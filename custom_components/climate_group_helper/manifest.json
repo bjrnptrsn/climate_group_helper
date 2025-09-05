@@ -1,0 +1,14 @@
+{
+  "domain": "climate_group_helper",
+  "name": "Climate Group Helper",
+  "codeowners": ["@bjrnptrsn"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/bjrnptrsn/climate_group_helper",
+  "integration_type": "helper",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/bjrnptrsn/climate_group_helper/issues",
+  "quality_scale": "internal",
+  "requirements": [],
+  "version": "0.1.0"
+}

@@ -1,0 +1,172 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Climate Group Helper Configuration",
+        "description": "Create a group of climate entities that can be controlled as a single unit. The group will aggregate temperature readings and synchronize control commands across all member devices.",
+        "data": {
+          "name": "Group Name",
+          "entities": "Climate Entities",
+          "average_option": "Temperature Averaging Method",
+          "round_option": "Temperature Rounding"
+        },
+        "data_description": {
+          "name": "Enter a descriptive name for this climate group (e.g., 'Living Room Climate' or 'Upstairs Heating').",
+          "entities": "Select the climate devices to include in this group.",
+          "average_option": "Choose the method for calculating the group's target temperature.",
+          "round_option": "Select the rounding precision for temperature values."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "At least one climate entity must be selected to create a group.",
+      "invalid_entity": "One or more selected entities are not valid climate devices.",
+      "duplicate_name": "A climate group with this name already exists.",
+      "unavailable_entities": "Some selected entities are currently unavailable. The group will be created but may not function properly until all entities are available."
+    },
+    "abort": {
+      "already_configured": "A climate group with this configuration already exists.",
+      "single_instance_allowed": "Only one climate group helper integration can be configured.",
+      "no_changes": "No changes were made to the configuration."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure Climate Group Options",
+        "description": "Modify the settings for your climate group. Changes will take effect immediately and affect how temperatures are calculated and displayed.",
+        "data": {
+          "entities": "Climate Entities",
+          "average_option": "Temperature Averaging Method",
+          "round_option": "Temperature Rounding"
+        },
+        "data_description": {
+          "entities": "Add or remove climate entities from this group. Removing entities will exclude them from temperature calculations and control commands.",
+          "average_option": "Change the method for calculating target temperatures across group members.",
+          "round_option": "Adjust the temperature precision for the group."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "At least one climate entity must remain in the group.",
+      "invalid_entity": "One or more selected entities are not valid climate devices.",
+      "configuration_error": "Unable to apply the new configuration. Please check your settings and try again."
+    },
+    "abort": {
+      "no_changes": "No changes were detected in the configuration."
+    }
+  },
+  "selector": {
+    "average_option": {
+      "options": {
+        "mean": "Mean (Average)",
+        "median": "Median (Middle Value)",
+        "min": "Minimum",
+        "max": "Maximum"
+      }
+    },
+    "round_option": {
+      "options": {
+        "none": "No Rounding (Exact Values)",
+        "half": "Half Degree (0.5°)",
+        "integer": "Whole Numbers (1°)"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group": {
+        "name": "Climate Group",
+        "state_attributes": {
+          "member_entities": {
+            "name": "Member Entities",
+            "description": "List of climate entities included in this group"
+          },
+          "averaging_method": {
+            "name": "Averaging Method",
+            "description": "Method used to calculate target temperatures"
+          },
+          "temperature_precision": {
+            "name": "Temperature Precision",
+            "description": "Rounding applied to temperature values"
+          },
+          "last_active_mode": {
+            "name": "Last Active Mode",
+            "description": "The most recent non-off HVAC mode used by the group"
+          },
+          "member_count": {
+            "name": "Member Count",
+            "description": "Number of entities in this climate group"
+          },
+          "active_members": {
+            "name": "Active Members",
+            "description": "Number of currently available group members"
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "set_temperature": {
+      "name": "Set Temperature",
+      "description": "Set the target temperature for all climate entities in the group simultaneously.",
+      "fields": {
+        "entity_id": {
+          "name": "Climate Group",
+          "description": "The climate group entity to control."
+        },
+        "temperature": {
+          "name": "Target Temperature",
+          "description": "The desired temperature for all group members."
+        },
+        "target_temp_high": {
+          "name": "Target High Temperature",
+          "description": "The upper temperature limit for heat/cool mode."
+        },
+        "target_temp_low": {
+          "name": "Target Low Temperature", 
+          "description": "The lower temperature limit for heat/cool mode."
+        },
+        "hvac_mode": {
+          "name": "HVAC Mode",
+          "description": "Optionally change the HVAC mode when setting temperature."
+        }
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Climate Group Member Unavailable",
+      "description": "One or more members of climate group '{group_name}' are currently unavailable. The group will continue to function with available members, but some features may be limited.\n\nUnavailable entities: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "Climate Group Has No Available Members",
+      "description": "Climate group '{group_name}' has no available member entities. The group will be unavailable until at least one member entity becomes available.\n\nCheck the status of these entities: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Climate Group Feature Conflicts",
+      "description": "Climate group '{group_name}' contains members with incompatible features. Some functionality may be limited to features supported by all group members.\n\nConflicting entities: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC mode changed",
+      "temperature_target_changed": "Target temperature changed",
+      "current_temperature_changed": "Current temperature changed",
+      "group_turned_on": "Group turned on",
+      "group_turned_off": "Group turned off"
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC mode is",
+      "is_temperature_above": "Temperature is above",
+      "is_temperature_below": "Temperature is below",
+      "is_group_available": "Group is available"
+    },
+    "action_type": {
+      "set_hvac_mode": "Set HVAC mode",
+      "set_temperature": "Set temperature",
+      "turn_on": "Turn on",
+      "turn_off": "Turn off"
+    }
+  }
+}
