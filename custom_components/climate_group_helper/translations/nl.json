@@ -1,0 +1,182 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuratie van Climate Group Helper",
+        "description": "Creëer een groep van klimaatentiteiten die als één geheel kunnen worden bestuurd. De groep zal temperatuurmetingen aggregeren en besturingscommando's synchroniseren over alle aangesloten apparaten.",
+        "data": {
+          "name": "Groepsnaam",
+          "entities": "Klimaatentiteiten",
+          "average_option": "Temperatuurgemiddelde Methode",
+          "round_option": "Temperatuur afronden",
+          "expose_member_entities": "Lid-entiteiten weergeven"
+        },
+        "data_description": {
+          "name": "Voer een beschrijvende naam in voor deze klimaatgroep (bijv. 'Klimaat Woonkamer' of 'Verwarming Bovenverdieping').",
+          "entities": "Selecteer de klimaat-apparaten die in deze groep moeten worden opgenomen.",
+          "average_option": "Kies de methode voor het berekenen van de doeltemperatuur van de groep.",
+          "round_option": "Selecteer de afrondingsprecisie voor temperatuurwaarden.",
+          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Er moet ten minste één klimaatentiteit worden geselecteerd om een groep te maken.",
+      "invalid_entity": "Een of meer geselecteerde entiteiten zijn geen geldige klimaat-apparaten.",
+      "duplicate_name": "Er bestaat al een klimaatgroep met deze naam.",
+      "unavailable_entities": "Sommige geselecteerde entiteiten zijn momenteel niet beschikbaar. De groep wordt aangemaakt, maar functioneert mogelijk niet correct totdat alle entiteiten beschikbaar zijn."
+    },
+    "abort": {
+      "already_configured": "Er bestaat al een klimaatgroep met deze configuratie.",
+      "single_instance_allowed": "Er kan slechts één Climate Group Helper-integratie worden geconfigureerd.",
+      "no_changes": "Er zijn geen wijzigingen in de configuratie aangebracht."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opties voor klimaatgroep configureren",
+        "description": "Wijzig de instellingen voor uw klimaatgroep. Wijzigingen worden onmiddellijk van kracht en beïnvloeden hoe temperaturen worden berekend en weergegeven.",
+        "data": {
+          "entities": "Klimaatentiteiten",
+          "average_option": "Temperatuurgemiddelde Methode",
+          "round_option": "Temperatuur afronden",
+          "expose_member_entities": "Lid-entiteiten weergeven"
+        },
+        "data_description": {
+          "entities": "Voeg klimaatentiteiten toe aan of verwijder ze uit deze groep. Het verwijderen van entiteiten sluit ze uit van temperatuurberekeningen en besturingscommando's.",
+          "average_option": "Wijzig de methode voor het berekenen van doeltemperaturen voor groepsleden.",
+          "round_option": "Pas de temperatuurprecisie voor de groep aan.",
+          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Er moet ten minste één klimaatentiteit in de groep blijven.",
+      "invalid_entity": "Een of meer geselecteerde entiteiten zijn geen geldige klimaat-apparaten.",
+      "configuration_error": "Kan de nieuwe configuratie niet toepassen. Controleer uw instellingen en probeer het opnieuw."
+    },
+    "abort": {
+      "no_changes": "Er zijn geen wijzigingen in de configuratie gedetecteerd."
+    }
+  },
+  "selector": {
+    "average_option": {
+      "options": {
+        "mean": "Gemiddelde",
+        "median": "Mediaan (Middelste Waarde)",
+        "min": "Minimum",
+        "max": "Maximum"
+      }
+    },
+    "round_option": {
+      "options": {
+        "none": "Niet afronden (Exacte Waarden)",
+        "half": "Halve Graad (0.5°)",
+        "integer": "Hele Getallen (1°)"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group": {
+        "name": "Klimaatgroep",
+        "state_attributes": {
+          "member_entities": {
+            "name": "Lid-entiteiten",
+            "description": "Lijst van klimaatentiteiten in deze groep"
+          },
+          "averaging_method": {
+            "name": "Gemiddelde Methode",
+            "description": "Methode die wordt gebruikt om doeltemperaturen te berekenen"
+          },
+          "temperature_precision": {
+            "name": "Temperatuurprecisie",
+            "description": "Afronding toegepast op temperatuurwaarden"
+          },
+          "last_active_mode": {
+            "name": "Laatste Actieve Modus",
+            "description": "De meest recente niet-uit HVAC-modus die door de groep wordt gebruikt"
+          },
+          "member_count": {
+            "name": "Aantal Leden",
+            "description": "Aantal entiteiten in deze klimaatgroep"
+          },
+          "active_members": {
+            "name": "Actieve Leden",
+            "description": "Aantal momenteel beschikbare groepsleden"
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "set_temperature": {
+      "name": "Temperatuur instellen",
+      "description": "Stel de doeltemperatuur in voor alle klimaatentiteiten in de groep tegelijk.",
+      "fields": {
+        "entity_id": {
+          "name": "Klimaatgroep",
+          "description": "De te besturen klimaatgroepentiteit."
+        },
+        "temperature": {
+          "name": "Doeltemperatuur",
+          "description": "De gewenste temperatuur voor alle groepsleden."
+        },
+        "target_temp_high": {
+          "name": "Hoge Doeltemperatuur",
+          "description": "De bovengrens van de temperatuur voor de verwarmings-/koelmodus."
+        },
+        "target_temp_low": {
+          "name": "Lage Doeltemperatuur",
+          "description": "De ondergrens van de temperatuur voor de verwarmings-/koelmodus."
+        },
+        "hvac_mode": {
+          "name": "HVAC-modus",
+          "description": "Wijzig optioneel de HVAC-modus bij het instellen van de temperatuur."
+        }
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Lid van klimaatgroep niet beschikbaar",
+      "description": "Een of meer leden van de klimaatgroep '{group_name}' zijn momenteel niet beschikbaar. De groep blijft functioneren met beschikbare leden, maar sommige functies kunnen beperkt zijn.
+
+Niet-beschikbare entiteiten: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "Klimaatgroep heeft geen beschikbare leden",
+      "description": "Klimaatgroep '{group_name}' heeft geen beschikbare leden. De groep is niet beschikbaar totdat ten minste één lid-entiteit beschikbaar is.
+
+Controleer de status van deze entiteiten: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Conflicterende functies in klimaatgroep",
+      "description": "Klimaatgroep '{group_name}' bevat leden met incompatibele functies. Sommige functionaliteit kan beperkt zijn tot functies die door alle groepsleden worden ondersteund.
+
+Conflicterende entiteiten: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC-modus gewijzigd",
+      "temperature_target_changed": "Doeltemperatuur gewijzigd",
+      "current_temperature_changed": "Huidige temperatuur gewijzigd",
+      "group_turned_on": "Groep ingeschakeld",
+      "group_turned_off": "Groep uitgeschakeld"
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC-modus is",
+      "is_temperature_above": "Temperatuur is boven",
+      "is_temperature_below": "Temperatuur is onder",
+      "is_group_available": "Groep is beschikbaar"
+    },
+    "action_type": {
+      "set_hvac_mode": "HVAC-modus instellen",
+      "set_temperature": "Temperatuur instellen",
+      "turn_on": "Inschakelen",
+      "turn_off": "Uitschakelen"
+    }
+  }
+}

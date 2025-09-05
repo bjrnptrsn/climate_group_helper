@@ -1,0 +1,176 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Konfiguracja pomocnika grupy klimatyzacji",
+        "description": "Utwórz grupę encji klimatyzacji, którymi można sterować jako pojedynczą jednostką. Grupa będzie agregować odczyty temperatury i synchronizować polecenia sterujące na wszystkich urządzeniach członkowskich.",
+        "data": {
+          "name": "Nazwa grupy",
+          "entities": "Encje klimatyzacji",
+          "average_option": "Metoda uśredniania temperatury",
+          "round_option": "Zaokrąglanie temperatury",
+          "expose_member_entities": "Udostępnij encje członkowskie"
+        },
+        "data_description": {
+          "name": "Wprowadź opisową nazwę dla tej grupy klimatyzacji (np. 'Klimatyzacja w salonie' lub 'Ogrzewanie na piętrze').",
+          "entities": "Wybierz urządzenia klimatyzacyjne do włączenia do tej grupy.",
+          "average_option": "Wybierz metodę obliczania docelowej temperatury grupy.",
+          "round_option": "Wybierz precyzję zaokrąglania wartości temperatury.",
+          "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Należy wybrać co najmniej jedną encję klimatyzacji, aby utworzyć grupę.",
+      "invalid_entity": "Jedna lub więcej wybranych encji nie jest prawidłowymi urządzeniami klimatyzacyjnymi.",
+      "duplicate_name": "Grupa klimatyzacji o tej nazwie już istnieje.",
+      "unavailable_entities": "Niektóre wybrane encje są obecnie niedostępne. Grupa zostanie utworzona, ale może nie działać poprawnie, dopóki wszystkie encje nie będą dostępne."
+    },
+    "abort": {
+      "already_configured": "Grupa klimatyzacji o tej konfiguracji już istnieje.",
+      "single_instance_allowed": "Można skonfigurować tylko jedną integrację pomocnika grupy klimatyzacji.",
+      "no_changes": "Nie wprowadzono żadnych zmian w konfiguracji."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Skonfiguruj opcje grupy klimatyzacji",
+        "description": "Zmodyfikuj ustawienia grupy klimatyzacji. Zmiany wejdą w życie natychmiast i wpłyną na sposób obliczania i wyświetlania temperatur.",
+        "data": {
+          "entities": "Encje klimatyzacji",
+          "average_option": "Metoda uśredniania temperatury",
+          "round_option": "Zaokrąglanie temperatury",
+          "expose_member_entities": "Udostępnij encje członkowskie"
+        },
+        "data_description": {
+          "entities": "Dodaj lub usuń encje klimatyzacji z tej grupy. Usunięcie encji wykluczy je z obliczeń temperatury i poleceń sterujących.",
+          "average_option": "Zmień metodę obliczania temperatur docelowych dla członków grupy.",
+          "round_option": "Dostosuj precyzję temperatury dla grupy.",
+          "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "W grupie musi pozostać co najmniej jedna encja klimatyzacji.",
+      "invalid_entity": "Jedna lub więcej wybranych encji nie jest prawidłowymi urządzeniami klimatyzacyjnymi.",
+      "configuration_error": "Nie można zastosować nowej konfiguracji. Sprawdź ustawienia i spróbuj ponownie."
+    },
+    "abort": {
+      "no_changes": "Nie wykryto żadnych zmian w konfiguracji."
+    }
+  },
+  "selector": {
+    "average_option": {
+      "options": {
+        "mean": "Średnia",
+        "median": "Mediana (wartość środkowa)",
+        "min": "Minimum",
+        "max": "Maksimum"
+      }
+    },
+    "round_option": {
+      "options": {
+        "none": "Bez zaokrąglania (dokładne wartości)",
+        "half": "Pół stopnia (0,5°)",
+        "integer": "Liczby całkowite (1°)"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group": {
+        "name": "Grupa klimatyzacji",
+        "state_attributes": {
+          "member_entities": {
+            "name": "Encje członkowskie",
+            "description": "Lista encji klimatyzacji zawartych w tej grupie"
+          },
+          "averaging_method": {
+            "name": "Metoda uśredniania",
+            "description": "Metoda używana do obliczania temperatur docelowych"
+          },
+          "temperature_precision": {
+            "name": "Precyzja temperatury",
+            "description": "Zaokrąglanie stosowane do wartości temperatury"
+          },
+          "last_active_mode": {
+            "name": "Ostatni aktywny tryb",
+            "description": "Ostatni tryb HVAC inny niż wyłączony, używany przez grupę"
+          },
+          "member_count": {
+            "name": "Liczba członków",
+            "description": "Liczba encji w tej grupie klimatyzacji"
+          },
+          "active_members": {
+            "name": "Aktywni członkowie",
+            "description": "Liczba aktualnie dostępnych członków grupy"
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "set_temperature": {
+      "name": "Ustaw temperaturę",
+      "description": "Ustaw jednocześnie docelową temperaturę dla wszystkich encji klimatyzacji w grupie.",
+      "fields": {
+        "entity_id": {
+          "name": "Grupa klimatyzacji",
+          "description": "Encja grupy klimatyzacji do sterowania."
+        },
+        "temperature": {
+          "name": "Temperatura docelowa",
+          "description": "Pożądana temperatura dla wszystkich członków grupy."
+        },
+        "target_temp_high": {
+          "name": "Docelowa wysoka temperatura",
+          "description": "Górna granica temperatury dla trybu ogrzewania/chłodzenia."
+        },
+        "target_temp_low": {
+          "name": "Docelowa niska temperatura",
+          "description": "Dolna granica temperatury dla trybu ogrzewania/chłodzenia."
+        },
+        "hvac_mode": {
+          "name": "Tryb HVAC",
+          "description": "Opcjonalnie zmień tryb HVAC podczas ustawiania temperatury."
+        }
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Członek grupy klimatyzacji niedostępny",
+      "description": "Jeden lub więcej członków grupy klimatyzacji '{group_name}' jest obecnie niedostępnych. Grupa będzie nadal działać z dostępnymi członkami, ale niektóre funkcje mogą być ograniczone.\n\nNiedostępne encje: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "Grupa klimatyzacji nie ma dostępnych członków",
+      "description": "Grupa klimatyzacji '{group_name}' nie ma dostępnych encji członkowskich. Grupa będzie niedostępna, dopóki co najmniej jedna encja członkowska nie stanie się dostępna.\n\nSprawdź stan tych encji: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Konflikty funkcji grupy klimatyzacji",
+      "description": "Grupa klimatyzacji '{group_name}' zawiera członków z niekompatybilnymi funkcjami. Niektóre funkcje mogą być ograniczone do funkcji obsługiwanych przez wszystkich członków grupy.\n\nKonfliktujące encje: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "Zmieniono tryb HVAC",
+      "temperature_target_changed": "Zmieniono docelową temperaturę",
+      "current_temperature_changed": "Zmieniono bieżącą temperaturę",
+      "group_turned_on": "Grupa włączona",
+      "group_turned_off": "Grupa wyłączona"
+    },
+    "condition_type": {
+      "is_hvac_mode": "Tryb HVAC to",
+      "is_temperature_above": "Temperatura jest powyżej",
+      "is_temperature_below": "Temperatura jest poniżej",
+      "is_group_available": "Grupa jest dostępna"
+    },
+    "action_type": {
+      "set_hvac_mode": "Ustaw tryb HVAC",
+      "set_temperature": "Ustaw temperaturę",
+      "turn_on": "Włącz",
+      "turn_off": "Wyłącz"
+    }
+  }
+}

@@ -16,6 +16,7 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_AVERAGE_OPTION,
     CONF_ROUND_OPTION,
+    CONF_EXPOSE_MEMBER_ENTITIES,
     DEFAULT_NAME,
     DOMAIN,
     AverageOption,
@@ -83,6 +84,7 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         translation_key="round_option",
                     )
                 ),
+                vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=False): bool,
             }
         )
 
@@ -175,6 +177,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         translation_key="round_option",
                     )
                 ),
+                vol.Optional(
+                    CONF_EXPOSE_MEMBER_ENTITIES,
+                    default=current_config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
+                ): bool,
             }
         )
 

@@ -22,3 +22,4 @@ class RoundOption:
 # Configuration keys
 CONF_AVERAGE_OPTION = "average_option"
 CONF_ROUND_OPTION = "round_option"
+CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"

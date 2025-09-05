@@ -1,0 +1,176 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "气候组助手配置",
+        "description": "创建一个气候实体组，可以作为一个单元进行控制。该组将聚合温度读数并在所有成员设备之间同步控制命令。",
+        "data": {
+          "name": "组名",
+          "entities": "气候实体",
+          "average_option": "温度平均方法",
+          "round_option": "温度四舍五入",
+          "expose_member_entities": "公开成员实体"
+        },
+        "data_description": {
+          "name": "为此气候组输入一个描述性名称（例如，‘客厅气候’或‘楼上供暖’）。",
+          "entities": "选择要包含在此组中的气候设备。",
+          "average_option": "选择计算组目标温度的方法。",
+          "round_option": "选择温度值的四舍五入精度。",
+          "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。"
+        }
+      }
+    },
+    "error": {
+      "no_entities": "必须至少选择一个气候实体才能创建组。",
+      "invalid_entity": "一个或多个选定的实体不是有效的气候设备。",
+      "duplicate_name": "具有此名称的气候组已存在。",
+      "unavailable_entities": "某些选定的实体当前不可用。该组将被创建，但在所有实体都可用之前可能无法正常运行。"
+    },
+    "abort": {
+      "already_configured": "具有此配置的气候组已存在。",
+      "single_instance_allowed": "只能配置一个气候组助手集成。",
+      "no_changes": "未对配置进行任何更改。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "配置气候组选项",
+        "description": "修改您的气候组的设置。更改将立即生效，并影响温度的计算和显示方式。",
+        "data": {
+          "entities": "气候实体",
+          "average_option": "温度平均方法",
+          "round_option": "温度四舍五入",
+          "expose_member_entities": "公开成员实体"
+        },
+        "data_description": {
+          "entities": "从此组中添加或删除气候实体。删除实体会将其从温度计算和控制命令中排除。",
+          "average_option": "更改计算组成员目标温度的方法。",
+          "round_option": "调整组的温度精度。",
+          "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。"
+        }
+      }
+    },
+    "error": {
+      "no_entities": "组中必须至少保留一个气候实体。",
+      "invalid_entity": "一个或多个选定的实体不是有效的气候设备。",
+      "configuration_error": "无法应用新配置。请检查您的设置并重试。"
+    },
+    "abort": {
+      "no_changes": "在配置中未检测到任何更改。"
+    }
+  },
+  "selector": {
+    "average_option": {
+      "options": {
+        "mean": "平均值",
+        "median": "中位数（中间值）",
+        "min": "最小值",
+        "max": "最大值"
+      }
+    },
+    "round_option": {
+      "options": {
+        "none": "不四舍五入（精确值）",
+        "half": "半度 (0.5°)",
+        "integer": "整数 (1°)"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group": {
+        "name": "气候组",
+        "state_attributes": {
+          "member_entities": {
+            "name": "成员实体",
+            "description": "此组中包含的气候实体列表"
+          },
+          "averaging_method": {
+            "name": "平均方法",
+            "description": "用于计算目标温度的方法"
+          },
+          "temperature_precision": {
+            "name": "温度精度",
+            "description": "应用于温度值的四舍五入"
+          },
+          "last_active_mode": {
+            "name": "上一个活动模式",
+            "description": "该组使用的最新的非关闭HVAC模式"
+          },
+          "member_count": {
+            "name": "成员计数",
+            "description": "此气候组中的实体数量"
+          },
+          "active_members": {
+            "name": "活动成员",
+            "description": "当前可用的组成员数量"
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "set_temperature": {
+      "name": "设置温度",
+      "description": "同时为组中的所有气候实体设置目标温度。",
+      "fields": {
+        "entity_id": {
+          "name": "气候组",
+          "description": "要控制的气候组实体。"
+        },
+        "temperature": {
+          "name": "目标温度",
+          "description": "所有组成员的期望温度。"
+        },
+        "target_temp_high": {
+          "name": "目标高温",
+          "description": "加热/冷却模式的温度上限。"
+        },
+        "target_temp_low": {
+          "name": "目标低温",
+          "description": "加热/冷却模式的温度下限。"
+        },
+        "hvac_mode": {
+          "name": "HVAC模式",
+          "description": "在设置温度时可选择更改HVAC模式。"
+        }
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "气候组成员不可用",
+      "description": "气候组“{group_name}”的一个或多个成员当前不可用。该组将继续与可用成员一起运行，但某些功能可能会受到限制。\n\n不可用的实体：{unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "气候组没有可用的成员",
+      "description": "气候组“{group_name}”没有可用的成员实体。该组将不可用，直到至少有一个成员实体变为可用。\n\n检查这些实体的状态：{member_entities}"
+    },
+    "conflicting_features": {
+      "title": "气候组功能冲突",
+      "description": "气候组“{group_name}”包含具有不兼容功能的成员。某些功能可能仅限于所有组成员都支持的功能。\n\n冲突的实体：{conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC模式已更改",
+      "temperature_target_changed": "目标温度已更改",
+      "current_temperature_changed": "当前温度已更改",
+      "group_turned_on": "组已打开",
+      "group_turned_off": "组已关闭"
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC模式是",
+      "is_temperature_above": "温度高于",
+      "is_temperature_below": "温度低于",
+      "is_group_available": "组可用"
+    },
+    "action_type": {
+      "set_hvac_mode": "设置HVAC模式",
+      "set_temperature": "设置温度",
+      "turn_on": "打开",
+      "turn_off": "关闭"
+    }
+  }
+}

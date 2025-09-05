@@ -66,7 +66,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_AVERAGE_OPTION, CONF_ROUND_OPTION, AverageOption, RoundOption
+from .const import (
+    CONF_AVERAGE_OPTION,
+    CONF_ROUND_OPTION,
+    CONF_EXPOSE_MEMBER_ENTITIES,
+    AverageOption,
+    RoundOption
+)
 
 CALC_TYPES = {
     AverageOption.MIN: min,
@@ -130,6 +136,7 @@ async def async_setup_entry(
                 entity_ids=entities,
                 average_option=config.get(CONF_AVERAGE_OPTION, AverageOption.MEAN),
                 round_option=config.get(CONF_ROUND_OPTION, RoundOption.NONE),
+                expose_member_entities=config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
             )
         ]
     )
@@ -145,6 +152,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         entity_ids: list[str],
         average_option: str,
         round_option: str,
+        expose_member_entities: bool,
     ) -> None:
         """Initialize a climate group."""
 
@@ -153,12 +161,15 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._entity_ids = entity_ids
         self._average_calc = CALC_TYPES[average_option]
         self._round_option = round_option
+        self._expose_member_entities = expose_member_entities
 
         self._attr_supported_features = DEFAULT_SUPPORTED_FEATURES
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
 
         self._attr_available = False
         self._attr_assumed_state = True
+
+        self._attr_extra_state_attributes = {}
 
         self._attr_current_temperature = None
         self._attr_target_temperature = None
@@ -196,6 +207,11 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         """Query all members and determine the climate group state."""
 
         _LOGGER.debug("async_update_group_state called for: %s", self.entity_id)
+
+        # Expose member entities in attributes if configured
+        self._attr_extra_state_attributes = {}
+        if self._expose_member_entities:
+            self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self._entity_ids
 
         # Determine assumed state and availability for the group
         all_states = [

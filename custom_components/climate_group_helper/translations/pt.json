@@ -1,0 +1,176 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuração do Assistente de Grupo de Climatização",
+        "description": "Crie um grupo de entidades de climatização que podem ser controladas como uma única unidade. O grupo agregará as leituras de temperatura e sincronizará os comandos de controlo em todos os dispositivos membros.",
+        "data": {
+          "name": "Nome do Grupo",
+          "entities": "Entidades de Climatização",
+          "average_option": "Método de Média de Temperatura",
+          "round_option": "Arredondamento de Temperatura",
+          "expose_member_entities": "Expor Entidades Membro"
+        },
+        "data_description": {
+          "name": "Introduza um nome descritivo para este grupo de climatização (por exemplo, 'Climatização da Sala' ou 'Aquecimento do Andar de Cima').",
+          "entities": "Selecione os dispositivos de climatização a incluir neste grupo.",
+          "average_option": "Escolha o método para calcular a temperatura alvo do grupo.",
+          "round_option": "Selecione a precisão de arredondamento para os valores de temperatura.",
+          "expose_member_entities": "Ative esta opção para expor a lista de entidades membro como um atributo de estado."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Pelo menos uma entidade de climatização deve ser selecionada para criar um grupo.",
+      "invalid_entity": "Uma ou mais entidades selecionadas não são dispositivos de climatização válidos.",
+      "duplicate_name": "Já existe um grupo de climatização com este nome.",
+      "unavailable_entities": "Algumas entidades selecionadas estão atualmente indisponíveis. O grupo será criado, mas poderá não funcionar corretamente até que todas as entidades estejam disponíveis."
+    },
+    "abort": {
+      "already_configured": "Já existe um grupo de climatização com esta configuração.",
+      "single_instance_allowed": "Apenas uma integração do assistente de grupo de climatização pode ser configurada.",
+      "no_changes": "Não foram feitas alterações à configuração."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configurar Opções do Grupo de Climatização",
+        "description": "Modifique as definições do seu grupo de climatização. As alterações entrarão em vigor imediatamente e afetarão a forma como as temperaturas são calculadas e apresentadas.",
+        "data": {
+          "entities": "Entidades de Climatização",
+          "average_option": "Método de Média de Temperatura",
+          "round_option": "Arredondamento de Temperatura",
+          "expose_member_entities": "Expor Entidades Membro"
+        },
+        "data_description": {
+          "entities": "Adicione ou remova entidades de climatização deste grupo. A remoção de entidades irá excluí-las dos cálculos de temperatura e dos comandos de controlo.",
+          "average_option": "Altere o método de cálculo das temperaturas alvo entre os membros do grupo.",
+          "round_option": "Ajuste a precisão da temperatura para o grupo.",
+          "expose_member_entities": "Ative esta opção para expor a lista de entidades membro como um atributo de estado."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Pelo menos uma entidade de climatização deve permanecer no grupo.",
+      "invalid_entity": "Uma ou mais entidades selecionadas não são dispositivos de climatização válidos.",
+      "configuration_error": "Não foi possível aplicar a nova configuração. Verifique as suas definições e tente novamente."
+    },
+    "abort": {
+      "no_changes": "Não foram detetadas alterações na configuração."
+    }
+  },
+  "selector": {
+    "average_option": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (Valor do Meio)",
+        "min": "Mínimo",
+        "max": "Máximo"
+      }
+    },
+    "round_option": {
+      "options": {
+        "none": "Sem Arredondamento (Valores Exatos)",
+        "half": "Meio Grau (0.5°)",
+        "integer": "Números Inteiros (1°)"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group": {
+        "name": "Grupo de Climatização",
+        "state_attributes": {
+          "member_entities": {
+            "name": "Entidades Membro",
+            "description": "Lista de entidades de climatização incluídas neste grupo"
+          },
+          "averaging_method": {
+            "name": "Método de Média",
+            "description": "Método utilizado para calcular as temperaturas alvo"
+          },
+          "temperature_precision": {
+            "name": "Precisão da Temperatura",
+            "description": "Arredondamento aplicado aos valores de temperatura"
+          },
+          "last_active_mode": {
+            "name": "Último Modo Ativo",
+            "description": "O modo HVAC mais recente não desligado utilizado pelo grupo"
+          },
+          "member_count": {
+            "name": "Contagem de Membros",
+            "description": "Número de entidades neste grupo de climatização"
+          },
+          "active_members": {
+            "name": "Membros Ativos",
+            "description": "Número de membros do grupo atualmente disponíveis"
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "set_temperature": {
+      "name": "Definir Temperatura",
+      "description": "Defina a temperatura alvo para todas as entidades de climatização no grupo simultaneamente.",
+      "fields": {
+        "entity_id": {
+          "name": "Grupo de Climatização",
+          "description": "A entidade do grupo de climatização a controlar."
+        },
+        "temperature": {
+          "name": "Temperatura Alvo",
+          "description": "A temperatura desejada para todos los membros do grupo."
+        },
+        "target_temp_high": {
+          "name": "Temperatura Alvo Alta",
+          "description": "O limite superior de temperatura para o modo de aquecimento/arrefecimento."
+        },
+        "target_temp_low": {
+          "name": "Temperatura Alvo Baixa",
+          "description": "O limite inferior de temperatura para o modo de aquecimento/arrefecimento."
+        },
+        "hvac_mode": {
+          "name": "Modo HVAC",
+          "description": "Opcionalmente, altere o modo HVAC ao definir a temperatura."
+        }
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Membro do Grupo de Climatização Indisponível",
+      "description": "Um ou mais membros do grupo de climatização '{group_name}' estão atualmente indisponíveis. O grupo continuará a funcionar com os membros disponíveis, mas algumas funcionalidades podem estar limitadas.\n\nEntidades indisponíveis: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "O Grupo de Climatização Não Tem Membros Disponíveis",
+      "description": "O grupo de climatização '{group_name}' não tem entidades membro disponíveis. O grupo ficará indisponível até que pelo menos uma entidade membro esteja disponível.\n\nVerifique o estado destas entidades: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Conflitos de Funcionalidades do Grupo de Climatização",
+      "description": "O grupo de climatização '{group_name}' contém membros com funcionalidades incompatíveis. Algumas funcionalidades podem estar limitadas às funcionalidades suportadas por todos os membros do grupo.\n\nEntidades em conflito: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "Modo HVAC alterado",
+      "temperature_target_changed": "Temperatura alvo alterada",
+      "current_temperature_changed": "Temperatura atual alterada",
+      "group_turned_on": "Grupo ligado",
+      "group_turned_off": "Grupo desligado"
+    },
+    "condition_type": {
+      "is_hvac_mode": "O modo HVAC é",
+      "is_temperature_above": "A temperatura está acima de",
+      "is_temperature_below": "A temperatura está abaixo de",
+      "is_group_available": "O grupo está disponível"
+    },
+    "action_type": {
+      "set_hvac_mode": "Definir modo HVAC",
+      "set_temperature": "Definir temperatura",
+      "turn_on": "Ligar",
+      "turn_off": "Desligar"
+    }
+  }
+}
