@@ -22,6 +22,7 @@ This integration is fully configured via the UI, no `configuration.yaml` editing
     *   `Whole Numbers (1°)`: Round to whole numbers.
 *   **Dynamic Updates**: Add or remove entities from the group without restarting Home Assistant (via the options dialog).
 *   **UI Configuration**: Complete setup and management through the Home Assistant user interface (Config Flow).
+*   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
 
 ## Installation
 
