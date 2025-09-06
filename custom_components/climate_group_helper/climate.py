@@ -67,11 +67,13 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
+    ATTR_ASSUMED_STATE,
+    ATTR_LAST_ACTIVE_HVAC_MODE,
     CONF_AVERAGE_OPTION,
-    CONF_ROUND_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
+    CONF_ROUND_OPTION,
     AverageOption,
-    RoundOption
+    RoundOption,
 )
 
 CALC_TYPES = {
@@ -208,10 +210,12 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         _LOGGER.debug("async_update_group_state called for: %s", self.entity_id)
 
-        # Expose member entities in attributes if configured
-        self._attr_extra_state_attributes = {}
-        if self._expose_member_entities:
-            self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self._entity_ids
+        # Initialize extra state attributes
+        self._attr_extra_state_attributes = {
+            CONF_AVERAGE_OPTION: self._average_calc.__name__,
+            CONF_ROUND_OPTION: self._round_option,
+            CONF_EXPOSE_MEMBER_ENTITIES: self._expose_member_entities,
+        }
 
         # Determine assumed state and availability for the group
         all_states = [
@@ -225,6 +229,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         # Check if there are any valid states
         if states:
+
             # Get all active hvac modes (except HVACMode.OFF)
             active_hvac_modes = [state.state for state in states if state.state != HVACMode.OFF]
             if active_hvac_modes:
@@ -340,6 +345,13 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                     continue
                 # Bitwise AND the supported features of all members
                 self._attr_supported_features &= support
+
+            # Update extra state attributes
+            self._attr_extra_state_attributes[ATTR_ASSUMED_STATE] = self._attr_assumed_state
+            self._attr_extra_state_attributes[ATTR_LAST_ACTIVE_HVAC_MODE] = self._last_active_hvac_mode
+            # Expose member entities if configured
+            if self._expose_member_entities:
+                self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self._entity_ids
 
         # No states available
         else:

@@ -54,6 +54,7 @@ After installation, you can create a new Climate Group via the Helpers menu.
     *   **Climate Entities**: Select all climate entities you want to add to this group.
     *   **Temperature Averaging Method**: Choose the method for calculating the average temperature (see Features).
     *   **Temperature Rounding**: Select the desired rounding method.
+    *   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
 6.  Click **"Submit"**.
 
 The new climate group entity will be created and ready to use immediately.

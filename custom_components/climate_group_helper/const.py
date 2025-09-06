@@ -23,3 +23,7 @@ class RoundOption:
 CONF_AVERAGE_OPTION = "average_option"
 CONF_ROUND_OPTION = "round_option"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
+
+# Attribute keys
+ATTR_ASSUMED_STATE = "assumed_state"
+ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
