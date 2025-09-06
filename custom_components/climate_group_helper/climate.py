@@ -432,20 +432,20 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         # Set to the last active HVAC mode if available
         if self._last_active_hvac_mode is not None:
-            _LOGGER.debug("Turn on with the last active hvac mode: %s, %s", self._last_active_hvac_mode, self._logger_data)
+            _LOGGER.debug("Turn on with the last active hvac mode: %s", self._last_active_hvac_mode)
             await self.async_set_hvac_mode(self._last_active_hvac_mode)
 
         # Try to set the first available HVAC mode
         elif self._attr_hvac_modes:
             for mode in self._attr_hvac_modes:
                 if mode != HVACMode.OFF:
-                    _LOGGER.debug("Turn on with first available hvac mode: %s, %s", mode, self._logger_data)
+                    _LOGGER.debug("Turn on with first available hvac mode: %s", mode)
                     await self.async_set_hvac_mode(mode)
                     break
 
         # No hvac modes available
         else:
-            _LOGGER.debug("Can't turn on: No hvac modes available: %s", self._logger_data)
+            _LOGGER.debug("Can't turn on: No hvac modes available")
 
 
     async def async_turn_off(self) -> None:
@@ -453,12 +453,12 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         # Only turn off if HVACMode.OFF is supported
         if HVACMode.OFF in self._attr_hvac_modes:
-            _LOGGER.debug("Turn off with hvac mode 'off': %s", self._logger_data)
+            _LOGGER.debug("Turn off with hvac mode 'off'")
             await self.async_set_hvac_mode(HVACMode.OFF)
 
         # HVACMode.OFF not supported
         else:
-            _LOGGER.debug("Can't turn off: hvac mode 'off' not available: %s", self._logger_data)
+            _LOGGER.debug("Can't turn off: hvac mode 'off' not available")
 
 
     async def async_toggle(self) -> None:
