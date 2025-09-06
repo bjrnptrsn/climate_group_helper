@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - 2025-09-07
+
+### Features
+
+*   Add option to prioritize 'Off' HVAC Mode.
+
+
 ## 0.2.1 - 2025-09-06
 
 ### Fixes
