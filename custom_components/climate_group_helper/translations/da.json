@@ -1,0 +1,186 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Konfiguration af klimagruppe-hjælper",
+        "description": "Opret en gruppe af klimaanlæg, der kan styres som en enkelt enhed. Gruppen vil aggregere temperaturaflæsninger og synkronisere kontrolkommandoer på tværs af alle medlemsenheder.",
+        "data": {
+          "name": "Gruppenavn",
+          "entities": "Klimaanlæg",
+          "average_option": "Metode til temperaturgennemsnit",
+          "round_option": "Temperaturafrunding",
+          "expose_member_entities": "Vis medlemsenheder",
+          "hvac_mode_off_priority": "Prioriter 'Fra' HVAC-tilstand"
+        },
+        "data_description": {
+          "name": "Indtast et beskrivende navn for denne klimagruppe (f.eks. 'Stueklima' eller 'Opvarmning ovenpå').",
+          "entities": "Vælg de klimaanlæg, der skal inkluderes i denne gruppe.",
+          "average_option": "Vælg metoden til beregning af gruppens måltemperatur.",
+          "round_option": "Vælg afrundingspræcisionen for temperaturværdier.",
+          "expose_member_entities": "Aktiver denne mulighed for at vise listen over medlemsenheder som en statusattribut.",
+          "hvac_mode_off_priority": "Hvis aktiveret, vil gruppens HVAC-tilstand være 'fra', hvis et medlem af klimaanlægget er 'fra'. Ellers bestemmes gruppens HVAC-tilstand af den fælles tilstand for aktive medlemmer."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Mindst én klimaanlæg skal vælges for at oprette en gruppe.",
+      "invalid_entity": "En eller flere valgte enheder er ikke gyldige klimaanlæg.",
+      "duplicate_name": "En klimagruppe med dette navn eksisterer allerede.",
+      "unavailable_entities": "Nogle valgte enheder er i øjeblikket utilgængelige. Gruppen vil blive oprettet, men fungerer muligvis ikke korrekt, før alle enheder er tilgængelige."
+    },
+    "abort": {
+      "already_configured": "En klimagruppe med denne konfiguration eksisterer allerede.",
+      "single_instance_allowed": "Kun én klimagruppe-hjælperintegration kan konfigureres.",
+      "no_changes": "Der blev ikke foretaget ændringer i konfigurationen."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Konfigurer klimagruppeindstillinger",
+        "description": "Rediger indstillingerne for din klimagruppe. Ændringer træder i kraft med det samme og påvirker, hvordan temperaturer beregnes og vises.",
+        "data": {
+          "entities": "Klimaanlæg",
+          "average_option": "Metode til temperaturgennemsnit",
+          "round_option": "Temperaturafrunding",
+          "expose_member_entities": "Vis medlemsenheder",
+          "hvac_mode_off_priority": "Prioriter 'Fra' HVAC-tilstand"
+        },
+        "data_description": {
+          "entities": "Tilføj eller fjern klimaanlæg fra denne gruppe. Fjernelse af enheder vil udelukke dem fra temperaturberegninger og kontrolkommandoer.",
+          "average_option": "Skift metoden til beregning af måltemperaturer på tværs af gruppemedlemmer.",
+          "round_option": "Juster temperaturpræcisionen for gruppen.",
+          "expose_member_entities": "Aktiver denne mulighed for at vise listen over medlemsenheder som en statusattribut.",
+          "hvac_mode_off_priority": "Hvis aktiveret, vil gruppens HVAC-tilstand være 'fra', hvis et medlem af klimaanlægget er 'fra'. Ellers bestemmes gruppens HVAC-tilstand af den fælles tilstand for aktive medlemmer."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Mindst én klimaanlæg skal forblive i gruppen.",
+      "invalid_entity": "En eller flere valgte enheder er ikke gyldige klimaanlæg.",
+      "configuration_error": "Kan ikke anvende den nye konfiguration. Kontroller dine indstillinger og prøv igen."
+    },
+    "abort": {
+      "no_changes": "Der blev ikke registreret ændringer i konfigurationen."
+    }
+  },
+  "selector": {
+    "average_option": {
+      "options": {
+        "mean": "Gennemsnit",
+        "median": "Median (midterste værdi)",
+        "min": "Minimum",
+        "max": "Maksimum"
+      }
+    },
+    "round_option": {
+      "options": {
+        "none": "Ingen afrunding (præcise værdier)",
+        "half": "Halv grad (0,5°)",
+        "integer": "Hele tal (1°)"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group": {
+        "name": "Klimagruppe",
+        "state_attributes": {
+          "member_entities": {
+            "name": "Medlemsenheder",
+            "description": "Liste over klimaanlæg inkluderet i denne gruppe"
+          },
+          "averaging_method": {
+            "name": "Gennemsnitsmetode",
+            "description": "Metode brugt til at beregne måltemperaturer"
+          },
+          "temperature_precision": {
+            "name": "Temperaturpræcision",
+            "description": "Afrunding anvendt på temperaturværdier"
+          },
+          "last_active_mode": {
+            "name": "Sidste aktive tilstand",
+            "description": "Den seneste ikke-fra HVAC-tilstand brugt af gruppen"}
+          },
+          "member_count": {
+            "name": "Antal medlemmer",
+            "description": "Antal enheder i denne klimagruppe"}
+          },
+          "active_members": {
+            "name": "Aktive medlemmer",
+            "description": "Antal aktuelt tilgængelige gruppemedlemmer"}
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "set_temperature": {
+      "name": "Indstil temperatur",
+      "description": "Indstil måltemperaturen for alle klimaanlæg i gruppen samtidigt.",
+      "fields": {
+        "entity_id": {
+          "name": "Klimagruppe",
+          "description": "Klimagruppe-enheden, der skal styres."}
+        },
+        "temperature": {
+          "name": "Måltemperatur",
+          "description": "Den ønskede temperatur for alle gruppemedlemmer."}
+        },
+        "target_temp_high": {
+          "name": "Høj måltemperatur",
+          "description": "Den øvre temperaturgrænse for varme-/køletilstand."}
+        },
+        "target_temp_low": {
+          "name": "Lav måltemperatur",
+          "description": "Den nedre temperaturgrænse for varme-/køletilstand."}
+        },
+        "hvac_mode": {
+          "name": "HVAC-tilstand",
+          "description": "Skift eventuelt HVAC-tilstand ved indstilling af temperatur."}
+        }
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Medlem af klimagruppe utilgængelig",
+      "description": "Et eller flere medlemmer af klimagruppen '{group_name}' er i øjeblikket utilgængelige. Gruppen vil fortsætte med at fungere med tilgængelige medlemmer, men nogle funktioner kan være begrænsede.
+
+Utilgængelige enheder: {unavailable_entities}"}
+    },
+    "no_members_available": {
+      "title": "Klimagruppe har ingen tilgængelige medlemmer",
+      "description": "Klimagruppe '{group_name}' har ingen tilgængelige medlemsenheder. Gruppen vil være utilgængelig, indtil mindst én medlemsenhed bliver tilgængelig.
+
+Kontroller status for disse enheder: {member_entities}"}
+    },
+    "conflicting_features": {
+      "title": "Klimagruppe funktionskonflikter",
+      "description": "Klimagruppe '{group_name}' indeholder medlemmer med inkompatible funktioner. Nogle funktioner kan være begrænset til funktioner, der understøttes af alle gruppemedlemmer.
+
+Konfliktende enheder: {conflicting_entities}"}
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC-tilstand ændret",
+      "temperature_target_changed": "Måltemperatur ændret",
+      "current_temperature_changed": "Nuværende temperatur ændret",
+      "group_turned_on": "Gruppe tændt",
+      "group_turned_off": "Gruppe slukket"}
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC-tilstand er",
+      "is_temperature_above": "Temperatur er over",
+      "is_temperature_below": "Temperatur er under",
+      "is_group_available": "Gruppe er tilgængelig"}
+    },
+    "action_type": {
+      "set_hvac_mode": "Indstil HVAC-tilstand",
+      "set_temperature": "Indstil temperatur",
+      "turn_on": "Tænd",
+      "turn_off": "Sluk"}
+    }
+  }
+}

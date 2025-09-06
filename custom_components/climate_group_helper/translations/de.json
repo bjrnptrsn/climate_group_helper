@@ -9,14 +9,16 @@
           "entities": "Klimageräte",
           "average_option": "Temperatur-Mittelwertmethode",
           "round_option": "Temperaturrundung",
-          "expose_member_entities": "Mitgliedsentitäten anzeigen"
+          "expose_member_entities": "Mitgliedsentitäten anzeigen",
+          "hvac_mode_off_priority": "HLK-Modus 'Aus' priorisieren"
         },
         "data_description": {
           "name": "Geben Sie einen beschreibenden Namen für diese Klimagruppe ein (z. B. 'Wohnzimmerklima' oder 'Heizung Obergeschoss').",
           "entities": "Wählen Sie die Klimageräte aus, die in diese Gruppe aufgenommen werden sollen.",
           "average_option": "Wählen Sie die Methode zur Berechnung der Ziel-Temperatur der Gruppe.",
           "round_option": "Wählen Sie die Rundungsgenauigkeit für Temperaturwerte.",
-          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
+          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
+          "hvac_mode_off_priority": "Wenn aktiviert, wird der HLK-Modus der Gruppe 'Aus' sein, wenn ein Mitglieds-Klimagerät 'Aus' ist."
         }
       }
     },
@@ -41,13 +43,15 @@
           "entities": "Klimageräte",
           "average_option": "Temperatur-Mittelwertmethode",
           "round_option": "Temperaturrundung",
-          "expose_member_entities": "Mitgliedsentitäten anzeigen"
+          "expose_member_entities": "Mitgliedsentitäten anzeigen",
+          "hvac_mode_off_priority": "HLK-Modus 'Aus' priorisieren"
         },
         "data_description": {
           "entities": "Fügen Sie Klimageräte zu dieser Gruppe hinzu oder entfernen Sie sie. Entfernte Geräte werden von Temperaturberechnungen und Steuerbefehlen ausgeschlossen.",
           "average_option": "Ändern Sie die Methode zur Berechnung der Zieltemperaturen für alle Gruppenmitglieder.",
           "round_option": "Passen Sie die Temperaturgenauigkeit für die Gruppe an.",
-          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
+          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
+          "hvac_mode_off_priority": "Wenn aktiviert, wird der HLK-Modus der Gruppe 'Aus' sein, wenn ein Mitglieds-Klimagerät 'Aus' ist."
         }
       }
     },

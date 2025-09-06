@@ -17,6 +17,7 @@ from .const import (
     CONF_AVERAGE_OPTION,
     CONF_ROUND_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
+    CONF_HVAC_MODE_OFF_PRIORITY,
     DEFAULT_NAME,
     DOMAIN,
     AverageOption,
@@ -85,6 +86,10 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                 ),
                 vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=False): bool,
+                vol.Optional(
+                    CONF_HVAC_MODE_OFF_PRIORITY,
+                    default=False,
+                ): bool,
             }
         )
 
@@ -180,6 +185,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_EXPOSE_MEMBER_ENTITIES,
                     default=current_config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
+                ): bool,
+                vol.Optional(
+                    CONF_HVAC_MODE_OFF_PRIORITY,
+                    default=current_config.get(CONF_HVAC_MODE_OFF_PRIORITY, False),
                 ): bool,
             }
         )

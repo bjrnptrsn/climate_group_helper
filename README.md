@@ -23,6 +23,7 @@ This integration is fully configured via the UI, no `configuration.yaml` editing
 *   **Dynamic Updates**: Add or remove entities from the group without restarting Home Assistant (via the options dialog).
 *   **UI Configuration**: Complete setup and management through the Home Assistant user interface (Config Flow).
 *   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
+*   **Prioritize 'Off' HVAC Mode**: If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'.
 
 ## Installation
 
@@ -55,6 +56,7 @@ After installation, you can create a new Climate Group via the Helpers menu.
     *   **Temperature Averaging Method**: Choose the method for calculating the average temperature (see Features).
     *   **Temperature Rounding**: Select the desired rounding method.
     *   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
+    *   **Prioritize 'Off' HVAC Mode**: If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'.
 6.  Click **"Submit"**.
 
 The new climate group entity will be created and ready to use immediately.

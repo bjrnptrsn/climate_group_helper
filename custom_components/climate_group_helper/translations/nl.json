@@ -9,14 +9,16 @@
           "entities": "Klimaatentiteiten",
           "average_option": "Temperatuurgemiddelde Methode",
           "round_option": "Temperatuur afronden",
-          "expose_member_entities": "Lid-entiteiten weergeven"
+          "expose_member_entities": "Lid-entiteiten weergeven",
+          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
         },
         "data_description": {
           "name": "Voer een beschrijvende naam in voor deze klimaatgroep (bijv. 'Klimaat Woonkamer' of 'Verwarming Bovenverdieping').",
           "entities": "Selecteer de klimaat-apparaten die in deze groep moeten worden opgenomen.",
           "average_option": "Kies de methode voor het berekenen van de doeltemperatuur van de groep.",
           "round_option": "Selecteer de afrondingsprecisie voor temperatuurwaarden.",
-          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
+          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven.",
+          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
         }
       }
     },
@@ -41,13 +43,15 @@
           "entities": "Klimaatentiteiten",
           "average_option": "Temperatuurgemiddelde Methode",
           "round_option": "Temperatuur afronden",
-          "expose_member_entities": "Lid-entiteiten weergeven"
+          "expose_member_entities": "Lid-entiteiten weergeven",
+          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
         },
         "data_description": {
           "entities": "Voeg klimaatentiteiten toe aan of verwijder ze uit deze groep. Het verwijderen van entiteiten sluit ze uit van temperatuurberekeningen en besturingscommando's.",
           "average_option": "Wijzig de methode voor het berekenen van doeltemperaturen voor groepsleden.",
           "round_option": "Pas de temperatuurprecisie voor de groep aan.",
-          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
+          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven.",
+          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
         }
       }
     },
@@ -141,21 +145,15 @@
   "issues": {
     "member_unavailable": {
       "title": "Lid van klimaatgroep niet beschikbaar",
-      "description": "Een of meer leden van de klimaatgroep '{group_name}' zijn momenteel niet beschikbaar. De groep blijft functioneren met beschikbare leden, maar sommige functies kunnen beperkt zijn.
-
-Niet-beschikbare entiteiten: {unavailable_entities}"
+      "description": "Een of meer leden van de klimaatgroep '{group_name}' zijn momenteel niet beschikbaar. De groep blijft functioneren met beschikbare leden, maar sommige functies kunnen beperkt zijn.\n\nNiet-beschikbare entiteiten: {unavailable_entities}"
     },
     "no_members_available": {
       "title": "Klimaatgroep heeft geen beschikbare leden",
-      "description": "Klimaatgroep '{group_name}' heeft geen beschikbare leden. De groep is niet beschikbaar totdat ten minste één lid-entiteit beschikbaar is.
-
-Controleer de status van deze entiteiten: {member_entities}"
+      "description": "Klimaatgroep '{group_name}' heeft geen beschikbare leden. De groep is niet beschikbaar totdat ten minste één lid-entiteit beschikbaar is.\n\nControleer de status van deze entiteiten: {member_entities}"
     },
     "conflicting_features": {
       "title": "Conflicterende functies in klimaatgroep",
-      "description": "Klimaatgroep '{group_name}' bevat leden met incompatibele functies. Sommige functionaliteit kan beperkt zijn tot functies die door alle groepsleden worden ondersteund.
-
-Conflicterende entiteiten: {conflicting_entities}"
+      "description": "Klimaatgroep '{group_name}' bevat leden met incompatibele functies. Sommige functionaliteit kan beperkt zijn tot functies die door alle groepsleden worden ondersteund.\n\nConflicterende entiteiten: {conflicting_entities}"
     }
   },
   "device_automation": {

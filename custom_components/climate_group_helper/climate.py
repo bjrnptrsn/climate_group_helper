@@ -71,6 +71,7 @@ from .const import (
     ATTR_LAST_ACTIVE_HVAC_MODE,
     CONF_AVERAGE_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
+    CONF_HVAC_MODE_OFF_PRIORITY,
     CONF_ROUND_OPTION,
     AverageOption,
     RoundOption,
@@ -139,6 +140,7 @@ async def async_setup_entry(
                 average_option=config.get(CONF_AVERAGE_OPTION, AverageOption.MEAN),
                 round_option=config.get(CONF_ROUND_OPTION, RoundOption.NONE),
                 expose_member_entities=config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
+                hvac_mode_off_priority=config.get(CONF_HVAC_MODE_OFF_PRIORITY, False),
             )
         ]
     )
@@ -155,6 +157,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         average_option: str,
         round_option: str,
         expose_member_entities: bool,
+        hvac_mode_off_priority: bool,
     ) -> None:
         """Initialize a climate group."""
 
@@ -164,6 +167,9 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._average_calc = CALC_TYPES[average_option]
         self._round_option = round_option
         self._expose_member_entities = expose_member_entities
+        self._hvac_mode_off_priority = hvac_mode_off_priority
+
+        self._last_active_hvac_mode = None
 
         self._attr_supported_features = DEFAULT_SUPPORTED_FEATURES
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
@@ -202,8 +208,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._attr_swing_horizontal_modes = None
         self._attr_swing_horizontal_mode = None
 
-        self._last_active_hvac_mode = None
-
     @callback
     def async_update_group_state(self) -> None:
         """Query all members and determine the climate group state."""
@@ -230,18 +234,25 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         # Check if there are any valid states
         if states:
 
-            # Get all active hvac modes (except HVACMode.OFF)
-            active_hvac_modes = [state.state for state in states if state.state != HVACMode.OFF]
-            if active_hvac_modes:
-                # Set hvac_mode to the most common active hvac mode
-                self._attr_hvac_mode = max(set(active_hvac_modes), key=active_hvac_modes.count)
-                # Update last active hvac mode if it has changed
-                if self._attr_hvac_mode != self._last_active_hvac_mode:
-                    self._last_active_hvac_mode = self._attr_hvac_mode
-                    _LOGGER.debug("Updated last active hvac mode: %s", self._last_active_hvac_mode)
-            # Set hvac_mode to HVACMode.OFF if all states are HVACMode.OFF
-            elif all(state.state == HVACMode.OFF for state in states):
+            # Determine HVACMode
+            if self._hvac_mode_off_priority and any(state.state == HVACMode.OFF for state in states):
                 self._attr_hvac_mode = HVACMode.OFF
+                _LOGGER.debug("HVAC mode set to OFF due to off_priority for: %s", self.entity_id)
+            else:
+                active_hvac_modes = [state.state for state in states if state.state != HVACMode.OFF]
+                if active_hvac_modes:
+                    self._attr_hvac_mode = max(set(active_hvac_modes), key=active_hvac_modes.count)
+                elif all(state.state == HVACMode.OFF for state in states):
+                    self._attr_hvac_mode = HVACMode.OFF
+                else:
+                    # We can't determine the HVACMode, set to None
+                    self._attr_hvac_mode = None
+                    _LOGGER.debug("Can't determine HVACMode for: %s, States: %s", self.entity_id, states)
+
+            # Update last active hvac mode if it has changed and is not HVACMode.OFF
+            if (self._attr_hvac_mode != HVACMode.OFF) and (self._attr_hvac_mode != self._last_active_hvac_mode):
+                self._last_active_hvac_mode = self._attr_hvac_mode
+                _LOGGER.debug("Updated last active hvac mode: %s", self._last_active_hvac_mode)
 
             # The group is available if any member is available
             self._attr_available = True
