@@ -68,9 +68,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     ATTR_ASSUMED_STATE,
+    ATTR_CURRENT_MEMBER_HVAC_MODES,
     ATTR_GROUP_IN_SYNC,
     ATTR_LAST_ACTIVE_HVAC_MODE,
-    ATTR_MEMBER_HVAC_MODES,
     ATTR_TARGET_HVAC_MODE,
     CONF_AVERAGE_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
@@ -369,7 +369,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_extra_state_attributes[ATTR_ASSUMED_STATE] = self._attr_assumed_state
             self._attr_extra_state_attributes[ATTR_LAST_ACTIVE_HVAC_MODE] = self._last_active_hvac_mode
             self._attr_extra_state_attributes[ATTR_TARGET_HVAC_MODE] = self._target_hvac_mode
-            self._attr_extra_state_attributes[ATTR_MEMBER_HVAC_MODES] = member_hvac_modes
+            self._attr_extra_state_attributes[ATTR_CURRENT_MEMBER_HVAC_MODES] = member_hvac_modes
             # Check if all members are in sync with the target HVAC mode
             if self._target_hvac_mode is not None:
                 self._attr_extra_state_attributes[ATTR_GROUP_IN_SYNC] = (
@@ -431,7 +431,9 @@ class ClimateGroup(GroupEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
 
+        # Update target HVAC mode 
         self._target_hvac_mode = hvac_mode
+        self.async_defer_or_update_ha_state()   # Update group state and write ha state
 
         data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_HVAC_MODE: hvac_mode}
         _LOGGER.debug("Setting hvac mode: %s", data)

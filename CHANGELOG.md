@@ -6,12 +6,11 @@
 
 *   Add option to prioritize 'Off' HVAC Mode.
 
-
 ## 0.2.1 - 2025-09-06
 
 ### Fixes
 
-*   Fixes an issue where automations would fail with the error `'ClimateGroup' object has no attribute '_logger_data'`.
+*   Fixes an issue with the error `'ClimateGroup' object has no attribute '_logger_data'`.
 
 ## 0.2.0 - 2025-09-06
 
