@@ -27,4 +27,7 @@ CONF_HVAC_MODE_OFF_PRIORITY = "hvac_mode_off_priority"
 
 # Attribute keys
 ATTR_ASSUMED_STATE = "assumed_state"
+ATTR_GROUP_IN_SYNC = "group_in_sync"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
+ATTR_MEMBER_HVAC_MODES = "member_hvac_modes"
+ATTR_TARGET_HVAC_MODE = "target_hvac_mode"

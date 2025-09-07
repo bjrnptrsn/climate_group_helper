@@ -68,7 +68,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     ATTR_ASSUMED_STATE,
+    ATTR_GROUP_IN_SYNC,
     ATTR_LAST_ACTIVE_HVAC_MODE,
+    ATTR_MEMBER_HVAC_MODES,
+    ATTR_TARGET_HVAC_MODE,
     CONF_AVERAGE_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_HVAC_MODE_OFF_PRIORITY,
@@ -169,6 +172,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._expose_member_entities = expose_member_entities
         self._hvac_mode_off_priority = hvac_mode_off_priority
 
+        self._target_hvac_mode = None
         self._last_active_hvac_mode = None
 
         self._attr_supported_features = DEFAULT_SUPPORTED_FEATURES
@@ -219,6 +223,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             CONF_AVERAGE_OPTION: self._average_calc.__name__,
             CONF_ROUND_OPTION: self._round_option,
             CONF_EXPOSE_MEMBER_ENTITIES: self._expose_member_entities,
+            CONF_HVAC_MODE_OFF_PRIORITY: self._hvac_mode_off_priority,
         }
 
         # Determine assumed state and availability for the group
@@ -234,15 +239,18 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         # Check if there are any valid states
         if states:
 
+            # Create a sorted list of unique HVAC modes from all members
+            member_hvac_modes = sorted(list(set(state.state for state in states)))
+
             # Determine HVACMode
-            if self._hvac_mode_off_priority and any(state.state == HVACMode.OFF for state in states):
+            if self._hvac_mode_off_priority and HVACMode.OFF in member_hvac_modes:
                 self._attr_hvac_mode = HVACMode.OFF
                 _LOGGER.debug("HVAC mode set to OFF due to off_priority for: %s", self.entity_id)
             else:
-                active_hvac_modes = [state.state for state in states if state.state != HVACMode.OFF]
+                active_hvac_modes = [mode for mode in member_hvac_modes if mode != HVACMode.OFF]
                 if active_hvac_modes:
                     self._attr_hvac_mode = max(set(active_hvac_modes), key=active_hvac_modes.count)
-                elif all(state.state == HVACMode.OFF for state in states):
+                elif all(mode == HVACMode.OFF for mode in member_hvac_modes):
                     self._attr_hvac_mode = HVACMode.OFF
                 else:
                     # We can't determine the HVACMode, set to None
@@ -360,6 +368,15 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             # Update extra state attributes
             self._attr_extra_state_attributes[ATTR_ASSUMED_STATE] = self._attr_assumed_state
             self._attr_extra_state_attributes[ATTR_LAST_ACTIVE_HVAC_MODE] = self._last_active_hvac_mode
+            self._attr_extra_state_attributes[ATTR_TARGET_HVAC_MODE] = self._target_hvac_mode
+            self._attr_extra_state_attributes[ATTR_MEMBER_HVAC_MODES] = member_hvac_modes
+            # Check if all members are in sync with the target HVAC mode
+            if self._target_hvac_mode is not None:
+                self._attr_extra_state_attributes[ATTR_GROUP_IN_SYNC] = (
+                    len(member_hvac_modes) == 1 and member_hvac_modes[0] == self._target_hvac_mode
+                )
+            else:
+                self._attr_extra_state_attributes[ATTR_GROUP_IN_SYNC] = False
             # Expose member entities if configured
             if self._expose_member_entities:
                 self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self._entity_ids
@@ -413,6 +430,8 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
+
+        self._target_hvac_mode = hvac_mode
 
         data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_HVAC_MODE: hvac_mode}
         _LOGGER.debug("Setting hvac mode: %s", data)
