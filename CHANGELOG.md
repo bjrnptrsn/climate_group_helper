@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 - 2025-09-08
+
+*   Add new state attributes to provide more insights into the group's state:
+    *   `group_in_sync`: Indicates if all member entities are in sync with the target HVAC mode.
+    *   `current_member_hvac_modes`: A list of current HVAC modes of the member entities.
+    *   `target_hvac_mode`: The last HVAC mode that was requested for the group entity.
+
 ## 0.3.0 - 2025-09-07
 
 ### Features
