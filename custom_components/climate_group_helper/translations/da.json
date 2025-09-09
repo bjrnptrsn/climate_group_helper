@@ -100,15 +100,15 @@
           },
           "last_active_mode": {
             "name": "Sidste aktive tilstand",
-            "description": "Den seneste ikke-fra HVAC-tilstand brugt af gruppen"}
+            "description": "Den seneste ikke-fra HVAC-tilstand brugt af gruppen"
           },
           "member_count": {
             "name": "Antal medlemmer",
-            "description": "Antal enheder i denne klimagruppe"}
+            "description": "Antal enheder i denne klimagruppe"
           },
           "active_members": {
             "name": "Aktive medlemmer",
-            "description": "Antal aktuelt tilgængelige gruppemedlemmer"}
+            "description": "Antal aktuelt tilgængelige gruppemedlemmer"
           }
         }
       }
@@ -121,23 +121,23 @@
       "fields": {
         "entity_id": {
           "name": "Klimagruppe",
-          "description": "Klimagruppe-enheden, der skal styres."}
+          "description": "Klimagruppe-enheden, der skal styres."
         },
         "temperature": {
           "name": "Måltemperatur",
-          "description": "Den ønskede temperatur for alle gruppemedlemmer."}
+          "description": "Den ønskede temperatur for alle gruppemedlemmer."
         },
         "target_temp_high": {
           "name": "Høj måltemperatur",
-          "description": "Den øvre temperaturgrænse for varme-/køletilstand."}
+          "description": "Den øvre temperaturgrænse for varme-/køletilstand."
         },
         "target_temp_low": {
           "name": "Lav måltemperatur",
-          "description": "Den nedre temperaturgrænse for varme-/køletilstand."}
+          "description": "Den nedre temperaturgrænse for varme-/køletilstand."
         },
         "hvac_mode": {
           "name": "HVAC-tilstand",
-          "description": "Skift eventuelt HVAC-tilstand ved indstilling af temperatur."}
+          "description": "Skift eventuelt HVAC-tilstand ved indstilling af temperatur."
         }
       }
     }
@@ -145,21 +145,15 @@
   "issues": {
     "member_unavailable": {
       "title": "Medlem af klimagruppe utilgængelig",
-      "description": "Et eller flere medlemmer af klimagruppen '{group_name}' er i øjeblikket utilgængelige. Gruppen vil fortsætte med at fungere med tilgængelige medlemmer, men nogle funktioner kan være begrænsede.
-
-Utilgængelige enheder: {unavailable_entities}"}
+      "description": "Et eller flere medlemmer af klimagruppen '{group_name}' er i øjeblikket utilgængelige. Gruppen vil fortsætte med at fungere med tilgængelige medlemmer, men nogle funktioner kan være begrænsede.\r\n\r\nUtilgængelige enheder: {unavailable_entities}"
     },
     "no_members_available": {
       "title": "Klimagruppe har ingen tilgængelige medlemmer",
-      "description": "Klimagruppe '{group_name}' har ingen tilgængelige medlemsenheder. Gruppen vil være utilgængelig, indtil mindst én medlemsenhed bliver tilgængelig.
-
-Kontroller status for disse enheder: {member_entities}"}
+      "description": "Klimagruppe '{group_name}' har ingen tilgængelige medlemsenheder. Gruppen vil være utilgængelig, indtil mindst én medlemsenhed bliver tilgængelig.\r\n\r\nKontroller status for disse enheder: {member_entities}"
     },
     "conflicting_features": {
       "title": "Klimagruppe funktionskonflikter",
-      "description": "Klimagruppe '{group_name}' indeholder medlemmer med inkompatible funktioner. Nogle funktioner kan være begrænset til funktioner, der understøttes af alle gruppemedlemmer.
-
-Konfliktende enheder: {conflicting_entities}"}
+      "description": "Klimagruppe '{group_name}' indeholder medlemmer med inkompatible funktioner. Nogle funktioner kan være begrænset til funktioner, der understøttes af alle gruppemedlemmer.\r\n\r\nKonfliktende enheder: {conflicting_entities}"
     }
   },
   "device_automation": {
@@ -168,19 +162,19 @@ Konfliktende enheder: {conflicting_entities}"}
       "temperature_target_changed": "Måltemperatur ændret",
       "current_temperature_changed": "Nuværende temperatur ændret",
       "group_turned_on": "Gruppe tændt",
-      "group_turned_off": "Gruppe slukket"}
+      "group_turned_off": "Gruppe slukket"
     },
     "condition_type": {
       "is_hvac_mode": "HVAC-tilstand er",
       "is_temperature_above": "Temperatur er over",
       "is_temperature_below": "Temperatur er under",
-      "is_group_available": "Gruppe er tilgængelig"}
+      "is_group_available": "Gruppe er tilgængelig"
     },
     "action_type": {
       "set_hvac_mode": "Indstil HVAC-tilstand",
       "set_temperature": "Indstil temperatur",
       "turn_on": "Tænd",
-      "turn_off": "Sluk"}
+      "turn_off": "Sluk"
     }
   }
 }
