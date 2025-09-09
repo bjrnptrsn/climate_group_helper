@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0 - 2025-09-09
+
+### Features
+
+*   **New HVAC Mode Strategy**: Replaces the "Prioritize 'Off' Mode" toggle with a new selector to provide more control over the group's HVAC mode. This is designed to make automations more reliable. The available strategies are:
+    *   **Normal (Default):** The group's mode is the most frequent mode among its active members.
+    *   **Off Priority:** The group's mode will be `off` if any member is `off`. This matches the behavior of the old "Prioritize 'Off' Mode" setting.
+    *   **Auto:** A smart strategy that uses 'Off Priority' logic when an active mode (e.g., `heat`) is targeted and 'Normal' logic when `off` is targeted.
+*   Configuration for existing users is automatically migrated to the new setting.
+
+### Fixes
+
+*   Corrected a bug in the calculation for the "most common" HVAC mode and HVAC action.
+*   Repaired syntax errors in some translations.
+
 ## 0.4.0 - 2025-09-08
 
 *   Add new state attributes to provide more insights into the group's state:
@@ -12,12 +27,6 @@
 ### Features
 
 *   Add option to prioritize 'Off' HVAC Mode.
-
-## 0.2.1 - 2025-09-06
-
-### Fixes
-
-*   Fixes an issue with the error `'ClimateGroup' object has no attribute '_logger_data'`.
 
 ## 0.2.0 - 2025-09-06
 
