@@ -32,7 +32,7 @@ HVAC_MODE_STRATEGY_AUTO = "auto"
 
 # Attribute keys
 ATTR_ASSUMED_STATE = "assumed_state"
-ATTR_CURRENT_MEMBER_HVAC_MODES = "current_member_hvac_modes"
+ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
 ATTR_GROUP_IN_SYNC = "group_in_sync"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
 ATTR_TARGET_HVAC_MODE = "target_hvac_mode"
