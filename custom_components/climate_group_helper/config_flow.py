@@ -15,11 +15,14 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_AVERAGE_OPTION,
-    CONF_ROUND_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
-    CONF_HVAC_MODE_OFF_PRIORITY,
+    CONF_HVAC_MODE_STRATEGY,
+    CONF_ROUND_OPTION,
     DEFAULT_NAME,
     DOMAIN,
+    HVAC_MODE_STRATEGY_AUTO,
+    HVAC_MODE_STRATEGY_NORMAL,
+    HVAC_MODE_STRATEGY_OFF_PRIORITY,
     AverageOption,
     RoundOption,
 )
@@ -45,7 +48,9 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             if not errors:
                 # Generate unique_str from the name and add a random number to ensure uniqueness
-                await self.async_set_unique_id(user_input[CONF_NAME].strip().lower().replace(' ', '_'))
+                await self.async_set_unique_id(
+                    user_input[CONF_NAME].strip().lower().replace(" ", "_")
+                )
                 self._abort_if_unique_id_configured()
                 _LOGGER.debug("Creating config entry with data: %s", user_input)
 
@@ -62,7 +67,9 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         multiple=True,
                     )
                 ),
-                vol.Required(CONF_AVERAGE_OPTION, default=AverageOption.MEAN): selector.SelectSelector(
+                vol.Required(
+                    CONF_AVERAGE_OPTION, default=AverageOption.MEAN
+                ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[
                             AverageOption.MEAN,
@@ -74,7 +81,9 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         translation_key="average_option",
                     )
                 ),
-                vol.Required(CONF_ROUND_OPTION, default=RoundOption.NONE): selector.SelectSelector(
+                vol.Required(
+                    CONF_ROUND_OPTION, default=RoundOption.NONE
+                ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[
                             RoundOption.NONE,
@@ -85,11 +94,20 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         translation_key="round_option",
                     )
                 ),
+                vol.Required(
+                    CONF_HVAC_MODE_STRATEGY, default=HVAC_MODE_STRATEGY_NORMAL
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            HVAC_MODE_STRATEGY_NORMAL,
+                            HVAC_MODE_STRATEGY_OFF_PRIORITY,
+                            HVAC_MODE_STRATEGY_AUTO,
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="hvac_mode_strategy",
+                    )
+                ),
                 vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=False): bool,
-                vol.Optional(
-                    CONF_HVAC_MODE_OFF_PRIORITY,
-                    default=False,
-                ): bool,
             }
         )
 
@@ -107,6 +125,7 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Create the options flow."""
         return ClimateGroupOptionsFlow(config_entry)
 
+
 class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
     """Climate Group options flow."""
 
@@ -120,7 +139,9 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         """Manage the options."""
         errors: dict[str, str] = {}
 
-        _LOGGER.debug("Starting options flow with current options: %s", self._config_entry.options)
+        _LOGGER.debug(
+            "Starting options flow with current options: %s", self._config_entry.options
+        )
 
         # Get current configuration (data + options)
         current_config = {**self._config_entry.data, **self._config_entry.options}
@@ -142,6 +163,15 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 _LOGGER.debug("Options updated: %s", user_input)
                 return self.async_create_entry(title="", data=user_input)
 
+        # Determine the default value for hvac_mode_strategy based on the old key
+        # This ensures a smooth migration for existing users.
+        hvac_mode_strategy_default = current_config.get(CONF_HVAC_MODE_STRATEGY)
+        if hvac_mode_strategy_default is None:
+            if current_config.get("hvac_mode_off_priority", False):
+                hvac_mode_strategy_default = HVAC_MODE_STRATEGY_OFF_PRIORITY
+            else:
+                hvac_mode_strategy_default = HVAC_MODE_STRATEGY_NORMAL
+
         data_schema = vol.Schema(
             {
                 vol.Required(
@@ -155,7 +185,9 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 ),
                 vol.Required(
                     CONF_AVERAGE_OPTION,
-                    default=current_config.get(CONF_AVERAGE_OPTION, AverageOption.MEAN),
+                    default=current_config.get(
+                        CONF_AVERAGE_OPTION, AverageOption.MEAN
+                    ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[
@@ -182,13 +214,22 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         translation_key="round_option",
                     )
                 ),
+                vol.Required(
+                    CONF_HVAC_MODE_STRATEGY, default=hvac_mode_strategy_default
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            HVAC_MODE_STRATEGY_NORMAL,
+                            HVAC_MODE_STRATEGY_OFF_PRIORITY,
+                            HVAC_MODE_STRATEGY_AUTO,
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="hvac_mode_strategy",
+                    )
+                ),
                 vol.Optional(
                     CONF_EXPOSE_MEMBER_ENTITIES,
                     default=current_config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
-                ): bool,
-                vol.Optional(
-                    CONF_HVAC_MODE_OFF_PRIORITY,
-                    default=current_config.get(CONF_HVAC_MODE_OFF_PRIORITY, False),
                 ): bool,
             }
         )

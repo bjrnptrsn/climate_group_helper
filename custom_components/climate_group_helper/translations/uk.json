@@ -9,16 +9,16 @@
           "entities": "Кліматичні пристрої",
           "average_option": "Метод усереднення температури",
           "round_option": "Округлення температури",
-          "expose_member_entities": "Показати пристрої-члени",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "Показати пристрої-члени"
         },
         "data_description": {
           "name": "Введіть описову назву для цієї кліматичної групи (наприклад, 'Клімат у вітальні' або 'Опалення нагорі').",
           "entities": "Виберіть кліматичні пристрої, які потрібно включити до цієї групи.",
           "average_option": "Виберіть метод розрахунку цільової температури групи.",
           "round_option": "Виберіть точність округлення значень температури.",
-          "expose_member_entities": "Увімкніть цю опцію, щоб відобразити список пристроїв-членів як атрибут стану.",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "Увімкніть цю опцію, щоб відобразити список пристроїв-членів як атрибут стану."
         }
       }
     },
@@ -43,15 +43,15 @@
           "entities": "Кліматичні пристрої",
           "average_option": "Метод усереднення температури",
           "round_option": "Округлення температури",
-          "expose_member_entities": "Показати пристрої-члени",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "Показати пристрої-члени"
         },
         "data_description": {
           "entities": "Додайте або видаліть кліматичні пристрої з цієї групи. Видалення пристроїв виключить їх з розрахунків температури та команд керування.",
           "average_option": "Змініть метод розрахунку цільових температур для членів групи.",
           "round_option": "Налаштуйте точність температури для групи.",
-          "expose_member_entities": "Увімкніть цю опцію, щоб відобразити список пристроїв-членів як атрибут стану.",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "Увімкніть цю опцію, щоб відобразити список пристроїв-членів як атрибут стану."
         }
       }
     },
@@ -78,6 +78,13 @@
         "none": "Без округлення (точні значення)",
         "half": "Пів градуса (0,5°)",
         "integer": "Цілі числа (1°)"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal (Most common mode)",
+        "off_priority": "Off Priority (Group is off if any member is off)",
+        "auto": "Auto (Smart strategy based on target mode)"
       }
     }
   },

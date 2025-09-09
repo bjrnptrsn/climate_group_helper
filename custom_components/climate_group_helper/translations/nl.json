@@ -9,16 +9,16 @@
           "entities": "Klimaatentiteiten",
           "average_option": "Temperatuurgemiddelde Methode",
           "round_option": "Temperatuur afronden",
-          "expose_member_entities": "Lid-entiteiten weergeven",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "Lid-entiteiten weergeven"
         },
         "data_description": {
           "name": "Voer een beschrijvende naam in voor deze klimaatgroep (bijv. 'Klimaat Woonkamer' of 'Verwarming Bovenverdieping').",
           "entities": "Selecteer de klimaat-apparaten die in deze groep moeten worden opgenomen.",
           "average_option": "Kies de methode voor het berekenen van de doeltemperatuur van de groep.",
           "round_option": "Selecteer de afrondingsprecisie voor temperatuurwaarden.",
-          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven.",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
         }
       }
     },
@@ -43,15 +43,15 @@
           "entities": "Klimaatentiteiten",
           "average_option": "Temperatuurgemiddelde Methode",
           "round_option": "Temperatuur afronden",
-          "expose_member_entities": "Lid-entiteiten weergeven",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "Lid-entiteiten weergeven"
         },
         "data_description": {
           "entities": "Voeg klimaatentiteiten toe aan of verwijder ze uit deze groep. Het verwijderen van entiteiten sluit ze uit van temperatuurberekeningen en besturingscommando's.",
           "average_option": "Wijzig de methode voor het berekenen van doeltemperaturen voor groepsleden.",
           "round_option": "Pas de temperatuurprecisie voor de groep aan.",
-          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven.",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
         }
       }
     },
@@ -79,6 +79,13 @@
         "half": "Halve Graad (0.5°)",
         "integer": "Hele Getallen (1°)"
       }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal (Most common mode)",
+        "off_priority": "Off Priority (Group is off if any member is off)",
+        "auto": "Auto (Smart strategy based on target mode)"
+      }
     }
   },
   "entity": {
@@ -100,7 +107,7 @@
           },
           "last_active_mode": {
             "name": "Laatste Actieve Modus",
-            "description": "De meest recente niet-uit HVAC-modus die door de groep wordt gebruikt"
+            "description": "De meest recent niet-uit HVAC-modus die door de groep wordt gebruikt"
           },
           "member_count": {
             "name": "Aantal Leden",
@@ -159,7 +166,7 @@
   "device_automation": {
     "trigger_type": {
       "hvac_mode_changed": "HVAC-modus gewijzigd",
-      "temperature_target_changed": "Doeltemperatuur gewijzigd",
+      "temperature_target_changed": "Doeltemperatur gewijzigd",
       "current_temperature_changed": "Huidige temperatuur gewijzigd",
       "group_turned_on": "Groep ingeschakeld",
       "group_turned_off": "Groep uitgeschakeld"

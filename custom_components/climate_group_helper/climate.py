@@ -74,8 +74,11 @@ from .const import (
     ATTR_TARGET_HVAC_MODE,
     CONF_AVERAGE_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
-    CONF_HVAC_MODE_OFF_PRIORITY,
+    CONF_HVAC_MODE_STRATEGY,
     CONF_ROUND_OPTION,
+    HVAC_MODE_STRATEGY_AUTO,
+    HVAC_MODE_STRATEGY_NORMAL,
+    HVAC_MODE_STRATEGY_OFF_PRIORITY,
     AverageOption,
     RoundOption,
 )
@@ -107,6 +110,7 @@ SUPPORT_FLAGS = (
 
 DEFAULT_SUPPORTED_FEATURES = ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
 
+
 def mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
     """Round the decimal part of a float to an fractional value with a certain precision."""
 
@@ -118,6 +122,7 @@ def mean_round(value: float | None, round_option: str = RoundOption.NONE) -> flo
     if round_option == RoundOption.INTEGER:
         return round(value)
     return value
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -132,6 +137,14 @@ async def async_setup_entry(
     registry = er.async_get(hass)
     entities = er.async_validate_entity_ids(registry, config[CONF_ENTITIES])
 
+    # TEMP: Get HVAC mode strategy, migrating from old key if necessary
+    hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY)
+    if hvac_mode_strategy is None:
+        if config.get("hvac_mode_off_priority", False):
+            hvac_mode_strategy = HVAC_MODE_STRATEGY_OFF_PRIORITY
+        else:
+            hvac_mode_strategy = HVAC_MODE_STRATEGY_NORMAL
+
     _LOGGER.debug("Setting up climate group entity '%s' with config: %s", config_entry.title, config)
 
     async_add_entities(
@@ -143,7 +156,7 @@ async def async_setup_entry(
                 average_option=config.get(CONF_AVERAGE_OPTION, AverageOption.MEAN),
                 round_option=config.get(CONF_ROUND_OPTION, RoundOption.NONE),
                 expose_member_entities=config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
-                hvac_mode_off_priority=config.get(CONF_HVAC_MODE_OFF_PRIORITY, False),
+                hvac_mode_strategy=hvac_mode_strategy,
             )
         ]
     )
@@ -160,7 +173,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         average_option: str,
         round_option: str,
         expose_member_entities: bool,
-        hvac_mode_off_priority: bool,
+        hvac_mode_strategy: str,
     ) -> None:
         """Initialize a climate group."""
 
@@ -170,7 +183,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._average_calc = CALC_TYPES[average_option]
         self._round_option = round_option
         self._expose_member_entities = expose_member_entities
-        self._hvac_mode_off_priority = hvac_mode_off_priority
+        self._hvac_mode_strategy = hvac_mode_strategy
 
         self._target_hvac_mode = None
         self._last_active_hvac_mode = None
@@ -223,7 +236,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             CONF_AVERAGE_OPTION: self._average_calc.__name__,
             CONF_ROUND_OPTION: self._round_option,
             CONF_EXPOSE_MEMBER_ENTITIES: self._expose_member_entities,
-            CONF_HVAC_MODE_OFF_PRIORITY: self._hvac_mode_off_priority,
+            CONF_HVAC_MODE_STRATEGY: self._hvac_mode_strategy,
         }
 
         # Determine assumed state and availability for the group
@@ -238,24 +251,38 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         # Check if there are any valid states
         if states:
+            # All available HVAC modes
+            available_hvac_modes = list(find_state_attributes(states, ATTR_HVAC_MODES))
+            self._attr_hvac_modes = list(set().union(*available_hvac_modes)) if available_hvac_modes else [HVACMode.OFF]
 
-            # Create a sorted list of unique HVAC modes from all members
-            member_hvac_modes = sorted(list(set(state.state for state in states)))
+            # A list of all HVAC modes that are currently set 
+            member_hvac_modes = sorted([state.state for state in states])
 
-            # Determine HVACMode
-            if self._hvac_mode_off_priority and HVACMode.OFF in member_hvac_modes:
-                self._attr_hvac_mode = HVACMode.OFF
-                _LOGGER.debug("HVAC mode set to OFF due to off_priority for: %s", self.entity_id)
-            else:
-                active_hvac_modes = [mode for mode in member_hvac_modes if mode != HVACMode.OFF]
-                if active_hvac_modes:
-                    self._attr_hvac_mode = max(set(active_hvac_modes), key=active_hvac_modes.count)
-                elif all(mode == HVACMode.OFF for mode in member_hvac_modes):
+            # A list of active HVAC modes that are currently set
+            active_hvac_modes = [mode for mode in member_hvac_modes if mode != HVACMode.OFF]
+
+            # Determine most common active HVAC mode
+            most_common_active_hvac_mode = max(active_hvac_modes, key=active_hvac_modes.count) if active_hvac_modes else None
+
+            # Determine the group's HVAC mode based on the strategy
+            strategy = self._hvac_mode_strategy
+            if strategy == HVAC_MODE_STRATEGY_AUTO:
+                if self._target_hvac_mode not in (None, HVACMode.OFF):
+                    strategy = HVAC_MODE_STRATEGY_OFF_PRIORITY
+                else:
+                    strategy = HVAC_MODE_STRATEGY_NORMAL
+
+            if strategy == HVAC_MODE_STRATEGY_NORMAL:
+                if all(mode == HVACMode.OFF for mode in member_hvac_modes) if member_hvac_modes else False:
                     self._attr_hvac_mode = HVACMode.OFF
                 else:
-                    # We can't determine the HVACMode, set to None
-                    self._attr_hvac_mode = None
-                    _LOGGER.debug("Can't determine HVACMode for: %s, States: %s", self.entity_id, states)
+                    self._attr_hvac_mode = most_common_active_hvac_mode
+
+            elif strategy == HVAC_MODE_STRATEGY_OFF_PRIORITY:
+                if HVACMode.OFF in member_hvac_modes:
+                    self._attr_hvac_mode = HVACMode.OFF
+                else:
+                    self._attr_hvac_mode = most_common_active_hvac_mode
 
             # Update last active hvac mode if it has changed and is not HVACMode.OFF
             if (self._attr_hvac_mode != HVACMode.OFF) and (self._attr_hvac_mode != self._last_active_hvac_mode):
@@ -316,10 +343,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             # Max humidity is the lowest of all ATTR_MAX_HUMIDITY values
             self._attr_max_humidity = reduce_attribute(states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
 
-            # Available HVAC modes
-            hvac_modes = list(find_state_attributes(states, ATTR_HVAC_MODES))
-            self._attr_hvac_modes = list(set().union(*hvac_modes)) if hvac_modes else [HVACMode.OFF]
-
             # HVAC action is the most common active action
             hvac_actions = list(find_state_attributes(states, ATTR_HVAC_ACTION))
             if hvac_actions:
@@ -327,7 +350,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 active_hvac_actions = [action for action in hvac_actions if action != HVACAction.OFF]
                 if active_hvac_actions:
                     # Set hvac_action to the most common active hvac action
-                    self._attr_hvac_action = max(set(active_hvac_actions), key=active_hvac_actions.count)
+                    self._attr_hvac_action = max(active_hvac_actions, key=active_hvac_actions.count)
                 # Set hvac_action to HVACAction.OFF if all actions are HVACAction.OFF
                 elif all(a == HVACAction.OFF for a in hvac_actions):
                     self._attr_hvac_action = HVACAction.OFF
@@ -407,7 +430,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=self._context
         )
 
-
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
 
@@ -416,7 +438,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_HUMIDITY, data, blocking=True, context=self._context
         )
-
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Forward the set_fan_mode to all climate in the climate group."""
@@ -427,20 +448,18 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data, blocking=True, context=self._context
         )
 
-
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
 
-        # Update target HVAC mode 
+        # Update target HVAC mode
         self._target_hvac_mode = hvac_mode
-        self.async_defer_or_update_ha_state()   # Update group state and write ha state
+        self.async_defer_or_update_ha_state()  # Update group state and write ha state
 
         data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_HVAC_MODE: hvac_mode}
         _LOGGER.debug("Setting hvac mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=self._context
         )
-
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Forward the set_swing_mode to all climate in the climate group."""
@@ -451,7 +470,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data, blocking=True, context=self._context,
         )
 
-
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""
 
@@ -461,7 +479,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             CLIMATE_DOMAIN, SERVICE_SET_SWING_HORIZONTAL_MODE, data, blocking=True, context=self._context,
         )
 
-
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Forward the set_preset_mode to all climate in the climate group."""
         data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_PRESET_MODE: preset_mode}
@@ -469,7 +486,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True, context=self._context,
         )
-
 
     async def async_turn_on(self) -> None:
         """Forward the turn_on command to all climate in the climate group."""
@@ -491,7 +507,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         else:
             _LOGGER.debug("Can't turn on: No hvac modes available")
 
-
     async def async_turn_off(self) -> None:
         """Forward the turn_off command to all climate in the climate group."""
 
@@ -503,7 +518,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         # HVACMode.OFF not supported
         else:
             _LOGGER.debug("Can't turn off: hvac mode 'off' not available")
-
 
     async def async_toggle(self) -> None:
         """Toggle the entity."""

@@ -9,16 +9,16 @@
           "entities": "气候实体",
           "average_option": "温度平均方法",
           "round_option": "温度四舍五入",
-          "expose_member_entities": "公开成员实体",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "公开成员实体"
         },
         "data_description": {
           "name": "为此气候组输入一个描述性名称（例如，‘客厅气候’或‘楼上供暖’）。",
           "entities": "选择要包含在此组中的气候设备。",
           "average_option": "选择计算组目标温度的方法。",
           "round_option": "选择温度值的四舍五入精度。",
-          "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。"
         }
       }
     },
@@ -43,15 +43,15 @@
           "entities": "气候实体",
           "average_option": "温度平均方法",
           "round_option": "温度四舍五入",
-          "expose_member_entities": "公开成员实体",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "公开成员实体"
         },
         "data_description": {
           "entities": "从此组中添加或删除气候实体。删除实体会将其从温度计算和控制命令中排除。",
           "average_option": "更改计算组成员目标温度的方法。",
           "round_option": "调整组的温度精度。",
-          "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。"
         }
       }
     },
@@ -78,6 +78,13 @@
         "none": "不四舍五入（精确值）",
         "half": "半度 (0.5°)",
         "integer": "整数 (1°)"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal (Most common mode)",
+        "off_priority": "Off Priority (Group is off if any member is off)",
+        "auto": "Auto (Smart strategy based on target mode)"
       }
     }
   },
@@ -145,15 +152,15 @@
   "issues": {
     "member_unavailable": {
       "title": "气候组成员不可用",
-      "description": "气候组“{group_name}”的一个或多个成员当前不可用。该组将继续与可用成员一起运行，但某些功能可能会受到限制。\n\n不可用的实体：{unavailable_entities}"
+      "description": "气候组‘{group_name}’的一个或多个成员当前不可用。该组将继续与可用成员一起运行，但某些功能可能会受到限制。\n\n不可用的实体：{unavailable_entities}"
     },
     "no_members_available": {
       "title": "气候组没有可用的成员",
-      "description": "气候组“{group_name}”没有可用的成员实体。该组将不可用，直到至少有一个成员实体变为可用。\n\n检查这些实体的状态：{member_entities}"
+      "description": "气候组‘{group_name}’没有可用的成员实体。该组将不可用，直到至少有一个成员实体变为可用。\n\n检查这些实体的状态：{member_entities}"
     },
     "conflicting_features": {
       "title": "气候组功能冲突",
-      "description": "气候组“{group_name}”包含具有不兼容功能的成员。某些功能可能仅限于所有组成员都支持的功能。\n\n冲突的实体：{conflicting_entities}"
+      "description": "气候组‘{group_name}’包含具有不兼容功能的成员。某些功能可能仅限于所有组成员都支持的功能。\n\n冲突的实体：{conflicting_entities}"
     }
   },
   "device_automation": {
@@ -162,19 +169,19 @@
       "temperature_target_changed": "目标温度已更改",
       "current_temperature_changed": "当前温度已更改",
       "group_turned_on": "组已打开",
-      "group_turned_off": "组已关闭"}
+      "group_turned_off": "组已关闭"
     },
     "condition_type": {
       "is_hvac_mode": "HVAC模式是",
       "is_temperature_above": "温度高于",
       "is_temperature_below": "温度低于",
-      "is_group_available": "组可用"}
+      "is_group_available": "组可用"
     },
     "action_type": {
       "set_hvac_mode": "设置HVAC模式",
       "set_temperature": "设置温度",
       "turn_on": "打开",
-      "turn_off": "关闭"}
+      "turn_off": "关闭"
     }
   }
 }

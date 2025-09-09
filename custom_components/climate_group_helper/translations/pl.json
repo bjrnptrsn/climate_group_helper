@@ -9,16 +9,16 @@
           "entities": "Encje klimatyzacji",
           "average_option": "Metoda uśredniania temperatury",
           "round_option": "Zaokrąglanie temperatury",
-          "expose_member_entities": "Udostępnij encje członkowskie",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "Udostępnij encje członkowskie"
         },
         "data_description": {
           "name": "Wprowadź opisową nazwę dla tej grupy klimatyzacji (np. 'Klimatyzacja w salonie' lub 'Ogrzewanie na piętrze').",
           "entities": "Wybierz urządzenia klimatyzacyjne do włączenia do tej grupy.",
           "average_option": "Wybierz metodę obliczania docelowej temperatury grupy.",
           "round_option": "Wybierz precyzję zaokrąglania wartości temperatury.",
-          "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu.",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu."
         }
       }
     },
@@ -43,15 +43,15 @@
           "entities": "Encje klimatyzacji",
           "average_option": "Metoda uśredniania temperatury",
           "round_option": "Zaokrąglanie temperatury",
-          "expose_member_entities": "Udostępnij encje członkowskie",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "Udostępnij encje członkowskie"
         },
         "data_description": {
           "entities": "Dodaj lub usuń encje klimatyzacji z tej grupy. Usunięcie encji wykluczy je z obliczeń temperatury i poleceń sterujących.",
           "average_option": "Zmień metodę obliczania temperatur docelowych dla członków grupy.",
           "round_option": "Dostosuj precyzję temperatury dla grupy.",
-          "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu.",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu."
         }
       }
     },
@@ -79,6 +79,13 @@
         "half": "Pół stopnia (0,5°)",
         "integer": "Liczby całkowite (1°)"
       }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal (Most common mode)",
+        "off_priority": "Off Priority (Group is off if any member is off)",
+        "auto": "Auto (Smart strategy based on target mode)"
+      }
     }
   },
   "entity": {
@@ -88,27 +95,27 @@
         "state_attributes": {
           "member_entities": {
             "name": "Encje członkowskie",
-            "description": "Lista encji klimatyzacji zawartych w tej grupie"}
+            "description": "Lista encji klimatyzacji zawartych w tej grupie"
           },
           "averaging_method": {
             "name": "Metoda uśredniania",
-            "description": "Metoda używana do obliczania temperatur docelowych"}
+            "description": "Metoda używana do obliczania temperatur docelowych"
           },
           "temperature_precision": {
             "name": "Precyzja temperatury",
-            "description": "Zaokrąglanie stosowane do wartości temperatury"}
+            "description": "Zaokrąglanie stosowane do wartości temperatury"
           },
           "last_active_mode": {
             "name": "Ostatni aktywny tryb",
-            "description": "Ostatni tryb HVAC inny niż wyłączony, używany przez grupę"}
+            "description": "Ostatni tryb HVAC inny niż wyłączony, używany przez grupę"
           },
           "member_count": {
             "name": "Liczba członków",
-            "description": "Liczba encji w tej grupie klimatyzacji"}
+            "description": "Liczba encji w tej grupie klimatyzacji"
           },
           "active_members": {
             "name": "Aktywni członkowie",
-            "description": "Liczba aktualnie dostępnych członków grupy"}
+            "description": "Liczba aktualnie dostępnych członków grupy"
           }
         }
       }
@@ -145,15 +152,15 @@
   "issues": {
     "member_unavailable": {
       "title": "Członek grupy klimatyzacji niedostępny",
-      "description": "Jeden lub więcej członków grupy klimatyzacji '{group_name}' jest obecnie niedostępnych. Grupa będzie nadal działać z dostępnymi członkami, ale niektóre funkcje mogą być ograniczone.\n\nNiedostępne encje: {unavailable_entities}"}
+      "description": "Jeden lub więcej członków grupy klimatyzacji '{group_name}' jest obecnie niedostępnych. Grupa będzie nadal działać z dostępnymi członkami, ale niektóre funkcje mogą być ograniczone.\n\nNiedostępne encje: {unavailable_entities}"
     },
     "no_members_available": {
       "title": "Grupa klimatyzacji nie ma dostępnych członków",
-      "description": "Grupa klimatyzacji '{group_name}' nie ma dostępnych encji członkowskich. Grupa będzie niedostępna, dopóki co najmniej jedna encja członkowska nie stanie się dostępna.\n\nSprawdź stan tych encji: {member_entities}"}
+      "description": "Grupa klimatyzacji '{group_name}' nie ma dostępnych encji członkowskich. Grupa będzie niedostępna, dopóki co najmniej jedna encja członkowska nie stanie się dostępna.\n\nSprawdź stan tych encji: {member_entities}"
     },
     "conflicting_features": {
       "title": "Konflikty funkcji grupy klimatyzacji",
-      "description": "Grupa klimatyzacji '{group_name}' zawiera członków z niekompatybilnymi funkcjami. Niektóre funkcje mogą być ograniczone do funkcji obsługiwanych przez wszystkich członków grupy.\n\nKonfliktujące encje: {conflicting_entities}"}
+      "description": "Grupa klimatyzacji '{group_name}' zawiera członków z niekompatybilnymi funkcjami. Niektóre funkcje mogą być ograniczone do funkcji obsługiwanych przez wszystkich członków grupy.\n\nKonfliktujące encje: {conflicting_entities}"
     }
   },
   "device_automation": {
@@ -162,19 +169,19 @@
       "temperature_target_changed": "Zmieniono docelową temperaturę",
       "current_temperature_changed": "Zmieniono bieżącą temperaturę",
       "group_turned_on": "Grupa włączona",
-      "group_turned_off": "Grupa wyłączona"}
+      "group_turned_off": "Grupa wyłączona"
     },
     "condition_type": {
       "is_hvac_mode": "Tryb HVAC to",
       "is_temperature_above": "Temperatura jest powyżej",
       "is_temperature_below": "Temperatura jest poniżej",
-      "is_group_available": "Grupa jest dostępna"}
+      "is_group_available": "Grupa jest dostępna"
     },
     "action_type": {
       "set_hvac_mode": "Ustaw tryb HVAC",
       "set_temperature": "Ustaw temperaturę",
       "turn_on": "Włącz",
-      "turn_off": "Wyłącz"}
+      "turn_off": "Wyłącz"
     }
   }
 }

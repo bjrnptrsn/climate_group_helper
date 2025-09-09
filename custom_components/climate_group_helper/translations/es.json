@@ -9,16 +9,16 @@
           "entities": "Entidades de climatización",
           "average_option": "Método de promediado de temperatura",
           "round_option": "Redondeo de temperatura",
-          "expose_member_entities": "Exponer entidades miembro",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "Exponer entidades miembro"
         },
         "data_description": {
           "name": "Ingrese un nombre descriptivo para este grupo de climatización (por ejemplo, 'Clima de la sala de estar' o 'Calefacción de arriba').",
           "entities": "Seleccione los dispositivos de climatización que se incluirán en este grupo.",
           "average_option": "Elija el método para calcular la temperatura objetivo del grupo.",
           "round_option": "Seleccione la precisión de redondeo para los valores de temperatura.",
-          "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado.",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado."
         }
       }
     },
@@ -43,15 +43,15 @@
           "entities": "Entidades de climatización",
           "average_option": "Método de promediado de temperatura",
           "round_option": "Redondeo de temperatura",
-          "expose_member_entities": "Exponer entidades miembro",
-          "hvac_mode_off_priority": "Prioritize 'Off' HVAC Mode"
+          "hvac_mode_strategy": "HVAC Mode Strategy",
+          "expose_member_entities": "Exponer entidades miembro"
         },
         "data_description": {
           "entities": "Agregue or elimine entidades de climatización de este grupo. La eliminación de entidades las excluirá de los cálculos de temperatura y los comandos de control.",
           "average_option": "Cambie el método para calcular las temperaturas objetivo entre los miembros del grupo.",
           "round_option": "Ajuste la precisión de la temperatura para el grupo.",
-          "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado.",
-          "hvac_mode_off_priority": "If enabled, the group's HVAC mode will be 'off' if any member climate entity is 'off'. Otherwise, the group's HVAC mode will be determined by the common mode of active members."
+          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado."
         }
       }
     },
@@ -78,6 +78,13 @@
         "none": "Sin redondeo (valores exactos)",
         "half": "Medio grado (0,5°)",
         "integer": "Números enteros (1°)"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal (Most common mode)",
+        "off_priority": "Off Priority (Group is off if any member is off)",
+        "auto": "Auto (Smart strategy based on target mode)"
       }
     }
   },
