@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.1 - 2025-09-12
+
+### Fixes
+
+*   Correctly determine climate group sync status.
+
+### Changes
+
+*   Renamed the `current_member_hvac_modes` attribute to `current_hvac_modes` for consistency.
+
 ## 0.5.0 - 2025-09-09
 
 ### Features
