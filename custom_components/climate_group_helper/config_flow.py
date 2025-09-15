@@ -17,12 +17,15 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_AVERAGE_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
+    CONF_FEATURE_STRATEGY,
     CONF_HVAC_MODE_STRATEGY,
     CONF_ROUND_OPTION,
     CONF_TEMP_SENSOR,
     CONF_USE_TEMP_SENSOR,
     DEFAULT_NAME,
     DOMAIN,
+    FEATURE_STRATEGY_INTERSECTION,
+    FEATURE_STRATEGY_UNION,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
@@ -107,6 +110,18 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         ],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="hvac_mode_strategy",
+                    )
+                ),
+                vol.Required(
+                    CONF_FEATURE_STRATEGY, default=FEATURE_STRATEGY_INTERSECTION
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            FEATURE_STRATEGY_INTERSECTION,
+                            FEATURE_STRATEGY_UNION,
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="feature_strategy",
                     )
                 ),
                 vol.Optional(CONF_TEMP_SENSOR): selector.EntitySelector(
@@ -267,6 +282,21 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         ],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="hvac_mode_strategy",
+                    )
+                ),
+                vol.Required(
+                    CONF_FEATURE_STRATEGY,
+                    default=current_config.get(
+                        CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION
+                    ),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            FEATURE_STRATEGY_INTERSECTION,
+                            FEATURE_STRATEGY_UNION,
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="feature_strategy",
                     )
                 ),
                 **TEMP_SENSOR_SCHEMA,

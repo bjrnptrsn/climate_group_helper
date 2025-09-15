@@ -10,6 +10,7 @@
           "average_option": "Temperature Averaging Method",
           "round_option": "Temperature Rounding",
           "hvac_mode_strategy": "HVAC Mode Strategy",
+          "feature_strategy": "Feature Strategy",
           "temp_sensor": "External Temperature Sensor",
           "expose_member_entities": "Expose Member Entities"
         },
@@ -19,6 +20,7 @@
           "average_option": "Choose the method for calculating the group's target temperature.",
           "round_option": "Select the rounding precision for temperature values.",
           "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "feature_strategy": "Choose how the group handles features (e.g., fan mode, swing mode) from its members.",
           "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
           "expose_member_entities": "Enable this to expose the list of member entities as a state attribute."
         }
@@ -46,6 +48,7 @@
           "average_option": "Temperature Averaging Method",
           "round_option": "Temperature Rounding",
           "hvac_mode_strategy": "HVAC Mode Strategy",
+          "feature_strategy": "Feature Strategy",
           "use_temp_sensor": "Use external temperature sensor",
           "temp_sensor": "External Temperature Sensor",
           "expose_member_entities": "Expose Member Entities"
@@ -55,6 +58,7 @@
           "average_option": "Change the method for calculating target temperatures across group members.",
           "round_option": "Adjust the temperature precision for the group.",
           "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "feature_strategy": "Choose how the group handles features (e.g., fan mode, swing mode) from its members.",
           "use_temp_sensor": "Enable or disable the use of an external temperature sensor for the group. If disabled, the group will use the averaged temperature of its members.",
           "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
           "expose_member_entities": "Enable this to expose the list of member entities as a state attribute."
@@ -91,6 +95,12 @@
         "normal": "Normal (Most common mode)",
         "off_priority": "Off Priority (Group is off if any member is off)",
         "auto": "Auto (Smart strategy based on target mode)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Intersection (Features common to all members)",
+        "union": "Union (All features from any member)"
       }
     }
   },

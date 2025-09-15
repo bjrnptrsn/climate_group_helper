@@ -26,11 +26,16 @@ CONF_USE_TEMP_SENSOR = "use_temp_sensor"
 CONF_TEMP_SENSOR = "temp_sensor"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
+CONF_FEATURE_STRATEGY = "feature_strategy"
 
 # HVAC mode strategies
 HVAC_MODE_STRATEGY_NORMAL = "normal"
 HVAC_MODE_STRATEGY_OFF_PRIORITY = "off_priority"
 HVAC_MODE_STRATEGY_AUTO = "auto"
+
+# Feature strategies
+FEATURE_STRATEGY_INTERSECTION = "intersection"
+FEATURE_STRATEGY_UNION = "union"
 
 # Attribute keys
 ATTR_ASSUMED_STATE = "assumed_state"

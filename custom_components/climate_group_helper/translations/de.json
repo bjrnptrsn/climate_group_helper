@@ -9,8 +9,9 @@
           "entities": "Klimageräte",
           "average_option": "Temperatur-Mittelwertmethode",
           "round_option": "Temperaturrundung",
-          "temp_sensor": "Externer Temperatursensor",
           "hvac_mode_strategy": "HLK-Modus-Strategie",
+          "feature_strategy": "Funktions-Strategie",
+          "temp_sensor": "Externer Temperatursensor",
           "expose_member_entities": "Mitgliedsentitäten anzeigen"
         },
         "data_description": {
@@ -19,6 +20,7 @@
           "average_option": "Wählen Sie die Methode zur Berechnung der Ziel-Temperatur der Gruppe.",
           "round_option": "Wählen Sie die Rundungsgenauigkeit für Temperaturwerte.",
           "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
+          "feature_strategy": "Wähle aus, wie die Gruppe mit den Funktionen (z.B. Lüftermodus, Schwenkmodus) ihrer Mitglieder umgeht.",
           "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
           "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
         }
@@ -46,6 +48,7 @@
           "average_option": "Temperatur-Mittelwertmethode",
           "round_option": "Temperaturrundung",
           "hvac_mode_strategy": "HLK-Modus-Strategie",
+          "feature_strategy": "Funktions-Strategie",
           "use_temp_sensor": "Externen Temperatursensor verwenden",
           "temp_sensor": "Externer Temperatursensor",
           "expose_member_entities": "Mitgliedsentitäten anzeigen"
@@ -55,6 +58,7 @@
           "average_option": "Ändern Sie die Methode zur Berechnung der Zieltemperaturen für alle Gruppenmitglieder.",
           "round_option": "Passen Sie die Temperaturgenauigkeit für die Gruppe an.",
           "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
+          "feature_strategy": "Wähle aus, wie die Gruppe mit den Funktionen (z.B. Lüftermodus, Schwenkmodus) ihrer Mitglieder umgeht.",
           "use_temp_sensor": "Aktivieren oder deaktivieren Sie die Verwendung eines externen Temperatursensors für die Gruppe. Wenn deaktiviert, verwendet die Gruppe die gemittelte Temperatur ihrer Mitglieder.",
           "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
           "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
@@ -91,6 +95,12 @@
         "normal": "Normal (Häufigster Modus)",
         "off_priority": "Aus-Priorität (Gruppe ist aus, wenn ein Mitglied aus ist)",
         "auto": "Auto (Intelligente Strategie basierend auf dem Zielmodus)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Schnittmenge (Nur gemeinsame Funktionen aller Mitglieder)",
+        "union": "Vereinigung (Alle Funktionen von jedem Mitglied)"
       }
     }
   },
