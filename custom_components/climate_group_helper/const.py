@@ -22,6 +22,7 @@ class RoundOption:
 # Configuration keys
 CONF_AVERAGE_OPTION = "average_option"
 CONF_ROUND_OPTION = "round_option"
+CONF_TEMP_SENSOR = "temp_sensor"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
 

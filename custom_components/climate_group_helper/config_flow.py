@@ -8,6 +8,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import CONF_ENTITIES, CONF_NAME
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
@@ -18,6 +19,7 @@ from .const import (
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_HVAC_MODE_STRATEGY,
     CONF_ROUND_OPTION,
+    CONF_TEMP_SENSOR,
     DEFAULT_NAME,
     DOMAIN,
     HVAC_MODE_STRATEGY_AUTO,
@@ -92,6 +94,12 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         ],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="round_option",
+                    )
+                ),
+                vol.Optional(CONF_TEMP_SENSOR): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=SENSOR_DOMAIN,
+                        multiple=False,
                     )
                 ),
                 vol.Required(
@@ -212,6 +220,15 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         ],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="round_option",
+                    )
+                ),
+                vol.Optional(
+                    CONF_TEMP_SENSOR,
+                    default=current_config.get(CONF_TEMP_SENSOR, ""),
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=SENSOR_DOMAIN,
+                        multiple=False,
                     )
                 ),
                 vol.Required(

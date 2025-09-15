@@ -10,13 +10,15 @@
           "average_option": "Temperature Averaging Method",
           "round_option": "Temperature Rounding",
           "hvac_mode_strategy": "HVAC Mode Strategy",
-          "expose_member_entities": "Expose Member Entities"
+          "expose_member_entities": "Expose Member Entities",
+          "temp_sensor": "External Temperature Sensor"
         },
         "data_description": {
           "name": "Enter a descriptive name for this climate group (e.g., 'Living Room Climate' or 'Upstairs Heating').",
           "entities": "Select the climate devices to include in this group.",
           "average_option": "Choose the method for calculating the group's target temperature.",
           "round_option": "Select the rounding precision for temperature values.",
+          "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
           "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
           "expose_member_entities": "Enable this to expose the list of member entities as a state attribute."
         }
@@ -44,12 +46,14 @@
           "average_option": "Temperature Averaging Method",
           "round_option": "Temperature Rounding",
           "hvac_mode_strategy": "HVAC Mode Strategy",
-          "expose_member_entities": "Expose Member Entities"
+          "expose_member_entities": "Expose Member Entities",
+          "temp_sensor": "External Temperature Sensor"
         },
         "data_description": {
           "entities": "Add or remove climate entities from this group. Removing entities will exclude them from temperature calculations and control commands.",
           "average_option": "Change the method for calculating target temperatures across group members.",
           "round_option": "Adjust the temperature precision for the group.",
+          "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
           "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
           "expose_member_entities": "Enable this to expose the list of member entities as a state attribute."
         }

@@ -76,6 +76,7 @@ from .const import (
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_HVAC_MODE_STRATEGY,
     CONF_ROUND_OPTION,
+    CONF_TEMP_SENSOR,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
@@ -109,7 +110,6 @@ SUPPORT_FLAGS = (
 )
 
 DEFAULT_SUPPORTED_FEATURES = ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
-
 
 def mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
     """Round the decimal part of a float to an fractional value with a certain precision."""
@@ -153,6 +153,7 @@ async def async_setup_entry(
                 entity_ids=entities,
                 average_option=config.get(CONF_AVERAGE_OPTION, AverageOption.MEAN),
                 round_option=config.get(CONF_ROUND_OPTION, RoundOption.NONE),
+                temp_sensor=config.get(CONF_TEMP_SENSOR),
                 expose_member_entities=config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
                 hvac_mode_strategy=hvac_mode_strategy,
             )
@@ -170,6 +171,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         entity_ids: list[str],
         average_option: str,
         round_option: str,
+        temp_sensor: str | None,
         expose_member_entities: bool,
         hvac_mode_strategy: str,
     ) -> None:
@@ -180,6 +182,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._entity_ids = entity_ids
         self._average_calc = CALC_TYPES[average_option]
         self._round_option = round_option
+        self._temp_sensor_entity_id = temp_sensor
         self._expose_member_entities = expose_member_entities
         self._hvac_mode_strategy = hvac_mode_strategy
 
@@ -195,6 +198,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._attr_extra_state_attributes = {}
 
         self._attr_current_temperature = None
+        self._attr_averaged_current_temperature = None
         self._attr_target_temperature = None
         self._attr_target_temperature_step = None
         self._attr_target_temperature_low = None
@@ -231,8 +235,10 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._attr_extra_state_attributes = {
             CONF_AVERAGE_OPTION: self._average_calc.__name__,
             CONF_ROUND_OPTION: self._round_option,
+            CONF_TEMP_SENSOR: self._temp_sensor_entity_id,
             CONF_EXPOSE_MEMBER_ENTITIES: self._expose_member_entities,
             CONF_HVAC_MODE_STRATEGY: self._hvac_mode_strategy,
+            "averaged_current_temperature": self._attr_averaged_current_temperature,
         }
 
         # Determine assumed state and availability for the group
@@ -293,8 +299,29 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             # Get temperature unit from system settings
             self._attr_temperature_unit = self.hass.config.units.temperature_unit
 
-            # Current temperature is the average of all ATTR_CURRENT_TEMPERATURE values
-            self._attr_current_temperature = reduce_attribute(states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: mean(data))
+            # Averaged current temperature of all members
+            self._attr_averaged_current_temperature = reduce_attribute(states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: mean(data))
+
+            # Get current temperature from sensor or fallback to averaged temperature
+            if self._temp_sensor_entity_id:
+                sensor_state = self.hass.states.get(self._temp_sensor_entity_id)
+                if sensor_state and sensor_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                    try:
+                        self._attr_current_temperature = float(sensor_state.state)
+                    except (ValueError, TypeError):
+                        _LOGGER.warning(
+                            "Could not retrieve temperature from sensor %s, falling back to averaged temperature",
+                            self._temp_sensor_entity_id
+                        )
+                        self._attr_current_temperature = self._attr_averaged_current_temperature
+                else:
+                    _LOGGER.warning(
+                        "Sensor %s is unavailable, falling back to averaged temperature",
+                        self._temp_sensor_entity_id
+                    )
+                    self._attr_current_temperature = self._attr_averaged_current_temperature
+            else:
+                self._attr_current_temperature = self._attr_averaged_current_temperature
 
             # Target temperature is calculated using the 'average_option' method from all ATTR_TEMPERATURE values.
             self._attr_target_temperature = reduce_attribute(states, ATTR_TEMPERATURE, reduce=lambda *data: self._average_calc(data))
