@@ -9,15 +9,17 @@
           "entities": "Entidades de Climatização",
           "average_option": "Método de Média de Temperatura",
           "round_option": "Arredondamento de Temperatura",
-          "hvac_mode_strategy": "HVAC Mode Strategy",
-          "expose_member_entities": "Expor Entidades Membro"
+          "hvac_mode_strategy": "Estratégia de modo HVAC",
+          "expose_member_entities": "Expor Entidades Membro",
+          "temp_sensor": "Sensor de temperatura externo"
         },
         "data_description": {
           "name": "Introduza um nome descritivo para este grupo de climatização (por exemplo, 'Climatização da Sala' ou 'Aquecimento do Andar de Cima').",
           "entities": "Selecione os dispositivos de climatização a incluir neste grupo.",
           "average_option": "Escolha o método para calcular a temperatura alvo do grupo.",
           "round_option": "Selecione a precisão de arredondamento para os valores de temperatura.",
-          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "temp_sensor": "Selecione um sensor externo opcional para substituir a temperatura atual do grupo.",
+          "hvac_mode_strategy": "Escolha a estratégia para determinar o modo HVAC do grupo.",
           "expose_member_entities": "Ative esta opção para expor a lista de entidades membro como um atributo de estado."
         }
       }
@@ -43,14 +45,16 @@
           "entities": "Entidades de Climatização",
           "average_option": "Método de Média de Temperatura",
           "round_option": "Arredondamento de Temperatura",
-          "hvac_mode_strategy": "HVAC Mode Strategy",
-          "expose_member_entities": "Expor Entidades Membro"
+          "hvac_mode_strategy": "Estratégia de modo HVAC",
+          "expose_member_entities": "Expor Entidades Membro",
+          "temp_sensor": "Sensor de temperatura externo"
         },
         "data_description": {
           "entities": "Adicione ou remova entidades de climatização deste grupo. A remoção de entidades irá excluí-las dos cálculos de temperatura e dos comandos de controlo.",
           "average_option": "Altere o método de cálculo das temperaturas alvo entre os membros do grupo.",
           "round_option": "Ajuste a precisão da temperatura para o grupo.",
-          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "temp_sensor": "Selecione um sensor externo opcional para substituir a temperatura atual do grupo.",
+          "hvac_mode_strategy": "Escolha a estratégia para determinar o modo HVAC do grupo.",
           "expose_member_entities": "Ative esta opção para expor a lista de entidades membro como um atributo de estado."
         }
       }
@@ -82,9 +86,9 @@
     },
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normal (Most common mode)",
-        "off_priority": "Off Priority (Group is off if any member is off)",
-        "auto": "Auto (Smart strategy based on target mode)"
+        "normal": "Normal (Modo mais comum)",
+        "off_priority": "Prioridade de desligamento (O grupo está desligado se algum membro estiver desligado)",
+        "auto": "Automático (Estratégia inteligente baseada no modo alvo)"
       }
     }
   },

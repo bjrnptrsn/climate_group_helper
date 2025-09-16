@@ -9,15 +9,17 @@
           "entities": "Klimaanlæg",
           "average_option": "Metode til temperaturgennemsnit",
           "round_option": "Temperaturafrunding",
-          "hvac_mode_strategy": "HVAC Mode Strategy",
-          "expose_member_entities": "Vis medlemsenheder"
+          "hvac_mode_strategy": "HVAC-tilstandsstrategi",
+          "expose_member_entities": "Vis medlemsenheder",
+          "temp_sensor": "Ekstern temperatursensor"
         },
         "data_description": {
           "name": "Indtast et beskrivende navn for denne klimagruppe (f.eks. 'Stueklima' eller 'Opvarmning ovenpå').",
           "entities": "Vælg de klimaanlæg, der skal inkluderes i denne gruppe.",
           "average_option": "Vælg metoden til beregning af gruppens måltemperatur.",
           "round_option": "Vælg afrundingspræcisionen for temperaturværdier.",
-          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "temp_sensor": "Vælg en valgfri ekstern sensor for at tilsidesætte gruppens aktuelle temperatur.",
+          "hvac_mode_strategy": "Vælg strategien for at bestemme gruppens HVAC-tilstand.",
           "expose_member_entities": "Aktiver denne mulighed for at vise listen over medlemsenheder som en statusattribut."
         }
       }
@@ -43,14 +45,16 @@
           "entities": "Klimaanlæg",
           "average_option": "Metode til temperaturgennemsnit",
           "round_option": "Temperaturafrunding",
-          "hvac_mode_strategy": "HVAC Mode Strategy",
-          "expose_member_entities": "Vis medlemsenheder"
+          "hvac_mode_strategy": "HVAC-tilstandsstrategi",
+          "expose_member_entities": "Vis medlemsenheder",
+          "temp_sensor": "Ekstern temperatursensor"
         },
         "data_description": {
           "entities": "Tilføj eller fjern klimaanlæg fra denne gruppe. Fjernelse af enheder vil udelukke dem fra temperaturberegninger og kontrolkommandoer.",
           "average_option": "Skift metoden til beregning af måltemperaturer på tværs af gruppemedlemmer.",
           "round_option": "Juster temperaturpræcisionen for gruppen.",
-          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "temp_sensor": "Vælg en valgfri ekstern sensor for at tilsidesætte gruppens aktuelle temperatur.",
+          "hvac_mode_strategy": "Vælg strategien for at bestemme gruppens HVAC-tilstand.",
           "expose_member_entities": "Aktiver denne mulighed for at vise listen over medlemsenheder som en statusattribut."
         }
       }
@@ -82,9 +86,9 @@
     },
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normal (Most common mode)",
-        "off_priority": "Off Priority (Group is off if any member is off)",
-        "auto": "Auto (Smart strategy based on target mode)"
+        "normal": "Normal (Mest almindelige tilstand)",
+        "off_priority": "Fra-prioritet (Gruppen er slukket, hvis et medlem er slukket)",
+        "auto": "Auto (Smart strategi baseret på måltilstand)"
       }
     }
   },

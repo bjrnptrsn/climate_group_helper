@@ -9,15 +9,17 @@
           "entities": "Кліматичні пристрої",
           "average_option": "Метод усереднення температури",
           "round_option": "Округлення температури",
-          "hvac_mode_strategy": "HVAC Mode Strategy",
-          "expose_member_entities": "Показати пристрої-члени"
+          "hvac_mode_strategy": "Стратегія режиму HVAC",
+          "expose_member_entities": "Показати пристрої-члени",
+          "temp_sensor": "Зовнішній датчик температури"
         },
         "data_description": {
           "name": "Введіть описову назву для цієї кліматичної групи (наприклад, 'Клімат у вітальні' або 'Опалення нагорі').",
           "entities": "Виберіть кліматичні пристрої, які потрібно включити до цієї групи.",
           "average_option": "Виберіть метод розрахунку цільової температури групи.",
           "round_option": "Виберіть точність округлення значень температури.",
-          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "temp_sensor": "Виберіть додатковий зовнішній датчик, щоб перевизначити поточну температуру групи.",
+          "hvac_mode_strategy": "Виберіть стратегію для визначення режиму HVAC групи.",
           "expose_member_entities": "Увімкніть цю опцію, щоб відобразити список пристроїв-членів як атрибут стану."
         }
       }
@@ -43,14 +45,16 @@
           "entities": "Кліматичні пристрої",
           "average_option": "Метод усереднення температури",
           "round_option": "Округлення температури",
-          "hvac_mode_strategy": "HVAC Mode Strategy",
-          "expose_member_entities": "Показати пристрої-члени"
+          "hvac_mode_strategy": "Стратегія режиму HVAC",
+          "expose_member_entities": "Показати пристрої-члени",
+          "temp_sensor": "Зовнішній датчик температури"
         },
         "data_description": {
           "entities": "Додайте або видаліть кліматичні пристрої з цієї групи. Видалення пристроїв виключить їх з розрахунків температури та команд керування.",
           "average_option": "Змініть метод розрахунку цільових температур для членів групи.",
           "round_option": "Налаштуйте точність температури для групи.",
-          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
+          "temp_sensor": "Виберіть додатковий зовнішній датчик, щоб перевизначити поточну температуру групи.",
+          "hvac_mode_strategy": "Виберіть стратегію для визначення режиму HVAC групи.",
           "expose_member_entities": "Увімкніть цю опцію, щоб відобразити список пристроїв-членів як атрибут стану."
         }
       }
@@ -82,9 +86,9 @@
     },
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normal (Most common mode)",
-        "off_priority": "Off Priority (Group is off if any member is off)",
-        "auto": "Auto (Smart strategy based on target mode)"
+        "normal": "Нормальний (Найпоширеніший режим)",
+        "off_priority": "Пріоритет вимкнення (Група вимкнена, якщо будь-який член вимкнений)",
+        "auto": "Авто (Розумна стратегія на основі цільового режиму)"
       }
     }
   },
@@ -181,6 +185,10 @@
       "set_hvac_mode": "Встановити режим HVAC",
       "set_temperature": "Встановити температуру",
       "turn_on": "Увімкнути",
+      "turn_off": "Вимкнути"
+    }
+  }
+}ути",
       "turn_off": "Вимкнути"
     }
   }
