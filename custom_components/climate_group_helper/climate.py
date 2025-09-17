@@ -179,12 +179,17 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         self._attr_unique_id = unique_id
         self._attr_name = name
-        self._entity_ids = entity_ids
+        self._climate_entity_ids = entity_ids
         self._average_calc = CALC_TYPES[average_option]
         self._round_option = round_option
         self._temp_sensor_entity_id = temp_sensor
         self._expose_member_entities = expose_member_entities
         self._hvac_mode_strategy = hvac_mode_strategy
+
+        # The list of entities to be tracked by GroupEntity
+        self._entity_ids = entity_ids.copy()
+        if temp_sensor:
+            self._entity_ids.append(temp_sensor)
 
         self._target_hvac_mode = None
         self._last_active_hvac_mode = None
@@ -238,13 +243,12 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             CONF_TEMP_SENSOR: self._temp_sensor_entity_id,
             CONF_EXPOSE_MEMBER_ENTITIES: self._expose_member_entities,
             CONF_HVAC_MODE_STRATEGY: self._hvac_mode_strategy,
-            "averaged_current_temperature": self._attr_averaged_current_temperature,
         }
 
         # Determine assumed state and availability for the group
         all_states = [
             state
-            for entity_id in self._entity_ids
+            for entity_id in self._climate_entity_ids
             if (state := self.hass.states.get(entity_id)) is not None
         ]
 
@@ -303,25 +307,16 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_averaged_current_temperature = reduce_attribute(states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: mean(data))
 
             # Get current temperature from sensor or fallback to averaged temperature
+            self._attr_current_temperature = self._attr_averaged_current_temperature
             if self._temp_sensor_entity_id:
                 sensor_state = self.hass.states.get(self._temp_sensor_entity_id)
                 if sensor_state and sensor_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                     try:
                         self._attr_current_temperature = float(sensor_state.state)
                     except (ValueError, TypeError):
-                        _LOGGER.warning(
-                            "Could not retrieve temperature from sensor %s, falling back to averaged temperature",
-                            self._temp_sensor_entity_id
-                        )
-                        self._attr_current_temperature = self._attr_averaged_current_temperature
+                        _LOGGER.warning("Could not retrieve temperature from sensor %s, falling back to averaged temperature", self._temp_sensor_entity_id)
                 else:
-                    _LOGGER.warning(
-                        "Sensor %s is unavailable, falling back to averaged temperature",
-                        self._temp_sensor_entity_id
-                    )
-                    self._attr_current_temperature = self._attr_averaged_current_temperature
-            else:
-                self._attr_current_temperature = self._attr_averaged_current_temperature
+                    _LOGGER.warning("Sensor %s is unavailable, falling back to averaged temperature", self._temp_sensor_entity_id)
 
             # Target temperature is calculated using the 'average_option' method from all ATTR_TEMPERATURE values.
             self._attr_target_temperature = reduce_attribute(states, ATTR_TEMPERATURE, reduce=lambda *data: self._average_calc(data))
@@ -416,15 +411,12 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_extra_state_attributes[ATTR_TARGET_HVAC_MODE] = self._target_hvac_mode
             self._attr_extra_state_attributes[ATTR_CURRENT_HVAC_MODES] = current_hvac_modes
             # Check if all members are in sync with the target HVAC mode
-            if self._target_hvac_mode is not None:
-                self._attr_extra_state_attributes[ATTR_GROUP_IN_SYNC] = (
-                    len(set(current_hvac_modes)) == 1 and current_hvac_modes[0] == self._target_hvac_mode
-                )
-            else:
-                self._attr_extra_state_attributes[ATTR_GROUP_IN_SYNC] = False
+            self._attr_extra_state_attributes[ATTR_GROUP_IN_SYNC] = (
+                len(set(current_hvac_modes)) == 1 and current_hvac_modes[0] == self._target_hvac_mode
+            )
             # Expose member entities if configured
             if self._expose_member_entities:
-                self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self._entity_ids
+                self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self._climate_entity_ids
 
         # No states available
         else:
@@ -434,7 +426,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Forward the set_temperature command to all climate in the climate group."""
 
-        data = {ATTR_ENTITY_ID: self._entity_ids}
+        data = {ATTR_ENTITY_ID: self._climate_entity_ids}
 
         if ATTR_HVAC_MODE in kwargs:
             await self.async_set_hvac_mode(kwargs[ATTR_HVAC_MODE])
@@ -455,7 +447,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
 
-        data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_HUMIDITY: humidity}
+        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_HUMIDITY: humidity}
         _LOGGER.debug("Setting humidity: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_HUMIDITY, data, blocking=True, context=self._context
@@ -464,7 +456,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Forward the set_fan_mode to all climate in the climate group."""
 
-        data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_FAN_MODE: fan_mode}
+        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_FAN_MODE: fan_mode}
         _LOGGER.debug("Setting fan mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data, blocking=True, context=self._context
@@ -477,7 +469,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._target_hvac_mode = hvac_mode
         self.async_defer_or_update_ha_state()  # Update group state and write ha state
 
-        data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_HVAC_MODE: hvac_mode}
+        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_HVAC_MODE: hvac_mode}
         _LOGGER.debug("Setting HVAC mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=self._context
@@ -486,7 +478,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Forward the set_swing_mode to all climate in the climate group."""
 
-        data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_SWING_MODE: swing_mode}
+        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_SWING_MODE: swing_mode}
         _LOGGER.debug("Setting swing mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data, blocking=True, context=self._context,
@@ -495,7 +487,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""
 
-        data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_SWING_HORIZONTAL_MODE: swing_horizontal_mode}
+        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_SWING_HORIZONTAL_MODE: swing_horizontal_mode}
         _LOGGER.debug("Setting horizontal swing mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_SWING_HORIZONTAL_MODE, data, blocking=True, context=self._context,
@@ -503,7 +495,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Forward the set_preset_mode to all climate in the climate group."""
-        data = {ATTR_ENTITY_ID: self._entity_ids, ATTR_PRESET_MODE: preset_mode}
+        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_PRESET_MODE: preset_mode}
         _LOGGER.debug("Setting preset mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True, context=self._context,
