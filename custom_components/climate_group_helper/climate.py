@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from functools import reduce
 from statistics import mean, median
 from typing import Any
 
@@ -243,7 +244,8 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._attr_swing_horizontal_modes = None
         self._attr_swing_horizontal_mode = None
 
-    def _get_supporting_entities(self, attribute_key: str, value_to_check: Any) -> list[str]:
+
+    def _get_supporting_entities(self, attribute_key: str, check_value: Any) -> list[str]:
         """Get entity ids that match a specific check for a given attribute."""
         supporting_entities = []
         for entity_id in self._entity_ids:
@@ -251,18 +253,79 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             if state is None:
                 continue
 
+            # Get the attribute value
             attribute_value = state.attributes.get(attribute_key)
             if attribute_value is None:
                 continue
 
-            if isinstance(value_to_check, ClimateEntityFeature):
-                if attribute_value & value_to_check:
+            # Feature: check if the flag is set
+            if isinstance(check_value, ClimateEntityFeature):
+                if attribute_value & check_value:
                     supporting_entities.append(entity_id)
-            elif isinstance(value_to_check, HVACMode):
-                if value_to_check in attribute_value:
+
+            # HVAC mode: check if the mode is in the list of modes
+            elif isinstance(check_value, HVACMode):
+                if check_value in attribute_value:
                     supporting_entities.append(entity_id)
 
         return supporting_entities
+
+
+    def _reduce_attributes(self, attributes: list[Any]) -> list[str] | int:
+        """Reduce a list of attributes (modes or features) based on the feature strategy."""
+        if not attributes:
+            return []
+
+        # It's a list of features [ClimateEntityFeature | int]
+        if isinstance(attributes[0], (ClimateEntityFeature, int)):
+            # Intersection
+            if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
+                return reduce(lambda x, y: x & y, attributes)
+            # Union
+            return reduce(lambda x, y: x | y, attributes)
+
+
+        # It's a list of modes [HVACMode | str]
+        else:
+            # Filter out empty attributes or None
+            valid_attributes = [attr for attr in attributes if attr]
+            if not valid_attributes:
+                return []
+
+            # Intersection
+            if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
+                return list(reduce(lambda x, y: set(x) & set(y), valid_attributes))
+            # Union
+            return list(reduce(lambda x, y: set(x) | set(y), valid_attributes))
+
+
+    def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | None:
+        """Determine the group's HVAC mode based on member modes and strategy."""
+
+        active_hvac_modes = [mode for mode in current_hvac_modes if mode != HVACMode.OFF]
+
+        most_common_active_hvac_mode = max(active_hvac_modes, key=active_hvac_modes.count) if active_hvac_modes else None
+
+        strategy = self._hvac_mode_strategy
+
+        if strategy == HVAC_MODE_STRATEGY_AUTO:
+            if self._target_hvac_mode in (HVACMode.OFF, None):
+                strategy = HVAC_MODE_STRATEGY_NORMAL
+            else:
+                strategy = HVAC_MODE_STRATEGY_OFF_PRIORITY
+
+        if strategy == HVAC_MODE_STRATEGY_NORMAL:
+            if all(mode == HVACMode.OFF for mode in current_hvac_modes) if current_hvac_modes else False:
+                return HVACMode.OFF
+            return most_common_active_hvac_mode
+
+        if strategy == HVAC_MODE_STRATEGY_OFF_PRIORITY:
+            if HVACMode.OFF in current_hvac_modes:
+                return HVACMode.OFF
+            return most_common_active_hvac_mode
+
+        return None
+
 
     @callback
     def async_update_group_state(self) -> None:
@@ -290,18 +353,8 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         # Check if there are any valid states
         if states:
-            # All available HVAC modes
-            available_hvac_modes = list(find_state_attributes(states, ATTR_HVAC_MODES))
-            if available_hvac_modes:
-                if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
-                    intersected_modes = set(available_hvac_modes[0])
-                    for mode_list in available_hvac_modes[1:]:
-                        intersected_modes.intersection_update(mode_list)
-                    self._attr_hvac_modes = list(intersected_modes)
-                else:
-                    self._attr_hvac_modes = list(set().union(*available_hvac_modes))
-            else:
-                self._attr_hvac_modes = []
+            # All available HVAC modes --> list of HVACMode (str), e.g. [<HVACMode.OFF: 'off'>, <HVACMode.HEAT: 'heat'>, <HVACMode.AUTO: 'auto'>, ...]
+            self._attr_hvac_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_HVAC_MODES)))
 
             # Make sure OFF is always available
             if HVACMode.OFF not in self._attr_hvac_modes:
@@ -310,36 +363,12 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             # A list of all HVAC modes that are currently set
             current_hvac_modes = sorted([state.state for state in states])
 
-            # A list of active HVAC modes that are currently set
-            active_hvac_modes = [mode for mode in current_hvac_modes if mode != HVACMode.OFF]
-
-            # Determine most common active HVAC mode
-            most_common_active_hvac_mode = max(active_hvac_modes, key=active_hvac_modes.count) if active_hvac_modes else None
-
-            # Determine the group's HVAC mode based on the strategy
-            strategy = self._hvac_mode_strategy
-
-            if strategy == HVAC_MODE_STRATEGY_AUTO:
-                if self._target_hvac_mode in (HVACMode.OFF, None):
-                    strategy = HVAC_MODE_STRATEGY_NORMAL
-                else:
-                    strategy = HVAC_MODE_STRATEGY_OFF_PRIORITY
-
-            if strategy == HVAC_MODE_STRATEGY_NORMAL:
-                if all(mode == HVACMode.OFF for mode in current_hvac_modes) if current_hvac_modes else False:
-                    self._attr_hvac_mode = HVACMode.OFF
-                else:
-                    self._attr_hvac_mode = most_common_active_hvac_mode
-            elif strategy == HVAC_MODE_STRATEGY_OFF_PRIORITY:
-                if HVACMode.OFF in current_hvac_modes:
-                    self._attr_hvac_mode = HVACMode.OFF
-                else:
-                    self._attr_hvac_mode = most_common_active_hvac_mode
+            # Determine the group's HVAC mode and update the attribute
+            self._attr_hvac_mode = self._determine_hvac_mode(current_hvac_modes)
 
             # Update last active HVAC mode
-            if self._attr_hvac_mode != self._last_active_hvac_mode:
-                if self._attr_hvac_mode != HVACMode.OFF:
-                    self._last_active_hvac_mode = self._attr_hvac_mode
+            if self._attr_hvac_mode not in (HVACMode.OFF, self._last_active_hvac_mode):
+                self._last_active_hvac_mode = self._attr_hvac_mode
 
             # The group is available if any member is available
             self._attr_available = True
@@ -408,11 +437,9 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_max_humidity = reduce_attribute(states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
 
             # HVAC action is the most common active action
-            current_hvac_actions = list(find_state_attributes(states, ATTR_HVAC_ACTION))
-            if current_hvac_actions:
+            if (current_hvac_actions := list(find_state_attributes(states, ATTR_HVAC_ACTION))):
                 # Get all active HVAC actions (except HVACAction.OFF)
-                active_hvac_actions = [action for action in current_hvac_actions if action != HVACAction.OFF]
-                if active_hvac_actions:
+                if active_hvac_actions := [action for action in current_hvac_actions if action != HVACAction.OFF]:
                     # Set hvac_action to the most common active HVAC action
                     self._attr_hvac_action = max(active_hvac_actions, key=active_hvac_actions.count)
                 # Set hvac_action to HVACAction.OFF if all actions are HVACAction.OFF
@@ -422,37 +449,24 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 # No HVAC actions, set to None
                 self._attr_hvac_action = None
 
-            # Available fan modes
-            fan_modes = list(find_state_attributes(states, ATTR_FAN_MODES))
-            self._attr_fan_modes = list(set().union(*fan_modes)) if fan_modes else None
+            # Available fan modes --> list of list of strings, e.g. [['auto', 'low', 'medium', 'high'], ['auto', 'silent', 'turbo'], ...]
+            self._attr_fan_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_FAN_MODES)))
             self._attr_fan_mode = most_frequent_attribute(states, ATTR_FAN_MODE)
 
-            # Available preset modes
-            preset_modes = list(find_state_attributes(states, ATTR_PRESET_MODES))
-            self._attr_preset_modes = list(set().union(*preset_modes)) if preset_modes else None
+            # Available preset modes --> list of list of strings, e.g. [['home', 'away', 'eco'], ['home', 'sleep', 'away', 'boost'], ...]
+            self._attr_preset_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_PRESET_MODES)))
             self._attr_preset_mode = most_frequent_attribute(states, ATTR_PRESET_MODE)
 
-            # Available swing modes
-            swing_modes = list(find_state_attributes(states, ATTR_SWING_MODES))
-            self._attr_swing_modes = list(set().union(*swing_modes)) if swing_modes else None
+            # Available swing modes --> list of list of strings, e.g. [['off', 'left', 'right', 'center', 'swing'], ['off', 'swing'], ...]
+            self._attr_swing_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_SWING_MODES)))
             self._attr_swing_mode = most_frequent_attribute(states, ATTR_SWING_MODE)
 
-            # Available horizontal swing modes
-            swing_horizontal_modes = list(find_state_attributes(states, ATTR_SWING_HORIZONTAL_MODES))
-            self._attr_swing_horizontal_modes = list(set().union(*swing_horizontal_modes)) if swing_horizontal_modes else None
+            # Available horizontal swing modes --> list of list of strings, e.g. [['off', 'left', 'right', 'center', 'swing'], ['off', 'swing'], ...]
+            self._attr_swing_horizontal_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_SWING_HORIZONTAL_MODES)))
             self._attr_swing_horizontal_mode = most_frequent_attribute(states, ATTR_SWING_HORIZONTAL_MODE)
 
-            # Supported features
-            supported_features = list(find_state_attributes(states, ATTR_SUPPORTED_FEATURES))
-            if supported_features:
-                attr_supported_features = supported_features[0]
-                for features in supported_features[1:]:
-                    if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
-                        attr_supported_features &= features
-                    elif self._feature_strategy == FEATURE_STRATEGY_UNION:
-                        attr_supported_features |= features
-            else:
-                attr_supported_features = 0
+            # Supported features --> list of unionized ClimateEntityFeature (int), e.g. [<ClimateEntityFeature.TARGET_TEMPERATURE_RANGE|FAN_MODE|PRESET_MODE|SWING_MODE|TURN_OFF|TURN_ON: 442>, <ClimateEntityFeature...: 941>, ...]
+            attr_supported_features = self._reduce_attributes(list(find_state_attributes(states, ATTR_SUPPORTED_FEATURES)))
 
             # Add default supported features
             self._attr_supported_features = attr_supported_features | DEFAULT_SUPPORTED_FEATURES
