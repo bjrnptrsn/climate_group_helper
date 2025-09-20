@@ -9,9 +9,9 @@
           "entities": "Klimageräte",
           "average_option": "Temperatur-Mittelwertmethode",
           "round_option": "Temperaturrundung",
+          "temp_sensor": "Externer Temperatursensor",
           "hvac_mode_strategy": "HLK-Modus-Strategie",
-          "expose_member_entities": "Mitgliedsentitäten anzeigen",
-          "temp_sensor": "Externer Temperatursensor"
+          "expose_member_entities": "Mitgliedsentitäten anzeigen"
         },
         "data_description": {
           "name": "Geben Sie einen beschreibenden Namen für diese Klimagruppe ein (z. B. 'Wohnzimmerklima' oder 'Heizung Obergeschoss').",
@@ -19,8 +19,8 @@
           "average_option": "Wählen Sie die Methode zur Berechnung der Ziel-Temperatur der Gruppe.",
           "round_option": "Wählen Sie die Rundungsgenauigkeit für Temperaturwerte.",
           "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
-          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
-          "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben."
+          "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
+          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
         }
       }
     },
@@ -46,16 +46,18 @@
           "average_option": "Temperatur-Mittelwertmethode",
           "round_option": "Temperaturrundung",
           "hvac_mode_strategy": "HLK-Modus-Strategie",
-          "expose_member_entities": "Mitgliedsentitäten anzeigen",
-          "temp_sensor": "Externer Temperatursensor"
+          "use_temp_sensor": "Externen Temperatursensor verwenden",
+          "temp_sensor": "Externer Temperatursensor",
+          "expose_member_entities": "Mitgliedsentitäten anzeigen"
         },
         "data_description": {
           "entities": "Fügen Sie Klimageräte zu dieser Gruppe hinzu oder entfernen Sie sie. Entfernte Geräte werden von Temperaturberechnungen und Steuerbefehlen ausgeschlossen.",
           "average_option": "Ändern Sie die Methode zur Berechnung der Zieltemperaturen für alle Gruppenmitglieder.",
           "round_option": "Passen Sie die Temperaturgenauigkeit für die Gruppe an.",
           "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
-          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
-          "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben."
+          "use_temp_sensor": "Aktivieren oder deaktivieren Sie die Verwendung eines externen Temperatursensors für die Gruppe. Wenn deaktiviert, verwendet die Gruppe die gemittelte Temperatur ihrer Mitglieder.",
+          "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
+          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
         }
       }
     },

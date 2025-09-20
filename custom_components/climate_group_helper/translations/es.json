@@ -9,17 +9,17 @@
           "entities": "Entidades de climatización",
           "average_option": "Método de promediado de temperatura",
           "round_option": "Redondeo de temperatura",
+          "temp_sensor": "Sensor de temperatura externo",
           "hvac_mode_strategy": "Estrategia de modo HVAC",
-          "expose_member_entities": "Exponer entidades miembro",
-          "temp_sensor": "Sensor de temperatura externo"
+          "expose_member_entities": "Exponer entidades miembro"
         },
         "data_description": {
           "name": "Ingrese un nombre descriptivo para este grupo de climatización (por ejemplo, 'Clima de la sala de estar' o 'Calefacción de arriba').",
           "entities": "Seleccione los dispositivos de climatización que se incluirán en este grupo.",
           "average_option": "Elija el método para calcular la temperatura objetivo del grupo.",
           "round_option": "Seleccione la precisión de redondeo para los valores de temperatura.",
-          "temp_sensor": "Seleccione un sensor externo opcional para anular la temperatura actual del grupo.",
           "hvac_mode_strategy": "Elija la estrategia para determinar el modo HVAC del grupo.",
+          "temp_sensor": "Seleccione un sensor externo opcional para anular la temperatura actual del grupo.",
           "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado."
         }
       }
@@ -46,15 +46,17 @@
           "average_option": "Método de promediado de temperatura",
           "round_option": "Redondeo de temperatura",
           "hvac_mode_strategy": "Estrategia de modo HVAC",
-          "expose_member_entities": "Exponer entidades miembro",
-          "temp_sensor": "Sensor de temperatura externo"
+          "use_temp_sensor": "Usar sensor de temperatura externo",
+          "temp_sensor": "Sensor de temperatura externo",
+          "expose_member_entities": "Exponer entidades miembro"
         },
         "data_description": {
           "entities": "Agregue or elimine entidades de climatización de este grupo. La eliminación de entidades las excluirá de los cálculos de temperatura y los comandos de control.",
           "average_option": "Cambie el método para calcular las temperaturas objetivo entre los miembros del grupo.",
           "round_option": "Ajuste la precisión de la temperatura para el grupo.",
-          "temp_sensor": "Seleccione un sensor externo opcional para anular la temperatura actual del grupo.",
           "hvac_mode_strategy": "Elija la estrategia para determinar el modo HVAC del grupo.",
+          "use_temp_sensor": "Habilitar o deshabilitar el uso de un sensor de temperatura externo para el grupo. Si está deshabilitado, el grupo utilizará la temperatura promedio de sus miembros.",
+          "temp_sensor": "Seleccione un sensor externo opcional para anular la temperatura actual del grupo.",
           "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado."
         }
       }

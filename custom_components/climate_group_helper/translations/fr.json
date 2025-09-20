@@ -9,17 +9,17 @@
           "entities": "Entités de climatisation",
           "average_option": "Méthode de calcul de la moyenne de température",
           "round_option": "Arrondi de la température",
+          "temp_sensor": "Capteur de température externe",
           "hvac_mode_strategy": "Stratégie de mode CVC",
-          "expose_member_entities": "Exposer les entités membres",
-          "temp_sensor": "Capteur de température externe"
+          "expose_member_entities": "Exposer les entités membres"
         },
         "data_description": {
           "name": "Saisissez un nom descriptif pour ce groupe de climatisation (par exemple, 'Climatisation du salon' ou 'Chauffage à l'étage').",
           "entities": "Sélectionnez les appareils de climatisation à inclure dans ce groupe.",
           "average_option": "Choisissez la méthode de calcul de la température cible du groupe.",
           "round_option": "Sélectionnez la précision d'arrondi pour les valeurs de température.",
-          "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "hvac_mode_strategy": "Choisissez la stratégie pour déterminer le mode CVC du groupe.",
+          "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état."
         }
       }
@@ -46,15 +46,17 @@
           "average_option": "Méthode de calcul de la moyenne de température",
           "round_option": "Arrondi de la température",
           "hvac_mode_strategy": "Stratégie de mode CVC",
-          "expose_member_entities": "Exposer les entités membres",
-          "temp_sensor": "Capteur de température externe"
+          "use_temp_sensor": "Utiliser un capteur de température externe",
+          "temp_sensor": "Capteur de température externe",
+          "expose_member_entities": "Exposer les entités membres"
         },
         "data_description": {
           "entities": "Ajoutez ou supprimez des entités de climatisation de ce groupe. La suppression d'entités les exclura des calculs de température et des commandes de contrôle.",
           "average_option": "Modifiez la méthode de calcul des températures cibles pour les membres du groupe.",
           "round_option": "Ajustez la précision de la température pour le groupe.",
-          "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "hvac_mode_strategy": "Choisissez la stratégie pour déterminer le mode CVC du groupe.",
+          "use_temp_sensor": "Activer ou désactiver l'utilisation d'un capteur de température externe pour le groupe. Si désactivé, le groupe utilisera la température moyenne de ses membres.",
+          "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état."
         }
       }

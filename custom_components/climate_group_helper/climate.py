@@ -77,6 +77,7 @@ from .const import (
     CONF_HVAC_MODE_STRATEGY,
     CONF_ROUND_OPTION,
     CONF_TEMP_SENSOR,
+    CONF_USE_TEMP_SENSOR,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
@@ -308,7 +309,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
             # Get current temperature from sensor or fallback to averaged temperature
             self._attr_current_temperature = self._attr_averaged_current_temperature
-            if self._temp_sensor_entity_id:
+            if self._temp_sensor_entity_id is not None:
                 sensor_state = self.hass.states.get(self._temp_sensor_entity_id)
                 if sensor_state and sensor_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                     try:

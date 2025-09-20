@@ -9,17 +9,17 @@
           "entities": "气候实体",
           "average_option": "温度平均方法",
           "round_option": "温度四舍五入",
+          "temp_sensor": "外部温度传感器",
           "hvac_mode_strategy": "HVAC 模式策略",
-          "expose_member_entities": "公开成员实体",
-          "temp_sensor": "外部温度传感器"
+          "expose_member_entities": "公开成员实体"
         },
         "data_description": {
           "name": "为此气候组输入一个描述性名称（例如，‘客厅气候’或‘楼上供暖’）。",
           "entities": "选择要包含在此组中的气候设备。",
           "average_option": "选择计算组目标温度的方法。",
           "round_option": "选择温度值的四舍五入精度。",
-          "temp_sensor": "选择一个可选的外部传感器以覆盖组的当前温度。",
           "hvac_mode_strategy": "选择确定组的 HVAC 模式的策略。",
+          "temp_sensor": "选择一个可选的外部传感器以覆盖组的当前温度。",
           "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。"
         }
       }
@@ -46,15 +46,17 @@
           "average_option": "温度平均方法",
           "round_option": "温度四舍五入",
           "hvac_mode_strategy": "HVAC 模式策略",
-          "expose_member_entities": "公开成员实体",
-          "temp_sensor": "外部温度传感器"
+          "use_temp_sensor": "使用外部温度传感器",
+          "temp_sensor": "外部温度传感器",
+          "expose_member_entities": "公开成员实体"
         },
         "data_description": {
           "entities": "从此组中添加或删除气候实体。删除实体会将其从温度计算和控制命令中排除。",
           "average_option": "更改计算组成员目标温度的方法。",
           "round_option": "调整组的温度精度。",
-          "temp_sensor": "选择一个可选的外部传感器以覆盖组的当前温度。",
           "hvac_mode_strategy": "选择确定组的 HVAC 模式的策略。",
+          "use_temp_sensor": "启用或禁用组的外部温度传感器。如果禁用，组将使用其成员的平均温度。",
+          "temp_sensor": "选择一个可选的外部传感器以覆盖组的当前温度。",
           "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。"
         }
       }
