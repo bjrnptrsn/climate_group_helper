@@ -424,6 +424,19 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_hvac_mode = None
             self._attr_available = False
 
+    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        """Forward the set_hvac_mode command to all climate in the climate group."""
+
+        # Update target HVAC mode
+        self._target_hvac_mode = hvac_mode
+        self.async_defer_or_update_ha_state()  # Update group state and write ha state
+
+        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_HVAC_MODE: hvac_mode}
+        _LOGGER.debug("Setting HVAC mode: %s", data)
+        await self.hass.services.async_call(
+            CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=self._context
+        )
+
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Forward the set_temperature command to all climate in the climate group."""
 
@@ -463,17 +476,12 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data, blocking=True, context=self._context
         )
 
-    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Forward the set_hvac_mode command to all climate in the climate group."""
-
-        # Update target HVAC mode
-        self._target_hvac_mode = hvac_mode
-        self.async_defer_or_update_ha_state()  # Update group state and write ha state
-
-        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_HVAC_MODE: hvac_mode}
-        _LOGGER.debug("Setting HVAC mode: %s", data)
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Forward the set_preset_mode to all climate in the climate group."""
+        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_PRESET_MODE: preset_mode}
+        _LOGGER.debug("Setting preset mode: %s", data)
         await self.hass.services.async_call(
-            CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=self._context
+            CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True, context=self._context,
         )
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
@@ -492,14 +500,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         _LOGGER.debug("Setting horizontal swing mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_SWING_HORIZONTAL_MODE, data, blocking=True, context=self._context,
-        )
-
-    async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Forward the set_preset_mode to all climate in the climate group."""
-        data = {ATTR_ENTITY_ID: self._climate_entity_ids, ATTR_PRESET_MODE: preset_mode}
-        _LOGGER.debug("Setting preset mode: %s", data)
-        await self.hass.services.async_call(
-            CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True, context=self._context,
         )
 
     async def async_turn_on(self) -> None:
