@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import CONF_ENTITIES, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 
 PLATFORMS: list[Platform] = [Platform.CLIMATE]
@@ -10,6 +10,24 @@ PLATFORMS: list[Platform] = [Platform.CLIMATE]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Climate Group helper from a config entry."""
+
+    # Split config entry into data and options during initial configuration
+    if not entry.options:
+        options = {
+            key: value
+            for key, value in entry.data.items()
+            if key not in (CONF_ENTITIES, CONF_NAME)
+        }
+
+        data = {
+            CONF_NAME: entry.data[CONF_NAME],
+            CONF_ENTITIES: entry.data[CONF_ENTITIES]
+        }
+
+        hass.config_entries.async_update_entry(
+            entry, data=data, options=options
+        )
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Register update listener for options changes
