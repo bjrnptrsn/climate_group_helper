@@ -9,8 +9,9 @@
           "entities": "Encje klimatyzacji",
           "average_option": "Metoda uśredniania temperatury",
           "round_option": "Zaokrąglanie temperatury",
-          "temp_sensor": "Zewnętrzny czujnik temperatury",
           "hvac_mode_strategy": "Strategia trybu HVAC",
+          "feature_strategy": "Strategia Funkcji",
+          "temp_sensor": "Zewnętrzny czujnik temperatury",
           "expose_member_entities": "Udostępnij encje członkowskie"
         },
         "data_description": {
@@ -19,6 +20,7 @@
           "average_option": "Wybierz metodę obliczania docelowej temperatury grupy.",
           "round_option": "Wybierz precyzję zaokrąglania wartości temperatury.",
           "hvac_mode_strategy": "Wybierz strategię określania trybu HVAC grupy.",
+          "feature_strategy": "Wybierz, jak grupa ma obsługiwać funkcje (np. tryb wentylatora, tryb wachlowania) swoich członków.",
           "temp_sensor": "Wybierz opcjonalny czujnik zewnętrzny, aby zastąpić bieżącą temperaturę grupy.",
           "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu."
         }
@@ -46,6 +48,7 @@
           "average_option": "Metoda uśredniania temperatury",
           "round_option": "Zaokrąglanie temperatury",
           "hvac_mode_strategy": "Strategia trybu HVAC",
+          "feature_strategy": "Strategia Funkcji",
           "use_temp_sensor": "Użyj zewnętrznego czujnika temperatury",
           "temp_sensor": "Zewnętrzny czujnik temperatury",
           "expose_member_entities": "Udostępnij encje członkowskie"
@@ -55,6 +58,7 @@
           "average_option": "Zmień metodę obliczania temperatur docelowych dla członków grupy.",
           "round_option": "Dostosuj precyzję temperatury dla grupy.",
           "hvac_mode_strategy": "Wybierz strategię określania trybu HVAC grupy.",
+          "feature_strategy": "Wybierz, jak grupa ma obsługiwać funkcje (np. tryb wentylatora, tryb wachlowania) swoich członków.",
           "use_temp_sensor": "Włącz lub wyłącz użycie zewnętrznego czujnika temperatury dla grupy. Jeśli wyłączony, grupa będzie używać uśrednionej temperatury swoich członków.",
           "temp_sensor": "Wybierz opcjonalny czujnik zewnętrzny, aby zastąpić bieżącą temperaturę grupy.",
           "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu."
@@ -91,6 +95,12 @@
         "normal": "Normalny (Najczęstszy tryb)",
         "off_priority": "Priorytet wyłączenia (Grupa jest wyłączona, jeśli którykolwiek członek jest wyłączony)",
         "auto": "Auto (Inteligentna strategia oparta na trybie docelowym)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Część wspólna (Funkcje wspólne dla wszystkich członków)",
+        "union": "Suma (Wszystkie funkcje od dowolnego członka)"
       }
     }
   },

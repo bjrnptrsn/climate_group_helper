@@ -9,8 +9,9 @@
           "entities": "Entidades de Climatização",
           "average_option": "Método de Média de Temperatura",
           "round_option": "Arredondamento de Temperatura",
-          "temp_sensor": "Sensor de temperatura externo",
           "hvac_mode_strategy": "Estratégia de modo HVAC",
+          "feature_strategy": "Estratégia de Funcionalidades",
+          "temp_sensor": "Sensor de temperatura externo",
           "expose_member_entities": "Expor Entidades Membro"
         },
         "data_description": {
@@ -19,6 +20,7 @@
           "average_option": "Escolha o método para calcular a temperatura alvo do grupo.",
           "round_option": "Selecione a precisão de arredondamento para os valores de temperatura.",
           "hvac_mode_strategy": "Escolha a estratégia para determinar o modo HVAC do grupo.",
+          "feature_strategy": "Escolha como o grupo lida com as funcionalidades (por exemplo, modo de ventilação, modo de oscilação) dos seus membros.",
           "temp_sensor": "Selecione um sensor externo opcional para substituir a temperatura atual do grupo.",
           "expose_member_entities": "Ative esta opção para expor a lista de entidades membro como um atributo de estado."
         }
@@ -40,12 +42,13 @@
     "step": {
       "init": {
         "title": "Configurar Opções do Grupo de Climatização",
-        "description": "Modifique as definições do seu grupo de climatização. As alterações entrarão em vigor immediately e afetarão a forma como as temperaturas são calculadas e apresentadas.",
+        "description": "Modifique as definições do seu grupo de climatização. As alterações entrarão em vigor imediatamente e afetarão a forma como as temperaturas são calculadas e apresentadas.",
         "data": {
           "entities": "Entidades de Climatização",
           "average_option": "Método de Média de Temperatura",
           "round_option": "Arredondamento de Temperatura",
           "hvac_mode_strategy": "Estratégia de modo HVAC",
+          "feature_strategy": "Estratégia de Funcionalidades",
           "use_temp_sensor": "Usar sensor de temperatura externo",
           "temp_sensor": "Sensor de temperatura externo",
           "expose_member_entities": "Expor Entidades Membro"
@@ -55,6 +58,7 @@
           "average_option": "Altere o método de cálculo das temperaturas alvo entre os membros do grupo.",
           "round_option": "Ajuste a precisão da temperatura para o grupo.",
           "hvac_mode_strategy": "Escolha a estratégia para determinar o modo HVAC do grupo.",
+          "feature_strategy": "Escolha como o grupo lida com as funcionalidades (por exemplo, modo de ventilação, modo de oscilação) dos seus membros.",
           "use_temp_sensor": "Ativar ou desativar o uso de um sensor de temperatura externo para o grupo. Se desativado, o grupo usará a temperatura média de seus membros.",
           "temp_sensor": "Selecione um sensor externo opcional para substituir a temperatura atual do grupo.",
           "expose_member_entities": "Ative esta opção para expor a lista de entidades membro como um atributo de estado."
@@ -91,6 +95,12 @@
         "normal": "Normal (Modo mais comum)",
         "off_priority": "Prioridade de desligamento (O grupo está desligado se algum membro estiver desligado)",
         "auto": "Automático (Estratégia inteligente baseada no modo alvo)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Interseção (Funcionalidades comuns a todos os membros)",
+        "union": "União (Todas as funcionalidades de qualquer membro)"
       }
     }
   },

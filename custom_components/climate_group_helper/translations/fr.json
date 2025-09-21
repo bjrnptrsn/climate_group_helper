@@ -9,8 +9,9 @@
           "entities": "Entités de climatisation",
           "average_option": "Méthode de calcul de la moyenne de température",
           "round_option": "Arrondi de la température",
-          "temp_sensor": "Capteur de température externe",
           "hvac_mode_strategy": "Stratégie de mode CVC",
+          "feature_strategy": "Stratégie de Fonctionnalité",
+          "temp_sensor": "Capteur de température externe",
           "expose_member_entities": "Exposer les entités membres"
         },
         "data_description": {
@@ -19,6 +20,7 @@
           "average_option": "Choisissez la méthode de calcul de la température cible du groupe.",
           "round_option": "Sélectionnez la précision d'arrondi pour les valeurs de température.",
           "hvac_mode_strategy": "Choisissez la stratégie pour déterminer le mode CVC du groupe.",
+          "feature_strategy": "Choisissez comment le groupe gère les fonctionnalités (par ex. mode ventilateur, mode oscillation) de ses membres.",
           "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état."
         }
@@ -46,6 +48,7 @@
           "average_option": "Méthode de calcul de la moyenne de température",
           "round_option": "Arrondi de la température",
           "hvac_mode_strategy": "Stratégie de mode CVC",
+          "feature_strategy": "Stratégie de Fonctionnalité",
           "use_temp_sensor": "Utiliser un capteur de température externe",
           "temp_sensor": "Capteur de température externe",
           "expose_member_entities": "Exposer les entités membres"
@@ -55,6 +58,7 @@
           "average_option": "Modifiez la méthode de calcul des températures cibles pour les membres du groupe.",
           "round_option": "Ajustez la précision de la température pour le groupe.",
           "hvac_mode_strategy": "Choisissez la stratégie pour déterminer le mode CVC du groupe.",
+          "feature_strategy": "Choisissez comment le groupe gère les fonctionnalités (par ex. mode ventilateur, mode oscillation) de ses membres.",
           "use_temp_sensor": "Activer ou désactiver l'utilisation d'un capteur de température externe pour le groupe. Si désactivé, le groupe utilisera la température moyenne de ses membres.",
           "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état."
@@ -91,6 +95,12 @@
         "normal": "Normal (Mode le plus courant)",
         "off_priority": "Priorité à l'arrêt (Le groupe est éteint si un membre est éteint)",
         "auto": "Auto (Stratégie intelligente basée sur le mode cible)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Intersection (Fonctionnalités communes à tous les membres)",
+        "union": "Union (Toutes les fonctionnalités de n'importe quel membre)"
       }
     }
   },

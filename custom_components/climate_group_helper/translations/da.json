@@ -9,8 +9,9 @@
           "entities": "Klimaanlæg",
           "average_option": "Metode til temperaturgennemsnit",
           "round_option": "Temperaturafrunding",
-          "temp_sensor": "Ekstern temperatursensor",
           "hvac_mode_strategy": "HVAC-tilstandsstrategi",
+          "feature_strategy": "Funktionsstrategi",
+          "temp_sensor": "Ekstern temperatursensor",
           "expose_member_entities": "Vis medlemsenheder"
         },
         "data_description": {
@@ -19,6 +20,7 @@
           "average_option": "Vælg metoden til beregning af gruppens måltemperatur.",
           "round_option": "Vælg afrundingspræcisionen for temperaturværdier.",
           "hvac_mode_strategy": "Vælg strategien for at bestemme gruppens HVAC-tilstand.",
+          "feature_strategy": "Vælg, hvordan gruppen håndterer funktioner (f.eks. ventilatortilstand, svingtilstand) fra sine medlemmer.",
           "temp_sensor": "Vælg en valgfri ekstern sensor for at tilsidesætte gruppens aktuelle temperatur.",
           "expose_member_entities": "Aktiver denne mulighed for at vise listen over medlemsenheder som en statusattribut."
         }
@@ -46,6 +48,7 @@
           "average_option": "Metode til temperaturgennemsnit",
           "round_option": "Temperaturafrunding",
           "hvac_mode_strategy": "HVAC-tilstandsstrategi",
+          "feature_strategy": "Funktionsstrategi",
           "use_temp_sensor": "Brug ekstern temperatursensor",
           "temp_sensor": "Ekstern temperatursensor",
           "expose_member_entities": "Vis medlemsenheder"
@@ -55,6 +58,7 @@
           "average_option": "Skift metoden til beregning af måltemperaturer på tværs af gruppemedlemmer.",
           "round_option": "Juster temperaturpræcisionen for gruppen.",
           "hvac_mode_strategy": "Vælg strategien for at bestemme gruppens HVAC-tilstand.",
+          "feature_strategy": "Vælg, hvordan gruppen håndterer funktioner (f.eks. ventilatortilstand, svingtilstand) fra sine medlemmer.",
           "use_temp_sensor": "Aktiver eller deaktiver brugen af en ekstern temperatursensor for gruppen. Hvis deaktiveret, vil gruppen bruge den gennemsnitlige temperatur fra dens medlemmer.",
           "temp_sensor": "Vælg en valgfri ekstern sensor for at tilsidesætte gruppens aktuelle temperatur.",
           "expose_member_entities": "Aktiver denne mulighed for at vise listen over medlemsenheder som en statusattribut."
@@ -91,6 +95,12 @@
         "normal": "Normal (Mest almindelige tilstand)",
         "off_priority": "Fra-prioritet (Gruppen er slukket, hvis et medlem er slukket)",
         "auto": "Auto (Smart strategi baseret på måltilstand)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Fællesmængde (Funktioner fælles for alle medlemmer)",
+        "union": "Foreningsmængde (Alle funktioner fra ethvert medlem)"
       }
     }
   },

@@ -9,8 +9,9 @@
           "entities": "Klimaatentiteiten",
           "average_option": "Temperatuurgemiddelde Methode",
           "round_option": "Temperatuur afronden",
-          "temp_sensor": "Externe temperatuursensor",
           "hvac_mode_strategy": "HVAC-modusstrategie",
+          "feature_strategy": "Functiestrategie",
+          "temp_sensor": "Externe temperatuursensor",
           "expose_member_entities": "Lid-entiteiten weergeven"
         },
         "data_description": {
@@ -19,6 +20,7 @@
           "average_option": "Kies de methode voor het berekenen van de doeltemperatuur van de groep.",
           "round_option": "Selecteer de afrondingsprecisie voor temperatuurwaarden.",
           "hvac_mode_strategy": "Kies de strategie voor het bepalen van de HVAC-modus van de groep.",
+          "feature_strategy": "Kies hoe de groep omgaat met functies (bijv. ventilatormodus, zwenkmodus) van zijn leden.",
           "temp_sensor": "Selecteer een optionele externe sensor om de huidige temperatuur van de groep te overschrijven.",
           "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
         }
@@ -46,6 +48,7 @@
           "average_option": "Temperatuurgemiddelde Methode",
           "round_option": "Temperatuur afronden",
           "hvac_mode_strategy": "HVAC-modusstrategie",
+          "feature_strategy": "Functiestrategie",
           "use_temp_sensor": "Gebruik externe temperatuursensor",
           "temp_sensor": "Externe temperatuursensor",
           "expose_member_entities": "Lid-entiteiten weergeven"
@@ -55,6 +58,7 @@
           "average_option": "Wijzig de methode voor het berekenen van doeltemperaturen voor groepsleden.",
           "round_option": "Pas de temperatuurprecisie voor de groep aan.",
           "hvac_mode_strategy": "Kies de strategie voor het bepalen van de HVAC-modus van de groep.",
+          "feature_strategy": "Kies hoe de groep omgaat met functies (bijv. ventilatormodus, zwenkmodus) van zijn leden.",
           "use_temp_sensor": "Schakel het gebruik van een externe temperatuursensor voor de groep in of uit. Indien uitgeschakeld, zal de groep de gemiddelde temperatuur van zijn leden gebruiken.",
           "temp_sensor": "Selecteer een optionele externe sensor om de huidige temperatuur van de groep te overschrijven.",
           "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
@@ -91,6 +95,12 @@
         "normal": "Normaal (Meest voorkomende modus)",
         "off_priority": "Uit-prioriteit (Groep is uit als een lid uit is)",
         "auto": "Auto (Slimme strategie gebaseerd op doelmodus)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Doorsnede (Functies die alle leden gemeen hebben)",
+        "union": "Unie (Alle functies van elk lid)"
       }
     }
   },
@@ -172,7 +182,7 @@
   "device_automation": {
     "trigger_type": {
       "hvac_mode_changed": "HVAC-modus gewijzigd",
-      "temperature_target_changed": "Doeltemperatur gewijzigd",
+      "temperature_target_changed": "Doeltemperatuur gewijzigd",
       "current_temperature_changed": "Huidige temperatuur gewijzigd",
       "group_turned_on": "Groep ingeschakeld",
       "group_turned_off": "Groep uitgeschakeld"

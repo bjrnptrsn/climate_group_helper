@@ -9,8 +9,9 @@
           "entities": "气候实体",
           "average_option": "温度平均方法",
           "round_option": "温度四舍五入",
-          "temp_sensor": "外部温度传感器",
           "hvac_mode_strategy": "HVAC 模式策略",
+          "feature_strategy": "功能策略",
+          "temp_sensor": "外部温度传感器",
           "expose_member_entities": "公开成员实体"
         },
         "data_description": {
@@ -19,6 +20,7 @@
           "average_option": "选择计算组目标温度的方法。",
           "round_option": "选择温度值的四舍五入精度。",
           "hvac_mode_strategy": "选择确定组的 HVAC 模式的策略。",
+          "feature_strategy": "选择组如何处理其成员的功能（例如，风扇模式、摆动模式）。",
           "temp_sensor": "选择一个可选的外部传感器以覆盖组的当前温度。",
           "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。"
         }
@@ -46,6 +48,7 @@
           "average_option": "温度平均方法",
           "round_option": "温度四舍五入",
           "hvac_mode_strategy": "HVAC 模式策略",
+          "feature_strategy": "功能策略",
           "use_temp_sensor": "使用外部温度传感器",
           "temp_sensor": "外部温度传感器",
           "expose_member_entities": "公开成员实体"
@@ -55,6 +58,7 @@
           "average_option": "更改计算组成员目标温度的方法。",
           "round_option": "调整组的温度精度。",
           "hvac_mode_strategy": "选择确定组的 HVAC 模式的策略。",
+          "feature_strategy": "选择组如何处理其成员的功能（例如，风扇模式、摆动模式）。",
           "use_temp_sensor": "启用或禁用组的外部温度传感器。如果禁用，组将使用其成员的平均温度。",
           "temp_sensor": "选择一个可选的外部传感器以覆盖组的当前温度。",
           "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。"
@@ -91,6 +95,12 @@
         "normal": "普通 (最常见模式)",
         "off_priority": "关机优先 (任何成员关机，则组关机)",
         "auto": "自动 (基于目标模式的智能策略)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "交集 (所有成员共有的功能)",
+        "union": "并集 (任何成员的所有功能)"
       }
     }
   },
