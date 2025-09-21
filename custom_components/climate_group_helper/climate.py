@@ -1,8 +1,8 @@
 """This platform allows several climate devices to be grouped into one climate device."""
 from __future__ import annotations
 
-import logging
 from functools import reduce
+import logging
 from statistics import mean, median
 from typing import Any
 
@@ -79,7 +79,6 @@ from .const import (
     CONF_HVAC_MODE_STRATEGY,
     CONF_ROUND_OPTION,
     CONF_TEMP_SENSOR,
-    CONF_USE_TEMP_SENSOR,
     FEATURE_STRATEGY_INTERSECTION,
     FEATURE_STRATEGY_UNION,
     HVAC_MODE_STRATEGY_AUTO,
@@ -245,7 +244,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._attr_swing_horizontal_mode = None
 
 
-    def _get_supporting_entities(self, attribute_key: str, check_value: Any) -> list[str]:
+    def _get_supporting_entities(self, check_attribute: str | list[str], check_value: Any = None) -> list[str]:
         """Get entity ids that match a specific check for a given attribute."""
         supporting_entities = []
         for entity_id in self._entity_ids:
@@ -253,20 +252,18 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             if state is None:
                 continue
 
-            # Get the attribute value
-            attribute_value = state.attributes.get(attribute_key)
-            if attribute_value is None:
-                continue
+            if isinstance(check_attribute, str):
+                check_attribute = [check_attribute]
 
-            # Feature: check if the flag is set
-            if isinstance(check_value, ClimateEntityFeature):
-                if attribute_value & check_value:
-                    supporting_entities.append(entity_id)
+            for attr in check_attribute:
+                if attr not in state.attributes:
+                    continue
+                if not (attr_values := state.attributes.get(attr)):
+                    continue
+                if check_value is not None and check_value not in attr_values:
+                    continue
 
-            # HVAC mode: check if the mode is in the list of modes
-            elif isinstance(check_value, HVACMode):
-                if check_value in attribute_value:
-                    supporting_entities.append(entity_id)
+                supporting_entities.append(entity_id)
 
         return supporting_entities
 
@@ -286,17 +283,16 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
 
         # It's a list of modes [HVACMode | str]
-        else:
-            # Filter out empty attributes or None
-            valid_attributes = [attr for attr in attributes if attr]
-            if not valid_attributes:
-                return []
+        # Filter out empty attributes or None
+        valid_attributes = [attr for attr in attributes if attr]
+        if not valid_attributes:
+            return []
 
-            # Intersection
-            if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
-                return list(reduce(lambda x, y: set(x) & set(y), valid_attributes))
-            # Union
-            return list(reduce(lambda x, y: set(x) | set(y), valid_attributes))
+        # Intersection
+        if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
+            return list(reduce(lambda x, y: set(x) & set(y), valid_attributes))
+        # Union
+        return list(reduce(lambda x, y: set(x) | set(y), valid_attributes))
 
 
     def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | None:
@@ -518,10 +514,11 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         entity_ids = self._climate_entity_ids
         if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            feature = ClimateEntityFeature.TARGET_TEMPERATURE
             if ATTR_TARGET_TEMP_LOW in kwargs and ATTR_TARGET_TEMP_HIGH in kwargs:
-                feature = ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
-            entity_ids = self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, feature)
+                attr = [ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH]
+            else:
+                attr = ATTR_TEMPERATURE
+            entity_ids = self._get_supporting_entities(attr)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the target temperature feature, skipping service call")
@@ -550,7 +547,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         entity_ids = self._climate_entity_ids
         if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_HUMIDITY)
+            entity_ids = self._get_supporting_entities(ATTR_HUMIDITY)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the target humidity feature, skipping service call")
@@ -567,7 +564,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         entity_ids = self._climate_entity_ids
         if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.FAN_MODE)
+            entity_ids = self._get_supporting_entities(ATTR_FAN_MODES, fan_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the fan mode feature, skipping service call")
@@ -583,7 +580,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         """Forward the set_preset_mode to all climate in the climate group."""
         entity_ids = self._climate_entity_ids
         if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.PRESET_MODE)
+            entity_ids = self._get_supporting_entities(ATTR_PRESET_MODES, preset_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the preset mode feature, skipping service call")
@@ -600,7 +597,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         entity_ids = self._climate_entity_ids
         if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.SWING_MODE)
+            entity_ids = self._get_supporting_entities(ATTR_SWING_MODES, swing_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the swing mode feature, skipping service call")
@@ -617,7 +614,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         entity_ids = self._climate_entity_ids
         if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.SWING_HORIZONTAL_MODE)
+            entity_ids = self._get_supporting_entities(ATTR_SWING_HORIZONTAL_MODES, swing_horizontal_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the horizontal swing mode feature, skipping service call")

@@ -23,10 +23,10 @@ class RoundOption:
 CONF_AVERAGE_OPTION = "average_option"
 CONF_ROUND_OPTION = "round_option"
 CONF_USE_TEMP_SENSOR = "use_temp_sensor"
-CONF_TEMP_SENSOR = "temp_sensor"
-CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
 CONF_FEATURE_STRATEGY = "feature_strategy"
+CONF_TEMP_SENSOR = "temp_sensor"
+CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 
 # HVAC mode strategies
 HVAC_MODE_STRATEGY_NORMAL = "normal"
