@@ -20,7 +20,7 @@
           "average_option": "Choose the method for calculating the group's target temperature.",
           "round_option": "Select the rounding precision for temperature values.",
           "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
-          "feature_strategy": "Choose how the group handles features (e.g., fan mode, swing mode) from its members.",
+          "feature_strategy": "Choose how to group the features (e.g., fan mode, swing mode) from its members.",
           "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
           "expose_member_entities": "Enable this to expose the list of member entities as a state attribute."
         }
@@ -58,8 +58,8 @@
           "average_option": "Change the method for calculating target temperatures across group members.",
           "round_option": "Adjust the temperature precision for the group.",
           "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
-          "feature_strategy": "Choose how the group handles features (e.g., fan mode, swing mode) from its members.",
-          "use_temp_sensor": "Enable or disable the use of an external temperature sensor for the group. If disabled, the group will use the averaged temperature of its members.",
+          "feature_strategy": "Choose how to group the features (e.g., fan mode, swing mode) from its members.",
+          "use_temp_sensor": "If disabled, the sensor is removed and the group uses the average temperature of its members.",
           "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
           "expose_member_entities": "Enable this to expose the list of member entities as a state attribute."
         }

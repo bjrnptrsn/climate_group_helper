@@ -20,7 +20,7 @@
           "average_option": "Elija el método para calcular la temperatura objetivo del grupo.",
           "round_option": "Seleccione la precisión de redondeo para los valores de temperatura.",
           "hvac_mode_strategy": "Elija la estrategia para determinar el modo HVAC del grupo.",
-          "feature_strategy": "Elija cómo el grupo maneja las funciones (por ejemplo, modo de ventilador, modo de oscilación) de sus miembros.",
+          "feature_strategy": "Elija cómo agrupar las características (por ejemplo, modo de ventilador, modo de oscilación) de sus miembros.",
           "temp_sensor": "Seleccione un sensor externo opcional para anular la temperatura actual del grupo.",
           "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado."
         }
@@ -58,8 +58,8 @@
           "average_option": "Cambie el método para calcular las temperaturas objetivo entre los miembros del grupo.",
           "round_option": "Ajuste la precisión de la temperatura para el grupo.",
           "hvac_mode_strategy": "Elija la estrategia para determinar el modo HVAC del grupo.",
-          "feature_strategy": "Elija cómo el grupo maneja las funciones (por ejemplo, modo de ventilador, modo de oscilación) de sus miembros.",
-          "use_temp_sensor": "Habilitar o deshabilitar el uso de un sensor de temperatura externo para el grupo. Si está deshabilitado, el grupo utilizará la temperatura promedio de sus miembros.",
+          "feature_strategy": "Elija cómo agrupar las características (por ejemplo, modo de ventilador, modo de oscilación) de sus miembros.",
+          "use_temp_sensor": "Si está deshabilitado, el sensor se elimina y el grupo usa la temperatura promedio de sus miembros.",
           "temp_sensor": "Seleccione un sensor externo opcional para anular la temperatura actual del grupo.",
           "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado."
         }

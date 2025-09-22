@@ -20,7 +20,7 @@
           "average_option": "Kies de methode voor het berekenen van de doeltemperatuur van de groep.",
           "round_option": "Selecteer de afrondingsprecisie voor temperatuurwaarden.",
           "hvac_mode_strategy": "Kies de strategie voor het bepalen van de HVAC-modus van de groep.",
-          "feature_strategy": "Kies hoe de groep omgaat met functies (bijv. ventilatormodus, zwenkmodus) van zijn leden.",
+          "feature_strategy": "Kies hoe de functies (bijv. ventilatormodus, zwenkmodus) van de leden moeten worden gegroepeerd.",
           "temp_sensor": "Selecteer een optionele externe sensor om de huidige temperatuur van de groep te overschrijven.",
           "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
         }
@@ -58,8 +58,8 @@
           "average_option": "Wijzig de methode voor het berekenen van doeltemperaturen voor groepsleden.",
           "round_option": "Pas de temperatuurprecisie voor de groep aan.",
           "hvac_mode_strategy": "Kies de strategie voor het bepalen van de HVAC-modus van de groep.",
-          "feature_strategy": "Kies hoe de groep omgaat met functies (bijv. ventilatormodus, zwenkmodus) van zijn leden.",
-          "use_temp_sensor": "Schakel het gebruik van een externe temperatuursensor voor de groep in of uit. Indien uitgeschakeld, zal de groep de gemiddelde temperatuur van zijn leden gebruiken.",
+          "feature_strategy": "Kies hoe de functies (bijv. ventilatormodus, zwenkmodus) van de leden moeten worden gegroepeerd.",
+          "use_temp_sensor": "Indien uitgeschakeld, wordt de sensor verwijderd en gebruikt de groep de gemiddelde temperatuur van haar leden.",
           "temp_sensor": "Selecteer een optionele externe sensor om de huidige temperatuur van de groep te overschrijven.",
           "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven."
         }

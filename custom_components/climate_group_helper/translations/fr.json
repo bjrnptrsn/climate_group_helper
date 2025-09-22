@@ -20,7 +20,7 @@
           "average_option": "Choisissez la méthode de calcul de la température cible du groupe.",
           "round_option": "Sélectionnez la précision d'arrondi pour les valeurs de température.",
           "hvac_mode_strategy": "Choisissez la stratégie pour déterminer le mode CVC du groupe.",
-          "feature_strategy": "Choisissez comment le groupe gère les fonctionnalités (par ex. mode ventilateur, mode oscillation) de ses membres.",
+          "feature_strategy": "Choisissez comment regrouper les fonctionnalités (par exemple, le mode ventilateur, le mode oscillation) de ses membres.",
           "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état."
         }
@@ -58,8 +58,8 @@
           "average_option": "Modifiez la méthode de calcul des températures cibles pour les membres du groupe.",
           "round_option": "Ajustez la précision de la température pour le groupe.",
           "hvac_mode_strategy": "Choisissez la stratégie pour déterminer le mode CVC du groupe.",
-          "feature_strategy": "Choisissez comment le groupe gère les fonctionnalités (par ex. mode ventilateur, mode oscillation) de ses membres.",
-          "use_temp_sensor": "Activer ou désactiver l'utilisation d'un capteur de température externe pour le groupe. Si désactivé, le groupe utilisera la température moyenne de ses membres.",
+          "feature_strategy": "Choisissez comment regrouper les fonctionnalités (par exemple, le mode ventilateur, le mode oscillation) de ses membres.",
+          "use_temp_sensor": "S'il est désactivé, le capteur est supprimé et le groupe utilise la température moyenne de ses membres.",
           "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état."
         }
@@ -131,7 +131,7 @@
           },
           "active_members": {
             "name": "Membres actifs",
-            "description": "Nombre de membres du groupe actuellement disponibles"
+            "description": "Nombre de membres du groupe currently disponibles"
           }
         }
       }

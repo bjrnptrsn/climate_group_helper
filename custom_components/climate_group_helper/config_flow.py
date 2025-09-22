@@ -167,11 +167,15 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         if user_input is not None:
 
-            # The 'use_temp_sensor' key is only present if a sensor was already configured.
-            # If the boolean was set to False, remove both temp sensor keys from the config.
+            # The key 'use_temp_sensor' is only present if a sensor was already configured.
+            # If the boolean is set to False (not None), remove both temp_sensor keys from the config.
             if user_input.get(CONF_USE_TEMP_SENSOR) is False:
                 user_input.pop(CONF_TEMP_SENSOR, None)
                 user_input.pop(CONF_USE_TEMP_SENSOR, None)
+            # If the key 'use_temp_sensor' is missing but a sensor is selected, a new sensor has been selected.
+            # If so, create key 'use_temp_sensor' and set it True.
+            elif CONF_TEMP_SENSOR in user_input and CONF_USE_TEMP_SENSOR not in user_input:
+                user_input[CONF_USE_TEMP_SENSOR] = True
 
             # Check that at least one entity was selected
             if not user_input.get(CONF_ENTITIES):
@@ -196,12 +200,13 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         # --- Schema Generation ---
 
         # Determine if a sensor is currently active
-        # If so, the sensor entity will be read-only and a 'use' boolean will be shown.
+        # If so, the sensor entity will be read-only and the 'use_temp_sensor' boolean will be shown.
         # If not, an optional temperature sensor can be selected.
-        # Unchecking the 'use' boolean will remove the sensor from the config.
         sensor_active = bool(CONF_TEMP_SENSOR in current_config)
-
-        # Conditional sensor field
+        
+        # The EntitySelector does not accept an empty string if the sensor has been removed.
+        # We therefore use the boolean to remove the key temp_sensor and thus the entity_id from the config.
+        # This ensures that the group_state_update can no longer be triggered from this sensors entity_id.
         TEMP_SENSOR_SCHEMA = {
             vol.Required(
                 CONF_USE_TEMP_SENSOR,

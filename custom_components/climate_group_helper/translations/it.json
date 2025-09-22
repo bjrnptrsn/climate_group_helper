@@ -20,7 +20,7 @@
           "average_option": "Scegli il metodo per calcolare la temperatura target del gruppo.",
           "round_option": "Seleziona la precisione di arrotondamento per i valori di temperatura.",
           "hvac_mode_strategy": "Scegli la strategia per determinare la modalità HVAC del gruppo.",
-          "feature_strategy": "Scegli come il gruppo gestisce le funzionalità (ad es. modalità ventilatore, modalità oscillazione) dei suoi membri.",
+          "feature_strategy": "Scegli come raggruppare le funzionalità (ad es. modalità ventola, modalità oscillazione) dei suoi membri.",
           "temp_sensor": "Seleziona un sensore esterno opzionale per sovrascrivere la temperatura attuale del gruppo.",
           "expose_member_entities": "Abilita questa opzione per esporre l'elenco delle entità membro come attributo di stato."
         }
@@ -58,8 +58,8 @@
           "average_option": "Modifica il metodo per calcolare le temperature target tra i membri del gruppo.",
           "round_option": "Regola la precisione della temperatura per il gruppo.",
           "hvac_mode_strategy": "Scegli la strategia per determinare la modalità HVAC del gruppo.",
-          "feature_strategy": "Scegli come il gruppo gestisce le funzionalità (ad es. modalità ventilatore, modalità oscillazione) dei suoi membri.",
-          "use_temp_sensor": "Abilita o disabilita l'uso di un sensore di temperatura esterno per il gruppo. Se disabilitato, il gruppo utilizzerà la temperatura media dei suoi membri.",
+          "feature_strategy": "Scegli come raggruppare le funzionalità (ad es. modalità ventola, modalità oscillazione) dei suoi membri.",
+          "use_temp_sensor": "Se disabilitato, il sensore viene rimosso e il gruppo utilizza la temperatura media dei suoi membri.",
           "temp_sensor": "Seleziona un sensore esterno opzionale per sovrascrivere la temperatura attuale del gruppo.",
           "expose_member_entities": "Abilita questa opzione per esporre l'elenco delle entità membro come attributo di stato."
         }

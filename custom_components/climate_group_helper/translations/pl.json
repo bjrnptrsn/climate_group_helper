@@ -20,7 +20,7 @@
           "average_option": "Wybierz metodę obliczania docelowej temperatury grupy.",
           "round_option": "Wybierz precyzję zaokrąglania wartości temperatury.",
           "hvac_mode_strategy": "Wybierz strategię określania trybu HVAC grupy.",
-          "feature_strategy": "Wybierz, jak grupa ma obsługiwać funkcje (np. tryb wentylatora, tryb wachlowania) swoich członków.",
+          "feature_strategy": "Wybierz, jak grupować funkcje (np. tryb wentylatora, tryb wachlowania) od jego członków.",
           "temp_sensor": "Wybierz opcjonalny czujnik zewnętrzny, aby zastąpić bieżącą temperaturę grupy.",
           "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu."
         }
@@ -58,8 +58,8 @@
           "average_option": "Zmień metodę obliczania temperatur docelowych dla członków grupy.",
           "round_option": "Dostosuj precyzję temperatury dla grupy.",
           "hvac_mode_strategy": "Wybierz strategię określania trybu HVAC grupy.",
-          "feature_strategy": "Wybierz, jak grupa ma obsługiwać funkcje (np. tryb wentylatora, tryb wachlowania) swoich członków.",
-          "use_temp_sensor": "Włącz lub wyłącz użycie zewnętrznego czujnika temperatury dla grupy. Jeśli wyłączony, grupa będzie używać uśrednionej temperatury swoich członków.",
+          "feature_strategy": "Wybierz, jak grupować funkcje (np. tryb wentylatora, tryb wachlowania) od jego członków.",
+          "use_temp_sensor": "Jeśli jest wyłączony, czujnik jest usuwany, a grupa używa średniej temperatury swoich członków.",
           "temp_sensor": "Wybierz opcjonalny czujnik zewnętrzny, aby zastąpić bieżącą temperaturę grupy.",
           "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu."
         }

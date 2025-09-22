@@ -256,13 +256,17 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 check_attribute = [check_attribute]
 
             for attr in check_attribute:
+                # Check if the attribute exists and is not None
                 if attr not in state.attributes:
                     continue
+                # Get the attribute value, continue if None 
                 if not (attr_values := state.attributes.get(attr)):
                     continue
+                # If a check_value is given, ensure it's present in the attribute values
                 if check_value is not None and check_value not in attr_values:
                     continue
 
+                # It's a match !
                 supporting_entities.append(entity_id)
 
         return supporting_entities

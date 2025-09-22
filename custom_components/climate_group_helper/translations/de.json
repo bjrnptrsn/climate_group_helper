@@ -20,7 +20,7 @@
           "average_option": "Wählen Sie die Methode zur Berechnung der Ziel-Temperatur der Gruppe.",
           "round_option": "Wählen Sie die Rundungsgenauigkeit für Temperaturwerte.",
           "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
-          "feature_strategy": "Wähle aus, wie die Gruppe mit den Funktionen (z.B. Lüftermodus, Schwenkmodus) ihrer Mitglieder umgeht.",
+          "feature_strategy": "Wählen Sie, wie die Funktionen (z. B. Lüftermodus, Schwenkmodus) der Mitglieder gruppiert werden sollen.",
           "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
           "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
         }
@@ -58,8 +58,8 @@
           "average_option": "Ändern Sie die Methode zur Berechnung der Zieltemperaturen für alle Gruppenmitglieder.",
           "round_option": "Passen Sie die Temperaturgenauigkeit für die Gruppe an.",
           "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
-          "feature_strategy": "Wähle aus, wie die Gruppe mit den Funktionen (z.B. Lüftermodus, Schwenkmodus) ihrer Mitglieder umgeht.",
-          "use_temp_sensor": "Aktivieren oder deaktivieren Sie die Verwendung eines externen Temperatursensors für die Gruppe. Wenn deaktiviert, verwendet die Gruppe die gemittelte Temperatur ihrer Mitglieder.",
+          "feature_strategy": "Wählen Sie, wie die Funktionen (z. B. Lüftermodus, Schwenkmodus) der Mitglieder gruppiert werden sollen.",
+          "use_temp_sensor": "Wenn deaktiviert, wird der Sensor entfernt und die Gruppe verwendet die Durchschnittstemperatur ihrer Mitglieder.",
           "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
           "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
         }
