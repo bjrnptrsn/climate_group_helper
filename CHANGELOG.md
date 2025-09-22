@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 - 2025-09-22
+
+### ✨ Features
+
+-   **External Temperature Sensor**: It is now possible to select an external temperature sensor to override the group's current temperature. The sensor can be added or removed at any time via the group's options.
+-   **Feature Grouping Strategy**: A new option has been added to control how features (like fan modes, swing modes, presets) are combined from member devices. You can now choose between:
+    -   `Intersection`: Only features supported by *all* devices are exposed.
+    -   `Union`: All features supported by *any* device are exposed. Service calls are now intelligently routed only to the members that support the specific command.
+
 ## 0.5.1 - 2025-09-12
 
 ### Fixes

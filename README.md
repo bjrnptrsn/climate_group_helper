@@ -26,6 +26,10 @@ This integration is fully configured via the UI, no `configuration.yaml` editing
     *   `Auto`: A smart strategy that changes its behavior based on the last command sent to the group:
         *   When turning **off**: Behaves like `Normal`. The group waits until all members are `off` before its state changes to `off`.
         *   When turning **on** (e.g., to `heat`): Behaves like `Off Priority`. This ensures the group's state doesn't switch to `heat` prematurely while some devices are still `off`, making automations that wait for a state change more reliable.
+*   **Feature Grouping Strategy**: Choose how the group exposes features from its members (like fan modes, swing modes, presets, etc.).
+    *   `Intersection`: The group only exposes features and modes that are common to *all* member devices.
+    *   `Union`: The group exposes all features and modes from *any* of its member devices. When a command is sent, it's only forwarded to the members that actually support it.
+*   **External Temperature Sensor**: Optionally, override the group's current temperature with an external sensor. A selected sensor can be easily removed via a toggle in the group's options.
 *   **Dynamic Updates**: Add or remove entities from the group without restarting Home Assistant (via the options dialog).
 *   **UI Configuration**: Complete setup and management through the Home Assistant user interface (Config Flow).
 *   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
@@ -61,6 +65,8 @@ After installation, you can create a new Climate Group via the Helpers menu.
     *   **Temperature Averaging Method**: Choose the method for calculating the average temperature (see Features).
     *   **Temperature Rounding**: Select the desired rounding method.
     *   **HVAC Mode Strategy**: Choose how the group's HVAC mode is determined. See the Features section for a detailed explanation of the `Normal`, `Off Priority`, and `Auto` strategies.
+    *   **Feature Grouping Strategy**: Choose how to combine features from member devices (`Intersection` or `Union`).
+    *   **External Temperature Sensor**: Select an optional sensor to provide the temperature for the group.
     *   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
 6.  Click **"Submit"**.
 
