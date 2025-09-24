@@ -244,30 +244,21 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._attr_swing_horizontal_mode = None
 
 
-    def _get_supporting_entities(self, check_attribute: str | list[str], check_value: Any = None) -> list[str]:
+    def _get_supporting_entities(self, check_attribute: str, check_value: int | str) -> list[str]:
         """Get entity ids that match a specific check for a given attribute."""
         supporting_entities = []
-        for entity_id in self._entity_ids:
+
+        for entity_id in self._climate_entity_ids:
             state = self.hass.states.get(entity_id)
+
             if state is None:
                 continue
+            if isinstance(check_value, int) and not (check_value & state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)):
+                continue
+            if isinstance(check_value, str) and (check_value not in state.attributes.get(check_attribute, [])):
+                continue
 
-            if isinstance(check_attribute, str):
-                check_attribute = [check_attribute]
-
-            for attr in check_attribute:
-                # Check if the attribute exists and is not None
-                if attr not in state.attributes:
-                    continue
-                # Get the attribute value, continue if None 
-                if not (attr_values := state.attributes.get(attr)):
-                    continue
-                # If a check_value is given, ensure it's present in the attribute values
-                if check_value is not None and check_value not in attr_values:
-                    continue
-
-                # It's a match !
-                supporting_entities.append(entity_id)
+            supporting_entities.append(entity_id)
 
         return supporting_entities
 
@@ -284,7 +275,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 return reduce(lambda x, y: x & y, attributes)
             # Union
             return reduce(lambda x, y: x | y, attributes)
-
 
         # It's a list of modes [HVACMode | str]
         # Filter out empty attributes or None
@@ -404,7 +394,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_target_temperature_low = reduce_attribute(states, ATTR_TARGET_TEMP_LOW, reduce=lambda *data: self._average_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature_low is not None:
-                self._attr_target_temperature_low = mean_round(self._attr_target_temperature_low, self._round_option    )
+                self._attr_target_temperature_low = mean_round(self._attr_target_temperature_low, self._round_option)
 
             # Target temperature high is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_HIGH values
             self._attr_target_temperature_high = reduce_attribute(states, ATTR_TARGET_TEMP_HIGH, reduce=lambda *data: self._average_calc(data))
@@ -494,10 +484,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
-
-        entity_ids = self._climate_entity_ids
-        if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_HVAC_MODES, hvac_mode)
+        entity_ids = self._get_supporting_entities(ATTR_HVAC_MODES, hvac_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the hvac mode %s, skipping service call", hvac_mode)
@@ -516,42 +503,45 @@ class ClimateGroup(GroupEntity, ClimateEntity):
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Forward the set_temperature command to all climate in the climate group."""
 
-        entity_ids = self._climate_entity_ids
-        if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            if ATTR_TARGET_TEMP_LOW in kwargs and ATTR_TARGET_TEMP_HIGH in kwargs:
-                attr = [ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH]
-            else:
-                attr = ATTR_TEMPERATURE
-            entity_ids = self._get_supporting_entities(attr)
-
-        if not entity_ids:
-            _LOGGER.debug("No entities support the target temperature feature, skipping service call")
-            return
-
-        data = {ATTR_ENTITY_ID: entity_ids}
-
-        if ATTR_HVAC_MODE in kwargs:
-            await self.async_set_hvac_mode(kwargs[ATTR_HVAC_MODE])
+        if (hvac_mode := kwargs.get(ATTR_HVAC_MODE)):
+            await self.async_set_hvac_mode(hvac_mode)
+            if hvac_mode == HVACMode.OFF:
+                _LOGGER.debug("Temperature setting skipped, as HVAC mode was set to OFF.")
+                return
 
         if ATTR_TEMPERATURE in kwargs:
-            data[ATTR_TEMPERATURE] = kwargs[ATTR_TEMPERATURE]
-        if ATTR_TARGET_TEMP_LOW in kwargs:
-            data[ATTR_TARGET_TEMP_LOW] = kwargs[ATTR_TARGET_TEMP_LOW]
-        if ATTR_TARGET_TEMP_HIGH in kwargs:
-            data[ATTR_TARGET_TEMP_HIGH] = kwargs[ATTR_TARGET_TEMP_HIGH]
+            if (entity_ids := self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_TEMPERATURE)):
+                data = {
+                    ATTR_ENTITY_ID: entity_ids,
+                    ATTR_TEMPERATURE: kwargs[ATTR_TEMPERATURE]
+                }
 
-        _LOGGER.debug("Setting temperature: %s", data)
+                _LOGGER.debug("Setting temperature: %s", data)
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=self._context
+                )
+            else:
+                _LOGGER.debug("No entities support the target temperature feature, skipping service call")
 
-        await self.hass.services.async_call(
-            CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=self._context
-        )
+        if ATTR_TARGET_TEMP_LOW in kwargs and ATTR_TARGET_TEMP_HIGH in kwargs:
+            if (entity_ids := self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_TEMPERATURE_RANGE)):
+                data = {
+                    ATTR_ENTITY_ID: entity_ids,
+                    ATTR_TARGET_TEMP_LOW: kwargs[ATTR_TARGET_TEMP_LOW],
+                    ATTR_TARGET_TEMP_HIGH: kwargs[ATTR_TARGET_TEMP_HIGH]
+                }
+
+                _LOGGER.debug("Setting temperature range: %s", data)
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=self._context
+                )
+            else:
+                _LOGGER.debug("No entities support the target temperature range feature, skipping service call")
+          
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
-
-        entity_ids = self._climate_entity_ids
-        if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_HUMIDITY)
+        entity_ids = self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_HUMIDITY)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the target humidity feature, skipping service call")
@@ -565,10 +555,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Forward the set_fan_mode to all climate in the climate group."""
-
-        entity_ids = self._climate_entity_ids
-        if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_FAN_MODES, fan_mode)
+        entity_ids = self._get_supporting_entities(ATTR_FAN_MODES, fan_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the fan mode feature, skipping service call")
@@ -582,9 +569,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Forward the set_preset_mode to all climate in the climate group."""
-        entity_ids = self._climate_entity_ids
-        if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_PRESET_MODES, preset_mode)
+        entity_ids = self._get_supporting_entities(ATTR_PRESET_MODES, preset_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the preset mode feature, skipping service call")
@@ -598,10 +583,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Forward the set_swing_mode to all climate in the climate group."""
-
-        entity_ids = self._climate_entity_ids
-        if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_SWING_MODES, swing_mode)
+        entity_ids = self._get_supporting_entities(ATTR_SWING_MODES, swing_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the swing mode feature, skipping service call")
@@ -615,10 +597,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""
-
-        entity_ids = self._climate_entity_ids
-        if self._feature_strategy == FEATURE_STRATEGY_UNION:
-            entity_ids = self._get_supporting_entities(ATTR_SWING_HORIZONTAL_MODES, swing_horizontal_mode)
+        entity_ids = self._get_supporting_entities(ATTR_SWING_HORIZONTAL_MODES, swing_horizontal_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the horizontal swing mode feature, skipping service call")
