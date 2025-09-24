@@ -1,40 +1,50 @@
-# Home Assistant Climate Group Helper
+# 🌡️ Home Assistant Climate Group Helper
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
-**Climate Group Helper** is a [Home Assistant](https://www.home-assistant.io/) integration that allows you to group multiple climate entities into a single entity. Control all your thermostats as one unit, synchronize HVAC modes and target temperatures, and get aggregated temperature readings.
+The **Climate Group Helper** for Home Assistant lets you combine multiple thermostats into a single, powerful entity. Simplify your dashboard and automations by controlling all your climate devices as one, with a fully UI-driven setup.
 
-This integration is fully configured via the UI, no `configuration.yaml` editing is required.
+## ✨ Features
 
-## Features
+This integration provides a set of core features for grouping climate devices, along with extensive customization options to tailor the group's behavior to your needs.
 
-*   **Group Climate Entities**: Combine any number of `climate` entities into one group.
-*   **Synchronized Control**: Change the HVAC mode (heating, cooling, off, etc.) and target temperature for all devices in the group simultaneously.
-*   **Aggregated Temperature**: The group's current temperature is calculated as an average of the member temperatures.
-*   **Flexible Averaging**: Choose between different methods for calculating the average temperature:
-    *   `Mean (Average)`: The average value of all members.
-    *   `Median (Middle Value)`: The middle value.
-    *   `Minimum`: The lowest value among all members.
-    *   `Maximum`: The highest value among all members.
-*   **Temperature Rounding**: Configure the precision of temperature values:
-    *   `No Rounding`: Exact values.
-    *   `Half Degree (0.5°)`: Round to half degrees.
-    *   `Whole Numbers (1°)`: Round to whole numbers.
-*   **HVAC Mode Strategy**: Choose how the group's HVAC mode is determined from its members. This is crucial for creating reliable automations.
-    *   `Normal (Most common mode)`: The group's mode is the most frequent mode among its active (not `off`) members. The group only turns `off` when all members are `off`.
-    *   `Off Priority`: The group's mode will be `off` if *any* member is `off`. This is useful to ensure the group state reflects that at least one device is inactive.
-    *   `Auto`: A smart strategy that changes its behavior based on the last command sent to the group:
-        *   When turning **off**: Behaves like `Normal`. The group waits until all members are `off` before its state changes to `off`.
-        *   When turning **on** (e.g., to `heat`): Behaves like `Off Priority`. This ensures the group's state doesn't switch to `heat` prematurely while some devices are still `off`, making automations that wait for a state change more reliable.
-*   **Feature Grouping Strategy**: Choose how the group exposes features (hvac modes, fan modes, preset modes, swing modes) from its members.
-    *   `Intersection`: The group only exposes features and modes that are common to *all* member devices.
-    *   `Union`: The group exposes all features and modes from *any* of its member devices. When a command is sent, it's only forwarded to the members that actually support it.
-*   **External Temperature Sensor**: Optionally, override the group's current temperature with an external sensor. A selected sensor can be easily removed via a toggle in the group's options.
-*   **Dynamic Updates**: Add or remove entities from the group without restarting Home Assistant (via the options dialog).
-*   **UI Configuration**: Complete setup and management through the Home Assistant user interface (Config Flow).
-*   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
+### 🚀 Core Features
 
-## Installation
+*   **Unified Control**: Treat multiple thermostats as a single, unified entity
+*   **Synchronized Operation**: Simultaneously set various attributes for all grouped devices (e.g., mode, temperature, humidity)
+*   **Aggregated Sensors**: Get a single, combined reading for temperature and humidity from all members
+*   **Dynamic Grouping**: Add or remove devices from a group on-the-fly without restarting Home Assistant
+*   **UI-Managed**: Set up and manage everything through the Home Assistant interface (**Helpers** tab)
+
+### ⚙️ Customization Options
+
+*   **Flexible Averaging**: Choose between different methods for calculating the average temperature
+    *   `Mean (Average)`: The average value of all members
+    *   `Median (Middle Value)`: The middle value
+    *   `Minimum`: The lowest value among all members
+    *   `Maximum`: The highest value among all members
+
+*   **Temperature Rounding**: Configure the precision of temperature values
+    *   `No Rounding`: Exact values
+    *   `Half Degree (0.5°)`: Round to half degrees
+    *   `Whole Numbers (1°)`: Round to whole numbers
+
+*   **HVAC Mode Strategy**: Defines how the group's overall state (e.g., `heat` or `off`) is determined. This is crucial for reliable automations
+    *   `Normal (Most common mode)`: The group takes on the mode that most of its active members are in. The group only turns `off` when *all* members are off
+    *   `Off Priority`: The group will report as `off` if *any* single member is off. This is useful to quickly see if not all devices are active
+    *   `Auto (Smart)`: A dynamic strategy that helps make automations more reliable by changing its behavior based on the last command
+        *   **When turning ON** (e.g., to `heat`): The group waits for *all* members to turn on before changing its state to `heat`. This prevents automations from triggering too early (same as `Off Priority`)
+        *   **When turning OFF**: The group waits for *all* members to turn off before changing its state to `off` (same as `Normal (Most common mode)`)
+
+*   **Feature Grouping Strategy**: Choose how the group exposes features (hvac modes, fan modes, preset modes, swing modes) from its members
+    *   `Intersection`: The group only exposes features and modes that are common to *all* member devices
+    *   `Union`: The group exposes all features and modes from *any* of its member devices. When a command is sent, it's only forwarded to the members that actually support it
+
+*   **External Temperature Sensor**: Optionally, override the group's current temperature with an external sensor
+
+*   **Expose Member Entities**: Optionally, expose the member entities as a state attribute on the group entity
+
+## 📦 Installation
 
 ### Via HACS (Home Assistant Community Store) - Recommended
 
@@ -51,7 +61,7 @@ This integration is fully configured via the UI, no `configuration.yaml` editing
 2.  Copy the `custom_components/climate_group_helper` folder into the `custom_components` directory of your Home Assistant installation.
 3.  Restart Home Assistant.
 
-## Configuration
+## 🛠️ Configuration
 
 After installation, you can create a new Climate Group via the Helpers menu.
 
@@ -72,7 +82,7 @@ After installation, you can create a new Climate Group via the Helpers menu.
 
 The new climate group entity will be created and ready to use immediately.
 
-## Modifying a Group
+## 🔄 Modifying a Group
 
 You can change the configuration of an existing group after creation:
 
@@ -81,10 +91,10 @@ You can change the configuration of an existing group after creation:
 3.  Find your climate group helper in the list and click on it to open the settings.
 4.  Here you can adjust the member entities and calculation options.
 
-## Contributions and Bug Reports
+## ❤️ Contributions and Bug Reports
 
 Contributions are welcome! If you find a bug or want to suggest a new feature, please create an [Issue in the GitHub repository](https://github.com/bjrnptrsn/climate_group_helper/issues).
 
-## License
+## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
