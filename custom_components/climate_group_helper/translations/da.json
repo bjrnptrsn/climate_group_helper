@@ -7,7 +7,8 @@
         "data": {
           "name": "Gruppenavn",
           "entities": "Klimaanlæg",
-          "average_option": "Metode til temperaturgennemsnit",
+          "current_avg_option": "Gennemsnit for aktuelle værdier",
+          "target_avg_option": "Gennemsnit for målværdier",
           "round_option": "Temperaturafrunding",
           "hvac_mode_strategy": "HVAC-tilstandsstrategi",
           "feature_strategy": "Funktionsstrategi",
@@ -17,7 +18,8 @@
         "data_description": {
           "name": "Indtast et beskrivende navn for denne klimagruppe (f.eks. 'Stueklima' eller 'Opvarmning ovenpå').",
           "entities": "Vælg de klimaanlæg, der skal inkluderes i denne gruppe.",
-          "average_option": "Vælg metoden til beregning af gruppens måltemperatur.",
+          "current_avg_option": "Vælg metoden til beregning af gruppens aktuelle temperatur.",
+          "target_avg_option": "Vælg metoden til beregning af gruppens måltemperatur.",
           "round_option": "Vælg afrundingspræcisionen for temperaturværdier.",
           "hvac_mode_strategy": "Vælg strategien for at bestemme gruppens HVAC-tilstand.",
           "feature_strategy": "Vælg, hvordan funktioner (f.eks. blæsertilstand, svingtilstand) fra medlemmerne skal grupperes.",
@@ -45,7 +47,8 @@
         "description": "Rediger indstillingerne for din klimagruppe. Ændringer træder i kraft med det samme og påvirker, hvordan temperaturer beregnes og vises.",
         "data": {
           "entities": "Klimaanlæg",
-          "average_option": "Metode til temperaturgennemsnit",
+          "current_avg_option": "Gennemsnit for aktuelle værdier",
+          "target_avg_option": "Gennemsnit for målværdier",
           "round_option": "Temperaturafrunding",
           "hvac_mode_strategy": "HVAC-tilstandsstrategi",
           "feature_strategy": "Funktionsstrategi",
@@ -55,7 +58,8 @@
         },
         "data_description": {
           "entities": "Tilføj eller fjern klimaanlæg fra denne gruppe. Fjernelse af enheder vil udelukke dem fra temperaturberegninger og kontrolkommandoer.",
-          "average_option": "Skift metoden til beregning af måltemperaturer på tværs af gruppemedlemmer.",
+          "current_avg_option": "Skift metoden til beregning af aktuelle temperaturer på tværs af gruppemedlemmer.",
+          "target_avg_option": "Skift metoden til beregning af måltemperaturer på tværs af gruppemedlemmer.",
           "round_option": "Juster temperaturpræcisionen for gruppen.",
           "hvac_mode_strategy": "Vælg strategien for at bestemme gruppens HVAC-tilstand.",
           "feature_strategy": "Vælg, hvordan funktioner (f.eks. blæsertilstand, svingtilstand) fra medlemmerne skal grupperes.",
@@ -75,7 +79,15 @@
     }
   },
   "selector": {
-    "average_option": {
+    "current_avg_option": {
+      "options": {
+        "mean": "Gennemsnit",
+        "median": "Median (midterste værdi)",
+        "min": "Minimum",
+        "max": "Maksimum"
+      }
+    },
+    "target_avg_option": {
       "options": {
         "mean": "Gennemsnit",
         "median": "Median (midterste værdi)",

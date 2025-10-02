@@ -1,9 +1,11 @@
 """Constants for the Climate Group helper integration."""
 
+from enum import StrEnum
+
 DOMAIN = "climate_group_helper"
 DEFAULT_NAME = "Climate Group"
 
-class AverageOption:
+class AverageOption(StrEnum):
     """Averaging options for temperature."""
 
     MEAN = "mean"
@@ -11,7 +13,7 @@ class AverageOption:
     MIN = "min"
     MAX = "max"
 
-class RoundOption:
+class RoundOption(StrEnum):
     """Rounding options for temperature."""
 
     NONE = "none"
@@ -20,7 +22,8 @@ class RoundOption:
 
 
 # Configuration keys
-CONF_AVERAGE_OPTION = "average_option"
+CONF_CURRENT_AVG_OPTION = "current_avg_option"
+CONF_TARGET_AVG_OPTION = "target_avg_option"
 CONF_ROUND_OPTION = "round_option"
 CONF_USE_TEMP_SENSOR = "use_temp_sensor"
 CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"

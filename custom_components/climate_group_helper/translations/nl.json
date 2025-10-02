@@ -7,7 +7,8 @@
         "data": {
           "name": "Groepsnaam",
           "entities": "Klimaatentiteiten",
-          "average_option": "Temperatuurgemiddelde Methode",
+          "current_avg_option": "Gemiddelde voor actuele waarden",
+          "target_avg_option": "Gemiddelde voor doelwaarden",
           "round_option": "Temperatuur afronden",
           "hvac_mode_strategy": "HVAC-modusstrategie",
           "feature_strategy": "Functiestrategie",
@@ -17,7 +18,8 @@
         "data_description": {
           "name": "Voer een beschrijvende naam in voor deze klimaatgroep (bijv. 'Klimaat Woonkamer' of 'Verwarming Bovenverdieping').",
           "entities": "Selecteer de klimaat-apparaten die in deze groep moeten worden opgenomen.",
-          "average_option": "Kies de methode voor het berekenen van de doeltemperatuur van de groep.",
+          "current_avg_option": "Kies de methode voor het berekenen van de huidige temperatuur en vochtigheid van de groep.",
+          "target_avg_option": "Kies de methode voor het berekenen van de doeltemperatuur en -vochtigheid van de groep.",
           "round_option": "Selecteer de afrondingsprecisie voor temperatuurwaarden.",
           "hvac_mode_strategy": "Kies de strategie voor het bepalen van de HVAC-modus van de groep.",
           "feature_strategy": "Kies hoe de functies (bijv. ventilatormodus, zwenkmodus) van de leden moeten worden gegroepeerd.",
@@ -45,7 +47,8 @@
         "description": "Wijzig de instellingen voor uw klimaatgroep. Wijzigingen worden onmiddellijk van kracht en beïnvloeden hoe temperaturen worden berekend en weergegeven.",
         "data": {
           "entities": "Klimaatentiteiten",
-          "average_option": "Temperatuurgemiddelde Methode",
+          "current_avg_option": "Gemiddelde voor actuele waarden",
+          "target_avg_option": "Gemiddelde voor doelwaarden",
           "round_option": "Temperatuur afronden",
           "hvac_mode_strategy": "HVAC-modusstrategie",
           "feature_strategy": "Functiestrategie",
@@ -55,7 +58,8 @@
         },
         "data_description": {
           "entities": "Voeg klimaatentiteiten toe aan of verwijder ze uit deze groep. Het verwijderen van entiteiten sluit ze uit van temperatuurberekeningen en besturingscommando's.",
-          "average_option": "Wijzig de methode voor het berekenen van doeltemperaturen voor groepsleden.",
+          "current_avg_option": "Wijzig de methode voor het berekenen van de huidige temperatuur en vochtigheid van groepsleden.",
+          "target_avg_option": "Wijzig de methode voor het berekenen van de doeltemperatuur en -vochtigheid van groepsleden.",
           "round_option": "Pas de temperatuurprecisie voor de groep aan.",
           "hvac_mode_strategy": "Kies de strategie voor het bepalen van de HVAC-modus van de groep.",
           "feature_strategy": "Kies hoe de functies (bijv. ventilatormodus, zwenkmodus) van de leden moeten worden gegroepeerd.",
@@ -75,7 +79,15 @@
     }
   },
   "selector": {
-    "average_option": {
+    "current_avg_option": {
+      "options": {
+        "mean": "Gemiddelde",
+        "median": "Mediaan (Middelste Waarde)",
+        "min": "Minimum",
+        "max": "Maximum"
+      }
+    },
+    "target_avg_option": {
       "options": {
         "mean": "Gemiddelde",
         "median": "Mediaan (Middelste Waarde)",

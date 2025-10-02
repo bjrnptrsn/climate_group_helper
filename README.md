@@ -11,7 +11,7 @@ This integration provides a set of core features for grouping climate devices, a
 ### 🚀 Core Features
 
 *   **Unified Control**: Treat multiple thermostats as a single, unified entity
-*   **Synchronized Operation**: Simultaneously set various attributes for all grouped devices (e.g., mode, temperature, humidity)
+*   **Synchronized Operation**: Simultaneously set various attributes for all grouped devices (e.g. mode, temperature, humidity)
 *   **Aggregated Sensors**: Get a single, combined reading for temperature and humidity from all members
 *   **Dynamic Grouping**: Add or remove devices from a group on-the-fly without restarting Home Assistant
 *   **UI-Managed**: Set up and manage everything through the Home Assistant interface (**Helpers** tab)
@@ -29,11 +29,11 @@ This integration provides a set of core features for grouping climate devices, a
     *   `Half Degree (0.5°)`: Round to half degrees
     *   `Whole Numbers (1°)`: Round to whole numbers
 
-*   **HVAC Mode Strategy**: Defines how the group's overall state (e.g., `heat` or `off`) is determined. This is crucial for reliable automations
+*   **HVAC Mode Strategy**: Defines how the group's overall state (e.g. `heat` or `off`) is determined. This is crucial for reliable automations
     *   `Normal (Most common mode)`: The group takes on the mode that most of its active members are in. The group only turns `off` when *all* members are off
     *   `Off Priority`: The group will report as `off` if *any* single member is off. This is useful to quickly see if not all devices are active
     *   `Auto (Smart)`: A dynamic strategy that helps make automations more reliable by changing its behavior based on the last command
-        *   **When turning ON** (e.g., to `heat`): The group waits for *all* members to turn on before changing its state to `heat`. This prevents automations from triggering too early (same as `Off Priority`)
+        *   **When turning ON** (e.g. to `heat`): The group waits for *all* members to turn on before changing its state to `heat`. This prevents automations from triggering too early (same as `Off Priority`)
         *   **When turning OFF**: The group waits for *all* members to turn off before changing its state to `off` (same as `Normal (Most common mode)`)
 
 *   **Feature Grouping Strategy**: Choose how the group exposes features (hvac modes, fan modes, preset modes, swing modes) from its members
@@ -70,7 +70,7 @@ After installation, you can create a new Climate Group via the Helpers menu.
 3.  Click the **+ Create Helper** button.
 4.  Find and select **"Climate Group Helper"**.
 5.  A configuration dialog will open. Fill in the following fields:
-    *   **Group Name**: A descriptive name for your group (e.g., "Living Room Heating").
+    *   **Group Name**: A descriptive name for your group (e.g. "Living Room Heating").
     *   **Climate Entities**: Select all climate entities you want to add to this group.
     *   **Temperature Averaging Method**: Choose the method for calculating the average temperature (see Features).
     *   **Temperature Rounding**: Select the desired rounding method.

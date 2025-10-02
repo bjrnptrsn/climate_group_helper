@@ -7,7 +7,8 @@
         "data": {
           "name": "Group Name",
           "entities": "Climate Entities",
-          "average_option": "Temperature Averaging Method",
+          "current_avg_option": "Averaging for Current Values",
+          "target_avg_option": "Averaging for Target Values",
           "round_option": "Temperature Rounding",
           "hvac_mode_strategy": "HVAC Mode Strategy",
           "feature_strategy": "Feature Strategy",
@@ -17,7 +18,8 @@
         "data_description": {
           "name": "Enter a descriptive name for this climate group (e.g., 'Living Room Climate' or 'Upstairs Heating').",
           "entities": "Select the climate devices to include in this group.",
-          "average_option": "Choose the method for calculating the group's target temperature.",
+          "current_avg_option": "Choose the method for calculating the group's current temperature and humidity.",
+          "target_avg_option": "Choose the method for calculating the group's target temperature and humidity.",
           "round_option": "Select the rounding precision for temperature values.",
           "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
           "feature_strategy": "Choose how to group the features (e.g., fan mode, swing mode) from its members.",
@@ -45,7 +47,8 @@
         "description": "Modify the settings for your climate group. Changes will take effect immediately and affect how temperatures are calculated and displayed.",
         "data": {
           "entities": "Climate Entities",
-          "average_option": "Temperature Averaging Method",
+          "current_avg_option": "Averaging for Current Values",
+          "target_avg_option": "Averaging for Target Values",
           "round_option": "Temperature Rounding",
           "hvac_mode_strategy": "HVAC Mode Strategy",
           "feature_strategy": "Feature Strategy",
@@ -55,7 +58,8 @@
         },
         "data_description": {
           "entities": "Add or remove climate entities from this group. Removing entities will exclude them from temperature calculations and control commands.",
-          "average_option": "Change the method for calculating target temperatures across group members.",
+          "current_avg_option": "Change the method for calculating current temperature and humidity across group members.",
+          "target_avg_option": "Change the method for calculating target temperature and humidity across group members.",
           "round_option": "Adjust the temperature precision for the group.",
           "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
           "feature_strategy": "Choose how to group the features (e.g., fan mode, swing mode) from its members.",
@@ -75,7 +79,15 @@
     }
   },
   "selector": {
-    "average_option": {
+    "current_avg_option": {
+      "options": {
+        "mean": "Mean (Average)",
+        "median": "Median (Middle Value)",
+        "min": "Minimum",
+        "max": "Maximum"
+      }
+    },
+    "target_avg_option": {
       "options": {
         "mean": "Mean (Average)",
         "median": "Median (Middle Value)",

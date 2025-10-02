@@ -7,7 +7,8 @@
         "data": {
           "name": "Nombre del grupo",
           "entities": "Entidades de climatización",
-          "average_option": "Método de promediado de temperatura",
+          "current_avg_option": "Promedio para valores actuales",
+          "target_avg_option": "Promedio para valores objetivo",
           "round_option": "Redondeo de temperatura",
           "hvac_mode_strategy": "Estrategia de modo HVAC",
           "feature_strategy": "Estrategia de Funciones",
@@ -17,7 +18,8 @@
         "data_description": {
           "name": "Ingrese un nombre descriptivo para este grupo de climatización (por ejemplo, 'Clima de la sala de estar' o 'Calefacción de arriba').",
           "entities": "Seleccione los dispositivos de climatización que se incluirán en este grupo.",
-          "average_option": "Elija el método para calcular la temperatura objetivo del grupo.",
+          "current_avg_option": "Elija el método para calcular la temperatura y humedad actuales del grupo.",
+          "target_avg_option": "Elija el método para calcular la temperatura y humedad objetivo del grupo.",
           "round_option": "Seleccione la precisión de redondeo para los valores de temperatura.",
           "hvac_mode_strategy": "Elija la estrategia para determinar el modo HVAC del grupo.",
           "feature_strategy": "Elija cómo agrupar las características (por ejemplo, modo de ventilador, modo de oscilación) de sus miembros.",
@@ -45,7 +47,8 @@
         "description": "Modifique la configuración de su grupo de climatización. Los cambios entrarán en vigor de inmediato y afectarán la forma en que se calculan y muestran las temperaturas.",
         "data": {
           "entities": "Entidades de climatización",
-          "average_option": "Método de promediado de temperatura",
+          "current_avg_option": "Promedio para valores actuales",
+          "target_avg_option": "Promedio para valores objetivo",
           "round_option": "Redondeo de temperatura",
           "hvac_mode_strategy": "Estrategia de modo HVAC",
           "feature_strategy": "Estrategia de Funciones",
@@ -55,7 +58,8 @@
         },
         "data_description": {
           "entities": "Agregue or elimine entidades de climatización de este grupo. La eliminación de entidades las excluirá de los cálculos de temperatura y los comandos de control.",
-          "average_option": "Cambie el método para calcular las temperaturas objetivo entre los miembros del grupo.",
+          "current_avg_option": "Cambie el método para calcular las temperaturas y humedades actuales entre los miembros del grupo.",
+          "target_avg_option": "Cambie el método para calcular las temperaturas y humedades objetivo entre los miembros del grupo.",
           "round_option": "Ajuste la precisión de la temperatura para el grupo.",
           "hvac_mode_strategy": "Elija la estrategia para determinar el modo HVAC del grupo.",
           "feature_strategy": "Elija cómo agrupar las características (por ejemplo, modo de ventilador, modo de oscilación) de sus miembros.",
@@ -75,7 +79,15 @@
     }
   },
   "selector": {
-    "average_option": {
+    "current_avg_option": {
+      "options": {
+        "mean": "Media (promedio)",
+        "median": "Mediana (valor medio)",
+        "min": "Mínimo",
+        "max": "Máximo"
+      }
+    },
+    "target_avg_option": {
       "options": {
         "mean": "Media (promedio)",
         "median": "Mediana (valor medio)",

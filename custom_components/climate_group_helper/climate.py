@@ -1,6 +1,7 @@
 """This platform allows several climate devices to be grouped into one climate device."""
 from __future__ import annotations
 
+from enum import StrEnum
 from functools import reduce
 import logging
 from statistics import mean, median
@@ -73,14 +74,14 @@ from .const import (
     ATTR_GROUP_IN_SYNC,
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_TARGET_HVAC_MODE,
-    CONF_AVERAGE_OPTION,
+    CONF_CURRENT_AVG_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_HVAC_MODE_STRATEGY,
     CONF_ROUND_OPTION,
+    CONF_TARGET_AVG_OPTION,
     CONF_TEMP_SENSOR,
     FEATURE_STRATEGY_INTERSECTION,
-    FEATURE_STRATEGY_UNION,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
@@ -139,19 +140,10 @@ async def async_setup_entry(
 ) -> None:
     """Initialize Climate Group config entry."""
 
-    # Support both data (initial config) and options (updates via UI)
-    config = {**config_entry.data, **config_entry.options}
+    config = {**config_entry.options}
 
     registry = er.async_get(hass)
     entities = er.async_validate_entity_ids(registry, config[CONF_ENTITIES])
-
-    # TEMP: Get HVAC mode strategy, migrating from old key if necessary
-    hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY)
-    if hvac_mode_strategy is None:
-        if config.get("hvac_mode_off_priority", False):
-            hvac_mode_strategy = HVAC_MODE_STRATEGY_OFF_PRIORITY
-        else:
-            hvac_mode_strategy = HVAC_MODE_STRATEGY_NORMAL
 
     async_add_entities(
         [
@@ -159,9 +151,10 @@ async def async_setup_entry(
                 unique_id=config_entry.unique_id,
                 name=config.get(CONF_NAME, config_entry.title),
                 entity_ids=entities,
-                average_option=config.get(CONF_AVERAGE_OPTION, AverageOption.MEAN),
+                current_avg_option=config.get(CONF_CURRENT_AVG_OPTION, AverageOption.MEAN),
+                target_avg_option=config.get(CONF_TARGET_AVG_OPTION, AverageOption.MEAN),
                 round_option=config.get(CONF_ROUND_OPTION, RoundOption.NONE),
-                hvac_mode_strategy=hvac_mode_strategy,
+                hvac_mode_strategy=config.get(CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL),
                 feature_strategy=config.get(CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION),
                 temp_sensor=config.get(CONF_TEMP_SENSOR),
                 expose_member_entities=config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
@@ -178,7 +171,8 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         unique_id: str | None,
         name: str,
         entity_ids: list[str],
-        average_option: str,
+        current_avg_option: str,
+        target_avg_option: str,
         round_option: str,
         hvac_mode_strategy: str,
         feature_strategy: str,
@@ -190,7 +184,8 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._attr_unique_id = unique_id
         self._attr_name = name
         self._climate_entity_ids = entity_ids
-        self._average_calc = CALC_TYPES[average_option]
+        self._current_avg_calc = CALC_TYPES[current_avg_option]
+        self._target_avg_calc = CALC_TYPES[target_avg_option]
         self._round_option = round_option
         self._hvac_mode_strategy = hvac_mode_strategy
         self._feature_strategy = feature_strategy
@@ -263,30 +258,40 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         return supporting_entities
 
 
-    def _reduce_attributes(self, attributes: list[Any]) -> list[str] | int:
+    def _reduce_attributes(self, attributes: list[Any]) -> list | int:
         """Reduce a list of attributes (modes or features) based on the feature strategy."""
         if not attributes:
             return []
 
-        # It's a list of features [ClimateEntityFeature | int]
+        # Handle list of features [ClimateEntityFeature | int]
         if isinstance(attributes[0], (ClimateEntityFeature, int)):
-            # Intersection
+            # Intersection (common features)
             if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
                 return reduce(lambda x, y: x & y, attributes)
-            # Union
+            # Union (all features)
             return reduce(lambda x, y: x | y, attributes)
 
-        # It's a list of modes [HVACMode | str]
+        # Handle list of modes [HVACMode | str]
         # Filter out empty attributes or None
         valid_attributes = [attr for attr in attributes if attr]
         if not valid_attributes:
             return []
 
-        # Intersection
+        # Intersection (common modes)
         if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
-            return list(reduce(lambda x, y: set(x) & set(y), valid_attributes))
-        # Union
-        return list(reduce(lambda x, y: set(x) | set(y), valid_attributes))
+            modes = list(reduce(lambda x, y: set(x) & set(y), valid_attributes))
+        # Union (all modes)
+        else:
+            modes = list(reduce(lambda x, y: set(x) | set(y), valid_attributes))
+
+        # Sort if modes are from type HVACMode
+        if modes and isinstance(modes[0], HVACMode):
+            # Make sure OFF is always included
+            modes.append(HVACMode.OFF)
+            # Sort based on the HVACMode enum order
+            modes = [m for m in HVACMode if m in modes]
+
+        return modes
 
 
     def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | None:
@@ -298,20 +303,29 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         strategy = self._hvac_mode_strategy
 
+        # Auto strategy
         if strategy == HVAC_MODE_STRATEGY_AUTO:
+            # If target HVAC mode is OFF or None, use normal strategy
             if self._target_hvac_mode in (HVACMode.OFF, None):
                 strategy = HVAC_MODE_STRATEGY_NORMAL
+            # If target HVAC mode is ON (e.g. heat, cool), use off priority strategy
             else:
                 strategy = HVAC_MODE_STRATEGY_OFF_PRIORITY
 
+        # Normal strategy
         if strategy == HVAC_MODE_STRATEGY_NORMAL:
+            # If all members are OFF, the group is OFF
             if all(mode == HVACMode.OFF for mode in current_hvac_modes) if current_hvac_modes else False:
                 return HVACMode.OFF
+            # Otherwise, return the most common active HVAC mode
             return most_common_active_hvac_mode
 
+        # Off priority strategy
         if strategy == HVAC_MODE_STRATEGY_OFF_PRIORITY:
+            # If any member is OFF, the group is OFF
             if HVACMode.OFF in current_hvac_modes:
                 return HVACMode.OFF
+            # Otherwise, return the most common active HVAC mode
             return most_common_active_hvac_mode
 
         return None
@@ -323,7 +337,8 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         # Initialize extra state attributes
         self._attr_extra_state_attributes = {
-            CONF_AVERAGE_OPTION: self._average_calc.__name__,
+            CONF_CURRENT_AVG_OPTION: self._current_avg_calc.__name__,
+            CONF_TARGET_AVG_OPTION: self._target_avg_calc.__name__,
             CONF_ROUND_OPTION: self._round_option,
             CONF_TEMP_SENSOR: self._temp_sensor_entity_id,
             CONF_EXPOSE_MEMBER_ENTITIES: self._expose_member_entities,
@@ -346,10 +361,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             # All available HVAC modes --> list of HVACMode (str), e.g. [<HVACMode.OFF: 'off'>, <HVACMode.HEAT: 'heat'>, <HVACMode.AUTO: 'auto'>, ...]
             self._attr_hvac_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_HVAC_MODES)))
 
-            # Make sure OFF is always available
-            if HVACMode.OFF not in self._attr_hvac_modes:
-                self._attr_hvac_modes.append(HVACMode.OFF)
-
             # A list of all HVAC modes that are currently set
             current_hvac_modes = sorted([state.state for state in states])
 
@@ -370,7 +381,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_temperature_unit = self.hass.config.units.temperature_unit
 
             # Averaged current temperature of all members
-            self._attr_averaged_current_temperature = reduce_attribute(states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: mean(data))
+            self._attr_averaged_current_temperature = reduce_attribute(states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._current_avg_calc(data))
 
             # Get current temperature from sensor or fallback to averaged temperature
             self._attr_current_temperature = self._attr_averaged_current_temperature
@@ -385,19 +396,19 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                     _LOGGER.warning("Sensor %s is unavailable, falling back to averaged temperature", self._temp_sensor_entity_id)
 
             # Target temperature is calculated using the 'average_option' method from all ATTR_TEMPERATURE values.
-            self._attr_target_temperature = reduce_attribute(states, ATTR_TEMPERATURE, reduce=lambda *data: self._average_calc(data))
+            self._attr_target_temperature = reduce_attribute(states, ATTR_TEMPERATURE, reduce=lambda *data: self._target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature is not None:
                 self._attr_target_temperature = mean_round(self._attr_target_temperature, self._round_option)
 
             # Target temperature low is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_LOW values
-            self._attr_target_temperature_low = reduce_attribute(states, ATTR_TARGET_TEMP_LOW, reduce=lambda *data: self._average_calc(data))
+            self._attr_target_temperature_low = reduce_attribute(states, ATTR_TARGET_TEMP_LOW, reduce=lambda *data: self._target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature_low is not None:
                 self._attr_target_temperature_low = mean_round(self._attr_target_temperature_low, self._round_option)
 
             # Target temperature high is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_HIGH values
-            self._attr_target_temperature_high = reduce_attribute(states, ATTR_TARGET_TEMP_HIGH, reduce=lambda *data: self._average_calc(data))
+            self._attr_target_temperature_high = reduce_attribute(states, ATTR_TARGET_TEMP_HIGH, reduce=lambda *data: self._target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature_high is not None:
                 self._attr_target_temperature_high = mean_round(self._attr_target_temperature_high, self._round_option)
@@ -412,10 +423,10 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_max_temp = reduce_attribute(states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
 
             # Current humidity is the average of all ATTR_CURRENT_HUMIDITY values
-            self._attr_current_humidity = reduce_attribute(states, ATTR_CURRENT_HUMIDITY, reduce=lambda *data: mean(data))
+            self._attr_current_humidity = reduce_attribute(states, ATTR_CURRENT_HUMIDITY, reduce=lambda *data: self._current_avg_calc(data))
 
             # Target humidity is calculated using the 'average_option' method from all ATTR_HUMIDITY values.
-            self._attr_target_humidity = reduce_attribute(states, ATTR_HUMIDITY, reduce=lambda *data: self._average_calc(data))
+            self._attr_target_humidity = reduce_attribute(states, ATTR_HUMIDITY, reduce=lambda *data: self._target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_humidity is not None:
                 self._attr_target_humidity = mean_round(self._attr_target_humidity, self._round_option)

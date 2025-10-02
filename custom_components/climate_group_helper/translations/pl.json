@@ -7,7 +7,8 @@
         "data": {
           "name": "Nazwa grupy",
           "entities": "Encje klimatyzacji",
-          "average_option": "Metoda uśredniania temperatury",
+          "current_avg_option": "Średnia dla bieżących wartości",
+          "target_avg_option": "Średnia dla docelowych wartości",
           "round_option": "Zaokrąglanie temperatury",
           "hvac_mode_strategy": "Strategia trybu HVAC",
           "feature_strategy": "Strategia Funkcji",
@@ -17,7 +18,8 @@
         "data_description": {
           "name": "Wprowadź opisową nazwę dla tej grupy klimatyzacji (np. 'Klimatyzacja w salonie' lub 'Ogrzewanie na piętrze').",
           "entities": "Wybierz urządzenia klimatyzacyjne do włączenia do tej grupy.",
-          "average_option": "Wybierz metodę obliczania docelowej temperatury grupy.",
+          "current_avg_option": "Wybierz metodę obliczania bieżącej temperatury i wilgotności grupy.",
+          "target_avg_option": "Wybierz metodę obliczania docelowej temperatury i wilgotności grupy.",
           "round_option": "Wybierz precyzję zaokrąglania wartości temperatury.",
           "hvac_mode_strategy": "Wybierz strategię określania trybu HVAC grupy.",
           "feature_strategy": "Wybierz, jak grupować funkcje (np. tryb wentylatora, tryb wachlowania) od jego członków.",
@@ -45,7 +47,8 @@
         "description": "Zmodyfikuj ustawienia grupy klimatyzacji. Zmiany wejdą w życie natychmiast i wpłyną na sposób obliczania i wyświetlania temperatur.",
         "data": {
           "entities": "Encje klimatyzacji",
-          "average_option": "Metoda uśredniania temperatury",
+          "current_avg_option": "Średnia dla bieżących wartości",
+          "target_avg_option": "Średnia dla docelowych wartości",
           "round_option": "Zaokrąglanie temperatury",
           "hvac_mode_strategy": "Strategia trybu HVAC",
           "feature_strategy": "Strategia Funkcji",
@@ -55,7 +58,8 @@
         },
         "data_description": {
           "entities": "Dodaj lub usuń encje klimatyzacji z tej grupy. Usunięcie encji wykluczy je z obliczeń temperatury i poleceń sterujących.",
-          "average_option": "Zmień metodę obliczania temperatur docelowych dla członków grupy.",
+          "current_avg_option": "Zmień metodę obliczania bieżącej temperatury i wilgotności dla członków grupy.",
+          "target_avg_option": "Zmień metodę obliczania docelowej temperatury i wilgotności dla członków grupy.",
           "round_option": "Dostosuj precyzję temperatury dla grupy.",
           "hvac_mode_strategy": "Wybierz strategię określania trybu HVAC grupy.",
           "feature_strategy": "Wybierz, jak grupować funkcje (np. tryb wentylatora, tryb wachlowania) od jego członków.",
@@ -75,7 +79,15 @@
     }
   },
   "selector": {
-    "average_option": {
+    "current_avg_option": {
+      "options": {
+        "mean": "Średnia",
+        "median": "Mediana (wartość środkowa)",
+        "min": "Minimum",
+        "max": "Maksimum"
+      }
+    },
+    "target_avg_option": {
       "options": {
         "mean": "Średnia",
         "median": "Mediana (wartość środkowa)",

@@ -7,7 +7,8 @@
         "data": {
           "name": "组名",
           "entities": "气候实体",
-          "average_option": "温度平均方法",
+          "current_avg_option": "当前值的平均方法",
+          "target_avg_option": "目标值的平均方法",
           "round_option": "温度四舍五入",
           "hvac_mode_strategy": "HVAC 模式策略",
           "feature_strategy": "功能策略",
@@ -17,7 +18,8 @@
         "data_description": {
           "name": "为此气候组输入一个描述性名称（例如，‘客厅气候’或‘楼上供暖’）。",
           "entities": "选择要包含在此组中的气候设备。",
-          "average_option": "选择计算组目标温度的方法。",
+          "current_avg_option": "选择计算组当前温度和湿度的方法。",
+          "target_avg_option": "选择计算组目标温度和湿度的方法。",
           "round_option": "选择温度值的四舍五入精度。",
           "hvac_mode_strategy": "选择确定组的 HVAC 模式的策略。",
           "feature_strategy": "选择如何对成员的功能（例如风扇模式、摆动模式）进行分组。",
@@ -45,7 +47,8 @@
         "description": "修改您的气候组的设置。更改将立即生效，并影响温度的计算和显示方式。",
         "data": {
           "entities": "气候实体",
-          "average_option": "温度平均方法",
+          "current_avg_option": "当前值的平均方法",
+          "target_avg_option": "目标值的平均方法",
           "round_option": "温度四舍五入",
           "hvac_mode_strategy": "HVAC 模式策略",
           "feature_strategy": "功能策略",
@@ -55,7 +58,8 @@
         },
         "data_description": {
           "entities": "从此组中添加或删除气候实体。删除实体会将其从温度计算和控制命令中排除。",
-          "average_option": "更改计算组成员目标温度的方法。",
+          "current_avg_option": "更改计算组成员当前温度和湿度的方法。",
+          "target_avg_option": "更改计算组成员目标温度和湿度的方法。",
           "round_option": "调整组的温度精度。",
           "hvac_mode_strategy": "选择确定组的 HVAC 模式的策略。",
           "feature_strategy": "选择如何对成员的功能（例如风扇模式、摆动模式）进行分组。",
@@ -75,7 +79,15 @@
     }
   },
   "selector": {
-    "average_option": {
+    "current_avg_option": {
+      "options": {
+        "mean": "平均值",
+        "median": "中位数（中间值）",
+        "min": "最小值",
+        "max": "最大值"
+      }
+    },
+    "target_avg_option": {
       "options": {
         "mean": "平均值",
         "median": "中位数（中间值）",

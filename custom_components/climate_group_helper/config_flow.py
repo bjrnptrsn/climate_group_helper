@@ -1,4 +1,5 @@
 """Config flow for Climate Group helper integration."""
+
 from __future__ import annotations
 
 import logging
@@ -15,11 +16,12 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import (
-    CONF_AVERAGE_OPTION,
+    CONF_CURRENT_AVG_OPTION,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_HVAC_MODE_STRATEGY,
     CONF_ROUND_OPTION,
+    CONF_TARGET_AVG_OPTION,
     CONF_TEMP_SENSOR,
     CONF_USE_TEMP_SENSOR,
     DEFAULT_NAME,
@@ -39,7 +41,15 @@ _LOGGER = logging.getLogger(__name__)
 class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 1
+    VERSION = 2
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> ClimateGroupOptionsFlow:
+        """Create the options flow."""
+        return ClimateGroupOptionsFlow(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -53,17 +63,18 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors[CONF_ENTITIES] = "no_entities"
 
             if not errors:
-                # Generate unique_str from the name and add a random number to ensure uniqueness
                 await self.async_set_unique_id(
                     user_input[CONF_NAME].strip().lower().replace(" ", "_")
                 )
                 self._abort_if_unique_id_configured()
 
+                # Store everything in options, data remains empty
                 return self.async_create_entry(
-                    title=user_input[CONF_NAME], data=user_input
+                    title=user_input[CONF_NAME], data={}, options=user_input
                 )
 
-        CONFIG_SCHEMA = vol.Schema(
+        # --- Schema for setup ---
+        setup_schema = vol.Schema(
             {
                 vol.Required(CONF_NAME, default=DEFAULT_NAME): str,
                 vol.Required(CONF_ENTITIES): selector.EntitySelector(
@@ -73,28 +84,28 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                 ),
                 vol.Required(
-                    CONF_AVERAGE_OPTION, default=AverageOption.MEAN
+                    CONF_CURRENT_AVG_OPTION, default=AverageOption.MEAN
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=[
-                            AverageOption.MEAN,
-                            AverageOption.MEDIAN,
-                            AverageOption.MIN,
-                            AverageOption.MAX,
-                        ],
+                        options=[opt.value for opt in AverageOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
-                        translation_key="average_option",
+                        translation_key="current_avg_option",
+                    )
+                ),
+                vol.Required(
+                    CONF_TARGET_AVG_OPTION, default=AverageOption.MEAN
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[opt.value for opt in AverageOption],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="target_avg_option",
                     )
                 ),
                 vol.Required(
                     CONF_ROUND_OPTION, default=RoundOption.NONE
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=[
-                            RoundOption.NONE,
-                            RoundOption.HALF,
-                            RoundOption.INTEGER,
-                        ],
+                        options=[opt.value for opt in RoundOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="round_option",
                     )
@@ -136,17 +147,9 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=CONFIG_SCHEMA,
+            data_schema=setup_schema,
             errors=errors,
         )
-
-    @staticmethod
-    @callback
-    def async_get_options_flow(
-        config_entry: config_entries.ConfigEntry,
-    ) -> ClimateGroupOptionsFlow:
-        """Create the options flow."""
-        return ClimateGroupOptionsFlow(config_entry)
 
 
 class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
@@ -154,7 +157,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self._config_entry = config_entry
+        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -162,83 +165,73 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         """Manage the options."""
         errors: dict[str, str] = {}
 
-        # Get current configuration (data + options)
-        current_config = {**self._config_entry.data, **self._config_entry.options}
-
         if user_input is not None:
-
-            # The key 'use_temp_sensor' is only present if a sensor was already configured.
-            # If the boolean is set to False (not None), remove both temp_sensor keys from the config.
-            if user_input.get(CONF_USE_TEMP_SENSOR) is False:
-                user_input.pop(CONF_TEMP_SENSOR, None)
-                user_input.pop(CONF_USE_TEMP_SENSOR, None)
-            # If the key 'use_temp_sensor' is missing but a sensor is selected, a new sensor has been selected.
-            # If so, create key 'use_temp_sensor' and set it True.
-            elif CONF_TEMP_SENSOR in user_input and CONF_USE_TEMP_SENSOR not in user_input:
-                user_input[CONF_USE_TEMP_SENSOR] = True
 
             # Check that at least one entity was selected
             if not user_input.get(CONF_ENTITIES):
                 errors[CONF_ENTITIES] = "no_entities"
 
-            if not errors:
-                # Check if anything actually changed
-                if user_input == current_config:
-                    _LOGGER.debug("No changes detected, aborting options flow")
-                    return self.async_abort(reason="no_changes")
+            # Handle the temperature sensor and associated boolean
+            if CONF_TEMP_SENSOR in user_input:
+                use_temp_sensor = user_input.get(CONF_USE_TEMP_SENSOR)
 
-                _LOGGER.debug("Options updated: %s", user_input)
+                # A new sensor has been selected, add key 'use_temp_sensor' and set to True
+                if use_temp_sensor is None:
+                    user_input[CONF_USE_TEMP_SENSOR] = True
+                # The current sensor is removed, remove both temp sensor keys
+                # A new selected sensor is reverted on error
+                if (use_temp_sensor is False
+                    or errors and use_temp_sensor is not True
+                ):
+                    user_input.pop(CONF_TEMP_SENSOR)
+                    user_input.pop(CONF_USE_TEMP_SENSOR)
+
+            if not errors:
                 return self.async_create_entry(title="", data=user_input)
 
-        hvac_mode_strategy_default = current_config.get(CONF_HVAC_MODE_STRATEGY)
-        if hvac_mode_strategy_default is None:
-            if current_config.get("hvac_mode_off_priority", False):
-                hvac_mode_strategy_default = HVAC_MODE_STRATEGY_OFF_PRIORITY
-            else:
-                hvac_mode_strategy_default = HVAC_MODE_STRATEGY_NORMAL
-
         # --- Schema Generation ---
+
+        # Get current configuration from options
+        # Override with user_input to re-displaying the form after an error
+        current_config = {**self.config_entry.options, **(user_input or {})}
 
         # Determine if a sensor is currently active
         # If so, the sensor entity will be read-only and the 'use_temp_sensor' boolean will be shown.
         # If not, an optional temperature sensor can be selected.
-        sensor_active = bool(CONF_TEMP_SENSOR in current_config)
-        
+        sensor_active = bool(current_config.get(CONF_TEMP_SENSOR))
+
         # The EntitySelector does not accept an empty string if the sensor has been removed.
         # We therefore use the boolean to remove the key temp_sensor and thus the entity_id from the config.
         # This ensures that the group_state_update can no longer be triggered from this sensors entity_id.
-        TEMP_SENSOR_SCHEMA = {
-            vol.Required(
-                CONF_USE_TEMP_SENSOR,
-                default=True,
-            ): bool,
-            vol.Optional(
-                CONF_TEMP_SENSOR,
-                default=current_config.get(CONF_TEMP_SENSOR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(
-                    domain=SENSOR_DOMAIN,
-                    multiple=False,
-                    read_only=True,
-                )
-            ),
-        } if sensor_active else {
-            vol.Optional(
-                CONF_TEMP_SENSOR,
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(
-                    domain=SENSOR_DOMAIN,
-                    multiple=False,
-                )
-            ),
-        }
+        temp_sensor_schema = (
+            {
+                vol.Required(CONF_USE_TEMP_SENSOR, default=True): bool,
+                vol.Optional(
+                    CONF_TEMP_SENSOR,
+                    default=current_config.get(CONF_TEMP_SENSOR),
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=SENSOR_DOMAIN,
+                        multiple=False,
+                        read_only=True
+                    )
+                ),
+            }
+            if sensor_active
+            else {
+                vol.Optional(CONF_TEMP_SENSOR): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=SENSOR_DOMAIN,
+                        multiple=False,
+                    )
+                ),
+            }
+        )
 
-        # Base schema fields
-        OPTIONS_SCHEMA = vol.Schema(
+        options_schema = vol.Schema(
             {
                 vol.Required(
-                    CONF_ENTITIES,
-                    default=current_config.get(CONF_ENTITIES, []),
+                    CONF_ENTITIES, default=current_config.get(CONF_ENTITIES, [])
                 ): selector.EntitySelector(
                     selector.EntitySelectorConfig(
                         domain=CLIMATE_DOMAIN,
@@ -246,20 +239,27 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     )
                 ),
                 vol.Required(
-                    CONF_AVERAGE_OPTION,
+                    CONF_CURRENT_AVG_OPTION,
                     default=current_config.get(
-                        CONF_AVERAGE_OPTION, AverageOption.MEAN
+                        CONF_CURRENT_AVG_OPTION, AverageOption.MEAN
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=[
-                            AverageOption.MEAN,
-                            AverageOption.MEDIAN,
-                            AverageOption.MIN,
-                            AverageOption.MAX,
-                        ],
+                        options=[opt.value for opt in AverageOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
-                        translation_key="average_option",
+                        translation_key="current_avg_option",
+                    )
+                ),
+                vol.Required(
+                    CONF_TARGET_AVG_OPTION,
+                    default=current_config.get(
+                        CONF_TARGET_AVG_OPTION, AverageOption.MEAN
+                    ),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[opt.value for opt in AverageOption],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="target_avg_option",
                     )
                 ),
                 vol.Required(
@@ -267,17 +267,16 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     default=current_config.get(CONF_ROUND_OPTION, RoundOption.NONE),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=[
-                            RoundOption.NONE,
-                            RoundOption.HALF,
-                            RoundOption.INTEGER,
-                        ],
+                        options=[opt.value for opt in RoundOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="round_option",
                     )
                 ),
                 vol.Required(
-                    CONF_HVAC_MODE_STRATEGY, default=hvac_mode_strategy_default
+                    CONF_HVAC_MODE_STRATEGY,
+                    default=current_config.get(
+                        CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL
+                    ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[
@@ -304,7 +303,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         translation_key="feature_strategy",
                     )
                 ),
-                **TEMP_SENSOR_SCHEMA,
+                **temp_sensor_schema,
                 vol.Optional(
                     CONF_EXPOSE_MEMBER_ENTITIES,
                     default=current_config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
@@ -314,6 +313,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=OPTIONS_SCHEMA,
+            data_schema=options_schema,
             errors=errors,
         )

@@ -7,7 +7,8 @@
         "data": {
           "name": "Nome do Grupo",
           "entities": "Entidades de Climatização",
-          "average_option": "Método de Média de Temperatura",
+          "current_avg_option": "Média para valores atuais",
+          "target_avg_option": "Média para valores-alvo",
           "round_option": "Arredondamento de Temperatura",
           "hvac_mode_strategy": "Estratégia de modo HVAC",
           "feature_strategy": "Estratégia de Funcionalidades",
@@ -17,7 +18,8 @@
         "data_description": {
           "name": "Introduza um nome descritivo para este grupo de climatização (por exemplo, 'Climatização da Sala' ou 'Aquecimento do Andar de Cima').",
           "entities": "Selecione os dispositivos de climatização a incluir neste grupo.",
-          "average_option": "Escolha o método para calcular a temperatura alvo do grupo.",
+          "current_avg_option": "Escolha o método para calcular a temperatura e humidade atuais do grupo.",
+          "target_avg_option": "Escolha o método para calcular a temperatura e humidade alvo do grupo.",
           "round_option": "Selecione a precisão de arredondamento para os valores de temperatura.",
           "hvac_mode_strategy": "Escolha a estratégia para determinar o modo HVAC do grupo.",
           "feature_strategy": "Escolha como agrupar as funcionalidades (por exemplo, modo de ventoinha, modo de oscilação) dos seus membros.",
@@ -45,7 +47,8 @@
         "description": "Modifique as definições do seu grupo de climatização. As alterações entrarão em vigor imediatamente e afetarão a forma como as temperaturas são calculadas e apresentadas.",
         "data": {
           "entities": "Entidades de Climatização",
-          "average_option": "Método de Média de Temperatura",
+          "current_avg_option": "Média para valores atuais",
+          "target_avg_option": "Média para valores-alvo",
           "round_option": "Arredondamento de Temperatura",
           "hvac_mode_strategy": "Estratégia de modo HVAC",
           "feature_strategy": "Estratégia de Funcionalidades",
@@ -55,7 +58,8 @@
         },
         "data_description": {
           "entities": "Adicione ou remova entidades de climatização deste grupo. A remoção de entidades irá excluí-las dos cálculos de temperatura e dos comandos de controlo.",
-          "average_option": "Altere o método de cálculo das temperaturas alvo entre os membros do grupo.",
+          "current_avg_option": "Altere o método de cálculo das temperaturas e humidade atuais entre os membros do grupo.",
+          "target_avg_option": "Altere o método de cálculo das temperaturas e humidade alvo entre os membros do grupo.",
           "round_option": "Ajuste a precisão da temperatura para o grupo.",
           "hvac_mode_strategy": "Escolha a estratégia para determinar o modo HVAC do grupo.",
           "feature_strategy": "Escolha como agrupar as funcionalidades (por exemplo, modo de ventoinha, modo de oscilação) dos seus membros.",
@@ -75,7 +79,15 @@
     }
   },
   "selector": {
-    "average_option": {
+    "current_avg_option": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (Valor do Meio)",
+        "min": "Mínimo",
+        "max": "Máximo"
+      }
+    },
+    "target_avg_option": {
       "options": {
         "mean": "Média",
         "median": "Mediana (Valor do Meio)",

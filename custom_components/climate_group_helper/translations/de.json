@@ -7,7 +7,8 @@
         "data": {
           "name": "Gruppenname",
           "entities": "Klimageräte",
-          "average_option": "Temperatur-Mittelwertmethode",
+          "current_avg_option": "Mittelwertmethode für aktuelle Werte",
+          "target_avg_option": "Mittelwertmethode für Zielwerte",
           "round_option": "Temperaturrundung",
           "hvac_mode_strategy": "HLK-Modus-Strategie",
           "feature_strategy": "Funktions-Strategie",
@@ -17,7 +18,8 @@
         "data_description": {
           "name": "Geben Sie einen beschreibenden Namen für diese Klimagruppe ein (z. B. 'Wohnzimmerklima' oder 'Heizung Obergeschoss').",
           "entities": "Wählen Sie die Klimageräte aus, die in diese Gruppe aufgenommen werden sollen.",
-          "average_option": "Wählen Sie die Methode zur Berechnung der Ziel-Temperatur der Gruppe.",
+          "current_avg_option": "Wählen Sie die Methode zur Berechnung der aktuellen Temperatur/Feuchtigkeit der Gruppe.",
+          "target_avg_option": "Wählen Sie die Methode zur Berechnung der Ziel-Temperatur/Feuchtigkeit der Gruppe.",
           "round_option": "Wählen Sie die Rundungsgenauigkeit für Temperaturwerte.",
           "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
           "feature_strategy": "Wählen Sie, wie die Funktionen (z. B. Lüftermodus, Schwenkmodus) der Mitglieder gruppiert werden sollen.",
@@ -45,7 +47,8 @@
         "description": "Ändern Sie die Einstellungen für Ihre Klimagruppe. Änderungen werden sofort wirksam und beeinflussen, wie Temperaturen berechnet und angezeigt werden.",
         "data": {
           "entities": "Klimageräte",
-          "average_option": "Temperatur-Mittelwertmethode",
+          "current_avg_option": "Mittelwertmethode für aktuelle Werte",
+          "target_avg_option": "Mittelwertmethode für Zielwerte",
           "round_option": "Temperaturrundung",
           "hvac_mode_strategy": "HLK-Modus-Strategie",
           "feature_strategy": "Funktions-Strategie",
@@ -55,7 +58,8 @@
         },
         "data_description": {
           "entities": "Fügen Sie Klimageräte zu dieser Gruppe hinzu oder entfernen Sie sie. Entfernte Geräte werden von Temperaturberechnungen und Steuerbefehlen ausgeschlossen.",
-          "average_option": "Ändern Sie die Methode zur Berechnung der Zieltemperaturen für alle Gruppenmitglieder.",
+          "current_avg_option": "Ändern Sie die Methode zur Berechnung der aktuellen Temperatur/Feuchtigkeit für alle Gruppenmitglieder.",
+          "target_avg_option": "Ändern Sie die Methode zur Berechnung der Ziel-Temperatur/Feuchtigkeit für alle Gruppenmitglieder.",
           "round_option": "Passen Sie die Temperaturgenauigkeit für die Gruppe an.",
           "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
           "feature_strategy": "Wählen Sie, wie die Funktionen (z. B. Lüftermodus, Schwenkmodus) der Mitglieder gruppiert werden sollen.",
@@ -75,7 +79,15 @@
     }
   },
   "selector": {
-    "average_option": {
+    "current_avg_option": {
+      "options": {
+        "mean": "Mittelwert (Durchschnitt)",
+        "median": "Median (Mittlerer Wert)",
+        "min": "Minimum",
+        "max": "Maximum"
+      }
+    },
+    "target_avg_option": {
       "options": {
         "mean": "Mittelwert (Durchschnitt)",
         "median": "Median (Mittlerer Wert)",

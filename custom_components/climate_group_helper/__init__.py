@@ -1,37 +1,63 @@
 """The Climate Group helper integration."""
 from __future__ import annotations
 
+import logging
+
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ENTITIES, CONF_NAME, Platform
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
+from .const import (
+    CONF_HVAC_MODE_STRATEGY,
+    CONF_TARGET_AVG_OPTION,
+    HVAC_MODE_STRATEGY_OFF_PRIORITY,
+)
+
 PLATFORMS: list[Platform] = [Platform.CLIMATE]
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Climate Group helper from a config entry."""
 
-    # Split config entry into data and options during initial configuration
+    # One-time migration for entries that have no options yet, moving all data to options
     if not entry.options:
-        options = {
-            key: value
-            for key, value in entry.data.items()
-            if key not in (CONF_ENTITIES, CONF_NAME)
-        }
-
-        data = {
-            CONF_NAME: entry.data[CONF_NAME],
-            CONF_ENTITIES: entry.data[CONF_ENTITIES]
-        }
-
-        hass.config_entries.async_update_entry(
-            entry, data=data, options=options
-        )
+        hass.config_entries.async_update_entry(entry, data={}, options=entry.data)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Register update listener for options changes
+    # Register update listener for options changes, which will trigger a reload
     entry.async_on_unload(entry.add_update_listener(_update_listener))
+
+    return True
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Migrate old entry."""
+    _LOGGER.debug("Attempting to migrate config entry from version %s", entry.version)
+
+    if entry.version == 1:
+        _LOGGER.debug("Migrating config entry to version 2")
+
+        # For version 1, some configuration was stored in data and some in options.
+        data_v1 = dict(entry.data)
+        options_v1 = dict(entry.options)
+
+        # For version 2, all configuration is stored in options, so we combine data and options into options.
+        options_v2 = {**data_v1, **options_v1}
+
+        # Migrate hvac_mode_off_priority to hvac_mode_strategy (since Release 0.5.0)
+        if options_v2.pop("hvac_mode_off_priority", False):
+            options_v2[CONF_HVAC_MODE_STRATEGY] = HVAC_MODE_STRATEGY_OFF_PRIORITY
+
+        # Migrate average_option to target_avg_option (since Release 0.7.0)
+        if (old_avg_option := options_v2.pop("average_option", None)) is not None:
+            options_v2[CONF_TARGET_AVG_OPTION] = old_avg_option
+
+        # Update the entry with empty data and all config in options
+        hass.config_entries.async_update_entry(entry, data={}, options=options_v2, version=2)
+        _LOGGER.info("Successfully migrated config entry to version 2")
 
     return True
 
@@ -42,5 +68,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Handle options update by reloading entry."""
+    """Handle options update by reloading the entry."""
     hass.config_entries.async_schedule_reload(entry.entry_id)
