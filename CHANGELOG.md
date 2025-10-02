@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0 - 2025-10-02
+
+### ✨ Features
+
+*   **Split Averaging Methods**: The single temperature averaging option has been split into two separate settings, providing more granular control over how the group calculates its values:
+    *   **Averaging for Current Values**: Determines how the group's *current* temperature and humidity are calculated from its members.
+    *   **Averaging for Target Values**: Independently determines how the group's *target* temperature and humidity are calculated.
+
+*   Configuration for existing users is automatically migrated to the new settings.
+
 ## 0.6.1 - 2025-09-24
 
 ### 🔧 Fixes

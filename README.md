@@ -18,11 +18,17 @@ This integration provides a set of core features for grouping climate devices, a
 
 ### ⚙️ Customization Options
 
-*   **Flexible Averaging**: Choose between different methods for calculating the average temperature
-    *   `Mean (Average)`: The average value of all members
-    *   `Median (Middle Value)`: The middle value
-    *   `Minimum`: The lowest value among all members
-    *   `Maximum`: The highest value among all members
+*   **Flexible Averaging for Current Values**: Choose how the group's *current* temperature and humidity are calculated from its members.
+    *   `Mean (Average)`: The average value of all members.
+    *   `Median (Middle Value)`: The middle value.
+    *   `Minimum`: The lowest value among all members.
+    *   `Maximum`: The highest value among all members.
+
+*   **Flexible Averaging for Target Values**: Independently choose how the group's *target* temperature and humidity are calculated.
+    *   `Mean (Average)`: The average value of all members.
+    *   `Median (Middle Value)`: The middle value.
+    *   `Minimum`: The lowest value among all members.
+    *   `Maximum`: The highest value among all members.
 
 *   **Temperature Rounding**: Configure the precision of temperature values
     *   `No Rounding`: Exact values
@@ -72,7 +78,8 @@ After installation, you can create a new Climate Group via the Helpers menu.
 5.  A configuration dialog will open. Fill in the following fields:
     *   **Group Name**: A descriptive name for your group (e.g. "Living Room Heating").
     *   **Climate Entities**: Select all climate entities you want to add to this group.
-    *   **Temperature Averaging Method**: Choose the method for calculating the average temperature (see Features).
+    *   **Averaging for Current Values**: Choose the method for calculating the group's current temperature and humidity.
+    *   **Averaging for Target Values**: Choose the method for calculating the group's target temperature and humidity.
     *   **Temperature Rounding**: Select the desired rounding method.
     *   **HVAC Mode Strategy**: Choose how the group's HVAC mode is determined. See the Features section for a detailed explanation of the `Normal`, `Off Priority`, and `Auto` strategies.
     *   **Feature Grouping Strategy**: Choose how to combine features from member devices (`Intersection` or `Union`).
