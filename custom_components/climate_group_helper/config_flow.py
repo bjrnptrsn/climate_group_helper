@@ -157,7 +157,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -193,7 +193,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         # Get current configuration from options
         # Override with user_input to re-displaying the form after an error
-        current_config = {**self.config_entry.options, **(user_input or {})}
+        current_config = {**self._config_entry.options, **(user_input or {})}
 
         # Determine if a sensor is currently active
         # If so, the sensor entity will be read-only and the 'use_temp_sensor' boolean will be shown.
