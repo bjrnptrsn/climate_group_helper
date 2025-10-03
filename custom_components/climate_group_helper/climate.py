@@ -1,7 +1,6 @@
 """This platform allows several climate devices to be grouped into one climate device."""
 from __future__ import annotations
 
-from enum import StrEnum
 from functools import reduce
 import logging
 from statistics import mean, median
@@ -118,19 +117,6 @@ DEFAULT_SUPPORTED_FEATURES = (
     ClimateEntityFeature.TURN_OFF
     | ClimateEntityFeature.TURN_ON
 )
-
-
-def mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
-    """Round the decimal part of a float to an fractional value with a certain precision."""
-
-    if value is None:
-        return None
-
-    if round_option == RoundOption.HALF:
-        return round(value * 2) / 2
-    if round_option == RoundOption.INTEGER:
-        return round(value)
-    return value
 
 
 async def async_setup_entry(
@@ -285,7 +271,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             modes = list(reduce(lambda x, y: set(x) | set(y), valid_attributes))
 
         # Sort if modes are from type HVACMode
-        if modes and isinstance(modes[0], HVACMode):
+        if modes and isinstance(modes[0], (HVACMode, str)):
             # Make sure OFF is always included
             modes.append(HVACMode.OFF)
             # Sort based on the HVACMode enum order
@@ -329,6 +315,19 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             return most_common_active_hvac_mode
 
         return None
+    
+    @staticmethod
+    def _mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
+        """Round the decimal part of a float to an fractional value with a certain precision."""
+
+        if value is None:
+            return None
+
+        if round_option == RoundOption.HALF:
+            return round(value * 2) / 2
+        if round_option == RoundOption.INTEGER:
+            return round(value)
+        return value
 
 
     @callback
@@ -399,19 +398,19 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_target_temperature = reduce_attribute(states, ATTR_TEMPERATURE, reduce=lambda *data: self._target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature is not None:
-                self._attr_target_temperature = mean_round(self._attr_target_temperature, self._round_option)
+                self._attr_target_temperature = self._mean_round(self._attr_target_temperature, self._round_option)
 
             # Target temperature low is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_LOW values
             self._attr_target_temperature_low = reduce_attribute(states, ATTR_TARGET_TEMP_LOW, reduce=lambda *data: self._target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature_low is not None:
-                self._attr_target_temperature_low = mean_round(self._attr_target_temperature_low, self._round_option)
+                self._attr_target_temperature_low = self._mean_round(self._attr_target_temperature_low, self._round_option)
 
             # Target temperature high is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_HIGH values
             self._attr_target_temperature_high = reduce_attribute(states, ATTR_TARGET_TEMP_HIGH, reduce=lambda *data: self._target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature_high is not None:
-                self._attr_target_temperature_high = mean_round(self._attr_target_temperature_high, self._round_option)
+                self._attr_target_temperature_high = self._mean_round(self._attr_target_temperature_high, self._round_option)
 
             # Target temperature step is the highest of all ATTR_TARGET_TEMP_STEP values
             self._attr_target_temperature_step = reduce_attribute(states, ATTR_TARGET_TEMP_STEP, reduce=max)
@@ -429,7 +428,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_target_humidity = reduce_attribute(states, ATTR_HUMIDITY, reduce=lambda *data: self._target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_humidity is not None:
-                self._attr_target_humidity = mean_round(self._attr_target_humidity, self._round_option)
+                self._attr_target_humidity = self._mean_round(self._attr_target_humidity, self._round_option)
 
             # Min humidity is the highest of all ATTR_MIN_HUMIDITY values
             self._attr_min_humidity = reduce_attribute(states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY)
