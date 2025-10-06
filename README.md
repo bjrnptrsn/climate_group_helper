@@ -30,7 +30,7 @@ This integration provides a set of core features for grouping climate devices, a
     *   `Minimum`: The lowest value among all members.
     *   `Maximum`: The highest value among all members.
 
-*   **Temperature Rounding**: Configure the precision of temperature values
+*   **Temperature Rounding**: Configure the precision of *target* temperature values to avoid sending fractional setpoints.
     *   `No Rounding`: Exact values
     *   `Half Degree (0.5°)`: Round to half degrees
     *   `Whole Numbers (1°)`: Round to whole numbers
