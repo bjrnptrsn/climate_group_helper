@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1 - 2025-10-06
+
+### 🔧 Fixes
+
+*   Fix a variable assignment issue in the options flow to prevent potential errors during configuration.
+*   Correctly sort HVAC modes to ensure consistent order.
+
 ## 0.7.0 - 2025-10-02
 
 ### ✨ Features
