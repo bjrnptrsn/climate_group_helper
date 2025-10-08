@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.2 - 2025-10-08
+
+### 🔧 Fixes
+
+*   Fix a bug where preset modes, fan modes, and swing modes could be wiped out by the HVAC mode sorting logic.
+
 ## 0.7.1 - 2025-10-06
 
 ### 🔧 Fixes
