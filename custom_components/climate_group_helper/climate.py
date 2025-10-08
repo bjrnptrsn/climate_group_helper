@@ -270,14 +270,17 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         else:
             modes = list(reduce(lambda x, y: set(x) | set(y), valid_attributes))
 
-        # Sort if modes are from type HVACMode
-        if modes and isinstance(modes[0], (HVACMode, str)):
-            # Make sure OFF is always included
-            modes.append(HVACMode.OFF)
-            # Sort based on the HVACMode enum order
-            modes = [m for m in HVACMode if m in modes]
-
         return modes
+
+
+    def _sort_hvac_modes(self, modes: list[HVACMode | str]) -> list[HVACMode | str]:
+        """Sort HVAC modes based on a predefined order."""
+        
+        # Make sure OFF is always included
+        modes.append(HVACMode.OFF)
+
+        # Return modes sorted in the order of the HVACMode enum
+        return [m for m in HVACMode if m in modes]
 
 
     def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | None:
@@ -358,7 +361,9 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         # Check if there are any valid states
         if states:
             # All available HVAC modes --> list of HVACMode (str), e.g. [<HVACMode.OFF: 'off'>, <HVACMode.HEAT: 'heat'>, <HVACMode.AUTO: 'auto'>, ...]
-            self._attr_hvac_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_HVAC_MODES)))
+            self._attr_hvac_modes = self._sort_hvac_modes(
+                self._reduce_attributes(list(find_state_attributes(states, ATTR_HVAC_MODES)))
+            )
 
             # A list of all HVAC modes that are currently set
             current_hvac_modes = sorted([state.state for state in states])
