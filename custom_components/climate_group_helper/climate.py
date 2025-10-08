@@ -200,12 +200,12 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._attr_target_temperature_step = None
         self._attr_target_temperature_low = None
         self._attr_target_temperature_high = None
-        self._attr_min_temp = None
-        self._attr_max_temp = None
+        self._attr_min_temp = DEFAULT_MIN_TEMP
+        self._attr_max_temp = DEFAULT_MAX_TEMP
         self._attr_current_humidity = None
         self._attr_target_humidity = None
-        self._attr_min_humidity = None
-        self._attr_max_humidity = None
+        self._attr_min_humidity = DEFAULT_MIN_HUMIDITY
+        self._attr_max_humidity = DEFAULT_MAX_HUMIDITY
 
         self._attr_hvac_modes = [HVACMode.OFF]
         self._attr_hvac_mode = None
