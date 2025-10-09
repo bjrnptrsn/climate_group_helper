@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.3 - 2025-10-09
+
+### 🔧 Fixes
+
+*   Initialize entity with default `min/max_temp` and
+     `min/max_humidity` values to prevent a race condition at startup.
+
 ## 0.7.2 - 2025-10-08
 
 ### 🔧 Fixes
