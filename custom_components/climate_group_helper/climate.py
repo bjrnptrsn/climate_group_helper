@@ -455,19 +455,19 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 self._attr_hvac_action = None
 
             # Available fan modes --> list of list of strings, e.g. [['auto', 'low', 'medium', 'high'], ['auto', 'silent', 'turbo'], ...]
-            self._attr_fan_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_FAN_MODES)))
+            self._attr_fan_modes = sorted(self._reduce_attributes(list(find_state_attributes(states, ATTR_FAN_MODES))))
             self._attr_fan_mode = most_frequent_attribute(states, ATTR_FAN_MODE)
 
             # Available preset modes --> list of list of strings, e.g. [['home', 'away', 'eco'], ['home', 'sleep', 'away', 'boost'], ...]
-            self._attr_preset_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_PRESET_MODES)))
+            self._attr_preset_modes = sorted(self._reduce_attributes(list(find_state_attributes(states, ATTR_PRESET_MODES))))
             self._attr_preset_mode = most_frequent_attribute(states, ATTR_PRESET_MODE)
 
             # Available swing modes --> list of list of strings, e.g. [['off', 'left', 'right', 'center', 'swing'], ['off', 'swing'], ...]
-            self._attr_swing_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_SWING_MODES)))
+            self._attr_swing_modes = sorted(self._reduce_attributes(list(find_state_attributes(states, ATTR_SWING_MODES))))
             self._attr_swing_mode = most_frequent_attribute(states, ATTR_SWING_MODE)
 
             # Available horizontal swing modes --> list of list of strings, e.g. [['off', 'left', 'right', 'center', 'swing'], ['off', 'swing'], ...]
-            self._attr_swing_horizontal_modes = self._reduce_attributes(list(find_state_attributes(states, ATTR_SWING_HORIZONTAL_MODES)))
+            self._attr_swing_horizontal_modes = sorted(self._reduce_attributes(list(find_state_attributes(states, ATTR_SWING_HORIZONTAL_MODES))))
             self._attr_swing_horizontal_mode = most_frequent_attribute(states, ATTR_SWING_HORIZONTAL_MODE)
 
             # Supported features --> list of unionized ClimateEntityFeature (int), e.g. [<ClimateEntityFeature.TARGET_TEMPERATURE_RANGE|FAN_MODE|PRESET_MODE|SWING_MODE|TURN_OFF|TURN_ON: 442>, <ClimateEntityFeature...: 941>, ...]
