@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.0 - 2025-10-15
+
+### ✨ Features
+
+*   **Expose Attributes as Sensors**: You can now enable a new option to create separate `sensor` entities for the group's aggregated temperature and humidity.
+    *   This is especially useful for history tracking and for using these values in automations, even when an external temperature sensor is configured for the group.
+
+### 🔧 Improvement
+
+*   **Consistent UI Order**: The various modes (fan, preset, swing) for the group entity are now sorted alphabetically, providing a more predictable user interface.
+
 ## 0.7.3 - 2025-10-09
 
 ### 🔧 Fixes
