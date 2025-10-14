@@ -17,6 +17,7 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_CURRENT_AVG_OPTION,
+    CONF_EXPOSE_ATTRIBUTE_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_HVAC_MODE_STRATEGY,
@@ -142,6 +143,7 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                 ),
                 vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=False): bool,
+                vol.Optional(CONF_EXPOSE_ATTRIBUTE_SENSORS, default=False): bool,
             }
         )
 
@@ -166,7 +168,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-
             # Check that at least one entity was selected
             if not user_input.get(CONF_ENTITIES):
                 errors[CONF_ENTITIES] = "no_entities"
@@ -180,9 +181,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     user_input[CONF_USE_TEMP_SENSOR] = True
                 # The current sensor is removed, remove both temp sensor keys
                 # A new selected sensor is reverted on error
-                if (use_temp_sensor is False
-                    or errors and use_temp_sensor is not True
-                ):
+                if use_temp_sensor is False or (errors and use_temp_sensor is not True):
                     user_input.pop(CONF_TEMP_SENSOR)
                     user_input.pop(CONF_USE_TEMP_SENSOR)
 
@@ -307,6 +306,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_EXPOSE_MEMBER_ENTITIES,
                     default=current_config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
+                ): bool,
+                vol.Optional(
+                    CONF_EXPOSE_ATTRIBUTE_SENSORS,
+                    default=current_config.get(CONF_EXPOSE_ATTRIBUTE_SENSORS, False),
                 ): bool,
             }
         )

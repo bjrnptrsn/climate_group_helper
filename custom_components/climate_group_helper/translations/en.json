@@ -13,7 +13,8 @@
           "hvac_mode_strategy": "HVAC Mode Strategy",
           "feature_strategy": "Feature Strategy",
           "temp_sensor": "External Temperature Sensor",
-          "expose_member_entities": "Expose Member Entities"
+          "expose_member_entities": "Expose Member Entities",
+          "expose_attribute_sensors": "Expose Attributes as Sensors"
         },
         "data_description": {
           "name": "Enter a descriptive name for this climate group (e.g., 'Living Room Climate' or 'Upstairs Heating').",
@@ -24,7 +25,8 @@
           "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
           "feature_strategy": "Choose how to group the features (e.g., fan mode, swing mode) from its members.",
           "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
-          "expose_member_entities": "Enable this to expose the list of member entities as a state attribute."
+          "expose_member_entities": "Enable this to expose the list of member entities as a state attribute.",
+          "expose_attribute_sensors": "Enable this to expose aggregated attributes (temperature, humidity) as separate sensor entities."
         }
       }
     },
@@ -54,7 +56,8 @@
           "feature_strategy": "Feature Strategy",
           "use_temp_sensor": "Use external temperature sensor",
           "temp_sensor": "External Temperature Sensor",
-          "expose_member_entities": "Expose Member Entities"
+          "expose_member_entities": "Expose Member Entities",
+          "expose_attribute_sensors": "Expose Attributes as Sensors"
         },
         "data_description": {
           "entities": "Add or remove climate entities from this group. Removing entities will exclude them from temperature calculations and control commands.",
@@ -65,7 +68,8 @@
           "feature_strategy": "Choose how to group the features (e.g., fan mode, swing mode) from its members.",
           "use_temp_sensor": "If disabled, the sensor is removed and the group uses the average temperature of its members.",
           "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
-          "expose_member_entities": "Enable this to expose the list of member entities as a state attribute."
+          "expose_member_entities": "Enable this to expose the list of member entities as a state attribute.",
+          "expose_attribute_sensors": "Enable this to expose aggregated attributes (temperature, humidity) as separate sensor entities."
         }
       }
     },

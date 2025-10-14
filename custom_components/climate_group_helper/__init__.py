@@ -8,12 +8,15 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_EXPOSE_ATTRIBUTE_SENSORS,
     CONF_HVAC_MODE_STRATEGY,
     CONF_TARGET_AVG_OPTION,
+    DOMAIN,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
 )
 
-PLATFORMS: list[Platform] = [Platform.CLIMATE]
+# Track which platforms have been set up per entry
+SETUP_PLATFORMS = "setup_platforms"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +28,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not entry.options:
         hass.config_entries.async_update_entry(entry, data={}, options=entry.data)
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Initialize domain data
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN].setdefault(entry.entry_id, {})
+    hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS] = set()
+
+    # Set up climate platform
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.CLIMATE])
+    hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.CLIMATE)
+
+    # Set up sensor platform if exposed
+    if entry.options.get(CONF_EXPOSE_ATTRIBUTE_SENSORS):
+        await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
+        hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SENSOR)
 
     # Register update listener for options changes, which will trigger a reload
     entry.async_on_unload(entry.add_update_listener(_update_listener))
@@ -64,7 +79,19 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    # Get setup platforms
+    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    platforms = list(entry_data.get(SETUP_PLATFORMS, {Platform.CLIMATE}))
+
+    # Unload platforms
+    unloaded = await hass.config_entries.async_unload_platforms(entry, platforms)
+
+    # Clean up domain data
+    if unloaded and entry.entry_id in hass.data.get(DOMAIN, {}):
+        hass.data[DOMAIN].pop(entry.entry_id)
+
+    return unloaded
 
 
 async def _update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

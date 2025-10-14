@@ -13,7 +13,8 @@
           "hvac_mode_strategy": "Estrategia de modo HVAC",
           "feature_strategy": "Estrategia de Funciones",
           "temp_sensor": "Sensor de temperatura externo",
-          "expose_member_entities": "Exponer entidades miembro"
+          "expose_member_entities": "Exponer entidades miembro",
+          "expose_attribute_sensors": "Exponer atributos como sensores"
         },
         "data_description": {
           "name": "Ingrese un nombre descriptivo para este grupo de climatización (por ejemplo, 'Clima de la sala de estar' o 'Calefacción de arriba').",
@@ -24,7 +25,8 @@
           "hvac_mode_strategy": "Elija la estrategia para determinar el modo HVAC del grupo.",
           "feature_strategy": "Elija cómo agrupar las características (por ejemplo, modo de ventilador, modo de oscilación) de sus miembros.",
           "temp_sensor": "Seleccione un sensor externo opcional para anular la temperatura actual del grupo.",
-          "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado."
+          "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado.",
+          "expose_attribute_sensors": "Habilite esto para exponer atributos agregados (temperatura, humedad) como entidades de sensor separadas."
         }
       }
     },
@@ -54,7 +56,8 @@
           "feature_strategy": "Estrategia de Funciones",
           "use_temp_sensor": "Usar sensor de temperatura externo",
           "temp_sensor": "Sensor de temperatura externo",
-          "expose_member_entities": "Exponer entidades miembro"
+          "expose_member_entities": "Exponer entidades miembro",
+          "expose_attribute_sensors": "Exponer atributos como sensores"
         },
         "data_description": {
           "entities": "Agregue or elimine entidades de climatización de este grupo. La eliminación de entidades las excluirá de los cálculos de temperatura y los comandos de control.",
@@ -65,7 +68,8 @@
           "feature_strategy": "Elija cómo agrupar las características (por ejemplo, modo de ventilador, modo de oscilación) de sus miembros.",
           "use_temp_sensor": "Si está deshabilitado, el sensor se elimina y el grupo usa la temperatura promedio de sus miembros.",
           "temp_sensor": "Seleccione un sensor externo opcional para anular la temperatura actual del grupo.",
-          "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado."
+          "expose_member_entities": "Habilite esta opción para exponer la lista de entidades miembro como un atributo de estado.",
+          "expose_attribute_sensors": "Habilite esto para exponer atributos agregados (temperatura, humedad) como entidades de sensor separadas."
         }
       }
     },

@@ -48,6 +48,8 @@ This integration provides a set of core features for grouping climate devices, a
 
 *   **External Temperature Sensor**: Optionally, override the group's current temperature with an external sensor
 
+*   **Expose Attributes as Sensors**: Optionally, create separate `sensor` entities for the group's aggregated attributes (temperature, humidity). This enables history tracking and simplifies using these values in automations or the UI.
+
 *   **Expose Member Entities**: Optionally, expose the member entities as a state attribute on the group entity
 
 ## 📦 Installation
@@ -84,6 +86,7 @@ After installation, you can create a new Climate Group via the Helpers menu.
     *   **HVAC Mode Strategy**: Choose how the group's HVAC mode is determined. See the Features section for a detailed explanation of the `Normal`, `Off Priority`, and `Auto` strategies.
     *   **Feature Grouping Strategy**: Choose how to combine features from member devices (`Intersection` or `Union`).
     *   **External Temperature Sensor**: Select an optional sensor to provide the temperature for the group.
+    *   **Expose Attributes as Sensors**: Optionally create separate sensor entities for aggregated attributes (temperature, humidity) to enable history tracking.
     *   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
 6.  Click **"Submit"**.
 

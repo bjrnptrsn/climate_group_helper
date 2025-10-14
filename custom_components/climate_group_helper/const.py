@@ -30,6 +30,7 @@ CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
 CONF_FEATURE_STRATEGY = "feature_strategy"
 CONF_TEMP_SENSOR = "temp_sensor"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
+CONF_EXPOSE_ATTRIBUTE_SENSORS = "expose_attribute_sensors"
 
 # HVAC mode strategies
 HVAC_MODE_STRATEGY_NORMAL = "normal"
@@ -42,6 +43,7 @@ FEATURE_STRATEGY_UNION = "union"
 
 # Attribute keys
 ATTR_ASSUMED_STATE = "assumed_state"
+ATTR_AVERAGED_CURRENT_TEMPERATURE = "averaged_current_temperature"
 ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
 ATTR_GROUP_IN_SYNC = "group_in_sync"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"

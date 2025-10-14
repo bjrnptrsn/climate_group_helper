@@ -13,7 +13,8 @@
           "hvac_mode_strategy": "Stratégie de mode CVC",
           "feature_strategy": "Stratégie de Fonctionnalité",
           "temp_sensor": "Capteur de température externe",
-          "expose_member_entities": "Exposer les entités membres"
+          "expose_member_entities": "Exposer les entités membres",
+          "expose_attribute_sensors": "Exposer les attributs en tant que capteurs"
         },
         "data_description": {
           "name": "Saisissez un nom descriptif pour ce groupe de climatisation (par exemple, 'Climatisation du salon' ou 'Chauffage à l'étage').",
@@ -24,7 +25,8 @@
           "hvac_mode_strategy": "Choisissez la stratégie pour déterminer le mode CVC du groupe.",
           "feature_strategy": "Choisissez comment regrouper les fonctionnalités (par exemple, le mode ventilateur, le mode oscillation) de ses membres.",
           "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
-          "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état."
+          "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état.",
+          "expose_attribute_sensors": "Activez cette option pour exposer les attributs agrégés (température, humidité) en tant qu'entités de capteur distinctes."
         }
       }
     },
@@ -54,7 +56,8 @@
           "feature_strategy": "Stratégie de Fonctionnalité",
           "use_temp_sensor": "Utiliser un capteur de température externe",
           "temp_sensor": "Capteur de température externe",
-          "expose_member_entities": "Exposer les entités membres"
+          "expose_member_entities": "Exposer les entités membres",
+          "expose_attribute_sensors": "Exposer les attributs en tant que capteurs"
         },
         "data_description": {
           "entities": "Ajoutez ou supprimez des entités de climatisation de ce groupe. La suppression d'entités les exclura des calculs de température et des commandes de contrôle.",
@@ -65,7 +68,8 @@
           "feature_strategy": "Choisissez comment regrouper les fonctionnalités (par exemple, le mode ventilateur, le mode oscillation) de ses membres.",
           "use_temp_sensor": "S'il est désactivé, le capteur est supprimé et le groupe utilise la température moyenne de ses membres.",
           "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
-          "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état."
+          "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état.",
+          "expose_attribute_sensors": "Activez cette option pour exposer les attributs agrégés (température, humidité) en tant qu'entités de capteur distinctes."
         }
       }
     },

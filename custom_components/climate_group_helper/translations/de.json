@@ -13,7 +13,8 @@
           "hvac_mode_strategy": "HLK-Modus-Strategie",
           "feature_strategy": "Funktions-Strategie",
           "temp_sensor": "Externer Temperatursensor",
-          "expose_member_entities": "Mitgliedsentitäten anzeigen"
+          "expose_member_entities": "Mitgliedsentitäten anzeigen",
+          "expose_attribute_sensors": "Attribute als Sensoren verfügbar machen"
         },
         "data_description": {
           "name": "Geben Sie einen beschreibenden Namen für diese Klimagruppe ein (z. B. 'Wohnzimmerklima' oder 'Heizung Obergeschoss').",
@@ -24,7 +25,8 @@
           "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
           "feature_strategy": "Wählen Sie, wie die Funktionen (z. B. Lüftermodus, Schwenkmodus) der Mitglieder gruppiert werden sollen.",
           "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
-          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
+          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
+          "expose_attribute_sensors": "Aktivieren, um aggregierte Attribute (Temperatur, Luftfeuchtigkeit) als separate Sensor-Entitäten verfügbar zu machen."
         }
       }
     },
@@ -54,7 +56,8 @@
           "feature_strategy": "Funktions-Strategie",
           "use_temp_sensor": "Externen Temperatursensor verwenden",
           "temp_sensor": "Externer Temperatursensor",
-          "expose_member_entities": "Mitgliedsentitäten anzeigen"
+          "expose_member_entities": "Mitgliedsentitäten anzeigen",
+          "expose_attribute_sensors": "Attribute als Sensoren verfügbar machen"
         },
         "data_description": {
           "entities": "Fügen Sie Klimageräte zu dieser Gruppe hinzu oder entfernen Sie sie. Entfernte Geräte werden von Temperaturberechnungen und Steuerbefehlen ausgeschlossen.",
@@ -65,7 +68,8 @@
           "feature_strategy": "Wählen Sie, wie die Funktionen (z. B. Lüftermodus, Schwenkmodus) der Mitglieder gruppiert werden sollen.",
           "use_temp_sensor": "Wenn deaktiviert, wird der Sensor entfernt und die Gruppe verwendet die Durchschnittstemperatur ihrer Mitglieder.",
           "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
-          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen."
+          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
+          "expose_attribute_sensors": "Aktivieren, um aggregierte Attribute (Temperatur, Luftfeuchtigkeit) als separate Sensor-Entitäten verfügbar zu machen."
         }
       }
     },

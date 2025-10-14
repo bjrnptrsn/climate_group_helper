@@ -69,6 +69,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     ATTR_ASSUMED_STATE,
+    ATTR_AVERAGED_CURRENT_TEMPERATURE,
     ATTR_CURRENT_HVAC_MODES,
     ATTR_GROUP_IN_SYNC,
     ATTR_LAST_ACTIVE_HVAC_MODE,
@@ -80,6 +81,7 @@ from .const import (
     CONF_ROUND_OPTION,
     CONF_TARGET_AVG_OPTION,
     CONF_TEMP_SENSOR,
+    DOMAIN,
     FEATURE_STRATEGY_INTERSECTION,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
@@ -224,6 +226,13 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._attr_swing_horizontal_modes = None
         self._attr_swing_horizontal_mode = None
 
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """Return the device info."""
+        return {
+            "identifiers": {(DOMAIN, self._attr_unique_id)},
+            "name": self._attr_name,
+        }
 
     def _get_supporting_entities(self, check_attribute: str, check_value: int | str) -> list[str]:
         """Get entity ids that match a specific check for a given attribute."""
@@ -480,6 +489,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_supported_features &= SUPPORTED_FEATURES
 
             # Update extra state attributes
+            self._attr_extra_state_attributes[ATTR_AVERAGED_CURRENT_TEMPERATURE] = self._attr_averaged_current_temperature
             self._attr_extra_state_attributes[ATTR_ASSUMED_STATE] = self._attr_assumed_state
             self._attr_extra_state_attributes[ATTR_LAST_ACTIVE_HVAC_MODE] = self._last_active_hvac_mode
             self._attr_extra_state_attributes[ATTR_TARGET_HVAC_MODE] = self._target_hvac_mode

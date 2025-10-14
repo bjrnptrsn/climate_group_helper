@@ -2,42 +2,44 @@
   "config": {
     "step": {
       "user": {
-        "title": "Configurazione dell'assistente per gruppi di climatizzazione",
-        "description": "Crea un gruppo di entità di climatizzazione che possono essere controllate come una singola unità. Il gruppo aggregherà le letture della temperatura e sincronizzerà i comandi di controllo su tutti i dispositivi membri.",
+        "title": "Configurazione dell\u0027assistente per gruppi di climatizzazione",
+        "description": "Crea un gruppo di entit\u00e0 di climatizzazione che possono essere controllate come una singola unit\u00e0. Il gruppo aggregher\u00e0 le letture della temperatura e sincronizzer\u00e0 i comandi di controllo su tutti i dispositivi membri.",
         "data": {
           "name": "Nome del gruppo",
-          "entities": "Entità di climatizzazione",
+          "entities": "Entit\u00e0 di climatizzazione",
           "current_avg_option": "Media per valori attuali",
           "target_avg_option": "Media per valori obiettivo",
           "round_option": "Arrotondamento della temperatura",
-          "hvac_mode_strategy": "Strategia modalità HVAC",
-          "feature_strategy": "Strategia Funzionalità",
+          "hvac_mode_strategy": "Strategia modalit\u00e0 HVAC",
+          "feature_strategy": "Strategia Funzionalit\u00e0",
           "temp_sensor": "Sensore di temperatura esterno",
-          "expose_member_entities": "Esporre le entità membro"
+          "expose_member_entities": "Esporre le entit\u00e0 membro",
+          "expose_attribute_sensors": "Esponi attributi come sensori"
         },
         "data_description": {
           "name": "Inserisci un nome descrittivo per questo gruppo di climatizzazione (ad es. 'Clima soggiorno' o 'Riscaldamento piano di sopra').",
           "entities": "Seleziona i dispositivi di climatizzazione da includere in questo gruppo.",
-          "current_avg_option": "Scegli il metodo per calcolare la temperatura e l'umidità attuali del gruppo.",
-          "target_avg_option": "Scegli il metodo per calcolare la temperatura e l'umidità target del gruppo.",
+          "current_avg_option": "Scegli il metodo per calcolare la temperatura e l\u0027umidit\u00e0 attuali del gruppo.",
+          "target_avg_option": "Scegli il metodo per calcolare la temperatura e l\u0027umidit\u00e0 target del gruppo.",
           "round_option": "Seleziona la precisione di arrotondamento per i valori di temperatura.",
-          "hvac_mode_strategy": "Scegli la strategia per determinare la modalità HVAC del gruppo.",
-          "feature_strategy": "Scegli come raggruppare le funzionalità (ad es. modalità ventola, modalità oscillazione) dei suoi membri.",
+          "hvac_mode_strategy": "Scegli la strategia per determinare la modalit\u00e0 HVAC del gruppo.",
+          "feature_strategy": "Scegli come raggruppare le funzionalit\u00e0 (ad es. modalit\u00e0 ventola, modalit\u00e0 oscillazione) dei suoi membri.",
           "temp_sensor": "Seleziona un sensore esterno opzionale per sovrascrivere la temperatura attuale del gruppo.",
-          "expose_member_entities": "Abilita questa opzione per esporre l'elenco delle entità membro come attributo di stato."
+          "expose_member_entities": "Abilita questa opzione per esporre l\u0027elenco delle entit\u00e0 membro come attributo di stato.",
+          "expose_attribute_sensors": "Abilita questa opzione per esporre gli attributi aggregati (temperatura, umidit\u00e0) come entit\u00e0 sensore separate."
         }
       }
     },
     "error": {
-      "no_entities": "È necessario selezionare almeno un'entità di climatizzazione per creare un gruppo.",
-      "invalid_entity": "Una o più entità selezionate non sono dispositivi di climatizzazione validi.",
-      "duplicate_name": "Esiste già un gruppo di climatizzazione con questo nome.",
-      "unavailable_entities": "Alcune entità selezionate non sono attualmente disponibili. Il gruppo verrà creato ma potrebbe non funzionare correttamente finché tutte le entità non saranno disponibili."
+      "no_entities": "\u00c8 necessario selezionare almeno un\u0027entit\u00e0 di climatizzazione per creare un gruppo.",
+      "invalid_entity": "Una o pi\u00f9 entit\u00e0 selezionate non sono dispositivi di climatizzazione validi.",
+      "duplicate_name": "Esiste gi\u00e0 un gruppo di climatizzazione con questo nome.",
+      "unavailable_entities": "Alcune entit\u00e0 selezionate non sono attualmente disponibili. Il gruppo verr\u00e0 creato ma potrebbe non funzionare correttamente finch\u00e9 tutte le entit\u00e0 non saranno disponibili."
     },
     "abort": {
-      "already_configured": "Esiste già un gruppo di climatizzazione con questa configurazione.",
-      "single_instance_allowed": "È possibile configurare una sola integrazione dell'assistente per gruppi di climatizzazione.",
-      "no_changes": "Nessuna modifica è stata apportata alla configurazione."
+      "already_configured": "Esiste gi\u00e0 un gruppo di climatizzazione con questa configurazione.",
+      "single_instance_allowed": "\u00c8 possibile configurare una sola integrazione dell\u0027assistente per gruppi di climatizzazione.",
+      "no_changes": "Nessuna modifica \u00e8 stata apportata alla configurazione."
     }
   },
   "options": {
@@ -46,36 +48,38 @@
         "title": "Configura le opzioni del gruppo di climatizzazione",
         "description": "Modifica le impostazioni per il tuo gruppo di climatizzazione. Le modifiche avranno effetto immediato e influenzeranno il modo in cui le temperature vengono calcolate e visualizzate.",
         "data": {
-          "entities": "Entità di climatizzazione",
+          "entities": "Entit\u00e0 di climatizzazione",
           "current_avg_option": "Media per valori attuali",
           "target_avg_option": "Media per valori obiettivo",
           "round_option": "Arrotondamento della temperatura",
-          "hvac_mode_strategy": "Strategia modalità HVAC",
-          "feature_strategy": "Strategia Funzionalità",
+          "hvac_mode_strategy": "Strategia modalit\u00e0 HVAC",
+          "feature_strategy": "Strategia Funzionalit\u00e0",
           "use_temp_sensor": "Usa sensore di temperatura esterno",
           "temp_sensor": "Sensore di temperatura esterno",
-          "expose_member_entities": "Esporre le entità membro"
+          "expose_member_entities": "Esporre le entit\u00e0 membro",
+          "expose_attribute_sensors": "Esponi attributi come sensori"
         },
         "data_description": {
-          "entities": "Aggiungi o rimuovi entità di climatizzazione da questo gruppo. La rimozione di entità le escluderà dai calcoli della temperatura e dai comandi di controllo.",
-          "current_avg_option": "Modifica il metodo per calcolare le temperature e l'umidità attuali tra i membri del gruppo.",
-          "target_avg_option": "Modifica il metodo per calcolare le temperature e l'umidità target tra i membri del gruppo.",
+          "entities": "Aggiungi o rimuovi entit\u00e0 di climatizzazione da questo gruppo. La rimozione di entit\u00e0 le escluder\u00e0 dai calcoli della temperatura e dai comandi di controllo.",
+          "current_avg_option": "Modifica il metodo per calcolare le temperature e l\u0027umidit\u00e0 attuali tra i membri del gruppo.",
+          "target_avg_option": "Modifica il metodo per calcolare le temperature e l\u0027umidit\u00e0 target tra i membri del gruppo.",
           "round_option": "Regola la precisione della temperatura per il gruppo.",
-          "hvac_mode_strategy": "Scegli la strategia per determinare la modalità HVAC del gruppo.",
-          "feature_strategy": "Scegli come raggruppare le funzionalità (ad es. modalità ventola, modalità oscillazione) dei suoi membri.",
+          "hvac_mode_strategy": "Scegli la strategia per determinare la modalit\u00e0 HVAC del gruppo.",
+          "feature_strategy": "Scegli come raggruppare le funzionalit\u00e0 (ad es. modalit\u00e0 ventola, modalit\u00e0 oscillazione) dei suoi membri.",
           "use_temp_sensor": "Se disabilitato, il sensore viene rimosso e il gruppo utilizza la temperatura media dei suoi membri.",
           "temp_sensor": "Seleziona un sensore esterno opzionale per sovrascrivere la temperatura attuale del gruppo.",
-          "expose_member_entities": "Abilita questa opzione per esporre l'elenco delle entità membro come attributo di stato."
+          "expose_member_entities": "Abilita questa opzione per esporre l\u0027elenco delle entit\u00e0 membro come attributo di stato.",
+          "expose_attribute_sensors": "Abilita questa opzione per esporre gli attributi aggregati (temperatura, umidit\u00e0) come entit\u00e0 sensore separate."
         }
       }
     },
     "error": {
-      "no_entities": "Nel gruppo deve rimanere almeno un'entità di climatizzazione.",
-      "invalid_entity": "Una o più entità selezionate non sono dispositivi di climatizzazione validi.",
+      "no_entities": "Nel gruppo deve rimanere almeno un\u0027entit\u00e0 di climatizzazione.",
+      "invalid_entity": "Una o pi\u00f9 entit\u00e0 selezionate non sono dispositivi di climatizzazione validi.",
       "configuration_error": "Impossibile applicare la nuova configurazione. Controlla le impostazioni e riprova."
     },
     "abort": {
-      "no_changes": "Nessuna modifica è stata rilevata nella configurazione."
+      "no_changes": "Nessuna modifica \u00e8 stata rilevata nella configurazione."
     }
   },
   "selector": {
@@ -104,15 +108,15 @@
     },
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normale (Modalità più comune)",
-        "off_priority": "Priorità spegnimento (Il gruppo è spento se un membro è spento)",
-        "auto": "Auto (Strategia intelligente basata sulla modalità target)"
+        "normal": "Normale (Modalit\u00e0 pi\u00f9 comune)",
+        "off_priority": "Priorit\u00e0 spegnimento (Il gruppo \u00e8 spento se un membro \u00e8 spento)",
+        "auto": "Auto (Strategia intelligente basata sulla modalit\u00e0 target)"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Intersezione (Funzionalità comuni a tutti i membri)",
-        "union": "Unione (Tutte le funzionalità di qualsiasi membro)"
+        "intersection": "Intersezione (Funzionalit\u00e0 comuni a tutti i membri)",
+        "union": "Unione (Tutte le funzionalit\u00e0 di qualsiasi membro)"
       }
     }
   },
@@ -122,8 +126,8 @@
         "name": "Gruppo di climatizzazione",
         "state_attributes": {
           "member_entities": {
-            "name": "Entità membro",
-            "description": "Elenco delle entità di climatizzazione incluse in questo gruppo"
+            "name": "Entit\u00e0 membro",
+            "description": "Elenco delle entit\u00e0 di climatizzazione incluse in questo gruppo"
           },
           "averaging_method": {
             "name": "Metodo di calcolo della media",
@@ -134,12 +138,12 @@
             "description": "Arrotondamento applicato ai valori di temperatura"
           },
           "last_active_mode": {
-            "name": "Ultima modalità attiva",
-            "description": "La modalità HVAC più recente non disattivata utilizzata dal gruppo"
+            "name": "Ultima modalit\u00e0 attiva",
+            "description": "La modalit\u00e0 HVAC pi\u00f9 recente non disattivata utilizzata dal gruppo"
           },
           "member_count": {
             "name": "Numero di membri",
-            "description": "Numero di entità in questo gruppo di climatizzazione"
+            "description": "Numero di entit\u00e0 in questo gruppo di climatizzazione"
           },
           "active_members": {
             "name": "Membri attivi",
@@ -152,11 +156,11 @@
   "services": {
     "set_temperature": {
       "name": "Imposta temperatura",
-      "description": "Imposta contemporaneamente la temperatura target per tutte le entità di climatizzazione del gruppo.",
+      "description": "Imposta contemporaneamente la temperatura target per tutte le entit\u00e0 di climatizzazione del gruppo.",
       "fields": {
         "entity_id": {
           "name": "Gruppo di climatizzazione",
-          "description": "L'entità del gruppo di climatizzazione da controllare."
+          "description": "L\u0027entit\u00e0 del gruppo di climatizzazione da controllare."
         },
         "temperature": {
           "name": "Temperatura target",
@@ -164,15 +168,15 @@
         },
         "target_temp_high": {
           "name": "Temperatura target alta",
-          "description": "Il limite di temperatura superiore per la modalità riscaldamento/raffreddamento."
+          "description": "Il limite di temperatura superiore per la modalit\u00e0 riscaldamento/raffreddamento."
         },
         "target_temp_low": {
           "name": "Temperatura target bassa",
-          "description": "Il limite di temperatura inferiore per la modalità riscaldamento/raffreddamento."
+          "description": "Il limite di temperatura inferiore per la modalit\u00e0 riscaldamento/raffreddamento."
         },
         "hvac_mode": {
-          "name": "Modalità HVAC",
-          "description": "Facoltativamente, modifica la modalità HVAC quando si imposta la temperatura."
+          "name": "Modalit\u00e0 HVAC",
+          "description": "Facoltativamente, modifica la modalit\u00e0 HVAC quando si imposta la temperatura."
         }
       }
     }
@@ -180,33 +184,33 @@
   "issues": {
     "member_unavailable": {
       "title": "Membro del gruppo di climatizzazione non disponibile",
-      "description": "Uno o più membri del gruppo di climatizzazione '{group_name}' non sono attualmente disponibili. Il gruppo continuerà a funzionare con i membri disponibili, ma alcune funzionalità potrebbero essere limitate.\n\nEntità non disponibili: {unavailable_entities}"
+      "description": "Uno o pi\u00f9 membri del gruppo di climatizzazione '{group_name}' non sono attualmente disponibili. Il gruppo continuer\u00e0 a funzionare con i membri disponibili, ma alcune funzionalit\u00e0 potrebbero essere limitate.\n\nEntit\u00e0 non disponibili: {unavailable_entities}"
     },
     "no_members_available": {
       "title": "Il gruppo di climatizzazione non ha membri disponibili",
-      "description": "Il gruppo di climatizzazione '{group_name}' non ha entità membro disponibili. Il gruppo non sarà disponibile finché non sarà disponibile almeno un'entità membro.\n\nControlla lo stato di queste entità: {member_entities}"
+      "description": "Il gruppo di climatizzazione '{group_name}' non ha entit\u00e0 membro disponibili. Il gruppo non sar\u00e0 disponibile finch\u00e9 non sar\u00e0 disponibile almeno un\u0027entit\u00e0 membro.\n\nControlla lo stato di queste entit\u00e0: {member_entities}"
     },
     "conflicting_features": {
-      "title": "Conflitti di funzionalità del gruppo di climatizzazione",
-      "description": "Il gruppo di climatizzazione '{group_name}' contiene membri con funzionalità incompatibili. Alcune funzionalità potrebbero essere limitate alle funzionalità supportate da tutti i membri del gruppo.\n\nEntità in conflitto: {conflicting_entities}"
+      "title": "Conflitti di funzionalit\u00e0 del gruppo di climatizzazione",
+      "description": "Il gruppo di climatizzazione '{group_name}' contiene membri con funzionalit\u00e0 incompatibili. Alcune funzionalit\u00e0 potrebbero essere limitate alle funzionalit\u00e0 supportate da tutti i membri del gruppo.\n\nEntit\u00e0 in conflitto: {conflicting_entities}"
     }
   },
   "device_automation": {
     "trigger_type": {
-      "hvac_mode_changed": "Modalità HVAC modificata",
+      "hvac_mode_changed": "Modalit\u00e0 HVAC modificata",
       "temperature_target_changed": "Temperatura target modificata",
       "current_temperature_changed": "Temperatura attuale modificata",
       "group_turned_on": "Gruppo attivato",
       "group_turned_off": "Gruppo disattivato"
     },
     "condition_type": {
-      "is_hvac_mode": "La modalità HVAC è",
-      "is_temperature_above": "La temperatura è superiore a",
-      "is_temperature_below": "La temperatura è inferiore a",
-      "is_group_available": "Il gruppo è disponibile"
+      "is_hvac_mode": "La modalit\u00e0 HVAC \u00e8",
+      "is_temperature_above": "La temperatura \u00e8 superiore a",
+      "is_temperature_below": "La temperatura \u00e8 inferiore a",
+      "is_group_available": "Il gruppo \u00e8 disponibile"
     },
     "action_type": {
-      "set_hvac_mode": "Imposta modalità HVAC",
+      "set_hvac_mode": "Imposta modalit\u00e0 HVAC",
       "set_temperature": "Imposta temperatura",
       "turn_on": "Attiva",
       "turn_off": "Disattiva"
