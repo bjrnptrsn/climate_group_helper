@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.1 - 2025-10-18
+
+### 🔧 Improvement
+
+*   **Improve HVAC *Action* Logic**: The logic for determining the group's `hvac_action` has been improved to be more robust and predictable. It now follows a clear 4-tier priority system:
+    1.  **Active**: The most common active state (`heating`, `cooling`, etc), but not idle or off.
+    2.  **Idle**: If no members are active, but at least one is idle.
+    3.  **Off**: If no members are active or idle, but at least one is off.
+    4.  **None**: As a fallback.
+
 ## 0.8.0 - 2025-10-15
 
 ### ✨ Features
