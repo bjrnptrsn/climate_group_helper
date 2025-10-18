@@ -327,6 +327,23 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             return most_common_active_hvac_mode
 
         return None
+
+    def _determine_hvac_action(self, current_hvac_actions: list[HVACAction | None]) -> HVACAction | None:
+        """Determine the group's HVAC action based on member actions and a priority."""
+
+        # 1. Priority: Active states (heating, cooling, etc.)
+        active_hvac_actions = [action for action in current_hvac_actions if action not in (HVACAction.OFF, HVACAction.IDLE)]
+        if active_hvac_actions:
+            # Set hvac_action to the most common active HVAC action
+            return max(active_hvac_actions, key=active_hvac_actions.count)
+        # 2. Priority: Idle state
+        if HVACAction.IDLE in current_hvac_actions:
+            return HVACAction.IDLE
+        # 3. Priority: Off state
+        if HVACAction.OFF in current_hvac_actions:
+            return HVACAction.OFF
+        # 4. Fallback
+        return None
     
     @staticmethod
     def _mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
@@ -390,6 +407,10 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             # The group state is assumed if not all states are equal
             self._attr_assumed_state = not states_equal(states)
 
+            # Determine HVAC action
+            current_hvac_actions = list(find_state_attributes(states, ATTR_HVAC_ACTION))
+            self._attr_hvac_action = self._determine_hvac_action(current_hvac_actions)
+
             # Get temperature unit from system settings
             self._attr_temperature_unit = self.hass.config.units.temperature_unit
 
@@ -449,19 +470,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
             # Max humidity is the lowest of all ATTR_MAX_HUMIDITY values
             self._attr_max_humidity = reduce_attribute(states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
-
-            # HVAC action is the most common active action
-            if (current_hvac_actions := list(find_state_attributes(states, ATTR_HVAC_ACTION))):
-                # Get all active HVAC actions (except HVACAction.OFF)
-                if active_hvac_actions := [action for action in current_hvac_actions if action != HVACAction.OFF]:
-                    # Set hvac_action to the most common active HVAC action
-                    self._attr_hvac_action = max(active_hvac_actions, key=active_hvac_actions.count)
-                # Set hvac_action to HVACAction.OFF if all actions are HVACAction.OFF
-                elif all(action == HVACAction.OFF for action in current_hvac_actions):
-                    self._attr_hvac_action = HVACAction.OFF
-            else:
-                # No HVAC actions, set to None
-                self._attr_hvac_action = None
 
             # Available fan modes --> list of list of strings, e.g. [['auto', 'low', 'medium', 'high'], ['auto', 'silent', 'turbo'], ...]
             self._attr_fan_modes = sorted(self._reduce_attributes(list(find_state_attributes(states, ATTR_FAN_MODES))))
