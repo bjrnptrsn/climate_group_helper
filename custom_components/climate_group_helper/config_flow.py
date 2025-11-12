@@ -17,10 +17,13 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_CURRENT_AVG_OPTION,
+    CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_ATTRIBUTE_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_REPEAT_COUNT,
+    CONF_REPEAT_DELAY,
     CONF_ROUND_OPTION,
     CONF_TARGET_AVG_OPTION,
     CONF_TEMP_SENSOR,
@@ -144,6 +147,32 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=False): bool,
                 vol.Optional(CONF_EXPOSE_ATTRIBUTE_SENSORS, default=False): bool,
+                vol.Optional(CONF_DEBOUNCE_DELAY, default=0): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=3,
+                        step=0.1,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(CONF_REPEAT_COUNT, default=1): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=1,
+                        max=3,
+                        step=1,
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(CONF_REPEAT_DELAY, default=1): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=5,
+                        step=0.5,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
             }
         )
 
@@ -311,6 +340,41 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     CONF_EXPOSE_ATTRIBUTE_SENSORS,
                     default=current_config.get(CONF_EXPOSE_ATTRIBUTE_SENSORS, False),
                 ): bool,
+                vol.Optional(
+                    CONF_DEBOUNCE_DELAY,
+                    default=current_config.get(CONF_DEBOUNCE_DELAY, 0),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=3,
+                        step=0.1,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(
+                    CONF_REPEAT_COUNT,
+                    default=current_config.get(CONF_REPEAT_COUNT, 1),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=1,
+                        max=3,
+                        step=1,
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(
+                    CONF_REPEAT_DELAY,
+                    default=current_config.get(CONF_REPEAT_DELAY, 1),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=5,
+                        step=0.5,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
             }
         )
 

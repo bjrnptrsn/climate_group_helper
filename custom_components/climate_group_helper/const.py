@@ -31,6 +31,9 @@ CONF_FEATURE_STRATEGY = "feature_strategy"
 CONF_TEMP_SENSOR = "temp_sensor"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_EXPOSE_ATTRIBUTE_SENSORS = "expose_attribute_sensors"
+CONF_DEBOUNCE_DELAY = "debounce_delay"
+CONF_REPEAT_COUNT = "repeat_count"
+CONF_REPEAT_DELAY = "repeat_delay"
 
 # HVAC mode strategies
 HVAC_MODE_STRATEGY_NORMAL = "normal"

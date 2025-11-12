@@ -14,7 +14,10 @@
           "feature_strategy": "Estratégia de Funcionalidades",
           "temp_sensor": "Sensor de temperatura externo",
           "expose_member_entities": "Expor Entidades Membro",
-          "expose_attribute_sensors": "Expor atributos como sensores"
+          "expose_attribute_sensors": "Expor atributos como sensores",
+          "debounce_delay": "Atraso de Debounce (segundos)",
+          "repeat_count": "Contagem de Repetições",
+          "repeat_delay": "Atraso de Repetição (segundos)"
         },
         "data_description": {
           "name": "Introduza um nome descritivo para este grupo de climatização (por exemplo, 'Climatização da Sala' ou 'Aquecimento do Andar de Cima').",
@@ -26,7 +29,10 @@
           "feature_strategy": "Escolha como agrupar as funcionalidades (por exemplo, modo de ventoinha, modo de oscilação) dos seus membros.",
           "temp_sensor": "Selecione um sensor externo opcional para substituir a temperatura atual do grupo.",
           "expose_member_entities": "Ative esta opção para expor a lista de entidades membro como um atributo de estado.",
-          "expose_attribute_sensors": "Ative esta opção para expor atributos agregados (temperatura, humidade) como entidades de sensor separadas."
+          "expose_attribute_sensors": "Ative esta opção para expor atributos agregados (temperatura, humidade) como entidades de sensor separadas.",
+          "debounce_delay": "Quando o debounce está ativo, alterações rápidas na temperatura e no modo HVAC podem ser combinadas. Por exemplo, se você alterar rapidamente a temperatura e, em seguida, o modo HVAC, apenas o último comando poderá ser enviado. Use com cuidado.",
+          "repeat_count": "O número de vezes que o comando final deve ser enviado para garantir que seja recebido.",
+          "repeat_delay": "O atraso (em segundos) entre cada comando repetido."
         }
       }
     },
@@ -57,7 +63,10 @@
           "use_temp_sensor": "Usar sensor de temperatura externo",
           "temp_sensor": "Sensor de temperatura externo",
           "expose_member_entities": "Expor Entidades Membro",
-          "expose_attribute_sensors": "Expor atributos como sensores"
+          "expose_attribute_sensors": "Expor atributos como sensores",
+          "debounce_delay": "Atraso de Debounce (segundos)",
+          "repeat_count": "Contagem de Repetições",
+          "repeat_delay": "Atraso de Repetição (segundos)"
         },
         "data_description": {
           "entities": "Adicione ou remova entidades de climatização deste grupo. A remoção de entidades irá excluí-las dos cálculos de temperatura e dos comandos de controlo.",
@@ -69,7 +78,10 @@
           "use_temp_sensor": "Se desativado, o sensor é removido e o grupo usa a temperatura média de seus membros.",
           "temp_sensor": "Selecione um sensor externo opcional para substituir a temperatura atual do grupo.",
           "expose_member_entities": "Ative esta opção para expor a lista de entidades membro como um atributo de estado.",
-          "expose_attribute_sensors": "Ative esta opção para expor atributos agregados (temperatura, humidade) como entidades de sensor separadas."
+          "expose_attribute_sensors": "Ative esta opção para expor atributos agregados (temperatura, humidade) como entidades de sensor separadas.",
+          "debounce_delay": "Quando o debounce está ativo, alterações rápidas na temperatura e no modo HVAC podem ser combinadas. Por exemplo, se você alterar rapidamente a temperatura e, em seguida, o modo HVAC, apenas o último comando poderá ser enviado. Use com cuidado.",
+          "repeat_count": "O número de vezes que o comando final deve ser enviado para garantir que seja recebido.",
+          "repeat_delay": "O atraso (em segundos) entre cada comando repetido."
         }
       }
     },

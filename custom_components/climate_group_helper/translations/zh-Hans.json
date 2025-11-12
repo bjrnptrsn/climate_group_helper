@@ -14,7 +14,10 @@
           "feature_strategy": "功能策略",
           "temp_sensor": "外部温度传感器",
           "expose_member_entities": "公开成员实体",
-          "expose_attribute_sensors": "将属性公开为传感器"
+          "expose_attribute_sensors": "将属性公开为传感器",
+          "debounce_delay": "去抖延迟（秒）",
+          "repeat_count": "重复计数",
+          "repeat_delay": "重复延迟（秒）"
         },
         "data_description": {
           "name": "为此气候组输入一个描述性名称（例如，‘客厅气候’或‘楼上供暖’）。",
@@ -26,7 +29,10 @@
           "feature_strategy": "选择如何对成员的功能（例如风扇模式、摆动模式）进行分组。",
           "temp_sensor": "选择一个可选的外部传感器以覆盖组的当前温度。",
           "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。",
-          "expose_attribute_sensors": "启用此选项可将聚合属性（温度、湿度）作为独立的传感器实体公开。"
+          "expose_attribute_sensors": "启用此选项可将聚合属性（温度、湿度）作为独立的传感器实体公开。",
+          "debounce_delay": "当去抖激活时，对温度和HVAC模式的快速更改可能会被合并。例如，如果您快速更改温度然后更改HVAC模式，则可能只发送最后一个命令。请谨慎使用。",
+          "repeat_count": "发送最终命令的次数，以确保其被接收。",
+          "repeat_delay": "每个重复命令之间的延迟（以秒为单位）。"
         }
       }
     },
@@ -57,7 +63,10 @@
           "use_temp_sensor": "使用外部温度传感器",
           "temp_sensor": "外部温度传感器",
           "expose_member_entities": "公开成员实体",
-          "expose_attribute_sensors": "将属性公开为传感器"
+          "expose_attribute_sensors": "将属性公开为传感器",
+          "debounce_delay": "去抖延迟（秒）",
+          "repeat_count": "重复计数",
+          "repeat_delay": "重复延迟（秒）"
         },
         "data_description": {
           "entities": "从此组中添加或删除气候实体。删除实体会将其从温度计算和控制命令中排除。",
@@ -69,7 +78,10 @@
           "use_temp_sensor": "如果禁用，传感器将被移除，组将使用其成员的平均温度。",
           "temp_sensor": "选择一个可选的外部传感器以覆盖组的当前温度。",
           "expose_member_entities": "启用此选项可将成员实体列表作为状态属性公开。",
-          "expose_attribute_sensors": "启用此选项可将聚合属性（温度、湿度）作为独立的传感器实体公开。"
+          "expose_attribute_sensors": "启用此选项可将聚合属性（温度、湿度）作为独立的传感器实体公开。",
+          "debounce_delay": "当去抖激活时，对温度和HVAC模式的快速更改可能会被合并。例如，如果您快速更改温度然后更改HVAC模式，则可能只发送最后一个命令。请谨慎使用。",
+          "repeat_count": "发送最终命令的次数，以确保其被接收。",
+          "repeat_delay": "每个重复命令之间的延迟（以秒为单位）。"
         }
       }
     },

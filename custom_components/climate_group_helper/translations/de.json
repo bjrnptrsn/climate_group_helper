@@ -14,7 +14,10 @@
           "feature_strategy": "Funktions-Strategie",
           "temp_sensor": "Externer Temperatursensor",
           "expose_member_entities": "Mitgliedsentitäten anzeigen",
-          "expose_attribute_sensors": "Attribute als Sensoren verfügbar machen"
+          "expose_attribute_sensors": "Attribute als Sensoren verfügbar machen",
+          "debounce_delay": "Entprellverzögerung (Sekunden)",
+          "repeat_count": "Anzahl der Wiederholungen",
+          "repeat_delay": "Wiederholungsverzögerung (Sekunden)"
         },
         "data_description": {
           "name": "Geben Sie einen beschreibenden Namen für diese Klimagruppe ein (z. B. 'Wohnzimmerklima' oder 'Heizung Obergeschoss').",
@@ -26,7 +29,10 @@
           "feature_strategy": "Wählen Sie, wie die Funktionen (z. B. Lüftermodus, Schwenkmodus) der Mitglieder gruppiert werden sollen.",
           "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
           "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
-          "expose_attribute_sensors": "Aktivieren, um aggregierte Attribute (Temperatur, Luftfeuchtigkeit) als separate Sensor-Entitäten verfügbar zu machen."
+          "expose_attribute_sensors": "Aktivieren, um aggregierte Attribute (Temperatur, Luftfeuchtigkeit) als separate Sensor-Entitäten verfügbar zu machen.",
+          "debounce_delay": "Wenn die Entprellung aktiv ist, können schnelle Änderungen der Temperatur und des HLK-Modus kombiniert werden. Wenn Sie beispielsweise schnell die Temperatur und dann den HLK-Modus ändern, wird möglicherweise nur der letzte Befehl gesendet. Mit Vorsicht verwenden.",
+          "repeat_count": "Die Anzahl, wie oft der endgültige Befehl gesendet werden soll, um sicherzustellen, dass er empfangen wird.",
+          "repeat_delay": "Die Verzögerung (in Sekunden) zwischen jedem wiederholten Befehl."
         }
       }
     },
@@ -57,7 +63,10 @@
           "use_temp_sensor": "Externen Temperatursensor verwenden",
           "temp_sensor": "Externer Temperatursensor",
           "expose_member_entities": "Mitgliedsentitäten anzeigen",
-          "expose_attribute_sensors": "Attribute als Sensoren verfügbar machen"
+          "expose_attribute_sensors": "Attribute als Sensoren verfügbar machen",
+          "debounce_delay": "Entprellverzögerung (Sekunden)",
+          "repeat_count": "Anzahl der Wiederholungen",
+          "repeat_delay": "Wiederholungsverzögerung (Sekunden)"
         },
         "data_description": {
           "entities": "Fügen Sie Klimageräte zu dieser Gruppe hinzu oder entfernen Sie sie. Entfernte Geräte werden von Temperaturberechnungen und Steuerbefehlen ausgeschlossen.",
@@ -69,7 +78,10 @@
           "use_temp_sensor": "Wenn deaktiviert, wird der Sensor entfernt und die Gruppe verwendet die Durchschnittstemperatur ihrer Mitglieder.",
           "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
           "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
-          "expose_attribute_sensors": "Aktivieren, um aggregierte Attribute (Temperatur, Luftfeuchtigkeit) als separate Sensor-Entitäten verfügbar zu machen."
+          "expose_attribute_sensors": "Aktivieren, um aggregierte Attribute (Temperatur, Luftfeuchtigkeit) als separate Sensor-Entitäten verfügbar zu machen.",
+          "debounce_delay": "Wenn die Entprellung aktiv ist, können schnelle Änderungen der Temperatur und des HLK-Modus kombiniert werden. Wenn Sie beispielsweise schnell die Temperatur und dann den HLK-Modus ändern, wird möglicherweise nur der letzte Befehl gesendet. Mit Vorsicht verwenden.",
+          "repeat_count": "Die Anzahl, wie oft der endgültige Befehl gesendet werden soll, um sicherzustellen, dass er empfangen wird.",
+          "repeat_delay": "Die Verzögerung (in Sekunden) zwischen jedem wiederholten Befehl."
         }
       }
     },

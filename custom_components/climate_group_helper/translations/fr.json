@@ -14,7 +14,10 @@
           "feature_strategy": "Stratégie de Fonctionnalité",
           "temp_sensor": "Capteur de température externe",
           "expose_member_entities": "Exposer les entités membres",
-          "expose_attribute_sensors": "Exposer les attributs en tant que capteurs"
+          "expose_attribute_sensors": "Exposer les attributs en tant que capteurs",
+          "debounce_delay": "Délai d'anti-rebond (secondes)",
+          "repeat_count": "Nombre de répétitions",
+          "repeat_delay": "Délai de répétition (secondes)"
         },
         "data_description": {
           "name": "Saisissez un nom descriptif pour ce groupe de climatisation (par exemple, 'Climatisation du salon' ou 'Chauffage à l'étage').",
@@ -26,7 +29,10 @@
           "feature_strategy": "Choisissez comment regrouper les fonctionnalités (par exemple, le mode ventilateur, le mode oscillation) de ses membres.",
           "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état.",
-          "expose_attribute_sensors": "Activez cette option pour exposer les attributs agrégés (température, humidité) en tant qu'entités de capteur distinctes."
+          "expose_attribute_sensors": "Activez cette option pour exposer les attributs agrégés (température, humidité) en tant qu'entités de capteur distinctes.",
+          "debounce_delay": "Lorsque l'anti-rebond est actif, les changements rapides de température et de mode CVC peuvent être combinés. Par exemple, si vous modifiez rapidement la température puis le mode CVC, seule la dernière commande peut être envoyée. À utiliser avec précaution.",
+          "repeat_count": "Le nombre de fois où envoyer la commande finale pour garantir sa réception.",
+          "repeat_delay": "Le délai (en secondes) entre chaque commande répétée."
         }
       }
     },
@@ -57,7 +63,10 @@
           "use_temp_sensor": "Utiliser un capteur de température externe",
           "temp_sensor": "Capteur de température externe",
           "expose_member_entities": "Exposer les entités membres",
-          "expose_attribute_sensors": "Exposer les attributs en tant que capteurs"
+          "expose_attribute_sensors": "Exposer les attributs en tant que capteurs",
+          "debounce_delay": "Délai d'anti-rebond (secondes)",
+          "repeat_count": "Nombre de répétitions",
+          "repeat_delay": "Délai de répétition (secondes)"
         },
         "data_description": {
           "entities": "Ajoutez ou supprimez des entités de climatisation de ce groupe. La suppression d'entités les exclura des calculs de température et des commandes de contrôle.",
@@ -69,7 +78,10 @@
           "use_temp_sensor": "S'il est désactivé, le capteur est supprimé et le groupe utilise la température moyenne de ses membres.",
           "temp_sensor": "Sélectionnez un capteur externe en option pour remplacer la température actuelle du groupe.",
           "expose_member_entities": "Activez cette option pour exposer la liste des entités membres en tant qu'attribut d'état.",
-          "expose_attribute_sensors": "Activez cette option pour exposer les attributs agrégés (température, humidité) en tant qu'entités de capteur distinctes."
+          "expose_attribute_sensors": "Activez cette option pour exposer les attributs agrégés (température, humidité) en tant qu'entités de capteur distinctes.",
+          "debounce_delay": "Lorsque l'anti-rebond est actif, les changements rapides de température et de mode CVC peuvent être combinés. Par exemple, si vous modifiez rapidement la température puis le mode CVC, seule la dernière commande peut être envoyée. À utiliser avec précaution.",
+          "repeat_count": "Le nombre de fois où envoyer la commande finale pour garantir sa réception.",
+          "repeat_delay": "Le délai (en secondes) entre chaque commande répétée."
         }
       }
     },

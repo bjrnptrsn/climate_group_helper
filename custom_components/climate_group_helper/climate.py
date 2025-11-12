@@ -1,6 +1,7 @@
 """This platform allows several climate devices to be grouped into one climate device."""
 from __future__ import annotations
 
+import asyncio
 from functools import reduce
 import logging
 from statistics import mean, median
@@ -65,6 +66,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
@@ -75,9 +77,12 @@ from .const import (
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_TARGET_HVAC_MODE,
     CONF_CURRENT_AVG_OPTION,
+    CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_REPEAT_COUNT,
+    CONF_REPEAT_DELAY,
     CONF_ROUND_OPTION,
     CONF_TARGET_AVG_OPTION,
     CONF_TEMP_SENSOR,
@@ -98,6 +103,35 @@ CALC_TYPES = {
 }
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class ServiceExecutor:
+    """Helper class to execute service calls with retry logic."""
+
+    def __init__(self, hass, config, logger):
+        """Initialize the service executor."""
+        self._hass = hass
+        self._logger = logger
+        self._config = config
+
+    async def execute_with_retry(self, executor_func, service_name, **kwargs):
+        """Execute the service call, with retries if configured."""
+        repeat_count = int(self._config.get(CONF_REPEAT_COUNT, 1))
+        repeat_delay = self._config.get(CONF_REPEAT_DELAY, 1)
+
+        for attempt in range(repeat_count):
+            try:
+                self._logger.debug("Executing service call '%s' (attempt %d/%d) with: %s", service_name, attempt + 1, repeat_count, kwargs)
+                pre_check = attempt > 0
+                if not await executor_func(pre_check=pre_check, **kwargs):
+                    self._logger.debug("Stopping retries for service '%s': Validation successful or execution not possible.", service_name)
+                    break
+            except Exception as e:
+                self._logger.warning("Service call '%s' attempt %d/%d failed: %s", service_name, attempt + 1, repeat_count, e)
+
+            if repeat_count > 1 and attempt < (repeat_count - 1):
+                await asyncio.sleep(repeat_delay)
+
 
 # No limit on parallel updates to enable a group calling another group
 PARALLEL_UPDATES = 0
@@ -136,16 +170,11 @@ async def async_setup_entry(
     async_add_entities(
         [
             ClimateGroup(
+                hass=hass,
                 unique_id=config_entry.unique_id,
                 name=config.get(CONF_NAME, config_entry.title),
                 entity_ids=entities,
-                current_avg_option=config.get(CONF_CURRENT_AVG_OPTION, AverageOption.MEAN),
-                target_avg_option=config.get(CONF_TARGET_AVG_OPTION, AverageOption.MEAN),
-                round_option=config.get(CONF_ROUND_OPTION, RoundOption.NONE),
-                hvac_mode_strategy=config.get(CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL),
-                feature_strategy=config.get(CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION),
-                temp_sensor=config.get(CONF_TEMP_SENSOR),
-                expose_member_entities=config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
+                config=config,
             )
         ]
     )
@@ -156,34 +185,31 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
     def __init__(
         self,
+        hass: HomeAssistant,
         unique_id: str | None,
         name: str,
         entity_ids: list[str],
-        current_avg_option: str,
-        target_avg_option: str,
-        round_option: str,
-        hvac_mode_strategy: str,
-        feature_strategy: str,
-        temp_sensor: str | None,
-        expose_member_entities: bool,
+        config: dict[str, Any],
     ) -> None:
         """Initialize a climate group."""
 
+        self.hass = hass
         self._attr_unique_id = unique_id
         self._attr_name = name
         self._climate_entity_ids = entity_ids
-        self._current_avg_calc = CALC_TYPES[current_avg_option]
-        self._target_avg_calc = CALC_TYPES[target_avg_option]
-        self._round_option = round_option
-        self._hvac_mode_strategy = hvac_mode_strategy
-        self._feature_strategy = feature_strategy
-        self._temp_sensor_entity_id = temp_sensor
-        self._expose_member_entities = expose_member_entities
+        self._config = config
+        self._current_avg_calc = CALC_TYPES[config.get(CONF_CURRENT_AVG_OPTION, AverageOption.MEAN)]
+        self._target_avg_calc = CALC_TYPES[config.get(CONF_TARGET_AVG_OPTION, AverageOption.MEAN)]
+        self._round_option = config.get(CONF_ROUND_OPTION, RoundOption.NONE)
+        self._hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL)
+        self._feature_strategy = config.get(CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION)
+        self._temp_sensor_entity_id = config.get(CONF_TEMP_SENSOR)
+        self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
 
         # The list of entities to be tracked by GroupEntity
         self._entity_ids = entity_ids.copy()
-        if temp_sensor:
-            self._entity_ids.append(temp_sensor)
+        if self._temp_sensor_entity_id:
+            self._entity_ids.append(self._temp_sensor_entity_id)
 
         self._target_hvac_mode = None
         self._last_active_hvac_mode = None
@@ -225,6 +251,18 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         self._attr_swing_horizontal_modes = None
         self._attr_swing_horizontal_mode = None
+
+        # Centralized service executor
+        self._service_executor = ServiceExecutor(self.hass, self._config, _LOGGER)
+
+        # Debouncers managed per-service
+        self._debouncers: dict[str, Debouncer] = {}
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity will be removed from hass."""
+        await super().async_will_remove_from_hass()
+        for debouncer in self._debouncers.values():
+            debouncer.async_cancel()
 
     @property
     def device_info(self) -> dict[str, Any]:
@@ -284,7 +322,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
     def _sort_hvac_modes(self, modes: list[HVACMode | str]) -> list[HVACMode | str]:
         """Sort HVAC modes based on a predefined order."""
-        
+
         # Make sure OFF is always included
         modes.append(HVACMode.OFF)
 
@@ -297,7 +335,9 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         active_hvac_modes = [mode for mode in current_hvac_modes if mode != HVACMode.OFF]
 
-        most_common_active_hvac_mode = max(active_hvac_modes, key=active_hvac_modes.count) if active_hvac_modes else None
+        most_common_active_hvac_mode = None
+        if active_hvac_modes:
+            most_common_active_hvac_mode = max(active_hvac_modes, key=active_hvac_modes.count)
 
         strategy = self._hvac_mode_strategy
 
@@ -326,7 +366,8 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             # Otherwise, return the most common active HVAC mode
             return most_common_active_hvac_mode
 
-        return None
+        # Default to OFF if no other mode is determined
+        return HVACMode.OFF
 
     def _determine_hvac_action(self, current_hvac_actions: list[HVACAction | None]) -> HVACAction | None:
         """Determine the group's HVAC action based on member actions and a priority."""
@@ -344,7 +385,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             return HVACAction.OFF
         # 4. Fallback
         return None
-    
+
     @staticmethod
     def _mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
         """Round the decimal part of a float to an fractional value with a certain precision."""
@@ -372,6 +413,9 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             CONF_EXPOSE_MEMBER_ENTITIES: self._expose_member_entities,
             CONF_HVAC_MODE_STRATEGY: self._hvac_mode_strategy,
             CONF_FEATURE_STRATEGY: self._feature_strategy,
+            CONF_DEBOUNCE_DELAY: self._config.get(CONF_DEBOUNCE_DELAY, 0),
+            CONF_REPEAT_COUNT: self._config.get(CONF_REPEAT_COUNT, 1),
+            CONF_REPEAT_DELAY: self._config.get(CONF_REPEAT_DELAY, 1),
         }
 
         # Determine assumed state and availability for the group
@@ -392,7 +436,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             )
 
             # A list of all HVAC modes that are currently set
-            current_hvac_modes = sorted([state.state for state in states])
+            current_hvac_modes = [state.state for state in states]
 
             # Determine the group's HVAC mode and update the attribute
             self._attr_hvac_mode = self._determine_hvac_mode(current_hvac_modes)
@@ -515,13 +559,52 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_hvac_mode = None
             self._attr_available = False
 
+
+    async def _async_call_service_debounced(self, service_name, executor_func, **kwargs):
+        """Debounce and execute a service call."""
+        debounce_delay = self._config.get(CONF_DEBOUNCE_DELAY, 0)
+
+        async def debounce_func():
+            """The coroutine to be executed after debounce."""
+            await self._service_executor.execute_with_retry(
+                executor_func, service_name, **kwargs
+            )
+
+        if debounce_delay > 0:
+            if service_name not in self._debouncers:
+                self._debouncers[service_name] = Debouncer(
+                    self.hass,
+                    _LOGGER,
+                    cooldown=debounce_delay,
+                    immediate=False,
+                    function=debounce_func,
+                )
+            else:
+                # Update the function with the latest kwargs
+                self._debouncers[service_name].function = debounce_func
+
+            self._debouncers[service_name].async_schedule_call()
+        else:
+            await debounce_func()
+
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
+        await self._async_call_service_debounced(
+            "set_hvac_mode", self._async_execute_set_hvac_mode, hvac_mode=hvac_mode
+        )
+
+    async def _async_execute_set_hvac_mode(self, hvac_mode: HVACMode, pre_check: bool = False) -> bool:
+        """Forward the set_hvac_mode command to all climate in the climate group."""
+        if pre_check:
+            if self._attr_hvac_mode == hvac_mode:
+                _LOGGER.debug("HVAC mode is already %s.", hvac_mode)
+                return False
+
         entity_ids = self._get_supporting_entities(ATTR_HVAC_MODES, hvac_mode)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the hvac mode %s, skipping service call", hvac_mode)
-            return
+            return False
 
         # Update target HVAC mode
         self._target_hvac_mode = hvac_mode
@@ -532,16 +615,44 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=self._context
         )
+        return True
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Forward the set_temperature command to all climate in the climate group."""
+        await self._async_call_service_debounced(
+            "set_temperature", self._async_execute_set_temperature, **kwargs
+        )
+
+    async def _async_execute_set_temperature(self, pre_check: bool = False, **kwargs: Any) -> bool:
+        """Execute the set_temperature service call."""
+        if not kwargs:
+            return False
+
+        if pre_check:
+            is_temp_ok = (
+                ATTR_TEMPERATURE not in kwargs or
+                self._attr_target_temperature == kwargs[ATTR_TEMPERATURE]
+            )
+            is_low_temp_ok = (
+                ATTR_TARGET_TEMP_LOW not in kwargs or
+                self._attr_target_temperature_low == kwargs[ATTR_TARGET_TEMP_LOW]
+            )
+            is_high_temp_ok = (
+                ATTR_TARGET_TEMP_HIGH not in kwargs or
+                self._attr_target_temperature_high == kwargs[ATTR_TARGET_TEMP_HIGH]
+            )
+
+            if is_temp_ok and is_low_temp_ok and is_high_temp_ok:
+                _LOGGER.debug("Temperature is already at the target value(s).")
+                return False
 
         if (hvac_mode := kwargs.get(ATTR_HVAC_MODE)):
             await self.async_set_hvac_mode(hvac_mode)
             if hvac_mode == HVACMode.OFF:
                 _LOGGER.debug("Temperature setting skipped, as HVAC mode was set to OFF.")
-                return
+                return False
 
+        executed = False
         if ATTR_TEMPERATURE in kwargs:
             if (entity_ids := self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_TEMPERATURE)):
                 data = {
@@ -553,6 +664,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 await self.hass.services.async_call(
                     CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=self._context
                 )
+                executed = True
             else:
                 _LOGGER.debug("No entities support the target temperature feature, skipping service call")
 
@@ -568,79 +680,141 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 await self.hass.services.async_call(
                     CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=self._context
                 )
+                executed = True
             else:
                 _LOGGER.debug("No entities support the target temperature range feature, skipping service call")
-          
+
+        return executed
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
+        await self._async_call_service_debounced(
+            "set_humidity", self._async_execute_set_humidity, humidity=humidity
+        )
+
+    async def _async_execute_set_humidity(self, humidity: int, pre_check: bool = False) -> bool:
+        """Set new target humidity."""
+        if pre_check:
+            if self._attr_target_humidity == humidity:
+                _LOGGER.debug("Humidity is already %s.", humidity)
+                return False
+
         entity_ids = self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_HUMIDITY)
 
         if not entity_ids:
             _LOGGER.debug("No entities support the target humidity feature, skipping service call")
-            return
+            return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_HUMIDITY: humidity}
         _LOGGER.debug("Setting humidity: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_HUMIDITY, data, blocking=True, context=self._context
         )
+        return True
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Forward the set_fan_mode to all climate in the climate group."""
+        await self._async_call_service_debounced(
+            "set_fan_mode", self._async_execute_set_fan_mode, fan_mode=fan_mode
+        )
+
+    async def _async_execute_set_fan_mode(self, fan_mode: str, pre_check: bool = False) -> bool:
+        """Forward the set_fan_mode to all climate in the climate group."""
+        if pre_check:
+            if self._attr_fan_mode == fan_mode:
+                _LOGGER.debug("Fan mode is already %s.", fan_mode)
+                return False
+
         entity_ids = self._get_supporting_entities(ATTR_FAN_MODES, fan_mode)
 
         if not entity_ids:
-            _LOGGER.debug("No entities support the fan mode feature, skipping service call")
-            return
+            _LOGGER.debug("No entities support the fan mode %s, skipping service call", fan_mode)
+            return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_FAN_MODE: fan_mode}
         _LOGGER.debug("Setting fan mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data, blocking=True, context=self._context
         )
+        return True
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Forward the set_preset_mode to all climate in the climate group."""
+        await self._async_call_service_debounced(
+            "set_preset_mode", self._async_execute_set_preset_mode, preset_mode=preset_mode
+        )
+
+    async def _async_execute_set_preset_mode(self, preset_mode: str, pre_check: bool = False) -> bool:
+        """Forward the set_preset_mode to all climate in the climate group."""
+        if pre_check:
+            if self._attr_preset_mode == preset_mode:
+                _LOGGER.debug("Preset mode is already %s.", preset_mode)
+                return False
+
         entity_ids = self._get_supporting_entities(ATTR_PRESET_MODES, preset_mode)
 
         if not entity_ids:
-            _LOGGER.debug("No entities support the preset mode feature, skipping service call")
-            return
+            _LOGGER.debug("No entities support the preset mode %s, skipping service call", preset_mode)
+            return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_PRESET_MODE: preset_mode}
         _LOGGER.debug("Setting preset mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True, context=self._context,
         )
+        return True
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Forward the set_swing_mode to all climate in the climate group."""
+        await self._async_call_service_debounced(
+            "set_swing_mode", self._async_execute_set_swing_mode, swing_mode=swing_mode
+        )
+
+    async def _async_execute_set_swing_mode(self, swing_mode: str, pre_check: bool = False) -> bool:
+        """Forward the set_swing_mode to all climate in the climate group."""
+        if pre_check:
+            if self._attr_swing_mode == swing_mode:
+                _LOGGER.debug("Swing mode is already %s.", swing_mode)
+                return False
+
         entity_ids = self._get_supporting_entities(ATTR_SWING_MODES, swing_mode)
 
         if not entity_ids:
-            _LOGGER.debug("No entities support the swing mode feature, skipping service call")
-            return
+            _LOGGER.debug("No entities support the swing mode %s, skipping service call", swing_mode)
+            return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_SWING_MODE: swing_mode}
         _LOGGER.debug("Setting swing mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data, blocking=True, context=self._context,
         )
+        return True
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""
+        await self._async_call_service_debounced(
+            "set_swing_horizontal_mode", self._async_execute_set_swing_horizontal_mode, swing_horizontal_mode=swing_horizontal_mode
+        )
+
+    async def _async_execute_set_swing_horizontal_mode(self, swing_horizontal_mode: str, pre_check: bool = False) -> bool:
+        """Set new target horizontal swing operation."""
+        if pre_check:
+            if self._attr_swing_horizontal_mode == swing_horizontal_mode:
+                _LOGGER.debug("Horizontal swing mode is already %s.", swing_horizontal_mode)
+                return False
+
         entity_ids = self._get_supporting_entities(ATTR_SWING_HORIZONTAL_MODES, swing_horizontal_mode)
 
         if not entity_ids:
-            _LOGGER.debug("No entities support the horizontal swing mode feature, skipping service call")
-            return
+            _LOGGER.debug("No entities support the horizontal swing mode %s, skipping service call", swing_horizontal_mode)
+            return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_SWING_HORIZONTAL_MODE: swing_horizontal_mode}
         _LOGGER.debug("Setting horizontal swing mode: %s", data)
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_SWING_HORIZONTAL_MODE, data, blocking=True, context=self._context,
         )
+        return True
 
     async def async_turn_on(self) -> None:
         """Forward the turn_on command to all climate in the climate group."""

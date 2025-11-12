@@ -14,7 +14,10 @@
           "feature_strategy": "Strategia Funkcji",
           "temp_sensor": "Zewnętrzny czujnik temperatury",
           "expose_member_entities": "Udostępnij encje członkowskie",
-          "expose_attribute_sensors": "Udostępnij atrybuty jako czujniki"
+          "expose_attribute_sensors": "Udostępnij atrybuty jako czujniki",
+          "debounce_delay": "Opóźnienie Debounce (sekundy)",
+          "repeat_count": "Liczba Powtórzeń",
+          "repeat_delay": "Opóźnienie Powtórzenia (sekundy)"
         },
         "data_description": {
           "name": "Wprowadź opisową nazwę dla tej grupy klimatyzacji (np. 'Klimatyzacja w salonie' lub 'Ogrzewanie na piętrze').",
@@ -26,7 +29,10 @@
           "feature_strategy": "Wybierz, jak grupować funkcje (np. tryb wentylatora, tryb wachlowania) od jego członków.",
           "temp_sensor": "Wybierz opcjonalny czujnik zewnętrzny, aby zastąpić bieżącą temperaturę grupy.",
           "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu.",
-          "expose_attribute_sensors": "Włącz tę opcję, aby udostępnić zagregowane atrybuty (temperatura, wilgotność) jako osobne encje czujników."
+          "expose_attribute_sensors": "Włącz tę opcję, aby udostępnić zagregowane atrybuty (temperatura, wilgotność) jako osobne encje czujników.",
+          "debounce_delay": "Gdy debounce jest aktywny, szybkie zmiany temperatury i trybu HVAC mogą być łączone. Na przykład, jeśli szybko zmienisz temperaturę, a następnie tryb HVAC, może zostać wysłane tylko ostatnie polecenie. Używaj ostrożnie.",
+          "repeat_count": "Liczba wysłania ostatniego polecenia w celu zapewnienia jego otrzymania.",
+          "repeat_delay": "Opóźnienie (w sekundach) między każdym powtórzonym poleceniem."
         }
       }
     },
@@ -57,7 +63,10 @@
           "use_temp_sensor": "Użyj zewnętrznego czujnika temperatury",
           "temp_sensor": "Zewnętrzny czujnik temperatury",
           "expose_member_entities": "Udostępnij encje członkowskie",
-          "expose_attribute_sensors": "Udostępnij atrybuty jako czujniki"
+          "expose_attribute_sensors": "Udostępnij atrybuty jako czujniki",
+          "debounce_delay": "Opóźnienie Debounce (sekundy)",
+          "repeat_count": "Liczba Powtórzeń",
+          "repeat_delay": "Opóźnienie Powtórzenia (sekundy)"
         },
         "data_description": {
           "entities": "Dodaj lub usuń encje klimatyzacji z tej grupy. Usunięcie encji wykluczy je z obliczeń temperatury i poleceń sterujących.",
@@ -69,7 +78,10 @@
           "use_temp_sensor": "Jeśli jest wyłączony, czujnik jest usuwany, a grupa używa średniej temperatury swoich członków.",
           "temp_sensor": "Wybierz opcjonalny czujnik zewnętrzny, aby zastąpić bieżącą temperaturę grupy.",
           "expose_member_entities": "Włącz tę opcję, aby udostępnić listę encji członkowskich jako atrybut stanu.",
-          "expose_attribute_sensors": "Włącz tę opcję, aby udostępnić zagregowane atrybuty (temperatura, wilgotność) jako osobne encje czujników."
+          "expose_attribute_sensors": "Włącz tę opcję, aby udostępnić zagregowane atrybuty (temperatura, wilgotność) jako osobne encje czujników.",
+          "debounce_delay": "Gdy debounce jest aktywny, szybkie zmiany temperatury i trybu HVAC mogą być łączone. Na przykład, jeśli szybko zmienisz temperaturę, a następnie tryb HVAC, może zostać wysłane tylko ostatnie polecenie. Używaj ostrożnie.",
+          "repeat_count": "Liczba wysłania ostatniego polecenia w celu zapewnienia jego otrzymania.",
+          "repeat_delay": "Opóźnienie (w sekundach) między każdym powtórzonym poleceniem."
         }
       }
     },

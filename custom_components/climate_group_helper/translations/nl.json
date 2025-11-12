@@ -14,7 +14,10 @@
           "feature_strategy": "Functiestrategie",
           "temp_sensor": "Externe temperatuursensor",
           "expose_member_entities": "Lid-entiteiten weergeven",
-          "expose_attribute_sensors": "Attributen als sensoren weergeven"
+          "expose_attribute_sensors": "Attributen als sensoren weergeven",
+          "debounce_delay": "Debounce Vertraging (seconden)",
+          "repeat_count": "Aantal Herhalingen",
+          "repeat_delay": "Herhalingsvertraging (seconden)"
         },
         "data_description": {
           "name": "Voer een beschrijvende naam in voor deze klimaatgroep (bijv. 'Klimaat Woonkamer' of 'Verwarming Bovenverdieping').",
@@ -26,7 +29,10 @@
           "feature_strategy": "Kies hoe de functies (bijv. ventilatormodus, zwenkmodus) van de leden moeten worden gegroepeerd.",
           "temp_sensor": "Selecteer een optionele externe sensor om de huidige temperatuur van de groep te overschrijven.",
           "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven.",
-          "expose_attribute_sensors": "Schakel dit in om geaggregeerde attributen (temperatuur, vochtigheid) als afzonderlijke sensor-entiteiten weer te geven."
+          "expose_attribute_sensors": "Schakel dit in om geaggregeerde attributen (temperatuur, vochtigheid) als afzonderlijke sensor-entiteiten weer te geven.",
+          "debounce_delay": "Wanneer debounce actief is, kunnen snelle wijzigingen in temperatuur en HVAC-modus worden gecombineerd. Als u bijvoorbeeld snel de temperatuur en vervolgens de HVAC-modus wijzigt, wordt mogelijk alleen de laatste opdracht verzonden. Wees voorzichtig.",
+          "repeat_count": "Het aantal keren dat de laatste opdracht moet worden verzonden om ervoor te zorgen dat deze wordt ontvangen.",
+          "repeat_delay": "De vertraging (in seconden) tussen elke herhaalde opdracht."
         }
       }
     },
@@ -57,7 +63,10 @@
           "use_temp_sensor": "Gebruik externe temperatuursensor",
           "temp_sensor": "Externe temperatuursensor",
           "expose_member_entities": "Lid-entiteiten weergeven",
-          "expose_attribute_sensors": "Attributen als sensoren weergeven"
+          "expose_attribute_sensors": "Attributen als sensoren weergeven",
+          "debounce_delay": "Debounce Vertraging (seconden)",
+          "repeat_count": "Aantal Herhalingen",
+          "repeat_delay": "Herhalingsvertraging (seconden)"
         },
         "data_description": {
           "entities": "Voeg klimaatentiteiten toe aan of verwijder ze uit deze groep. Het verwijderen van entiteiten sluit ze uit van temperatuurberekeningen en besturingscommando's.",
@@ -69,7 +78,10 @@
           "use_temp_sensor": "Indien uitgeschakeld, wordt de sensor verwijderd en gebruikt de groep de gemiddelde temperatuur van haar leden.",
           "temp_sensor": "Selecteer een optionele externe sensor om de huidige temperatuur van de groep te overschrijven.",
           "expose_member_entities": "Schakel dit in om de lijst met lid-entiteiten als een statusattribuut weer te geven.",
-          "expose_attribute_sensors": "Schakel dit in om geaggregeerde attributen (temperatuur, vochtigheid) als afzonderlijke sensor-entiteiten weer te geven."
+          "expose_attribute_sensors": "Schakel dit in om geaggregeerde attributen (temperatuur, vochtigheid) als afzonderlijke sensor-entiteiten weer te geven.",
+          "debounce_delay": "Wanneer debounce actief is, kunnen snelle wijzigingen in temperatuur en HVAC-modus worden gecombineerd. Als u bijvoorbeeld snel de temperatuur en vervolgens de HVAC-modus wijzigt, wordt mogelijk alleen de laatste opdracht verzonden. Wees voorzichtig.",
+          "repeat_count": "Het aantal keren dat de laatste opdracht moet worden verzonden om ervoor te zorgen dat deze wordt ontvangen.",
+          "repeat_delay": "De vertraging (in seconden) tussen elke herhaalde opdracht."
         }
       }
     },

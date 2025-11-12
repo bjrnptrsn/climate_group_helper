@@ -14,7 +14,10 @@
           "feature_strategy": "Feature Strategy",
           "temp_sensor": "External Temperature Sensor",
           "expose_member_entities": "Expose Member Entities",
-          "expose_attribute_sensors": "Expose Attributes as Sensors"
+          "expose_attribute_sensors": "Expose Attributes as Sensors",
+          "debounce_delay": "Debounce Delay (seconds)",
+          "repeat_count": "Repeat Count",
+          "repeat_delay": "Repeat Delay (seconds)"
         },
         "data_description": {
           "name": "Enter a descriptive name for this climate group (e.g., 'Living Room Climate' or 'Upstairs Heating').",
@@ -26,7 +29,10 @@
           "feature_strategy": "Choose how to group the features (e.g., fan mode, swing mode) from its members.",
           "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
           "expose_member_entities": "Enable this to expose the list of member entities as a state attribute.",
-          "expose_attribute_sensors": "Enable this to expose aggregated attributes (temperature, humidity) as separate sensor entities."
+          "expose_attribute_sensors": "Enable this to expose aggregated attributes (temperature, humidity) as separate sensor entities.",
+          "debounce_delay": "When debounce is active, rapid changes to temperature and HVAC mode might be combined. For example, if you quickly change the temperature and then the HVAC mode, only the last command might be sent. Use with caution.",
+          "repeat_count": "The number of times to send the final command to ensure it's received.",
+          "repeat_delay": "The delay (in seconds) between each repeated command."
         }
       }
     },
@@ -57,7 +63,10 @@
           "use_temp_sensor": "Use external temperature sensor",
           "temp_sensor": "External Temperature Sensor",
           "expose_member_entities": "Expose Member Entities",
-          "expose_attribute_sensors": "Expose Attributes as Sensors"
+          "expose_attribute_sensors": "Expose Attributes as Sensors",
+          "debounce_delay": "Debounce Delay (seconds)",
+          "repeat_count": "Repeat Count",
+          "repeat_delay": "Repeat Delay (seconds)"
         },
         "data_description": {
           "entities": "Add or remove climate entities from this group. Removing entities will exclude them from temperature calculations and control commands.",
@@ -69,7 +78,10 @@
           "use_temp_sensor": "If disabled, the sensor is removed and the group uses the average temperature of its members.",
           "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
           "expose_member_entities": "Enable this to expose the list of member entities as a state attribute.",
-          "expose_attribute_sensors": "Enable this to expose aggregated attributes (temperature, humidity) as separate sensor entities."
+          "expose_attribute_sensors": "Enable this to expose aggregated attributes (temperature, humidity) as separate sensor entities.",
+          "debounce_delay": "When debounce is active, rapid changes to temperature and HVAC mode might be combined. For example, if you quickly change the temperature and then the HVAC mode, only the last command might be sent. Use with caution.",
+          "repeat_count": "The number of times to send the final command to ensure it's received.",
+          "repeat_delay": "The delay (in seconds) between each repeated command."
         }
       }
     },

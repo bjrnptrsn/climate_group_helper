@@ -52,6 +52,11 @@ This integration provides a set of core features for grouping climate devices, a
 
 *   **Expose Member Entities**: Optionally, expose the member entities as a state attribute on the group entity
 
+*   **Reliability Settings (Debounce and Retry)**: Fine-tune the communication with your climate devices to handle unreliable networks or devices that don't always respond to commands.
+    *   **Debounce Delay**: Waits for a specified time (in seconds) after a UI change before sending the command. If other changes are made within this delay, the timer resets. This is useful to prevent a flood of commands when making rapid changes.
+    *   **Repeat Count**: The number of times to send the final command to ensure it's received.
+    *   **Repeat Delay**: The delay (in seconds) between each repeated command.
+
 ## 📦 Installation
 
 ### Via HACS (Home Assistant Community Store) - Recommended
@@ -88,6 +93,9 @@ After installation, you can create a new Climate Group via the Helpers menu.
     *   **External Temperature Sensor**: Select an optional sensor to provide the temperature for the group.
     *   **Expose Attributes as Sensors**: Optionally create separate sensor entities for aggregated attributes (temperature, humidity) to enable history tracking.
     *   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
+    *   **Debounce Delay**: Optionally, set a delay in seconds to wait before sending commands.
+    *   **Repeat Count**: Optionally, set the number of times to repeat commands.
+    *   **Repeat Delay**: Optionally, set the delay in seconds between repeated commands.
 6.  Click **"Submit"**.
 
 The new climate group entity will be created and ready to use immediately.
