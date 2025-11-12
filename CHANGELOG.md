@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0 - 2025-11-12
+
+### ✨ Features
+
+*   **Reliable Service Calls (Debounce and Retry)**: Introduced a new mechanism to make controlling your climate devices more robust and reliable.
+    *   **Debounce**: Prevents overwhelming your devices with rapid commands. When you make quick changes in the UI, the integration now waits for a brief, configurable moment for the changes to stop before sending the final command.
+    *   **Intelligent Retry**: Ensures commands are received by your climate device. If the device doesn't update its state after a command is sent, the integration will automatically retry sending it a configurable number of times. This is "intelligent" because it stops retrying as soon as it confirms the state has changed, saving unnecessary network traffic.
+    *   **Configuration**: These features can be fine-tuned via the group's options with three new settings: `Debounce Delay`, `Repeat Count`, and `Repeat Delay`.
+
 ## 0.8.1 - 2025-10-18
 
 ### 🔧 Improvement
