@@ -82,20 +82,7 @@ After installation, you can create a new Climate Group via the Helpers menu.
 2.  Select the **Helpers** tab.
 3.  Click the **+ Create Helper** button.
 4.  Find and select **"Climate Group Helper"**.
-5.  A configuration dialog will open. Fill in the following fields:
-    *   **Group Name**: A descriptive name for your group (e.g. "Living Room Heating").
-    *   **Climate Entities**: Select all climate entities you want to add to this group.
-    *   **Averaging for Current Values**: Choose the method for calculating the group's current temperature and humidity.
-    *   **Averaging for Target Values**: Choose the method for calculating the group's target temperature and humidity.
-    *   **Temperature Rounding**: Select the desired rounding method.
-    *   **HVAC Mode Strategy**: Choose how the group's HVAC mode is determined. See the Features section for a detailed explanation of the `Normal`, `Off Priority`, and `Auto` strategies.
-    *   **Feature Grouping Strategy**: Choose how to combine features from member devices (`Intersection` or `Union`).
-    *   **External Temperature Sensor**: Select an optional sensor to provide the temperature for the group.
-    *   **Expose Attributes as Sensors**: Optionally create separate sensor entities for aggregated attributes (temperature, humidity) to enable history tracking.
-    *   **Expose Member Entities**: Optionally expose the member entities as a state attribute on the group entity.
-    *   **Debounce Delay**: Optionally, set a delay in seconds to wait before sending commands.
-    *   **Repeat Count**: Optionally, set the number of times to repeat commands.
-    *   **Repeat Delay**: Optionally, set the delay in seconds between repeated commands.
+5.  A configuration dialog will open. Configure the group settings as needed.
 6.  Click **"Submit"**.
 
 The new climate group entity will be created and ready to use immediately.
@@ -108,6 +95,18 @@ You can change the configuration of an existing group after creation:
 2.  Select the **Helpers** tab.
 3.  Find your climate group helper in the list and click on it to open the settings.
 4.  Here you can adjust the member entities and calculation options.
+
+## 🔍 Troubleshooting
+
+If you encounter issues or need to gather more detailed information for bug reports, you can enable debug logging. Add this to your Home Assistant `configuration.yaml` file:
+
+```yaml
+logger:
+  logs:
+    custom_components.climate_group_helper: debug
+```
+
+After adding this, restart Home Assistant. Then you will find more detailed entries in your Home Assistant logs. This information also might be helpful when reporting issues.
 
 ## ❤️ Contributions and Bug Reports
 
