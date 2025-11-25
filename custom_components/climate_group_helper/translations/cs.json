@@ -1,0 +1,234 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pomocník Skupiny Klimatizace",
+        "description": "Vytvořte výkonný 'Virtuální ovladač' pro svá klimatická zařízení. Tato skupina bude shromažďovat údaje a synchronizovat nastavení napříč všemi členy, fungujíc jako jediná chytrá jednotka.",
+        "data": {
+          "name": "Název skupiny",
+          "entities": "Klimatická zařízení",
+          "current_avg_option": "Aktuální hodnoty (Zobrazení)",
+          "target_avg_option": "Cílové hodnoty (Ovládání)",
+          "round_option": "Přesnost ovládání (Zaokrouhlování)",
+          "hvac_mode_strategy": "Strategie režimu HVAC",
+          "feature_strategy": "Kompatibilita funkcí",
+          "temp_sensor": "Externí teplotní senzor",
+          "expose_member_entities": "Zobrazit seznam členů",
+          "expose_attribute_sensors": "Zobrazit chytré senzory",
+          "debounce_delay": "Zpoždění odezvy (sekundy)",
+          "repeat_count": "Počet opakování",
+          "repeat_delay": "Zpoždění opakování (sekundy)",
+          "sync_mode": "Režim synchronizace",
+          "sync_delay": "Zpoždění synchronizace (sekundy)"
+        },
+        "data_description": {
+          "name": "Přátelský název pro vaši skupinu (např. 'Obývák' nebo 'Celý dům').",
+          "entities": "Vyberte klimatická zařízení (termostaty, klimatizace), která chcete zahrnout do této skupiny.",
+          "current_avg_option": "Jak skupina shrnuje údaje senzorů (Teplota/Vlhkost) od svých členů.",
+          "target_avg_option": "Jak skupina vypočítává cílovou hodnotu k odeslání svým členům.",
+          "round_option": "Vyhněte se odesílání hodnot s nadměrnou přesností zařízením, která očekávají striktní kroky.",
+          "hvac_mode_strategy": "Určuje, jak skupina rozhoduje o svém celkovém stavu (např. když jsou některá zařízení vypnutá).",
+          "feature_strategy": "Jak zacházet se zařízeními s různými schopnostmi (např. jedno podporuje 'Pouze ventilátor', jiné ne).",
+          "temp_sensor": "Vyberte samostatný senzor, který se zobrazí jako aktuální teplota skupiny. Užitečné, pokud jsou senzory zařízení nepřesné.",
+          "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
+          "expose_attribute_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
+          "debounce_delay": "Čeká chvíli po dotyku ovládacích prvků před odesláním příkazů. Zabraňuje zahlcení vaší sítě.",
+          "repeat_count": "Automaticky opakuje příkazy, pokud je zařízení zmešká.",
+          "repeat_delay": "Čas čekání mezi pokusy o opakování.",
+          "sync_mode": "Řídí, jak skupina interaguje s manuálními změnami provedenými přímo na fyzických zařízeních.",
+          "sync_delay": "Vyrovnávací čas, aby se manuální úpravy ustálily, než zasáhne synchronizační logika."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Musíte vybrat alespoň jedno klimatické zařízení.",
+      "invalid_entity": "Jedno nebo více vybraných zařízení nejsou platné klimatické entity.",
+      "duplicate_name": "Klimatická skupina s tímto názvem již existuje.",
+      "unavailable_entities": "Některá vybraná zařízení nejsou k dispozici. Skupina bude vytvořena, ale nemusí plně fungovat, dokud neposlechnou."
+    },
+    "abort": {
+      "already_configured": "Tato skupina je již nakonfigurována.",
+      "single_instance_allowed": "Je povolena pouze jedna instance.",
+      "no_changes": "Nebyly provedeny žádné změny."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Konfigurovat Klimatickou Skupinu",
+        "description": "Vylaďte chování své skupiny. Změny se projeví okamžitě.",
+        "data": {
+          "entities": "Klimatická zařízení",
+          "current_avg_option": "Aktuální hodnoty (Zobrazení)",
+          "target_avg_option": "Cílové hodnoty (Ovládání)",
+          "round_option": "Přesnost ovládání (Zaokrouhlování)",
+          "hvac_mode_strategy": "Strategie režimu HVAC",
+          "feature_strategy": "Kompatibilita funkcí",
+          "use_temp_sensor": "Použít externí senzor",
+          "temp_sensor": "Externí teplotní senzor",
+          "expose_member_entities": "Zobrazit seznam členů",
+          "expose_attribute_sensors": "Zobrazit chytré senzory",
+          "debounce_delay": "Zpoždění odezvy (sekundy)",
+          "repeat_count": "Počet opakování",
+          "repeat_delay": "Zpoždění opakování (sekundy)",
+          "sync_mode": "Režim synchronizace",
+          "sync_delay": "Zpoždění synchronizace (sekundy)"
+        },
+        "data_description": {
+          "entities": "Přidat nebo odebrat zařízení. Odebrání zařízení zastaví jejich ovládání skupinou.",
+          "current_avg_option": "Jak skupina shrnuje údaje senzorů (Teplota/Vlhkost) od svých členů.",
+          "target_avg_option": "Jak skupina vypočítává cílovou hodnotu k odeslání svým členům.",
+          "round_option": "Vyhněte se odesílání hodnot s nadměrnou přesností zařízením, která očekávají striktní kroky.",
+          "hvac_mode_strategy": "Určuje, jak skupina rozhoduje o svém celkovém stavu (např. když jsou některá zařízení vypnutá).",
+          "feature_strategy": "Jak zacházet se zařízeními s různými schopnostmi (např. jedno podporuje 'Pouze ventilátor', jiné ne).",
+          "use_temp_sensor": "Povolit použití samostatného senzoru pro aktuální teplotu skupiny.",
+          "temp_sensor": "Vyberte externí senzor k použití.",
+          "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
+          "expose_attribute_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
+          "debounce_delay": "Čeká chvíli po dotyku ovládacích prvků před odesláním příkazů. Zabraňuje zahlcení vaší sítě.",
+          "repeat_count": "Automaticky opakuje příkazy, pokud je zařízení zmešká.",
+          "repeat_delay": "Čas čekání mezi pokusy o opakování.",
+          "sync_mode": "Řídí, jak skupina interaguje s manuálními změnami provedenými přímo na fyzických zařízeních.",
+          "sync_delay": "Vyrovnávací čas, aby se manuální úpravy ustálily, než zasáhne synchronizační logika."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Ve skupině musí zůstat alespoň jedno klimatické zařízení.",
+      "invalid_entity": "Vybráno neplatné zařízení.",
+      "configuration_error": "Nelze aktualizovat konfiguraci."
+    },
+    "abort": {
+      "no_changes": "Nebyly zjištěny žádné změny."
+    }
+  },
+  "selector": {
+    "current_avg_option": {
+      "options": {
+        "mean": "Průměr",
+        "median": "Medián (Ignorovat odlehlé hodnoty)",
+        "min": "Minimum (Nejnižší)",
+        "max": "Maximum (Nejvyšší)"
+      }
+    },
+    "target_avg_option": {
+      "options": {
+        "mean": "Průměr",
+        "median": "Medián (Střední hodnota)",
+        "min": "Minimum (Nejnižší)",
+        "max": "Maximum (Nejvyšší)"
+      }
+    },
+    "round_option": {
+      "options": {
+        "none": "Žádné zaokrouhlování (Přesné)",
+        "half": "Půl stupně (0.5°)",
+        "integer": "Celá čísla (1°)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "standard": "Standardní (Jednosměrný)",
+        "mirror": "Mirror (Magic Sync - Obousměrný)",
+        "lock": "Lock (Šéf - Vynutit skupinu)"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normální (Demokratický)",
+        "off_priority": "Priorita vypnutí (Hlavní vypínač)",
+        "auto": "Auto (Chytrý)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Průnik (Bezpečný režim - Společné funkce)",
+        "union": "Sjednocení (Pokročilý uživatel - Všechny funkce)"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group": {
+        "name": "Klimatická skupina",
+        "state_attributes": {
+          "group_in_sync": {
+            "name": "Skupina synchronizována",
+            "description": "Pravda, pokud všichni členové odpovídají cíli skupiny."
+          },
+          "last_active_hvac_mode": {
+            "name": "Poslední aktivní režim",
+            "description": "Naposledy použitý režim (Topení/Chlazení) před vypnutím."
+          },
+          "target_hvac_mode": {
+            "name": "Cílový režim HVAC",
+            "description": "Režim, který se skupina snaží nastavit na všech členech."
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "set_temperature": {
+      "name": "Nastavit teplotu",
+      "description": "Nastavit cílovou teplotu pro celou skupinu.",
+      "fields": {
+        "entity_id": {
+          "name": "Klimatická skupina",
+          "description": "Skupina k ovládání."
+        },
+        "temperature": {
+          "name": "Cílová teplota",
+          "description": "Požadovaná teplota."
+        },
+        "target_temp_high": {
+          "name": "Cíl Vysoká",
+          "description": "Horní limit pro režim topení/chlazení."
+        },
+        "target_temp_low": {
+          "name": "Cíl Nízká",
+          "description": "Spodní limit pro režim topení/chlazení."
+        },
+        "hvac_mode": {
+          "name": "Režim HVAC",
+          "description": "Volitelně změnit režim."
+        }
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Členské zařízení nedostupné",
+      "description": "Jedno nebo více zařízení ve skupině '{group_name}' je offline. Skupina bude pokračovat v práci s tím, co má.\n\nNedostupné: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "Žádní členové k dispozici",
+      "description": "Skupina '{group_name}' nemá žádné aktivní členy a je fakticky offline.\n\nZkontrolujte: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Konflikty funkcí",
+      "description": "Skupina '{group_name}' má členy s různými funkcemi. Funkčnost může být omezena na to, co podporují všichni.\n\nKonflikty: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "Režim HVAC změněn",
+      "temperature_target_changed": "Cílová teplota změněna",
+      "current_temperature_changed": "Aktuální teplota změněna",
+      "group_turned_on": "Skupina zapnuta",
+      "group_turned_off": "Skupina vypnuta"
+    },
+    "condition_type": {
+      "is_hvac_mode": "Režim HVAC je",
+      "is_temperature_above": "Teplota je nad",
+      "is_temperature_below": "Teplota je pod",
+      "is_group_available": "Skupina je k dispozici"
+    },
+    "action_type": {
+      "set_hvac_mode": "Nastavit režim HVAC",
+      "set_temperature": "Nastavit teplotu",
+      "turn_on": "Zapnout",
+      "turn_off": "Vypnout"
+    }
+  }
+}

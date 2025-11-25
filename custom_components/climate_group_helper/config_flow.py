@@ -22,6 +22,8 @@ from .const import (
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_SYNC_MODE,
+    CONF_SYNC_DELAY,
     CONF_REPEAT_COUNT,
     CONF_REPEAT_DELAY,
     CONF_ROUND_OPTION,
@@ -36,6 +38,7 @@ from .const import (
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
     AverageOption,
+    SyncMode,
     RoundOption,
 )
 
@@ -169,6 +172,24 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         min=0,
                         max=5,
                         step=0.5,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Required(
+                    CONF_SYNC_MODE, default=SyncMode.STANDARD
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[opt.value for opt in SyncMode],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="sync_mode",
+                    )
+                ),
+                vol.Optional(CONF_SYNC_DELAY, default=5): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=30,
+                        step=1,
                         unit_of_measurement="s",
                         mode=selector.NumberSelectorMode.SLIDER,
                     )
@@ -371,6 +392,30 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         min=0,
                         max=5,
                         step=0.5,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Required(
+                    CONF_SYNC_MODE,
+                    default=current_config.get(
+                        CONF_SYNC_MODE, SyncMode.STANDARD
+                    ),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[opt.value for opt in SyncMode],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="sync_mode",
+                    )
+                ),
+                vol.Optional(
+                    CONF_SYNC_DELAY,
+                    default=current_config.get(CONF_SYNC_DELAY, 5),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=30,
+                        step=1,
                         unit_of_measurement="s",
                         mode=selector.NumberSelectorMode.SLIDER,
                     )

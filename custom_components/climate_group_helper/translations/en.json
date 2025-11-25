@@ -2,133 +2,148 @@
   "config": {
     "step": {
       "user": {
-        "title": "Climate Group Helper Configuration",
-        "description": "Create a group of climate entities that can be controlled as a single unit. The group will aggregate temperature readings and synchronize control commands across all member devices.",
+        "title": "Climate Group Helper",
+        "description": "Create a powerful 'Virtual Controller' for your climate devices. This group will aggregate readings and synchronize settings across all members, acting as a single smart unit.",
         "data": {
           "name": "Group Name",
-          "entities": "Climate Entities",
-          "current_avg_option": "Averaging for Current Values",
-          "target_avg_option": "Averaging for Target Values",
-          "round_option": "Temperature Rounding",
+          "entities": "Climate Devices",
+          "current_avg_option": "Current Values (Display)",
+          "target_avg_option": "Target Values (Control)",
+          "round_option": "Precision Control (Rounding)",
           "hvac_mode_strategy": "HVAC Mode Strategy",
-          "feature_strategy": "Feature Strategy",
+          "feature_strategy": "Feature Compatibility",
           "temp_sensor": "External Temperature Sensor",
-          "expose_member_entities": "Expose Member Entities",
-          "expose_attribute_sensors": "Expose Attributes as Sensors",
+          "expose_member_entities": "Expose Member List",
+          "expose_attribute_sensors": "Expose Smart Sensors",
           "debounce_delay": "Debounce Delay (seconds)",
-          "repeat_count": "Repeat Count",
-          "repeat_delay": "Repeat Delay (seconds)"
+          "repeat_count": "Retry Attempts",
+          "repeat_delay": "Retry Delay (seconds)",
+          "sync_mode": "Synchronization Mode",
+          "sync_delay": "Sync Delay (seconds)"
         },
         "data_description": {
-          "name": "Enter a descriptive name for this climate group (e.g., 'Living Room Climate' or 'Upstairs Heating').",
-          "entities": "Select the climate devices to include in this group.",
-          "current_avg_option": "Choose the method for calculating the group's current temperature and humidity.",
-          "target_avg_option": "Choose the method for calculating the group's target temperature and humidity.",
-          "round_option": "Select the rounding precision for temperature values.",
-          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
-          "feature_strategy": "Choose how to group the features (e.g., fan mode, swing mode) from its members.",
-          "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
-          "expose_member_entities": "Enable this to expose the list of member entities as a state attribute.",
-          "expose_attribute_sensors": "Enable this to expose aggregated attributes (temperature, humidity) as separate sensor entities.",
-          "debounce_delay": "When debounce is active, rapid changes to temperature and HVAC mode might be combined. For example, if you quickly change the temperature and then the HVAC mode, only the last command might be sent. Use with caution.",
-          "repeat_count": "The number of times to send the final command to ensure it's received.",
-          "repeat_delay": "The delay (in seconds) between each repeated command."
+          "name": "A friendly name for your group (e.g., 'Living Room' or 'Whole House').",
+          "entities": "Select the climate devices (thermostats, ACs) to include in this group.",
+          "current_avg_option": "How the group summarizes sensor readings (Temperature/Humidity) from its members.",
+          "target_avg_option": "How the group calculates the target setpoint to send to its members.",
+          "round_option": "Avoid sending values with excessive precision to devices that expect strict steps.",
+          "hvac_mode_strategy": "Determines how the group decides its overall state (e.g., when some devices are off).",
+          "feature_strategy": "How to handle devices with different capabilities (e.g., one supports 'Fan Only', another doesn't).",
+          "temp_sensor": "Select a separate sensor to be shown as the group's current temperature. Useful if device sensors are inaccurate.",
+          "expose_member_entities": "Creates an attribute listing all member entity IDs.",
+          "expose_attribute_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
+          "debounce_delay": "Waits a moment after you touch controls before sending commands. Prevents flooding your network.",
+          "repeat_count": "Retries commands automatically if a device misses them.",
+          "repeat_delay": "The time to wait between retry attempts.",
+          "sync_mode": "Control how the group interacts with manual changes made directly on physical devices.",
+          "sync_delay": "A buffer time to let manual adjustments settle before the sync logic kicks in."
         }
       }
     },
     "error": {
-      "no_entities": "At least one climate entity must be selected to create a group.",
-      "invalid_entity": "One or more selected entities are not valid climate devices.",
+      "no_entities": "You must select at least one climate device.",
+      "invalid_entity": "One or more selected devices are not valid climate entities.",
       "duplicate_name": "A climate group with this name already exists.",
-      "unavailable_entities": "Some selected entities are currently unavailable. The group will be created but may not function properly until all entities are available."
+      "unavailable_entities": "Some selected devices are unavailable. The group will be created but may not work fully until they obey."
     },
     "abort": {
-      "already_configured": "A climate group with this configuration already exists.",
-      "single_instance_allowed": "Only one climate group helper integration can be configured.",
-      "no_changes": "No changes were made to the configuration."
+      "already_configured": "This group is already configured.",
+      "single_instance_allowed": "Only one instance is allowed.",
+      "no_changes": "No changes were made."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Configure Climate Group Options",
-        "description": "Modify the settings for your climate group. Changes will take effect immediately and affect how temperatures are calculated and displayed.",
+        "title": "Configure Climate Group",
+        "description": "Fine-tune your group's behavior. Changes take effect immediately.",
         "data": {
-          "entities": "Climate Entities",
-          "current_avg_option": "Averaging for Current Values",
-          "target_avg_option": "Averaging for Target Values",
-          "round_option": "Temperature Rounding",
+          "entities": "Climate Devices",
+          "current_avg_option": "Current Values (Display)",
+          "target_avg_option": "Target Values (Control)",
+          "round_option": "Precision Control (Rounding)",
           "hvac_mode_strategy": "HVAC Mode Strategy",
-          "feature_strategy": "Feature Strategy",
-          "use_temp_sensor": "Use external temperature sensor",
+          "feature_strategy": "Feature Compatibility",
+          "use_temp_sensor": "Use External Sensor",
           "temp_sensor": "External Temperature Sensor",
-          "expose_member_entities": "Expose Member Entities",
-          "expose_attribute_sensors": "Expose Attributes as Sensors",
+          "expose_member_entities": "Expose Member List",
+          "expose_attribute_sensors": "Expose Smart Sensors",
           "debounce_delay": "Debounce Delay (seconds)",
-          "repeat_count": "Repeat Count",
-          "repeat_delay": "Repeat Delay (seconds)"
+          "repeat_count": "Retry Attempts",
+          "repeat_delay": "Retry Delay (seconds)",
+          "sync_mode": "Synchronization Mode",
+          "sync_delay": "Sync Delay (seconds)"
         },
         "data_description": {
-          "entities": "Add or remove climate entities from this group. Removing entities will exclude them from temperature calculations and control commands.",
-          "current_avg_option": "Change the method for calculating current temperature and humidity across group members.",
-          "target_avg_option": "Change the method for calculating target temperature and humidity across group members.",
-          "round_option": "Adjust the temperature precision for the group.",
-          "hvac_mode_strategy": "Choose the strategy for determining the group's HVAC mode.",
-          "feature_strategy": "Choose how to group the features (e.g., fan mode, swing mode) from its members.",
-          "use_temp_sensor": "If disabled, the sensor is removed and the group uses the average temperature of its members.",
-          "temp_sensor": "Select an optional external sensor to override the current temperature of the group.",
-          "expose_member_entities": "Enable this to expose the list of member entities as a state attribute.",
-          "expose_attribute_sensors": "Enable this to expose aggregated attributes (temperature, humidity) as separate sensor entities.",
-          "debounce_delay": "When debounce is active, rapid changes to temperature and HVAC mode might be combined. For example, if you quickly change the temperature and then the HVAC mode, only the last command might be sent. Use with caution.",
-          "repeat_count": "The number of times to send the final command to ensure it's received.",
-          "repeat_delay": "The delay (in seconds) between each repeated command."
+          "entities": "Add or remove devices. Removing devices stops them from being controlled by the group.",
+          "current_avg_option": "How the group summarizes sensor readings (Temperature/Humidity) from its members.",
+          "target_avg_option": "How the group calculates the target setpoint to send to its members.",
+          "round_option": "Avoid sending values with excessive precision to devices that expect strict steps.",
+          "hvac_mode_strategy": "Determines how the group decides its overall state (e.g., when some devices are off).",
+          "feature_strategy": "How to handle devices with different capabilities (e.g., one supports 'Fan Only', another doesn't).",
+          "use_temp_sensor": "Enable to use a separate sensor for the group's current temperature.",
+          "temp_sensor": "Select the external sensor to use.",
+          "expose_member_entities": "Creates an attribute listing all member entity IDs.",
+          "expose_attribute_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
+          "debounce_delay": "Waits a moment after you touch controls before sending commands. Prevents flooding your network.",
+          "repeat_count": "Retries commands automatically if a device misses them.",
+          "repeat_delay": "The time to wait between retry attempts.",
+          "sync_mode": "Control how the group interacts with manual changes made directly on physical devices.",
+          "sync_delay": "A buffer time to let manual adjustments settle before the sync logic kicks in."
         }
       }
     },
     "error": {
-      "no_entities": "At least one climate entity must remain in the group.",
-      "invalid_entity": "One or more selected entities are not valid climate devices.",
-      "configuration_error": "Unable to apply the new configuration. Please check your settings and try again."
+      "no_entities": "At least one climate device must remain in the group.",
+      "invalid_entity": "Invalid device selected.",
+      "configuration_error": "Could not update configuration."
     },
     "abort": {
-      "no_changes": "No changes were detected in the configuration."
+      "no_changes": "No changes detected."
     }
   },
   "selector": {
     "current_avg_option": {
       "options": {
         "mean": "Mean (Average)",
-        "median": "Median (Middle Value)",
-        "min": "Minimum",
-        "max": "Maximum"
+        "median": "Median (Ignore Outliers)",
+        "min": "Minimum (Lowest)",
+        "max": "Maximum (Highest)"
       }
     },
     "target_avg_option": {
       "options": {
         "mean": "Mean (Average)",
         "median": "Median (Middle Value)",
-        "min": "Minimum",
-        "max": "Maximum"
+        "min": "Minimum (Lowest)",
+        "max": "Maximum (Highest)"
       }
     },
     "round_option": {
       "options": {
-        "none": "No Rounding (Exact Values)",
+        "none": "No Rounding (Exact)",
         "half": "Half Degree (0.5°)",
         "integer": "Whole Numbers (1°)"
       }
     },
+    "sync_mode": {
+      "options": {
+        "standard": "Standard (One-way)",
+        "mirror": "Mirror (Magic Sync - Two-way)",
+        "lock": "Lock (The Boss - Enforce Group)"
+      }
+    },
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normal (Most common mode)",
-        "off_priority": "Off Priority (Group is off if any member is off)",
-        "auto": "Auto (Smart strategy based on target mode)"
+        "normal": "Normal (Democratic)",
+        "off_priority": "Off Priority (Master Switch)",
+        "auto": "Auto (Smart)"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Intersection (Features common to all members)",
-        "union": "Union (All features from any member)"
+        "intersection": "Intersection (Safe Mode - Common Features)",
+        "union": "Union (Power User - All Features)"
       }
     }
   },
@@ -137,29 +152,17 @@
       "climate_group": {
         "name": "Climate Group",
         "state_attributes": {
-          "member_entities": {
-            "name": "Member Entities",
-            "description": "List of climate entities included in this group"
+          "group_in_sync": {
+            "name": "Group in Sync",
+            "description": "True if all members match the group's target."
           },
-          "averaging_method": {
-            "name": "Averaging Method",
-            "description": "Method used to calculate target temperatures"
-          },
-          "temperature_precision": {
-            "name": "Temperature Precision",
-            "description": "Rounding applied to temperature values"
-          },
-          "last_active_mode": {
+          "last_active_hvac_mode": {
             "name": "Last Active Mode",
-            "description": "The most recent non-off HVAC mode used by the group"
+            "description": "The last used mode (Heating/Cooling) before turning off."
           },
-          "member_count": {
-            "name": "Member Count",
-            "description": "Number of entities in this climate group"
-          },
-          "active_members": {
-            "name": "Active Members",
-            "description": "Number of currently available group members"
+          "target_hvac_mode": {
+            "name": "Target HVAC Mode",
+            "description": "The mode the group is trying to set on all members."
           }
         }
       }
@@ -168,43 +171,43 @@
   "services": {
     "set_temperature": {
       "name": "Set Temperature",
-      "description": "Set the target temperature for all climate entities in the group simultaneously.",
+      "description": "Set the target temperature for the entire group.",
       "fields": {
         "entity_id": {
           "name": "Climate Group",
-          "description": "The climate group entity to control."
+          "description": "The group to control."
         },
         "temperature": {
           "name": "Target Temperature",
-          "description": "The desired temperature for all group members."
+          "description": "The desired temperature."
         },
         "target_temp_high": {
-          "name": "Target High Temperature",
-          "description": "The upper temperature limit for heat/cool mode."
+          "name": "Target High",
+          "description": "Upper limit for heat/cool mode."
         },
         "target_temp_low": {
-          "name": "Target Low Temperature",
-          "description": "The lower temperature limit for heat/cool mode."
+          "name": "Target Low",
+          "description": "Lower limit for heat/cool mode."
         },
         "hvac_mode": {
           "name": "HVAC Mode",
-          "description": "Optionally change the HVAC mode when setting temperature."
+          "description": "Optionally change the mode."
         }
       }
     }
   },
   "issues": {
     "member_unavailable": {
-      "title": "Climate Group Member Unavailable",
-      "description": "One or more members of climate group '{group_name}' are currently unavailable. The group will continue to function with available members, but some features may be limited.\n\nUnavailable entities: {unavailable_entities}"
+      "title": "Member Device Unavailable",
+      "description": "One or more devices in '{group_name}' are offline. The group will keep working with what it has.\n\nUnavailable: {unavailable_entities}"
     },
     "no_members_available": {
-      "title": "Climate Group Has No Available Members",
-      "description": "Climate group '{group_name}' has no available member entities. The group will be unavailable until at least one member entity becomes available.\n\nCheck the status of these entities: {member_entities}"
+      "title": "No Members Available",
+      "description": "Group '{group_name}' has no active members and is effectively offline.\n\nCheck: {member_entities}"
     },
     "conflicting_features": {
-      "title": "Climate Group Feature Conflicts",
-      "description": "Climate group '{group_name}' contains members with incompatible features. Some functionality may be limited to features supported by all group members.\n\nConflicting entities: {conflicting_entities}"
+      "title": "Feature Conflicts",
+      "description": "Group '{group_name}' has members with different features. Functionality might be limited to what everyone supports.\n\nConflicting: {conflicting_entities}"
     }
   },
   "device_automation": {

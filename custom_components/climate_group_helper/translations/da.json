@@ -2,133 +2,148 @@
   "config": {
     "step": {
       "user": {
-        "title": "Konfiguration af klimagruppe-hjælper",
-        "description": "Opret en gruppe af klimaanlæg, der kan styres som en enkelt enhed. Gruppen vil aggregere temperaturaflæsninger og synkronisere kontrolkommandoer på tværs af alle medlemsenheder.",
+        "title": "Klima Gruppe Hjælper",
+        "description": "Opret en kraftfuld 'Virtuel Controller' til dine klimaenheder. Denne gruppe samler målinger og synkroniserer indstillinger på tværs af alle medlemmer og fungerer som en enkelt smart enhed.",
         "data": {
           "name": "Gruppenavn",
-          "entities": "Klimaanlæg",
-          "current_avg_option": "Gennemsnit for aktuelle værdier",
-          "target_avg_option": "Gennemsnit for målværdier",
-          "round_option": "Temperaturafrunding",
+          "entities": "Klimaenheder",
+          "current_avg_option": "Aktuelle Værdier (Visning)",
+          "target_avg_option": "Målværdier (Styring)",
+          "round_option": "Præcisionsstyring (Afrunding)",
           "hvac_mode_strategy": "HVAC-tilstandsstrategi",
-          "feature_strategy": "Funktionsstrategi",
-          "temp_sensor": "Ekstern temperatursensor",
-          "expose_member_entities": "Vis medlemsenheder",
-          "expose_attribute_sensors": "Vis attributter som sensorer",
+          "feature_strategy": "Funktionskompatibilitet",
+          "temp_sensor": "Ekstern Temperatursensor",
+          "expose_member_entities": "Vis Medlemsliste",
+          "expose_attribute_sensors": "Vis Smarte Sensorer",
           "debounce_delay": "Debounce Forsinkelse (sekunder)",
-          "repeat_count": "Gentag Antal",
-          "repeat_delay": "Gentag Forsinkelse (sekunder)"
+          "repeat_count": "Genforsøg",
+          "repeat_delay": "Genforsøgsforsinkelse (sekunder)",
+          "sync_mode": "Synkroniseringstilstand",
+          "sync_delay": "Sync Forsinkelse (sekunder)"
         },
         "data_description": {
-          "name": "Indtast et beskrivende navn for denne klimagruppe (f.eks. 'Stueklima' eller 'Opvarmning ovenpå').",
-          "entities": "Vælg de klimaanlæg, der skal inkluderes i denne gruppe.",
-          "current_avg_option": "Vælg metoden til beregning af gruppens aktuelle temperatur.",
-          "target_avg_option": "Vælg metoden til beregning af gruppens måltemperatur.",
-          "round_option": "Vælg afrundingspræcisionen for temperaturværdier.",
-          "hvac_mode_strategy": "Vælg strategien for at bestemme gruppens HVAC-tilstand.",
-          "feature_strategy": "Vælg, hvordan funktioner (f.eks. blæsertilstand, svingtilstand) from medlemmerne skal grupperes.",
-          "temp_sensor": "Vælg en valgfri ekstern sensor for at tilsidesætte gruppens aktuelle temperatur.",
-          "expose_member_entities": "Aktiver denne mulighed for at vise listen over medlemsenheder som en statusattribut.",
-          "expose_attribute_sensors": "Aktivér dette for at vise aggregerede attributter (temperatur, fugtighed) som separate sensorenheder.",
-          "debounce_delay": "Når debounce er aktiv, kan hurtige ændringer i temperatur og HVAC-tilstand blive kombineret. For eksempel, hvis du hurtigt ændrer temperaturen og derefter HVAC-tilstanden, sendes muligvis kun den sidste kommando. Brug med forsigtighed.",
-          "repeat_count": "Antallet af gange den endelige kommando skal sendes for at sikre, at den modtages.",
-          "repeat_delay": "Forsinkelsen (i sekunder) mellem hver gentagen kommando."
+          "name": "Et venligt navn til din gruppe (f.eks. 'Stue' eller 'Hele Huset').",
+          "entities": "Vælg de klimaenheder (termostater, AC'er), der skal inkluderes i denne gruppe.",
+          "current_avg_option": "Hvordan gruppen opsummerer sensormålinger (Temperatur/Fugtighed) fra sine medlemmer.",
+          "target_avg_option": "Hvordan gruppen beregner det målsætpunkt, der skal sendes til dens medlemmer.",
+          "round_option": "Undgå at sende værdier med overdreven præcision til enheder, der forventer strenge trin.",
+          "hvac_mode_strategy": "Bestemmer, hvordan gruppen beslutter sin overordnede tilstand (f.eks. når nogle enheder er slukket).",
+          "feature_strategy": "Hvordan man håndterer enheder med forskellige egenskaber (f.eks. en understøtter 'Kun Blæser', en anden gør ikke).",
+          "temp_sensor": "Vælg en separat sensor, der skal vises som gruppens aktuelle temperatur. Nyttigt, hvis enhedssensorer er unøjagtige.",
+          "expose_member_entities": "Opretter en attribut, der lister alle medlems enheds-ID'er.",
+          "expose_attribute_sensors": "Opretter ekstra sensorenheder til gruppens temperatur og fugtighed (nyttigt til grafer).",
+          "debounce_delay": "Venter et øjeblik efter du har betjent kontrollerne, før kommandoer sendes. Forhindrer oversvømmelse af dit netværk.",
+          "repeat_count": "Prøver automatisk kommandoer igen, hvis en enhed misser dem.",
+          "repeat_delay": "Tiden der skal ventes mellem genforsøg.",
+          "sync_mode": "Styrer, hvordan gruppen interagerer med manuelle ændringer foretaget direkte på fysiske enheder.",
+          "sync_delay": "En buffer tid til at lade manuelle justeringer falde til ro, før sync logikken træder i kraft."
         }
       }
     },
     "error": {
-      "no_entities": "Mindst én klimaanlæg skal vælges for at oprette en gruppe.",
-      "invalid_entity": "En eller flere valgte enheder er ikke gyldige klimaanlæg.",
-      "duplicate_name": "En klimagruppe med dette navn eksisterer allerede.",
-      "unavailable_entities": "Nogle valgte enheder er i øjeblikket utilgængelige. Gruppen vil blive oprettet, men fungerer muligvis ikke korrekt, før alle enheder er tilgængelige."
+      "no_entities": "Du skal vælge mindst én klimaenhed.",
+      "invalid_entity": "En eller flere valgte enheder er ikke gyldige klimaenheder.",
+      "duplicate_name": "En klimagruppe med dette navn findes allerede.",
+      "unavailable_entities": "Nogle valgte enheder er ikke tilgængelige. Gruppen oprettes, men fungerer muligvis ikke fuldt ud, før de adlyder."
     },
     "abort": {
-      "already_configured": "En klimagruppe med denne konfiguration eksisterer allerede.",
-      "single_instance_allowed": "Kun én klimagruppe-hjælperintegration kan konfigureres.",
-      "no_changes": "Der blev ikke foretaget ændringer i konfigurationen."
+      "already_configured": "Denne gruppe er allerede konfigureret.",
+      "single_instance_allowed": "Kun én instans er tilladt.",
+      "no_changes": "Ingen ændringer blev foretaget."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Konfigurer klimagruppeindstillinger",
-        "description": "Rediger indstillingerne for din klimagruppe. Ændringer træder i kraft med det samme og påvirker, hvordan temperaturer beregnes og vises.",
+        "title": "Konfigurer Klimagruppe",
+        "description": "Finjuster din gruppes adfærd. Ændringer træder i kraft med det samme.",
         "data": {
-          "entities": "Klimaanlæg",
-          "current_avg_option": "Gennemsnit for aktuelle værdier",
-          "target_avg_option": "Gennemsnit for målværdier",
-          "round_option": "Temperaturafrunding",
+          "entities": "Klimaenheder",
+          "current_avg_option": "Aktuelle Værdier (Visning)",
+          "target_avg_option": "Målværdier (Styring)",
+          "round_option": "Præcisionsstyring (Afrunding)",
           "hvac_mode_strategy": "HVAC-tilstandsstrategi",
-          "feature_strategy": "Funktionsstrategi",
-          "use_temp_sensor": "Brug ekstern temperatursensor",
-          "temp_sensor": "Ekstern temperatursensor",
-          "expose_member_entities": "Vis medlemsenheder",
-          "expose_attribute_sensors": "Vis attributter som sensorer",
+          "feature_strategy": "Funktionskompatibilitet",
+          "use_temp_sensor": "Brug Ekstern Sensor",
+          "temp_sensor": "Ekstern Temperatursensor",
+          "expose_member_entities": "Vis Medlemsliste",
+          "expose_attribute_sensors": "Vis Smarte Sensorer",
           "debounce_delay": "Debounce Forsinkelse (sekunder)",
-          "repeat_count": "Gentag Antal",
-          "repeat_delay": "Gentag Forsinkelse (sekunder)"
+          "repeat_count": "Genforsøg",
+          "repeat_delay": "Genforsøgsforsinkelse (sekunder)",
+          "sync_mode": "Synkroniseringstilstand",
+          "sync_delay": "Sync Forsinkelse (sekunder)"
         },
         "data_description": {
-          "entities": "Tilføj eller fjern klimaanlæg fra denne gruppe. Fjernelse af enheder vil udelukke dem fra temperaturberegninger og kontrolkommandoer.",
-          "current_avg_option": "Skift metoden til beregning af aktuelle temperaturer på tværs af gruppemedlemmer.",
-          "target_avg_option": "Skift metoden til beregning af måltemperaturer på tværs af gruppemedlemmer.",
-          "round_option": "Juster temperaturpræcisionen for gruppen.",
-          "hvac_mode_strategy": "Vælg strategien for at bestemme gruppens HVAC-tilstand.",
-          "feature_strategy": "Vælg, hvordan funktioner (f.eks. blæsertilstand, svingtilstand) from medlemmerne skal grupperes.",
-          "use_temp_sensor": "Hvis deaktiveret, fjernes sensoren, og gruppen bruger gennemsnitstemperaturen fra sine medlemmer.",
-          "temp_sensor": "Vælg en valgfri ekstern sensor for at tilsidesætte gruppens aktuelle temperatur.",
-          "expose_member_entities": "Aktiver denne mulighed for at vise listen over medlemsenheder som en statusattribut.",
-          "expose_attribute_sensors": "Aktivér dette for at vise aggregerede attributter (temperatur, fugtighed) som separate sensorenheder.",
-          "debounce_delay": "Når debounce er aktiv, kan hurtige ændringer i temperatur og HVAC-tilstand blive kombineret. For eksempel, hvis du hurtigt ændrer temperaturen og derefter HVAC-tilstanden, sendes muligvis kun den sidste kommando. Brug med forsigtighed.",
-          "repeat_count": "Antallet af gange den endelige kommando skal sendes for at sikre, at den modtages.",
-          "repeat_delay": "Forsinkelsen (i sekunder) mellem hver gentagen kommando."
+          "entities": "Tilføj eller fjern enheder. Fjernelse af enheder stopper dem fra at blive styret af gruppen.",
+          "current_avg_option": "Hvordan gruppen opsummerer sensormålinger (Temperatur/Fugtighed) fra sine medlemmer.",
+          "target_avg_option": "Hvordan gruppen beregner det målsætpunkt, der skal sendes til dens medlemmer.",
+          "round_option": "Undgå at sende værdier med overdreven præcision til enheder, der forventer strenge trin.",
+          "hvac_mode_strategy": "Bestemmer, hvordan gruppen beslutter sin overordnede tilstand (f.eks. når nogle enheder er slukket).",
+          "feature_strategy": "Hvordan man håndterer enheder med forskellige egenskaber (f.eks. en understøtter 'Kun Blæser', en anden gør ikke).",
+          "use_temp_sensor": "Aktiver for at bruge en separat sensor til gruppens aktuelle temperatur.",
+          "temp_sensor": "Vælg den eksterne sensor, der skal bruges.",
+          "expose_member_entities": "Opretter en attribut, der lister alle medlems enheds-ID'er.",
+          "expose_attribute_sensors": "Opretter ekstra sensorenheder til gruppens temperatur og fugtighed (nyttigt til grafer).",
+          "debounce_delay": "Venter et øjeblik efter du har betjent kontrollerne, før kommandoer sendes. Forhindrer oversvømmelse af dit netværk.",
+          "repeat_count": "Prøver automatisk kommandoer igen, hvis en enhed misser dem.",
+          "repeat_delay": "Tiden der skal ventes mellem genforsøg.",
+          "sync_mode": "Styrer, hvordan gruppen interagerer med manuelle ændringer foretaget direkte på fysiske enheder.",
+          "sync_delay": "En buffer tid til at lade manuelle justeringer falde til ro, før sync logikken træder i kraft."
         }
       }
     },
     "error": {
-      "no_entities": "Mindst én klimaanlæg skal forblive i gruppen.",
-      "invalid_entity": "En eller flere valgte enheder er ikke gyldige klimaanlæg.",
-      "configuration_error": "Kan ikke anvende den nye konfiguration. Kontroller dine indstillinger og prøv igen."
+      "no_entities": "Mindst én klimaenhed skal forblive i gruppen.",
+      "invalid_entity": "Ugyldig enhed valgt.",
+      "configuration_error": "Kunne ikke opdatere konfigurationen."
     },
     "abort": {
-      "no_changes": "Der blev ikke registreret ændringer i konfigurationen."
+      "no_changes": "Ingen ændringer registreret."
     }
   },
   "selector": {
     "current_avg_option": {
       "options": {
         "mean": "Gennemsnit",
-        "median": "Median (midterste værdi)",
-        "min": "Minimum",
-        "max": "Maksimum"
+        "median": "Median (Ignorer Afvigere)",
+        "min": "Minimum (Laveste)",
+        "max": "Maksimum (Højeste)"
       }
     },
     "target_avg_option": {
       "options": {
         "mean": "Gennemsnit",
-        "median": "Median (midterste værdi)",
-        "min": "Minimum",
-        "max": "Maksimum"
+        "median": "Median (Midterværdi)",
+        "min": "Minimum (Laveste)",
+        "max": "Maksimum (Højeste)"
       }
     },
     "round_option": {
       "options": {
-        "none": "Ingen afrunding (præcise værdier)",
-        "half": "Halv grad (0,5°)",
-        "integer": "Hele tal (1°)"
+        "none": "Ingen Afrunding (Præcis)",
+        "half": "Halv Grad (0.5°)",
+        "integer": "Hele Tal (1°)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "standard": "Standard (En-vejs)",
+        "mirror": "Mirror (Magic Sync - To-vejs)",
+        "lock": "Lock (Chefen - Gennemtving Gruppe)"
       }
     },
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normal (Mest almindelige tilstand)",
-        "off_priority": "Fra-prioritet (Gruppen er slukket, hvis et medlem er slukket)",
-        "auto": "Auto (Smart strategi baseret på måltilstand)"
+        "normal": "Normal (Demokratisk)",
+        "off_priority": "Sluk Prioritet (Hovedafbryder)",
+        "auto": "Auto (Smart)"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Fællesmængde (Funktioner fælles for alle medlemmer)",
-        "union": "Foreningsmængde (Alle funktioner fra ethvert medlem)"
+        "intersection": "Fællesmængde (Sikker Tilstand - Fælles Funktioner)",
+        "union": "Forening (Avanceret Bruger - Alle Funktioner)"
       }
     }
   },
@@ -137,29 +152,17 @@
       "climate_group": {
         "name": "Klimagruppe",
         "state_attributes": {
-          "member_entities": {
-            "name": "Medlemsenheder",
-            "description": "Liste over klimaanlæg inkluderet i denne gruppe"
+          "group_in_sync": {
+            "name": "Gruppe i Sync",
+            "description": "Sandt, hvis alle medlemmer matcher gruppens mål."
           },
-          "averaging_method": {
-            "name": "Gennemsnitsmetode",
-            "description": "Metode brugt til at beregne måltemperaturer"
+          "last_active_hvac_mode": {
+            "name": "Sidste Aktive Tilstand",
+            "description": "Den sidst anvendte tilstand (Opvarmning/Køling) før slukning."
           },
-          "temperature_precision": {
-            "name": "Temperaturpræcision",
-            "description": "Afrunding anvendt på temperaturværdier"
-          },
-          "last_active_mode": {
-            "name": "Sidste aktive tilstand",
-            "description": "Den seneste ikke-fra HVAC-tilstand brugt af gruppen"
-          },
-          "member_count": {
-            "name": "Antal medlemmer",
-            "description": "Antal enheder i denne klimagruppe"
-          },
-          "active_members": {
-            "name": "Aktive medlemmer",
-            "description": "Antal aktuelt tilgængelige gruppemedlemmer"
+          "target_hvac_mode": {
+            "name": "Mål HVAC-tilstand",
+            "description": "Den tilstand, gruppen forsøger at indstille på alle medlemmer."
           }
         }
       }
@@ -167,59 +170,59 @@
   },
   "services": {
     "set_temperature": {
-      "name": "Indstil temperatur",
-      "description": "Indstil måltemperaturen for alle klimaanlæg i gruppen samtidigt.",
+      "name": "Indstil Temperatur",
+      "description": "Indstil måltemperaturen for hele gruppen.",
       "fields": {
         "entity_id": {
           "name": "Klimagruppe",
-          "description": "Klimagruppe-enheden, der skal styres."
+          "description": "Gruppen der skal styres."
         },
         "temperature": {
           "name": "Måltemperatur",
-          "description": "Den ønskede temperatur for alle gruppemedlemmer."
+          "description": "Den ønskede temperatur."
         },
         "target_temp_high": {
-          "name": "Høj måltemperatur",
-          "description": "Den øvre temperaturgrænse for varme-/køletilstand."
+          "name": "Mål Høj",
+          "description": "Øvre grænse for varme/køle tilstand."
         },
         "target_temp_low": {
-          "name": "Lav måltemperatur",
-          "description": "Den nedre temperaturgrænse for varme-/køletilstand."
+          "name": "Mål Lav",
+          "description": "Nedre grænse for varme/køle tilstand."
         },
         "hvac_mode": {
           "name": "HVAC-tilstand",
-          "description": "Skift eventuelt HVAC-tilstand ved indstilling af temperatur."
+          "description": "Skift eventuelt tilstanden."
         }
       }
     }
   },
   "issues": {
     "member_unavailable": {
-      "title": "Medlem af klimagruppe utilgængelig",
-      "description": "Et eller flere medlemmer af klimagruppen '{group_name}' er i øjeblikket utilgængelige. Gruppen vil fortsætte med at fungere med tilgængelige medlemmer, men nogle funktioner kan være begrænsede.\n\nUtilgængelige enheder: {unavailable_entities}"
+      "title": "Medlemsenhed Ikke Tilgængelig",
+      "description": "En eller flere enheder i '{group_name}' er offline. Gruppen fortsætter med at fungere med det, den har.\n\nIkke tilgængelig: {unavailable_entities}"
     },
     "no_members_available": {
-      "title": "Klimagruppe har ingen tilgængelige medlemmer",
-      "description": "Klimagruppe '{group_name}' har ingen tilgængelige medlemsenheder. Gruppen vil være utilgængelig, indtil mindst én medlemsenhed bliver tilgængelig.\n\nKontroller status for disse enheder: {member_entities}"
+      "title": "Ingen Medlemmer Tilgængelige",
+      "description": "Gruppe '{group_name}' har ingen aktive medlemmer og er effektivt offline.\n\nTjek: {member_entities}"
     },
     "conflicting_features": {
-      "title": "Klimagruppe funktionskonflikter",
-      "description": "Klimagruppe '{group_name}' indeholder medlemmer med inkompatible funktioner. Nogle funktioner kan være begrænset til funktioner, der understøttes af alle gruppemedlemmer.\n\nKonfliktende enheder: {conflicting_entities}"
+      "title": "Funktionskonflikter",
+      "description": "Gruppe '{group_name}' har medlemmer med forskellige funktioner. Funktionalitet kan være begrænset til hvad alle understøtter.\n\nKonflikter: {conflicting_entities}"
     }
   },
   "device_automation": {
     "trigger_type": {
       "hvac_mode_changed": "HVAC-tilstand ændret",
       "temperature_target_changed": "Måltemperatur ændret",
-      "current_temperature_changed": "Nuværende temperatur ændret",
+      "current_temperature_changed": "Aktuel temperatur ændret",
       "group_turned_on": "Gruppe tændt",
       "group_turned_off": "Gruppe slukket"
     },
     "condition_type": {
       "is_hvac_mode": "HVAC-tilstand er",
-      "is_temperature_above": "Temperatur er over",
-      "is_temperature_below": "Temperatur er under",
-      "is_group_available": "Gruppe er tilgængelig"
+      "is_temperature_above": "Temperaturen er over",
+      "is_temperature_below": "Temperaturen er under",
+      "is_group_available": "Gruppen er tilgængelig"
     },
     "action_type": {
       "set_hvac_mode": "Indstil HVAC-tilstand",

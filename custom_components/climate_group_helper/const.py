@@ -21,24 +21,34 @@ class RoundOption(StrEnum):
     INTEGER = "integer"
 
 
+class SyncMode(StrEnum):
+    """Enum for sync modes."""
+
+    STANDARD = "standard"
+    LOCK = "lock"
+    MIRROR = "mirror"
+
+
 # Configuration keys
 CONF_CURRENT_AVG_OPTION = "current_avg_option"
-CONF_TARGET_AVG_OPTION = "target_avg_option"
-CONF_ROUND_OPTION = "round_option"
-CONF_USE_TEMP_SENSOR = "use_temp_sensor"
-CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
-CONF_FEATURE_STRATEGY = "feature_strategy"
-CONF_TEMP_SENSOR = "temp_sensor"
-CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
-CONF_EXPOSE_ATTRIBUTE_SENSORS = "expose_attribute_sensors"
 CONF_DEBOUNCE_DELAY = "debounce_delay"
+CONF_EXPOSE_ATTRIBUTE_SENSORS = "expose_attribute_sensors"
+CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
+CONF_FEATURE_STRATEGY = "feature_strategy"
+CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
 CONF_REPEAT_COUNT = "repeat_count"
 CONF_REPEAT_DELAY = "repeat_delay"
+CONF_ROUND_OPTION = "round_option"
+CONF_SYNC_MODE = "sync_mode"
+CONF_SYNC_DELAY = "sync_delay"
+CONF_TARGET_AVG_OPTION = "target_avg_option"
+CONF_TEMP_SENSOR = "temp_sensor"
+CONF_USE_TEMP_SENSOR = "use_temp_sensor"
 
 # HVAC mode strategies
+HVAC_MODE_STRATEGY_AUTO = "auto"
 HVAC_MODE_STRATEGY_NORMAL = "normal"
 HVAC_MODE_STRATEGY_OFF_PRIORITY = "off_priority"
-HVAC_MODE_STRATEGY_AUTO = "auto"
 
 # Feature strategies
 FEATURE_STRATEGY_INTERSECTION = "intersection"

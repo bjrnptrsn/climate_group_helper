@@ -2,133 +2,148 @@
   "config": {
     "step": {
       "user": {
-        "title": "Konfiguration des Klimagruppen-Helfers",
-        "description": "Erstellen Sie eine Gruppe von Klimageräten, die als eine einzige Einheit gesteuert werden können. Die Gruppe aggregiert Temperaturmesswerte und synchronisiert Steuerbefehle über alle Mitgliedsgeräte.",
+        "title": "Climate Group Helper",
+        "description": "Erstelle einen leistungsstarken 'Virtuellen Controller' für deine Klimageräte. Diese Gruppe bündelt Messwerte und synchronisiert Einstellungen über alle Mitglieder hinweg und agiert als eine einzige smarte Einheit.",
         "data": {
           "name": "Gruppenname",
           "entities": "Klimageräte",
-          "current_avg_option": "Mittelwertmethode für aktuelle Werte",
-          "target_avg_option": "Mittelwertmethode für Zielwerte",
-          "round_option": "Temperaturrundung",
-          "hvac_mode_strategy": "HLK-Modus-Strategie",
-          "feature_strategy": "Funktions-Strategie",
+          "current_avg_option": "Aktuelle Werte (Anzeige)",
+          "target_avg_option": "Zielwerte (Steuerung)",
+          "round_option": "Präzisionssteuerung (Rundung)",
+          "hvac_mode_strategy": "HVAC-Modus-Strategie",
+          "feature_strategy": "Funktionskompatibilität",
           "temp_sensor": "Externer Temperatursensor",
-          "expose_member_entities": "Mitgliedsentitäten anzeigen",
-          "expose_attribute_sensors": "Attribute als Sensoren verfügbar machen",
+          "expose_member_entities": "Mitgliederliste bereitstellen",
+          "expose_attribute_sensors": "Smarte Sensoren bereitstellen",
           "debounce_delay": "Entprellverzögerung (Sekunden)",
-          "repeat_count": "Anzahl der Wiederholungen",
-          "repeat_delay": "Wiederholungsverzögerung (Sekunden)"
+          "repeat_count": "Wiederholungsversuche",
+          "repeat_delay": "Wiederholungsverzögerung (Sekunden)",
+          "sync_mode": "Synchronisationsmodus",
+          "sync_delay": "Sync-Verzögerung (Sekunden)"
         },
         "data_description": {
-          "name": "Geben Sie einen beschreibenden Namen für diese Klimagruppe ein (z. B. 'Wohnzimmerklima' oder 'Heizung Obergeschoss').",
-          "entities": "Wählen Sie die Klimageräte aus, die in diese Gruppe aufgenommen werden sollen.",
-          "current_avg_option": "Wählen Sie die Methode zur Berechnung der aktuellen Temperatur/Feuchtigkeit der Gruppe.",
-          "target_avg_option": "Wählen Sie die Methode zur Berechnung der Ziel-Temperatur/Feuchtigkeit der Gruppe.",
-          "round_option": "Wählen Sie die Rundungsgenauigkeit für Temperaturwerte.",
-          "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
-          "feature_strategy": "Wählen Sie, wie die Funktionen (z. B. Lüftermodus, Schwenkmodus) der Mitglieder gruppiert werden sollen.",
-          "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
-          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
-          "expose_attribute_sensors": "Aktivieren, um aggregierte Attribute (Temperatur, Luftfeuchtigkeit) als separate Sensor-Entitäten verfügbar zu machen.",
-          "debounce_delay": "Wenn die Entprellung aktiv ist, können schnelle Änderungen der Temperatur und des HLK-Modus kombiniert werden. Wenn Sie beispielsweise schnell die Temperatur und dann den HLK-Modus ändern, wird möglicherweise nur der letzte Befehl gesendet. Mit Vorsicht verwenden.",
-          "repeat_count": "Die Anzahl, wie oft der endgültige Befehl gesendet werden soll, um sicherzustellen, dass er empfangen wird.",
-          "repeat_delay": "Die Verzögerung (in Sekunden) zwischen jedem wiederholten Befehl."
+          "name": "Ein freundlicher Name für deine Gruppe (z.B. 'Wohnzimmer' oder 'Ganzes Haus').",
+          "entities": "Wähle die Klimageräte (Thermostate, Klimaanlagen), die in dieser Gruppe enthalten sein sollen.",
+          "current_avg_option": "Wie die Gruppe Sensorwerte (Temperatur/Feuchtigkeit) ihrer Mitglieder zusammenfasst.",
+          "target_avg_option": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
+          "round_option": "Vermeide das Senden von Werten mit übermäßiger Präzision an Geräte, die strikte Schritte erwarten.",
+          "hvac_mode_strategy": "Bestimmt, wie die Gruppe ihren Gesamtstatus entscheidet (z.B. wenn einige Geräte aus sind).",
+          "feature_strategy": "Umgang mit Geräten unterschiedlicher Fähigkeiten (z.B. eines unterstützt 'Nur Lüfter', ein anderes nicht).",
+          "temp_sensor": "Wähle einen separaten Sensor, der als aktuelle Temperatur der Gruppe angezeigt wird. Nützlich bei ungenauen Gerätesensoren.",
+          "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
+          "expose_attribute_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
+          "debounce_delay": "Wartet einen Moment nach der Bedienung, bevor Befehle gesendet werden. Verhindert eine Überflutung des Netzwerks.",
+          "repeat_count": "Wiederholt Befehle automatisch, falls ein Gerät sie verpasst.",
+          "repeat_delay": "Die Wartezeit zwischen Wiederholungsversuchen.",
+          "sync_mode": "Steuert, wie die Gruppe mit manuellen Änderungen direkt an den physischen Geräten interagiert.",
+          "sync_delay": "Eine Pufferzeit, damit sich manuelle Anpassungen beruhigen können, bevor die Sync-Logik greift."
         }
       }
     },
     "error": {
-      "no_entities": "Es muss mindestens ein Klimagerät ausgewählt werden, um eine Gruppe zu erstellen.",
-      "invalid_entity": "Ein oder mehrere ausgewählte Geräte sind keine gültigen Klimageräte.",
+      "no_entities": "Du musst mindestens ein Klimagerät auswählen.",
+      "invalid_entity": "Eines oder mehrere der ausgewählten Geräte sind keine gültigen Klimageräte.",
       "duplicate_name": "Eine Klimagruppe mit diesem Namen existiert bereits.",
-      "unavailable_entities": "Einige ausgewählte Geräte sind derzeit nicht verfügbar. Die Gruppe wird erstellt, funktioniert aber möglicherweise erst dann ordnungsgemäß, wenn alle Geräte verfügbar sind."
+      "unavailable_entities": "Einige ausgewählte Geräte sind nicht verfügbar. Die Gruppe wird erstellt, funktioniert aber möglicherweise nicht vollständig, bis sie gehorchen."
     },
     "abort": {
-      "already_configured": "Eine Klimagruppe mit dieser Konfiguration ist bereits vorhanden.",
-      "single_instance_allowed": "Es kann nur eine Klimagruppenhelfer-Integration konfiguriert werden.",
-      "no_changes": "Es wurden keine Änderungen an der Konfiguration vorgenommen."
+      "already_configured": "Diese Gruppe ist bereits konfiguriert.",
+      "single_instance_allowed": "Nur eine Instanz ist erlaubt.",
+      "no_changes": "Es wurden keine Änderungen vorgenommen."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Optionen der Klimagruppe konfigurieren",
-        "description": "Ändern Sie die Einstellungen für Ihre Klimagruppe. Änderungen werden sofort wirksam und beeinflussen, wie Temperaturen berechnet und angezeigt werden.",
+        "title": "Klimagruppe konfigurieren",
+        "description": "Feinabstimmung des Gruppenverhaltens. Änderungen werden sofort wirksam.",
         "data": {
           "entities": "Klimageräte",
-          "current_avg_option": "Mittelwertmethode für aktuelle Werte",
-          "target_avg_option": "Mittelwertmethode für Zielwerte",
-          "round_option": "Temperaturrundung",
-          "hvac_mode_strategy": "HLK-Modus-Strategie",
-          "feature_strategy": "Funktions-Strategie",
-          "use_temp_sensor": "Externen Temperatursensor verwenden",
+          "current_avg_option": "Aktuelle Werte (Anzeige)",
+          "target_avg_option": "Zielwerte (Steuerung)",
+          "round_option": "Präzisionssteuerung (Rundung)",
+          "hvac_mode_strategy": "HVAC-Modus-Strategie",
+          "feature_strategy": "Funktionskompatibilität",
+          "use_temp_sensor": "Externen Sensor verwenden",
           "temp_sensor": "Externer Temperatursensor",
-          "expose_member_entities": "Mitgliedsentitäten anzeigen",
-          "expose_attribute_sensors": "Attribute als Sensoren verfügbar machen",
+          "expose_member_entities": "Mitgliederliste bereitstellen",
+          "expose_attribute_sensors": "Smarte Sensoren bereitstellen",
           "debounce_delay": "Entprellverzögerung (Sekunden)",
-          "repeat_count": "Anzahl der Wiederholungen",
-          "repeat_delay": "Wiederholungsverzögerung (Sekunden)"
+          "repeat_count": "Wiederholungsversuche",
+          "repeat_delay": "Wiederholungsverzögerung (Sekunden)",
+          "sync_mode": "Synchronisationsmodus",
+          "sync_delay": "Sync-Verzögerung (Sekunden)"
         },
         "data_description": {
-          "entities": "Fügen Sie Klimageräte zu dieser Gruppe hinzu oder entfernen Sie sie. Entfernte Geräte werden von Temperaturberechnungen und Steuerbefehlen ausgeschlossen.",
-          "current_avg_option": "Ändern Sie die Methode zur Berechnung der aktuellen Temperatur/Feuchtigkeit für alle Gruppenmitglieder.",
-          "target_avg_option": "Ändern Sie die Methode zur Berechnung der Ziel-Temperatur/Feuchtigkeit für alle Gruppenmitglieder.",
-          "round_option": "Passen Sie die Temperaturgenauigkeit für die Gruppe an.",
-          "hvac_mode_strategy": "Wählen Sie die Strategie zur Bestimmung des HLK-Modus der Gruppe.",
-          "feature_strategy": "Wählen Sie, wie die Funktionen (z. B. Lüftermodus, Schwenkmodus) der Mitglieder gruppiert werden sollen.",
-          "use_temp_sensor": "Wenn deaktiviert, wird der Sensor entfernt und die Gruppe verwendet die Durchschnittstemperatur ihrer Mitglieder.",
-          "temp_sensor": "Wählen Sie einen optionalen externen Sensor, um die aktuelle Temperatur der Gruppe zu überschreiben.",
-          "expose_member_entities": "Aktivieren Sie diese Option, um die Liste der Mitgliedsentitäten als Zustandsattribut anzuzeigen.",
-          "expose_attribute_sensors": "Aktivieren, um aggregierte Attribute (Temperatur, Luftfeuchtigkeit) als separate Sensor-Entitäten verfügbar zu machen.",
-          "debounce_delay": "Wenn die Entprellung aktiv ist, können schnelle Änderungen der Temperatur und des HLK-Modus kombiniert werden. Wenn Sie beispielsweise schnell die Temperatur und dann den HLK-Modus ändern, wird möglicherweise nur der letzte Befehl gesendet. Mit Vorsicht verwenden.",
-          "repeat_count": "Die Anzahl, wie oft der endgültige Befehl gesendet werden soll, um sicherzustellen, dass er empfangen wird.",
-          "repeat_delay": "Die Verzögerung (in Sekunden) zwischen jedem wiederholten Befehl."
+          "entities": "Geräte hinzufügen oder entfernen. Das Entfernen stoppt deren Steuerung durch die Gruppe.",
+          "current_avg_option": "Wie die Gruppe Sensorwerte (Temperatur/Feuchtigkeit) ihrer Mitglieder zusammenfasst.",
+          "target_avg_option": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
+          "round_option": "Vermeide das Senden von Werten mit übermäßiger Präzision an Geräte, die strikte Schritte erwarten.",
+          "hvac_mode_strategy": "Bestimmt, wie die Gruppe ihren Gesamtstatus entscheidet (z.B. wenn einige Geräte aus sind).",
+          "feature_strategy": "Umgang mit Geräten unterschiedlicher Fähigkeiten (z.B. eines unterstützt 'Nur Lüfter', ein anderes nicht).",
+          "use_temp_sensor": "Aktivieren, um einen separaten Sensor für die aktuelle Temperatur der Gruppe zu verwenden.",
+          "temp_sensor": "Wähle den externen Sensor aus.",
+          "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
+          "expose_attribute_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
+          "debounce_delay": "Wartet einen Moment nach der Bedienung, bevor Befehle gesendet werden. Verhindert eine Überflutung des Netzwerks.",
+          "repeat_count": "Wiederholt Befehle automatisch, falls ein Gerät sie verpasst.",
+          "repeat_delay": "Die Wartezeit zwischen Wiederholungsversuchen.",
+          "sync_mode": "Steuert, wie die Gruppe mit manuellen Änderungen direkt an den physischen Geräten interagiert.",
+          "sync_delay": "Eine Pufferzeit, damit sich manuelle Anpassungen beruhigen können, bevor die Sync-Logik greift."
         }
       }
     },
     "error": {
-      "no_entities": "Es muss mindestens ein Klimagerät in der Gruppe verbleiben.",
-      "invalid_entity": "Ein oder mehrere ausgewählte Geräte sind keine gültigen Klimageräte.",
-      "configuration_error": "Die neue Konfiguration konnte nicht angewendet werden. Bitte überprüfen Sie Ihre Einstellungen und versuchen Sie es erneut."
+      "no_entities": "Mindestens ein Klimagerät muss in der Gruppe verbleiben.",
+      "invalid_entity": "Ungültiges Gerät ausgewählt.",
+      "configuration_error": "Konfiguration konnte nicht aktualisiert werden."
     },
     "abort": {
-      "no_changes": "Es wurden keine Änderungen an der Konfiguration festgestellt."
+      "no_changes": "Keine Änderungen erkannt."
     }
   },
   "selector": {
     "current_avg_option": {
       "options": {
         "mean": "Mittelwert (Durchschnitt)",
-        "median": "Median (Mittlerer Wert)",
-        "min": "Minimum",
-        "max": "Maximum"
+        "median": "Median (Ausreißer ignorieren)",
+        "min": "Minimum (Niedrigster)",
+        "max": "Maximum (Höchster)"
       }
     },
     "target_avg_option": {
       "options": {
         "mean": "Mittelwert (Durchschnitt)",
         "median": "Median (Mittlerer Wert)",
-        "min": "Minimum",
-        "max": "Maximum"
+        "min": "Minimum (Niedrigster)",
+        "max": "Maximum (Höchster)"
       }
     },
     "round_option": {
       "options": {
-        "none": "Keine Rundung (Genaue Werte)",
-        "half": "Halbes Grad (0,5°)",
+        "none": "Keine Rundung (Exakt)",
+        "half": "Halbes Grad (0.5°)",
         "integer": "Ganze Zahlen (1°)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "standard": "Standard (Einweg)",
+        "mirror": "Mirror (Magic Sync - Zweiwege)",
+        "lock": "Lock (The Boss - Gruppe erzwingen)"
       }
     },
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normal (Häufigster Modus)",
-        "off_priority": "Aus-Priorität (Gruppe ist aus, wenn ein Mitglied aus ist)",
-        "auto": "Auto (Intelligente Strategie basierend auf dem Zielmodus)"
+        "normal": "Normal (Demokratisch)",
+        "off_priority": "Aus-Priorität (Hauptschalter)",
+        "auto": "Auto (Smart)"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Schnittmenge (Nur gemeinsame Funktionen aller Mitglieder)",
-        "union": "Vereinigung (Alle Funktionen von jedem Mitglied)"
+        "intersection": "Schnittmenge (Sicherer Modus - Gemeinsame Funktionen)",
+        "union": "Vereinigung (Power User - Alle Funktionen)"
       }
     }
   },
@@ -137,29 +152,17 @@
       "climate_group": {
         "name": "Klimagruppe",
         "state_attributes": {
-          "member_entities": {
-            "name": "Mitgliedsgeräte",
-            "description": "Liste der in dieser Gruppe enthaltenen Klimageräte"
+          "group_in_sync": {
+            "name": "Gruppe synchron",
+            "description": "Wahr, wenn alle Mitglieder dem Gruppenziel entsprechen."
           },
-          "averaging_method": {
-            "name": "Mittelwertmethode",
-            "description": "Methode zur Berechnung der Zieltemperaturen"
+          "last_active_hvac_mode": {
+            "name": "Letzter aktiver Modus",
+            "description": "Der zuletzt verwendete Modus (Heizen/Kühlen) vor dem Ausschalten."
           },
-          "temperature_precision": {
-            "name": "Temperaturgenauigkeit",
-            "description": "Auf Temperaturwerte angewendete Rundung"
-          },
-          "last_active_mode": {
-            "name": "Zuletzt aktiver Modus",
-            "description": "Der letzte von der Gruppe verwendete HLK-Modus, der nicht 'Aus' war"
-          },
-          "member_count": {
-            "name": "Anzahl der Mitglieder",
-            "description": "Anzahl der Geräte in dieser Klimagruppe"
-          },
-          "active_members": {
-            "name": "Aktive Mitglieder",
-            "description": "Anzahl der derzeit verfügbaren Gruppenmitglieder"
+          "target_hvac_mode": {
+            "name": "Ziel-HVAC-Modus",
+            "description": "Der Modus, den die Gruppe auf allen Mitgliedern zu setzen versucht."
           }
         }
       }
@@ -167,63 +170,63 @@
   },
   "services": {
     "set_temperature": {
-      "name": "Temperatur einstellen",
-      "description": "Stellen Sie die Ziel-Temperatur für alle Klimageräte in der Gruppe gleichzeitig ein.",
+      "name": "Temperatur setzen",
+      "description": "Setze die Zieltemperatur für die gesamte Gruppe.",
       "fields": {
         "entity_id": {
           "name": "Klimagruppe",
-          "description": "Die zu steuernde Klimagruppen-Entität."
+          "description": "Die zu steuernde Gruppe."
         },
         "temperature": {
-          "name": "Ziel-Temperatur",
-          "description": "Die gewünschte Temperatur für alle Gruppenmitglieder."
+          "name": "Zieltemperatur",
+          "description": "Die gewünschte Temperatur."
         },
         "target_temp_high": {
-          "name": "Obere Ziel-Temperatur",
-          "description": "Die obere Temperaturgrenze für den Heiz-/Kühlmodus."
+          "name": "Ziel Hoch",
+          "description": "Obergrenze für Heizen/Kühlen-Modus."
         },
         "target_temp_low": {
-          "name": "Untere Ziel-Temperatur",
-          "description": "Die untere Temperaturgrenze für den Heiz-/Kühlmodus."
+          "name": "Ziel Niedrig",
+          "description": "Untergrenze für Heizen/Kühlen-Modus."
         },
         "hvac_mode": {
-          "name": "HLK-Modus",
-          "description": "Ändern Sie optional den HLK-Modus, wenn Sie die Temperatur einstellen."
+          "name": "HVAC-Modus",
+          "description": "Optional den Modus ändern."
         }
       }
     }
   },
   "issues": {
     "member_unavailable": {
-      "title": "Mitglied der Klimagruppe nicht verfügbar",
-      "description": "Ein oder mehrere Mitglieder der Klimagruppe '{group_name}' sind derzeit nicht verfügbar. Die Gruppe funktioniert mit den verfügbaren Mitgliedern weiter, aber einige Funktionen können eingeschränkt sein.\n\nNicht verfügbare Geräte: {unavailable_entities}"
+      "title": "Mitgliedsgerät nicht verfügbar",
+      "description": "Ein oder mehrere Geräte in '{group_name}' sind offline. Die Gruppe arbeitet mit den verfügbaren weiter.\n\nNicht verfügbar: {unavailable_entities}"
     },
     "no_members_available": {
-      "title": "Klimagruppe hat keine verfügbaren Mitglieder",
-      "description": "Die Klimagruppe '{group_name}' hat keine verfügbaren Mitgliedsgeräte. Die Gruppe ist nicht verfügbar, bis mindestens ein Mitgliedsgerät verfügbar wird.\n\nÜberprüfen Sie den Status dieser Geräte: {member_entities}"
+      "title": "Keine Mitglieder verfügbar",
+      "description": "Gruppe '{group_name}' hat keine aktiven Mitglieder und ist effektiv offline.\n\nPrüfen: {member_entities}"
     },
     "conflicting_features": {
-      "title": "Funktionskonflikte in der Klimagruppe",
-      "description": "Die Klimagruppe '{group_name}' enthält Mitglieder mit inkompatiblen Funktionen. Einige Funktionen können auf die von allen Gruppenmitgliedern unterstützten Funktionen beschränkt sein.\n\nKonfliktverursachende Geräte: {conflicting_entities}"
+      "title": "Funktionskonflikte",
+      "description": "Gruppe '{group_name}' hat Mitglieder mit unterschiedlichen Funktionen. Funktionalität könnte auf den gemeinsamen Nenner beschränkt sein.\n\nKonflikte: {conflicting_entities}"
     }
   },
   "device_automation": {
     "trigger_type": {
-      "hvac_mode_changed": "HLK-Modus geändert",
-      "temperature_target_changed": "Ziel-Temperatur geändert",
+      "hvac_mode_changed": "HVAC-Modus geändert",
+      "temperature_target_changed": "Zieltemperatur geändert",
       "current_temperature_changed": "Aktuelle Temperatur geändert",
       "group_turned_on": "Gruppe eingeschaltet",
       "group_turned_off": "Gruppe ausgeschaltet"
     },
     "condition_type": {
-      "is_hvac_mode": "HLK-Modus ist",
+      "is_hvac_mode": "HVAC-Modus ist",
       "is_temperature_above": "Temperatur ist über",
       "is_temperature_below": "Temperatur ist unter",
       "is_group_available": "Gruppe ist verfügbar"
     },
     "action_type": {
-      "set_hvac_mode": "HLK-Modus einstellen",
-      "set_temperature": "Temperatur einstellen",
+      "set_hvac_mode": "Setze HVAC-Modus",
+      "set_temperature": "Setze Temperatur",
       "turn_on": "Einschalten",
       "turn_off": "Ausschalten"
     }
