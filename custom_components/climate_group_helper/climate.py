@@ -729,10 +729,10 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             self._attr_target_temperature_step = reduce_attribute(self._states, ATTR_TARGET_TEMP_STEP, reduce=max)
 
             # Min temperature is the highest of all ATTR_MIN_TEMP values
-            self._attr_min_temp = reduce_attribute(self._states, ATTR_MIN_TEMP, reduce=max, default=DEFAULT_MIN_TEMP)
+            self._attr_min_temp = reduce_attribute(self._states, ATTR_MIN_TEMP, reduce=min, default=DEFAULT_MIN_TEMP)
 
             # Max temperature is the lowest of all ATTR_MAX_TEMP values
-            self._attr_max_temp = reduce_attribute(self._states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
+            self._attr_max_temp = reduce_attribute(self._states, ATTR_MAX_TEMP, reduce=max, default=DEFAULT_MAX_TEMP)
 
             # Current humidity is the average of all ATTR_CURRENT_HUMIDITY values
             self._attr_current_humidity = reduce_attribute(self._states, ATTR_CURRENT_HUMIDITY, reduce=lambda *data: self._current_avg_calc(data))
