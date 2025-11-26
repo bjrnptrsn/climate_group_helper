@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Advanved Climate Group Helper",
-        "description": "Create a powerful 'Virtual Controller' for your climate devices. This group will aggregate readings and synchronize settings across all members, acting as a single smart unit.",
+        "description": "Create a more powerful 'Virtual Controller' for your climate devices. This group will aggregate readings and synchronize settings across all members, acting as a single smart unit.",
         "data": {
           "name": "Group Name",
           "entities": "Climate Devices",
