@@ -858,7 +858,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 return False
 
         entity_ids = self._get_supporting_entities(ATTR_HVAC_MODES, hvac_mode)
-
+        unsupporting_entity_ids = self._get_unsupporting_entities(ATTR_HVAC_MODES, hvac_mode)
         if not entity_ids:
             _LOGGER.debug("No entities support the hvac mode %s, skipping service call", hvac_mode)
             return False
@@ -872,6 +872,12 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         await self.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=context or self._context
         )
+        data = {ATTR_ENTITY_ID: unsupporting_entity_ids, ATTR_HVAC_MODE: 'off'}
+        _LOGGER.debug("Setting unsupporting HVAC mode: %s", data)
+        await self.hass.services.async_call(
+            CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=context or self._context
+        )
+        
         return True
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
