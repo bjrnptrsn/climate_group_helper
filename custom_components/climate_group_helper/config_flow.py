@@ -45,7 +45,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class AdvancedClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
     VERSION = 2
