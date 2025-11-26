@@ -1,11 +1,12 @@
 """This platform allows several climate devices to be grouped into one climate device."""
 from __future__ import annotations
 
-import asyncio
 from functools import reduce
-import logging
 from statistics import mean, median
 from typing import Any, Callable
+import asyncio
+import logging
+import time
 
 from homeassistant.components.climate import (
     ATTR_CURRENT_HUMIDITY,
@@ -171,6 +172,15 @@ class SyncModeHandler:
         self._snapshot_attrs: dict[str, Any] = {}
         self._snapshot_states: list[State] | None = None
         self._active_tasks: set[asyncio.Task] = set()
+
+        # Sync conflict tracking for timeout-based capitulation
+        self._last_sync_attempt: float | None = None                 # Timestamp when sync attempts started
+        self._reset_delay_seconds = (
+            (self._group._repeat_count * self._group._repeat_delay)  # Total retry duration
+            + self._group._sync_mode_delay                           # Initial delay before first attempt
+            + 5                                                      # Safety buffer for network/processing delays
+        )
+
         _LOGGER.debug("SyncModeHandler initialized for group '%s' with sync_mode: %s", self._group.entity_id, sync_mode)
 
     @property
@@ -185,31 +195,34 @@ class SyncModeHandler:
         if self._sync_mode == SyncMode.STANDARD:
             return
 
-        # User interaction (Internal Change): This is the new truth.
-        # Cancel any active fighting tasks and update the snapshot.
+        # Priority 1: User interaction - this becomes the new truth
         if self._is_internal_change():
             _LOGGER.debug("SyncModeHandler: Internal change detected. Resetting tasks and updating snapshot.")
             self._cancel_active_tasks()
             self._do_snapshot()
             return
 
-        # Active Syncing: We are busy correcting a deviation.
-        # Do not overwrite the snapshot (the goal state) with the current invalid state.
+        # Priority 2: Active syncing - protect the goal state
         if self.is_syncing:
             _LOGGER.debug("SyncModeHandler: Sync tasks active. Skipping snapshot to protect state.")
             return
 
         # LOCK Mode: External changes are rejected.
-        # Keep the old snapshot to revert the member, unless we don't have one yet (startup).
         if self._sync_mode == SyncMode.LOCK:
-            # Only take a snapshot if we don't have one yet (startup)
+            # Safety mechanism: Accept reality if device refuses commands for too long
+            if self._last_sync_attempt and (time.time() - self._last_sync_attempt) > self._reset_delay_seconds:
+                _LOGGER.warning("Group '%s': Sync failed for too long (>%ds). Accepting current state to stop loop.", self._group.entity_id, self._reset_delay_seconds)
+                self._do_snapshot()
+                return
+
+            # Create initial snapshot if none exists (startup)
             if not self._snapshot_attrs:
                 self._do_snapshot()
             else:
                 _LOGGER.debug("SyncModeHandler: Lock mode active. Skipping snapshot to preserve 'Truth'.")
             return
 
-        # MIRROR Mode: External changes are adopted.
+        # MIRROR Mode: External changes are adopted
         self._do_snapshot()
 
     def handle_sync_mode_changes(self):
@@ -300,9 +313,18 @@ class SyncModeHandler:
                 if hasattr(self._group, exec_func_name):
                     service_calls[service_name] = {key: target_value}
 
+                # Start sync conflict timer on first deviation detection
+                # Only set once per conflict cycle; subsequent calls extend the existing timer
+                if self._last_sync_attempt is None:
+                    self._last_sync_attempt = time.time()
+
             return list(service_calls.items())
 
         _LOGGER.debug("SyncModeHandler for group '%s': No changed member detected, no service calls to prepare.", self._group.entity_id)
+
+        # Everything calm, no more conflicts -> Reset timer
+        self._last_sync_attempt = None
+
         return []
 
     def _cancel_active_tasks(self):
@@ -323,6 +345,11 @@ class SyncModeHandler:
 
     def _do_snapshot(self):
         """Perform the actual snapshotting of attributes and states."""
+
+        # Reset sync timer: A new snapshot means the conflict is resolved
+        # (either user action, mirror adoption, timeout, or initial state)  
+        self._last_sync_attempt = None
+        
         self._snapshot_attrs = {
             key: self._get_group_value(key)
             for key in SYNC_MODE_WATCHED_ATTRIBUTES
@@ -393,16 +420,16 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._current_avg_calc = CALC_TYPES[config.get(CONF_CURRENT_AVG_OPTION, AverageOption.MEAN)]
         self._target_avg_calc = CALC_TYPES[config.get(CONF_TARGET_AVG_OPTION, AverageOption.MEAN)]
         self._round_option = config.get(CONF_ROUND_OPTION, RoundOption.NONE)
-        self._sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
-        self._sync_mode_delay = config.get(CONF_SYNC_DELAY, 5)
         self._debounce_delay = config.get(CONF_DEBOUNCE_DELAY, 0)
         self._repeat_count = int(config.get(CONF_REPEAT_COUNT, 1))
         self._repeat_delay = config.get(CONF_REPEAT_DELAY, 1)
-        self._sync_mode_handler = SyncModeHandler(self, self._sync_mode)
         self._hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL)
         self._feature_strategy = config.get(CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION)
         self._temp_sensor_entity_id = config.get(CONF_TEMP_SENSOR)
         self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
+        self._sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
+        self._sync_mode_delay = config.get(CONF_SYNC_DELAY, 5)
+        self._sync_mode_handler = SyncModeHandler(self, self._sync_mode)
 
         # The list of entities to be tracked by GroupEntity
         self._entity_ids = entity_ids.copy()
