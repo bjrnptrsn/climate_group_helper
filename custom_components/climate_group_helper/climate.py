@@ -922,14 +922,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             else:
                 _LOGGER.debug("No entities support the target temperature feature, skipping service call")
 
-            if (unsupporting_entity_ids := self._get_unsupporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_TEMPERATURE)):
-                data = {ATTR_ENTITY_ID: unsupporting_entity_ids, ATTR_HVAC_MODE: 'off'}
-                _LOGGER.debug("Setting off due to outside temp range: %s", data)
-                await self.hass.services.async_call(
-                    CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=context or self._context
-                )
-            else:
-                _LOGGER.debug("All entities support the target temperature feature, skipping turn off service call")
 
         if ATTR_TARGET_TEMP_LOW in kwargs and ATTR_TARGET_TEMP_HIGH in kwargs:
             if (entity_ids := self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_TEMPERATURE_RANGE)):
