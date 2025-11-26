@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.0 - 2025-11-26
+
+> **⚠️ NOTE:** This release involves a comprehensive refactoring of the core logic to implement the new "Sync Mode" features. While extensive testing has been conducted, there might be edge cases or bugs in real-world usage. Please report any issues on GitHub.
+
+### ✨ Features
+
+*   **Advanced Sync Modes**: You can now choose how the group interacts with its members:
+    *   **Standard**: The classic behavior. The group aggregates state but doesn't actively interfere with members.
+    *   **Lock**: Enforces the group's state. If a member is changed externally (e.g., manually), the group immediately reverts it.
+    *   **Mirror**: Adapts to members. If a member is changed externally, the group adopts that change and propagates it to all other members.
+
+*   **Configurable Sync Delay**: A new `Sync Delay` option (0-30s) helps prevent "fighting" between the group and devices. It adds a pause before the group corrects a deviation, giving devices time to settle.
+
+*   **Infinite Loop Prevention**: A safety mechanism detects if a device is permanently refusing commands (e.g., due to connection loss) and stops the group from retrying endlessly to prevent network flooding.
+
+*   **Localization**: Added and updated translations for all supported languages (Czech, Danish, German, Spanish, French, Italian, Dutch, Polish, Portuguese, Swedish, Ukrainian, Chinese).
+
 ## 0.9.0 - 2025-11-12
 
 ### ✨ Features

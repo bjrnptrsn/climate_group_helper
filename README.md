@@ -93,7 +93,7 @@ logger:
 
 ## ❤️ Contributing
 
-Found a bug or have an idea? [Open an issue](https://github.com/bjrnptrsn/climate_group_helper/issues) on GitHub. We love feedback!
+Found a bug or have an idea? [Open an issue](https://github.com/bjrnptrsn/climate_group_helper/issues) on GitHub.
 
 ## 📄 License
 
