@@ -513,7 +513,22 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         return supporting_entities
 
+    def _get_unsupporting_entities(self, check_attribute: str, check_value: int | str) -> list[str]:
+        """Get entity ids that match a specific check for a given attribute."""
+        unsupporting_entities = []
 
+        for entity_id in self._climate_entity_ids:
+            state = self.hass.states.get(entity_id)
+
+            if state is None:
+                unsupporting_entities.append(entity_id)
+            if isinstance(check_value, int) and not (check_value & state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)):
+                unsupporting_entities.append(entity_id)
+            if isinstance(check_value, str) and (check_value not in state.attributes.get(check_attribute, [])):
+                unsupporting_entities.append(entity_id)
+                
+        return unsupporting_entities
+    
     def _reduce_attributes(self, attributes: list[Any], default: Any = None) -> list | int:
         """Reduce a list of attributes (modes or features) based on the feature strategy."""
         if not attributes:
