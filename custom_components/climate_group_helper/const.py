@@ -3,7 +3,7 @@
 from enum import StrEnum
 
 DOMAIN = "advanced_climate_group_helper"
-DEFAULT_NAME = "Climate Group"
+DEFAULT_NAME = "Advanced Climate Group"
 
 class AverageOption(StrEnum):
     """Averaging options for temperature."""
