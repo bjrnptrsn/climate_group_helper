@@ -54,9 +54,9 @@ class AdvancedClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
-    ) -> ClimateGroupOptionsFlow:
+    ) -> AdvancedClimateGroupOptionsFlow:
         """Create the options flow."""
-        return ClimateGroupOptionsFlow(config_entry)
+        return AdvancedClimateGroupOptionsFlow(config_entry)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
