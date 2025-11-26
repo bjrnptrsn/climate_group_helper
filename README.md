@@ -46,14 +46,16 @@ Tailor the group's logic to fit your home perfectly.
 
 *   **Expose Attributes as Sensors**: Creates extra sensor entities for the group's temperature and humidity. Perfect for long-term history graphs (InfluxDB, etc.).
 
+*   **Expose Member List**: Creates an attribute listing all member entity IDs. Useful for templates or advanced automations.
+
 *   **Reliability Settings**: Fine-tune communication for chatty networks or sleepy devices.
     *   **Debounce Delay**: Waits a moment after you touch the controls before sending commands. Prevents flooding your network when you slide the temperature bar.
     *   **Repeat Count/Delay**: Retries commands automatically if a device misses them.
 
 *   **Synchronization Mode**: Control how the group interacts with manual changes made directly on physical devices (e.g., adjusting controls on a wall unit).
     *   `Standard (One-way)`: **Default.** Group commands update members. Manual changes on members update the group's *average*, but don't change the other members.
-    *   `Mirror (Two-way)`: **Magic Sync.** If you change settings on *one* device manually, the group detects this and instantly updates *all other* members to match. Keeps a zone in sync regardless of which unit you adjust.
-    *   `Lock (Enforce Group)`: **The Boss.** If a device is changed manually, the group immediately reverts it back to the group's setting. Ideal for public spaces, or preventing tampering.
+    *   `Mirror (Magic Sync - Two-way)`: If you change settings on *one* device manually, the group detects this and instantly updates *all other* members to match. Keeps a zone in sync regardless of which unit you adjust.
+    *   `Lock (The Boss - Enforce Group)`: If a device is changed manually, the group immediately reverts it back to the group's setting. Ideal for public spaces, or preventing tampering.
     *   **Sync Delay**: A configurable buffer (in seconds) to let manual adjustments settle before the sync logic kicks in.
 
 ## 📦 Installation

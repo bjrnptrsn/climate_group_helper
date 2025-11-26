@@ -148,8 +148,8 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         multiple=False,
                     )
                 ),
-                vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=False): bool,
                 vol.Optional(CONF_EXPOSE_ATTRIBUTE_SENSORS, default=False): bool,
+                vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=False): bool,
                 vol.Optional(CONF_DEBOUNCE_DELAY, default=0): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=0,
@@ -354,12 +354,12 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 ),
                 **temp_sensor_schema,
                 vol.Optional(
-                    CONF_EXPOSE_MEMBER_ENTITIES,
-                    default=current_config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
-                ): bool,
-                vol.Optional(
                     CONF_EXPOSE_ATTRIBUTE_SENSORS,
                     default=current_config.get(CONF_EXPOSE_ATTRIBUTE_SENSORS, False),
+                ): bool,
+                vol.Optional(
+                    CONF_EXPOSE_MEMBER_ENTITIES,
+                    default=current_config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
                 ): bool,
                 vol.Optional(
                     CONF_DEBOUNCE_DELAY,
