@@ -923,7 +923,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                     ATTR_TEMPERATURE: kwargs[ATTR_TEMPERATURE]
                 }
 
-                _LOGGER.debug("Setting temperature: %s", data)
+                _LOGGER.warn("Setting temperature: %s", data)
                 await self.hass.services.async_call(
                     CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=context or self._context
                 )
