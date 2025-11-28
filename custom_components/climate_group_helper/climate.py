@@ -913,7 +913,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 out_of_range_entity_ids = []
                 for entity_id in entity_ids:
                     state = self.hass.states.get(entity_id)
-                    _LOGGER.warn("Min Temp: %s", state.attributes.get(ATTR_MIN_TEMP, 0))
+                    _LOGGER.warn("Min Temp: %f", state.attributes.get(ATTR_MIN_TEMP, 0))
                     if (kwargs[ATTR_TEMPERATURE] > state.attributes.get(ATTR_MIN_TEMP, 0)):
                         in_range_entity_ids.append(entity_id)
                     else:
