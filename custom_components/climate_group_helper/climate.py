@@ -909,8 +909,17 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         executed = False
         if ATTR_TEMPERATURE in kwargs:
             if (entity_ids := self._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_TEMPERATURE)):
+                in_range_entity_ids = []
+                out_of_range_entity_ids = []
+                for entity_id in entity_ids:
+                    state = self.hass.states.get(entity_id)
+                    if (kwargs[ATTR_TEMPERATURE] > state.attributes.get(ATTR_MIN_TEMP, 0) && kwargs[ATTR_TEMPERATURE] < state.attributes.get(ATTR_MAX_TEMP, 0)):
+                        in_range_entity_ids.append(entity_id)
+                    else:
+                        out_of_range_entity_ids.append(entity_id)
+                        
                 data = {
-                    ATTR_ENTITY_ID: entity_ids,
+                    ATTR_ENTITY_ID: in_range_entity_ids,
                     ATTR_TEMPERATURE: kwargs[ATTR_TEMPERATURE]
                 }
 
