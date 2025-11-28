@@ -913,8 +913,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                 out_of_range_entity_ids = []
                 for entity_id in entity_ids:
                     state = self.hass.states.get(entity_id)
-                    _LOGGER.warn("Min Temp: %f", state.attributes.get(ATTR_MIN_TEMP, 0))
-                    if (kwargs[ATTR_TEMPERATURE] > state.attributes.get(ATTR_MIN_TEMP, 0)):
+                    if (kwargs[ATTR_TEMPERATURE] >= state.attributes.get(ATTR_MIN_TEMP, 0)):
                         in_range_entity_ids.append(entity_id)
                     else:
                         out_of_range_entity_ids.append(entity_id)
@@ -924,7 +923,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                     ATTR_TEMPERATURE: kwargs[ATTR_TEMPERATURE]
                 }
 
-                _LOGGER.warn("Setting temperature: %s", data)
+                _LOGGER.debug("Setting temperature: %s", data)
                 await self.hass.services.async_call(
                     CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=context or self._context
                 )
