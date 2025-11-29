@@ -23,13 +23,13 @@
           "sync_delay": "Sync Delay (seconds)"
         },
         "data_description": {
-          "name": "A friendly name for your group (e.g., 'Living Room' or 'Whole House').",
+          "name": "A friendly name for your group (e.g. 'Living Room' or 'Whole House').",
           "entities": "Select the climate devices (thermostats, ACs) to include in this group.",
           "current_avg_option": "How the group summarizes sensor readings (Temperature/Humidity) from its members.",
           "target_avg_option": "How the group calculates the target setpoint to send to its members.",
           "round_option": "Avoid sending values with excessive precision to devices that expect strict steps.",
-          "hvac_mode_strategy": "Determines how the group decides its overall state (e.g., when some devices are off).",
-          "feature_strategy": "How to handle devices with different capabilities (e.g., one supports 'Fan Only', another doesn't).",
+          "hvac_mode_strategy": "Determines how the group decides its overall state (e.g. when some devices are off).",
+          "feature_strategy": "How to handle devices with different capabilities (e.g. one supports 'Fan Only', another doesn't).",
           "temp_sensor": "Select a separate sensor to be shown as the group's current temperature. Useful if device sensors are inaccurate.",
           "expose_member_entities": "Creates an attribute listing all member entity IDs.",
           "expose_attribute_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
@@ -38,7 +38,7 @@
           "retry_delay": "The time to wait between retry attempts.",
           "sync_mode": "Control how the group interacts with manual changes made directly on physical devices.",
           "sync_retry": "How many times the group attempts to enforce its state on a deviating member before accepting the change.",
-          "sync_delay": "A buffer time to let manual adjustments settle before the sync logic kicks in."
+          "sync_delay": "The wait time (in seconds) after a sync command to let member devices process the change before verification."
         }
       }
     },
@@ -82,8 +82,8 @@
           "current_avg_option": "How the group summarizes sensor readings (Temperature/Humidity) from its members.",
           "target_avg_option": "How the group calculates the target setpoint to send to its members.",
           "round_option": "Avoid sending values with excessive precision to devices that expect strict steps.",
-          "hvac_mode_strategy": "Determines how the group decides its overall state (e.g., when some devices are off).",
-          "feature_strategy": "How to handle devices with different capabilities (e.g., one supports 'Fan Only', another doesn't).",
+          "hvac_mode_strategy": "Determines how the group decides its overall state (e.g. when some devices are off).",
+          "feature_strategy": "How to handle devices with different capabilities (e.g. one supports 'Fan Only', another doesn't).",
           "use_temp_sensor": "Enable to use a separate sensor for the group's current temperature.",
           "temp_sensor": "Select the external sensor to use.",
           "expose_member_entities": "Creates an attribute listing all member entity IDs.",
@@ -93,7 +93,7 @@
           "retry_delay": "The time to wait between retry attempts.",
           "sync_mode": "Control how the group interacts with manual changes made directly on physical devices.",
           "sync_retry": "How many times the group attempts to enforce its state on a deviating member before accepting the change.",
-          "sync_delay": "A buffer time to let manual adjustments settle before the sync logic kicks in."
+          "sync_delay": "The wait time (in seconds) after a sync command to let member devices process the change before verification."
         }
       }
     },

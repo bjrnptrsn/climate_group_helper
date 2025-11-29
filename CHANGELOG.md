@@ -6,12 +6,12 @@
 
 *   **Refined Retry Logic & Migration**: The configuration for retrying failed commands has been updated.
     *   **Renamed**: "Repeat" is now "Retry" (`Retry Attempts`, `Retry Delay`) to better reflect its purpose.
-    *   **Logic Change**: Previously, a value of `1` meant "Execute once + Repeat once". Now, `Retry Attempts: 1` means "Execute once + Retry once if failed". A value of `0` means "Execute once, no retries".
-    *   **Auto-Migration**: Your existing configuration will be automatically migrated. Old "Repeat" values will be decremented by 1 (e.g., old `1` -> new `0`) to preserve the original behavior.
+    *   **Logic Change**: Previously, a value of `2` meant 2 cycles "Execute once + Repeat once". Now, `Retry Attempts: 2` means "Execute once + Retry twice if failed". A value of `0` means "Execute once, no retries".
+    *   **Auto-Migration**: Your existing configuration will be automatically migrated. Old "Repeat" values will be decremented by 1 (e.g. old `2` -> new `1`) to preserve the original behavior.
 
 ### ✨ Features
 
-*   **Active Sync Enforcement**: The `Lock` and `Mirror` sync modes are now more robust. The group actively monitors member devices and fights deviations for a configured number of attempts (`Sync Retry Attempts`). If a device stubbornly refuses to change (e.g., due to a physical lock or connection loss), the group will eventually "capitulate" and accept the new state to prevent infinite loops and log spam.
+*   **Active Sync Enforcement**: The `Lock` and `Mirror` sync modes are now more robust. The group actively monitors member devices and fights deviations for a configured number of attempts (`Sync Retry Attempts`). If a device stubbornly refuses to change (e.g. due to a physical lock or connection loss), the group will eventually "capitulate" and accept the new state to prevent infinite loops and log spam.
 
 *   **Sync Retry Configuration**: You can now specifically configure how many times the group should try to enforce synchronization before giving up (`Sync Retry Attempts`).
 
@@ -29,12 +29,12 @@
 
 *   **Advanced Sync Modes**: You can now choose how the group interacts with its members:
     *   **Standard**: The classic behavior. The group aggregates state but doesn't actively interfere with members.
-    *   **Lock**: Enforces the group's state. If a member is changed externally (e.g., manually), the group immediately reverts it.
+    *   **Lock**: Enforces the group's state. If a member is changed externally (e.g. manually), the group immediately reverts it.
     *   **Mirror**: Adapts to members. If a member is changed externally, the group adopts that change and propagates it to all other members.
 
 *   **Configurable Sync Delay**: A new `Sync Delay` option (0-30s) helps prevent "fighting" between the group and devices. It adds a pause before the group corrects a deviation, giving devices time to settle.
 
-*   **Infinite Loop Prevention**: A safety mechanism detects if a device is permanently refusing commands (e.g., due to connection loss) and stops the group from retrying endlessly to prevent network flooding.
+*   **Infinite Loop Prevention**: A safety mechanism detects if a device is permanently refusing commands (e.g. due to connection loss) and stops the group from retrying endlessly to prevent network flooding.
 
 *   **Localization**: Added and updated translations for all supported languages (Czech, Danish, German, Spanish, French, Italian, Dutch, Polish, Portuguese, Swedish, Ukrainian, Chinese).
 
@@ -136,7 +136,7 @@
 *   **New HVAC Mode Strategy**: Replaces the "Prioritize 'Off' Mode" toggle with a new selector to provide more control over the group's HVAC mode. This is designed to make automations more reliable. The available strategies are:
     *   **Normal (Default):** The group's mode is the most frequent mode among its active members.
     *   **Off Priority:** The group's mode will be `off` if any member is `off`. This matches the behavior of the old "Prioritize 'Off' Mode" setting.
-    *   **Auto:** A smart strategy that uses 'Off Priority' logic when an active mode (e.g., `heat`) is targeted and 'Normal' logic when `off` is targeted.
+    *   **Auto:** A smart strategy that uses 'Off Priority' logic when an active mode (e.g. `heat`) is targeted and 'Normal' logic when `off` is targeted.
 
 *   Configuration for existing users is automatically migrated to the new setting.
 
