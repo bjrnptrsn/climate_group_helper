@@ -50,13 +50,15 @@ Tailor the group's logic to fit your home perfectly.
 
 *   **Reliability Settings**: Fine-tune communication for chatty networks or sleepy devices.
     *   **Debounce Delay**: Waits a moment after you touch the controls before sending commands. Prevents flooding your network when you slide the temperature bar.
-    *   **Repeat Count/Delay**: Retries commands automatically if a device misses them.
+    *   **Retry Attempts**: Number of times to retry a command if it fails to execute.
+    *   **Retry Delay**: Time to wait between retries.
 
 *   **Synchronization Mode**: Control how the group interacts with manual changes made directly on physical devices (e.g., adjusting controls on a wall unit).
     *   `Standard (One-way)`: **Default.** Group commands update members. Manual changes on members update the group's *average*, but don't change the other members.
     *   `Mirror (Magic Sync - Two-way)`: If you change settings on *one* device manually, the group detects this and instantly updates *all other* members to match. Keeps a zone in sync regardless of which unit you adjust.
     *   `Lock (The Boss - Enforce Group)`: If a device is changed manually, the group immediately reverts it back to the group's setting. Ideal for public spaces, or preventing tampering.
-    *   **Sync Delay**: A configurable buffer (in seconds) to let manual adjustments settle before the sync logic kicks in.
+    *   **Sync Delay**: A buffer (in seconds) to let manual adjustments settle before the sync logic kicks in.
+    *   **Sync Retry Attempts**: Number of times the group tries to re-enforce the state if the initial sync attempt fails.
 
 ## 📦 Installation
 

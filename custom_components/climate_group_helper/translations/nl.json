@@ -16,9 +16,10 @@
           "expose_member_entities": "Ledenlijst Tonen",
           "expose_attribute_sensors": "Slimme Sensoren Tonen",
           "debounce_delay": "Debouncevertraging (seconden)",
-          "repeat_count": "Herhaalpogingen",
-          "repeat_delay": "Herhaalvertraging (seconden)",
+          "retry_attempts": "Herhaalpogingen",
+          "retry_delay": "Herhaalvertraging (seconden)",
           "sync_mode": "Synchronisatiemodus",
+          "sync_retry": "Sync Herhaalpogingen",
           "sync_delay": "Syncvertraging (seconden)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Maakt een attribuut aan met een lijst van alle entiteit-ID's van leden.",
           "expose_attribute_sensors": "Maakt extra sensorentiteiten aan voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
           "debounce_delay": "Wacht even na het bedienen van de knoppen voordat commando's worden verzonden. Voorkomt overbelasting van uw netwerk.",
-          "repeat_count": "Probeert commando's automatisch opnieuw als een apparaat ze mist.",
-          "repeat_delay": "De wachttijd tussen herhaalpogingen.",
+          "retry_attempts": "Probeert commando's automatisch opnieuw als een apparaat ze mist.",
+          "retry_delay": "De wachttijd tussen herhaalpogingen.",
           "sync_mode": "Regelt hoe de groep interageert met handmatige wijzigingen die direct op fysieke apparaten worden gemaakt.",
+          "sync_retry": "Hoe vaak de groep probeert zijn status af te dwingen bij een afwijkend lid voordat de wijziging wordt geaccepteerd.",
           "sync_delay": "Een buffertijd om handmatige aanpassingen te laten stabiliseren voordat de synclogica ingrijpt."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Ledenlijst Tonen",
           "expose_attribute_sensors": "Slimme Sensoren Tonen",
           "debounce_delay": "Debouncevertraging (seconden)",
-          "repeat_count": "Herhaalpogingen",
-          "repeat_delay": "Herhaalvertraging (seconden)",
+          "retry_attempts": "Herhaalpogingen",
+          "retry_delay": "Herhaalvertraging (seconden)",
           "sync_mode": "Synchronisatiemodus",
+          "sync_retry": "Sync Herhaalpogingen",
           "sync_delay": "Syncvertraging (seconden)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Maakt een attribuut aan met een lijst van alle entiteit-ID's van leden.",
           "expose_attribute_sensors": "Maakt extra sensorentiteiten aan voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
           "debounce_delay": "Wacht even na het bedienen van de knoppen voordat commando's worden verzonden. Voorkomt overbelasting van uw netwerk.",
-          "repeat_count": "Probeert commando's automatisch opnieuw als een apparaat ze mist.",
-          "repeat_delay": "De wachttijd tussen herhaalpogingen.",
+          "retry_attempts": "Probeert commando's automatisch opnieuw als een apparaat ze mist.",
+          "retry_delay": "De wachttijd tussen herhaalpogingen.",
           "sync_mode": "Regelt hoe de groep interageert met handmatige wijzigingen die direct op fysieke apparaten worden gemaakt.",
+          "sync_retry": "Hoe vaak de groep probeert zijn status af te dwingen bij een afwijkend lid voordat de wijziging wordt geaccepteerd.",
           "sync_delay": "Een buffertijd om handmatige aanpassingen te laten stabiliseren voordat de synclogica ingrijpt."
         }
       }

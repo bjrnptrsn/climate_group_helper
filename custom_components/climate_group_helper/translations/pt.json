@@ -16,9 +16,10 @@
           "expose_member_entities": "Expor Lista de Membros",
           "expose_attribute_sensors": "Expor Sensores Inteligentes",
           "debounce_delay": "Atraso de Debounce (segundos)",
-          "repeat_count": "Tentativas de Repetição",
-          "repeat_delay": "Atraso de Repetição (segundos)",
+          "retry_attempts": "Tentativas de Repetição",
+          "retry_delay": "Atraso de Repetição (segundos)",
           "sync_mode": "Modo de Sincronização",
+          "sync_retry": "Tentativas de Sincronização",
           "sync_delay": "Atraso de Sync (segundos)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Cria um atributo listando todos os IDs de entidade dos membros.",
           "expose_attribute_sensors": "Cria entidades de sensor extras para a temperatura e umidade do grupo (útil para gráficos).",
           "debounce_delay": "Aguarda um momento após tocar nos controles antes de enviar comandos. Evita inundar sua rede.",
-          "repeat_count": "Repete comandos automaticamente se um dispositivo os perder.",
-          "repeat_delay": "O tempo de espera entre tentativas de repetição.",
+          "retry_attempts": "Repete comandos automaticamente se um dispositivo os perder.",
+          "retry_delay": "O tempo de espera entre tentativas de repetição.",
           "sync_mode": "Controla como o grupo interage com alterações manuais feitas diretamente nos dispositivos físicos.",
+          "sync_retry": "Quantas vezes o grupo tenta impor seu estado a um membro desviante antes de aceitar a alteração.",
           "sync_delay": "Um tempo de buffer para permitir que ajustes manuais se estabilizem antes que a lógica de sync entre em ação."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Expor Lista de Membros",
           "expose_attribute_sensors": "Expor Sensores Inteligentes",
           "debounce_delay": "Atraso de Debounce (segundos)",
-          "repeat_count": "Tentativas de Repetição",
-          "repeat_delay": "Atraso de Repetição (segundos)",
+          "retry_attempts": "Tentativas de Repetição",
+          "retry_delay": "Atraso de Repetição (segundos)",
           "sync_mode": "Modo de Sincronização",
+          "sync_retry": "Tentativas de Sincronização",
           "sync_delay": "Atraso de Sync (segundos)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Cria um atributo listando todos os IDs de entidade dos membros.",
           "expose_attribute_sensors": "Cria entidades de sensor extras para a temperatura e umidade do grupo (útil para gráficos).",
           "debounce_delay": "Aguarda um momento após tocar nos controles antes de enviar comandos. Evita inundar sua rede.",
-          "repeat_count": "Repete comandos automaticamente se um dispositivo os perder.",
-          "repeat_delay": "O tempo de espera entre tentativas de repetição.",
+          "retry_attempts": "Repete comandos automaticamente se um dispositivo os perder.",
+          "retry_delay": "O tempo de espera entre tentativas de repetição.",
           "sync_mode": "Controla como o grupo interage com alterações manuais feitas diretamente nos dispositivos físicos.",
+          "sync_retry": "Quantas vezes o grupo tenta impor seu estado a um membro desviante antes de aceitar a alteração.",
           "sync_delay": "Um tempo de buffer para permitir que ajustes manuais se estabilizem antes que a lógica de sync entre em ação."
         }
       }

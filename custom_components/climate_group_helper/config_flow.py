@@ -1,5 +1,4 @@
 """Config flow for Climate Group helper integration."""
-
 from __future__ import annotations
 
 import logging
@@ -12,7 +11,7 @@ from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import CONF_ENTITIES, CONF_NAME
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.helpers import selector
 
 from .const import (
@@ -23,9 +22,10 @@ from .const import (
     CONF_FEATURE_STRATEGY,
     CONF_HVAC_MODE_STRATEGY,
     CONF_SYNC_MODE,
+    CONF_SYNC_RETRY,
     CONF_SYNC_DELAY,
-    CONF_REPEAT_COUNT,
-    CONF_REPEAT_DELAY,
+    CONF_RETRY_ATTEMPTS,
+    CONF_RETRY_DELAY,
     CONF_ROUND_OPTION,
     CONF_TARGET_AVG_OPTION,
     CONF_TEMP_SENSOR,
@@ -48,7 +48,7 @@ _LOGGER = logging.getLogger(__name__)
 class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 2
+    VERSION = 3
 
     @staticmethod
     @callback
@@ -60,7 +60,7 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
 
@@ -159,18 +159,18 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         mode=selector.NumberSelectorMode.SLIDER,
                     )
                 ),
-                vol.Optional(CONF_REPEAT_COUNT, default=1): selector.NumberSelector(
+                vol.Optional(CONF_RETRY_ATTEMPTS, default=1): selector.NumberSelector(
                     selector.NumberSelectorConfig(
-                        min=1,
-                        max=3,
+                        min=0,
+                        max=5,
                         step=1,
                         mode=selector.NumberSelectorMode.SLIDER,
                     )
                 ),
-                vol.Optional(CONF_REPEAT_DELAY, default=1): selector.NumberSelector(
+                vol.Optional(CONF_RETRY_DELAY, default=2.5): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=0,
-                        max=5,
+                        max=10,
                         step=0.5,
                         unit_of_measurement="s",
                         mode=selector.NumberSelectorMode.SLIDER,
@@ -183,6 +183,14 @@ class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         options=[opt.value for opt in SyncMode],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="sync_mode",
+                    )
+                ),
+                vol.Optional(CONF_SYNC_RETRY, default=2): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=5,
+                        step=1,
+                        mode=selector.NumberSelectorMode.SLIDER,
                     )
                 ),
                 vol.Optional(CONF_SYNC_DELAY, default=5): selector.NumberSelector(
@@ -213,7 +221,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Manage the options."""
         errors: dict[str, str] = {}
 
@@ -374,23 +382,23 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     )
                 ),
                 vol.Optional(
-                    CONF_REPEAT_COUNT,
-                    default=current_config.get(CONF_REPEAT_COUNT, 1),
+                    CONF_RETRY_ATTEMPTS,
+                    default=current_config.get(CONF_RETRY_ATTEMPTS, 1),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
-                        min=1,
-                        max=3,
+                        min=0,
+                        max=5,
                         step=1,
                         mode=selector.NumberSelectorMode.SLIDER,
                     )
                 ),
                 vol.Optional(
-                    CONF_REPEAT_DELAY,
-                    default=current_config.get(CONF_REPEAT_DELAY, 1),
+                    CONF_RETRY_DELAY,
+                    default=current_config.get(CONF_RETRY_DELAY, 2.5),
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=0,
-                        max=5,
+                        max=10,
                         step=0.5,
                         unit_of_measurement="s",
                         mode=selector.NumberSelectorMode.SLIDER,
@@ -406,6 +414,17 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         options=[opt.value for opt in SyncMode],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="sync_mode",
+                    )
+                ),
+                vol.Optional(
+                    CONF_SYNC_RETRY,
+                    default=current_config.get(CONF_SYNC_RETRY, 2),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=5,
+                        step=1,
+                        mode=selector.NumberSelectorMode.SLIDER,
                     )
                 ),
                 vol.Optional(

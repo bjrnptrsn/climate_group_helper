@@ -11,6 +11,8 @@ from .const import (
     CONF_EXPOSE_ATTRIBUTE_SENSORS,
     CONF_HVAC_MODE_STRATEGY,
     CONF_TARGET_AVG_OPTION,
+    CONF_RETRY_ATTEMPTS,
+    CONF_RETRY_DELAY,
     DOMAIN,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
 )
@@ -73,6 +75,32 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
         # Update the entry with empty data and all config in options
         hass.config_entries.async_update_entry(entry, data={}, options=options_v2, version=2)
         _LOGGER.info("Successfully migrated config entry to version 2")
+
+    if entry.version == 2:
+        _LOGGER.debug("Migrating config entry to version 3")
+        options_v3 = dict(entry.options)
+
+        # Rename repeat_count to retry_attempts
+        if "repeat_count" in options_v3:
+            repeat_count = options_v3.pop("repeat_count")
+            # repeat_count was total executions (1 = no retry).
+            # retry_attempts is retries after failure (min 0 in config flow).
+            # So we subtract 1, but ensure at least 0.
+            options_v3[CONF_RETRY_ATTEMPTS] = max(0, repeat_count - 1)
+            _LOGGER.debug(
+                "Migrated 'repeat_count' (%s) to '%s' (%s)",
+                repeat_count,
+                CONF_RETRY_ATTEMPTS,
+                options_v3[CONF_RETRY_ATTEMPTS],
+            )
+
+        # Rename repeat_delay to retry_delay
+        if "repeat_delay" in options_v3:
+            options_v3[CONF_RETRY_DELAY] = options_v3.pop("repeat_delay")
+            _LOGGER.debug("Migrated 'repeat_delay' to '%s'", CONF_RETRY_DELAY)
+
+        hass.config_entries.async_update_entry(entry, options=options_v3, version=3)
+        _LOGGER.info("Successfully migrated config entry to version 3")
 
     return True
 

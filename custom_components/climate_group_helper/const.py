@@ -36,10 +36,11 @@ CONF_EXPOSE_ATTRIBUTE_SENSORS = "expose_attribute_sensors"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_FEATURE_STRATEGY = "feature_strategy"
 CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
-CONF_REPEAT_COUNT = "repeat_count"
-CONF_REPEAT_DELAY = "repeat_delay"
+CONF_RETRY_ATTEMPTS = "retry_attempts"
+CONF_RETRY_DELAY = "retry_delay"
 CONF_ROUND_OPTION = "round_option"
 CONF_SYNC_MODE = "sync_mode"
+CONF_SYNC_RETRY = "sync_retry"
 CONF_SYNC_DELAY = "sync_delay"
 CONF_TARGET_AVG_OPTION = "target_avg_option"
 CONF_TEMP_SENSOR = "temp_sensor"
@@ -61,3 +62,14 @@ ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
 ATTR_GROUP_IN_SYNC = "group_in_sync"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
 ATTR_TARGET_HVAC_MODE = "target_hvac_mode"
+
+# Sync Mode
+SYNC_MODE_WATCHED_ATTRIBUTES = {
+    "hvac_mode": None,
+    "temperature": "temperature",
+    "fan_mode": "fan_mode",
+    "preset_mode": "preset_mode",
+    "swing_mode": "swing_mode",
+}
+
+SYNC_SAFETY_BUFFER_SECONDS = 5

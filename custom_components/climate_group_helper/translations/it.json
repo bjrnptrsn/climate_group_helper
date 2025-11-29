@@ -16,9 +16,10 @@
           "expose_member_entities": "Esponi Elenco Membri",
           "expose_attribute_sensors": "Esponi Sensori Intelligenti",
           "debounce_delay": "Ritardo Anti-rimbalzo (secondi)",
-          "repeat_count": "Tentativi di Riprova",
-          "repeat_delay": "Ritardo Riprova (secondi)",
+          "retry_attempts": "Tentativi di Riprova",
+          "retry_delay": "Ritardo Riprova (secondi)",
           "sync_mode": "Modalità Sincronizzazione",
+          "sync_retry": "Tentativi di Sync",
           "sync_delay": "Ritardo Sync (secondi)"
         },
         "data_description": {
@@ -27,15 +28,16 @@
           "current_avg_option": "Come il gruppo riassume le letture dei sensori (Temperatura/Umidità) dai suoi membri.",
           "target_avg_option": "Come il gruppo calcola il setpoint target da inviare ai suoi membri.",
           "round_option": "Evita di inviare valori con precisione eccessiva ai dispositivi che si aspettano step rigorosi.",
-          "hvac_mode_strategy": "Determina come il gruppo decide il suo stato complessivo (es. quando alcuni dispositivi sono spenti).",
+          "hvac_mode_strategy": "Come il gruppo decide il suo stato complessivo (es. quando alcuni dispositivi sono spenti).",
           "feature_strategy": "Come gestire dispositivi con capacità diverse (es. uno supporta 'Solo Ventola', un altro no).",
           "temp_sensor": "Seleziona un sensore separato da mostrare come temperatura attuale del gruppo. Utile se i sensori del dispositivo sono imprecisi.",
           "expose_member_entities": "Crea un attributo che elenca tutti gli ID entità dei membri.",
           "expose_attribute_sensors": "Crea entità sensore extra per la temperatura e l'umidità del gruppo (utile per i grafici).",
           "debounce_delay": "Attende un momento dopo aver toccato i controlli prima di inviare comandi. Previene l'inondazione della rete.",
-          "repeat_count": "Riprova automaticamente i comandi se un dispositivo li perde.",
-          "repeat_delay": "Il tempo di attesa tra i tentativi di riprova.",
+          "retry_attempts": "Riprova automaticamente i comandi se un dispositivo li perde.",
+          "retry_delay": "Il tempo di attesa tra i tentativi di riprova.",
           "sync_mode": "Controlla come il gruppo interagisce con le modifiche manuali effettuate direttamente sui dispositivi fisici.",
+          "sync_retry": "Quante volte il gruppo tenta di imporre il proprio stato su un membro deviante prima di accettare la modifica.",
           "sync_delay": "Un tempo cuscinetto per lasciare che le regolazioni manuali si stabilizzino prima che la logica di sync intervenga."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Esponi Elenco Membri",
           "expose_attribute_sensors": "Esponi Sensori Intelligenti",
           "debounce_delay": "Ritardo Anti-rimbalzo (secondi)",
-          "repeat_count": "Tentativi di Riprova",
-          "repeat_delay": "Ritardo Riprova (secondi)",
+          "retry_attempts": "Tentativi di Riprova",
+          "retry_delay": "Ritardo Riprova (secondi)",
           "sync_mode": "Modalità Sincronizzazione",
+          "sync_retry": "Tentativi di Sync",
           "sync_delay": "Ritardo Sync (secondi)"
         },
         "data_description": {
@@ -79,16 +82,17 @@
           "current_avg_option": "Come il gruppo riassume le letture dei sensori (Temperatura/Umidità) dai suoi membri.",
           "target_avg_option": "Come il gruppo calcola il setpoint target da inviare ai suoi membri.",
           "round_option": "Evita di inviare valori con precisione eccessiva ai dispositivi che si aspettano step rigorosi.",
-          "hvac_mode_strategy": "Determina come il gruppo decide il suo stato complessivo (es. quando alcuni dispositivi sono spenti).",
+          "hvac_mode_strategy": "Come il gruppo decide il suo stato complessivo (es. quando alcuni dispositivi sono spenti).",
           "feature_strategy": "Come gestire dispositivi con capacità diverse (es. uno supporta 'Solo Ventola', un altro no).",
           "use_temp_sensor": "Abilita per usare un sensore separato per la temperatura attuale del gruppo.",
           "temp_sensor": "Seleziona il sensore esterno da usare.",
           "expose_member_entities": "Crea un attributo che elenca tutti gli ID entità dei membri.",
           "expose_attribute_sensors": "Crea entità sensore extra per la temperatura e l'umidità del gruppo (utile per i grafici).",
           "debounce_delay": "Attende un momento dopo aver toccato i controlli prima di inviare comandi. Previene l'inondazione della rete.",
-          "repeat_count": "Riprova automaticamente i comandi se un dispositivo li perde.",
-          "repeat_delay": "Il tempo di attesa tra i tentativi di riprova.",
+          "retry_attempts": "Riprova automaticamente i comandi se un dispositivo li perde.",
+          "retry_delay": "Il tempo di attesa tra i tentativi di riprova.",
           "sync_mode": "Controlla come il gruppo interagisce con le modifiche manuali effettuate direttamente sui dispositivi fisici.",
+          "sync_retry": "Quante volte il gruppo tenta di imporre il proprio stato su un membro deviante prima di accettare la modifica.",
           "sync_delay": "Un tempo cuscinetto per lasciare che le regolazioni manuali si stabilizzino prima che la logica di sync intervenga."
         }
       }

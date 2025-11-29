@@ -16,9 +16,10 @@
           "expose_member_entities": "Exposer la Liste des Membres",
           "expose_attribute_sensors": "Exposer les Capteurs Intelligents",
           "debounce_delay": "Délai d'Anti-rebond (secondes)",
-          "repeat_count": "Tentatives de Réessai",
-          "repeat_delay": "Délai de Réessai (secondes)",
+          "retry_attempts": "Tentatives de Réessai",
+          "retry_delay": "Délai de Réessai (secondes)",
           "sync_mode": "Mode de Synchronisation",
+          "sync_retry": "Tentatives de Sync",
           "sync_delay": "Délai de Sync (secondes)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Crée un attribut listant tous les IDs d'entité des membres.",
           "expose_attribute_sensors": "Crée des entités de capteur supplémentaires pour la température et l'humidité du groupe (utile pour les graphiques).",
           "debounce_delay": "Attend un moment après avoir touché les commandes avant d'envoyer les ordres. Empêche d'inonder votre réseau.",
-          "repeat_count": "Réessaie automatiquement les commandes si un appareil les manque.",
-          "repeat_delay": "Le temps d'attente entre les tentatives de réessai.",
-          "sync_mode": "Contrôle comment le groupe interagit avec les changements manuels effectués directement sur les appareils physiques.",
+          "retry_attempts": "Réessaie automatiquement les commandes si un appareil les manque.",
+          "retry_delay": "Le temps d'attente entre les tentatives de réessai.",
+          "sync_mode": "Contrôle how the group interacts with manual changes made directly on physical devices.",
+          "sync_retry": "Combien de fois le groupe tente d'imposer son état à un membre déviant avant d'accepter le changement.",
           "sync_delay": "Un temps tampon pour laisser les ajustements manuels se stabiliser avant que la logique de sync n'intervienne."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Exposer la Liste des Membres",
           "expose_attribute_sensors": "Exposer les Capteurs Intelligents",
           "debounce_delay": "Délai d'Anti-rebond (secondes)",
-          "repeat_count": "Tentatives de Réessai",
-          "repeat_delay": "Délai de Réessai (secondes)",
+          "retry_attempts": "Tentatives de Réessai",
+          "retry_delay": "Délai de Réessai (secondes)",
           "sync_mode": "Mode de Synchronisation",
+          "sync_retry": "Tentatives de Sync",
           "sync_delay": "Délai de Sync (secondes)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Crée un attribut listant tous les IDs d'entité des membres.",
           "expose_attribute_sensors": "Crée des entités de capteur supplémentaires pour la température et l'humidité du groupe (utile pour les graphiques).",
           "debounce_delay": "Attend un moment après avoir touché les commandes avant d'envoyer les ordres. Empêche d'inonder votre réseau.",
-          "repeat_count": "Réessaie automatiquement les commandes si un appareil les manque.",
-          "repeat_delay": "Le temps d'attente entre les tentatives de réessai.",
-          "sync_mode": "Contrôle comment le groupe interagit avec les changements manuels effectués directement sur les appareils physiques.",
+          "retry_attempts": "Réessaie automatiquement les commandes si un appareil les manque.",
+          "retry_delay": "Le temps d'attente entre les tentatives de réessai.",
+          "sync_mode": "Contrôle how the group interacts with manual changes made directly on physical devices.",
+          "sync_retry": "Combien de fois le groupe tente d'imposer son état à un membre déviant avant d'accepter le changement.",
           "sync_delay": "Un temps tampon pour laisser les ajustements manuels se stabiliser avant que la logique de sync n'intervienne."
         }
       }

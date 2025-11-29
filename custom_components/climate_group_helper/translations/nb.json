@@ -16,9 +16,10 @@
           "expose_member_entities": "Vis medlemsliste",
           "expose_attribute_sensors": "Vis smarte sensorer",
           "debounce_delay": "Debounce-forsinkelse (sekunder)",
-          "repeat_count": "Forsøk på nytt",
-          "repeat_delay": "Forsinkelse ved nytt forsøk (sekunder)",
+          "retry_attempts": "Forsøk på nytt",
+          "retry_delay": "Forsinkelse ved nytt forsøk (sekunder)",
           "sync_mode": "Synkroniseringsmodus",
+          "sync_retry": "Sync-forsøk",
           "sync_delay": "Sync-forsinkelse (sekunder)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Oppretter en attributt som lister opp alle medlems-IDer.",
           "expose_attribute_sensors": "Oppretter ekstra sensorenheter for gruppens temperatur og fuktighet (nyttig for grafer).",
           "debounce_delay": "Venter et øyeblikk etter at du har berørt kontrollene før kommandoer sendes. Forhindrer oversvømmelse av nettverket ditt.",
-          "repeat_count": "Prøver automatisk kommandoer på nytt hvis en enhet mister dem.",
-          "repeat_delay": "Tiden å vente mellom forsøk på nytt.",
+          "retry_attempts": "Prøver automatisk kommandoer på nytt hvis en enhet mister dem.",
+          "retry_delay": "Tiden å vente mellom forsøk på nytt.",
           "sync_mode": "Kontrollerer hvordan gruppen samhandler med manuelle endringer gjort direkte på fysiske enheter.",
+          "sync_retry": "Hvor mange ganger gruppen forsøker å håndheve sin tilstand på et avvikende medlem før endringen godtas.",
           "sync_delay": "En buffertid for å la manuelle justeringer stabilisere seg før synkroniseringslogikken slår inn."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Vis medlemsliste",
           "expose_attribute_sensors": "Vis smarte sensorer",
           "debounce_delay": "Debounce-forsinkelse (sekunder)",
-          "repeat_count": "Forsøk på nytt",
-          "repeat_delay": "Forsinkelse ved nytt forsøk (sekunder)",
+          "retry_attempts": "Forsøk på nytt",
+          "retry_delay": "Forsinkelse ved nytt forsøk (sekunder)",
           "sync_mode": "Synkroniseringsmodus",
+          "sync_retry": "Sync-forsøk",
           "sync_delay": "Sync-forsinkelse (sekunder)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Oppretter en attributt som lister opp alle medlems-IDer.",
           "expose_attribute_sensors": "Oppretter ekstra sensorenheter for gruppens temperatur og fuktighet (nyttig for grafer).",
           "debounce_delay": "Venter et øyeblikk etter at du har berørt kontrollene før kommandoer sendes. Forhindrer oversvømmelse av nettverket ditt.",
-          "repeat_count": "Prøver automatisk kommandoer på nytt hvis en enhet mister dem.",
-          "repeat_delay": "Tiden å vente mellom forsøk på nytt.",
+          "retry_attempts": "Prøver automatisk kommandoer på nytt hvis en enhet mister dem.",
+          "retry_delay": "Tiden å vente mellom forsøk på nytt.",
           "sync_mode": "Kontrollerer hvordan gruppen samhandler med manuelle endringer gjort direkte på fysiske enheter.",
+          "sync_retry": "Hvor mange ganger gruppen forsøker å håndheve sin tilstand på et avvikende medlem før endringen godtas.",
           "sync_delay": "En buffertid for å la manuelle justeringer stabilisere seg før synkroniseringslogikken slår inn."
         }
       }

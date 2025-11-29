@@ -16,9 +16,10 @@
           "expose_member_entities": "显示成员列表",
           "expose_attribute_sensors": "显示智能传感器",
           "debounce_delay": "防抖延迟 (秒)",
-          "repeat_count": "重试次数",
-          "repeat_delay": "重试延迟 (秒)",
+          "retry_attempts": "重试次数",
+          "retry_delay": "重试延迟 (秒)",
           "sync_mode": "同步模式",
+          "sync_retry": "同步重试次数",
           "sync_delay": "同步延迟 (秒)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
           "expose_attribute_sensors": "为组的温度和湿度创建额外的传感器实体 (用于图表)。",
           "debounce_delay": "触摸控制后等待片刻再发送命令。防止网络拥塞。",
-          "repeat_count": "如果设备错过命令，自动重试。",
-          "repeat_delay": "重试尝试之间的等待时间。",
+          "retry_attempts": "如果设备错过命令，自动重试。",
+          "retry_delay": "重试尝试之间的等待时间。",
           "sync_mode": "控制组如何与直接在物理设备上进行的手动更改进行交互。",
+          "sync_retry": "组在接受更改之前尝试强制偏差成员恢复状态的次数。",
           "sync_delay": "在同步逻辑介入之前，让手动调整稳定的缓冲时间。"
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "显示成员列表",
           "expose_attribute_sensors": "显示智能传感器",
           "debounce_delay": "防抖延迟 (秒)",
-          "repeat_count": "重试次数",
-          "repeat_delay": "重试延迟 (秒)",
+          "retry_attempts": "重试次数",
+          "retry_delay": "重试延迟 (秒)",
           "sync_mode": "同步模式",
+          "sync_retry": "同步重试次数",
           "sync_delay": "同步延迟 (秒)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
           "expose_attribute_sensors": "为组的温度和湿度创建额外的传感器实体 (用于图表)。",
           "debounce_delay": "触摸控制后等待片刻再发送命令。防止网络拥塞。",
-          "repeat_count": "如果设备错过命令，自动重试。",
-          "repeat_delay": "重试尝试之间的等待时间。",
+          "retry_attempts": "如果设备错过命令，自动重试。",
+          "retry_delay": "重试尝试之间的等待时间。",
           "sync_mode": "控制组如何与直接在物理设备上进行的手动更改进行交互。",
+          "sync_retry": "组在接受更改之前尝试强制偏差成员恢复状态的次数。",
           "sync_delay": "在同步逻辑介入之前，让手动调整稳定的缓冲时间。"
         }
       }

@@ -16,9 +16,10 @@
           "expose_member_entities": "Mitgliederliste bereitstellen",
           "expose_attribute_sensors": "Smarte Sensoren bereitstellen",
           "debounce_delay": "Entprellverzögerung (Sekunden)",
-          "repeat_count": "Wiederholungsversuche",
-          "repeat_delay": "Wiederholungsverzögerung (Sekunden)",
+          "retry_attempts": "Wiederholungsversuche",
+          "retry_delay": "Wiederholungsverzögerung (Sekunden)",
           "sync_mode": "Synchronisationsmodus",
+          "sync_retry": "Sync-Wiederholungsversuche",
           "sync_delay": "Sync-Verzögerung (Sekunden)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
           "expose_attribute_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
           "debounce_delay": "Wartet einen Moment nach der Bedienung, bevor Befehle gesendet werden. Verhindert eine Überflutung des Netzwerks.",
-          "repeat_count": "Wiederholt Befehle automatisch, falls ein Gerät sie verpasst.",
-          "repeat_delay": "Die Wartezeit zwischen Wiederholungsversuchen.",
+          "retry_attempts": "Wiederholt Befehle automatisch, falls ein Gerät sie verpasst.",
+          "retry_delay": "Die Wartezeit zwischen Wiederholungsversuchen.",
           "sync_mode": "Steuert, wie die Gruppe mit manuellen Änderungen direkt an den physischen Geräten interagiert.",
+          "sync_retry": "Wie oft die Gruppe versucht, ihren Status bei einem abweichenden Mitglied zu erzwingen, bevor sie die Änderung akzeptiert.",
           "sync_delay": "Eine Pufferzeit, damit sich manuelle Anpassungen beruhigen können, bevor die Sync-Logik greift."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Mitgliederliste bereitstellen",
           "expose_attribute_sensors": "Smarte Sensoren bereitstellen",
           "debounce_delay": "Entprellverzögerung (Sekunden)",
-          "repeat_count": "Wiederholungsversuche",
-          "repeat_delay": "Wiederholungsverzögerung (Sekunden)",
+          "retry_attempts": "Wiederholungsversuche",
+          "retry_delay": "Wiederholungsverzögerung (Sekunden)",
           "sync_mode": "Synchronisationsmodus",
+          "sync_retry": "Sync-Wiederholungsversuche",
           "sync_delay": "Sync-Verzögerung (Sekunden)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
           "expose_attribute_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
           "debounce_delay": "Wartet einen Moment nach der Bedienung, bevor Befehle gesendet werden. Verhindert eine Überflutung des Netzwerks.",
-          "repeat_count": "Wiederholt Befehle automatisch, falls ein Gerät sie verpasst.",
-          "repeat_delay": "Die Wartezeit zwischen Wiederholungsversuchen.",
+          "retry_attempts": "Wiederholt Befehle automatisch, falls ein Gerät sie verpasst.",
+          "retry_delay": "Die Wartezeit zwischen Wiederholungsversuchen.",
           "sync_mode": "Steuert, wie die Gruppe mit manuellen Änderungen direkt an den physischen Geräten interagiert.",
+          "sync_retry": "Wie oft die Gruppe versucht, ihren Status bei einem abweichenden Mitglied zu erzwingen, bevor sie die Änderung akzeptiert.",
           "sync_delay": "Eine Pufferzeit, damit sich manuelle Anpassungen beruhigen können, bevor die Sync-Logik greift."
         }
       }

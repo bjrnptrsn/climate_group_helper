@@ -16,9 +16,10 @@
           "expose_member_entities": "Visa Medlemslista",
           "expose_attribute_sensors": "Visa Smarta Sensorer",
           "debounce_delay": "Debounce Fördröjning (sekunder)",
-          "repeat_count": "Försök Igen",
-          "repeat_delay": "Fördröjning Mellan Försök (sekunder)",
+          "retry_attempts": "Försök Igen",
+          "retry_delay": "Fördröjning Mellan Försök (sekunder)",
           "sync_mode": "Synkroniseringsläge",
+          "sync_retry": "Sync-försök",
           "sync_delay": "Sync Fördröjning (sekunder)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Skapar ett attribut som listar alla medlems-entitets-ID:n.",
           "expose_attribute_sensors": "Skapar extra sensorentiteter för gruppens temperatur och fuktighet (användbart för grafer).",
           "debounce_delay": "Väntar en stund efter att du rört kontrollerna innan kommandon skickas. Förhindrar översvämning av ditt nätverk.",
-          "repeat_count": "Försöker automatiskt skicka kommandon igen om en enhet missar dem.",
-          "repeat_delay": "Tiden att vänta mellan försök.",
+          "retry_attempts": "Försöker automatiskt skicka kommandon igen om en enhet missar dem.",
+          "retry_delay": "Tiden att vänta mellan försök.",
           "sync_mode": "Styr hur gruppen interagerar med manuella ändringar som görs direkt på fysiska enheter.",
+          "sync_retry": "Hur många gånger gruppen försöker tvinga sitt tillstånd på en avvikande medlem innan ändringen accepteras.",
           "sync_delay": "En bufferttid för att låta manuella justeringar stabiliseras innan synkroniseringslogiken träder in."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Visa Medlemslista",
           "expose_attribute_sensors": "Visa Smarta Sensorer",
           "debounce_delay": "Debounce Fördröjning (sekunder)",
-          "repeat_count": "Försök Igen",
-          "repeat_delay": "Fördröjning Mellan Försök (sekunder)",
+          "retry_attempts": "Försök Igen",
+          "retry_delay": "Fördröjning Mellan Försök (sekunder)",
           "sync_mode": "Synkroniseringsläge",
+          "sync_retry": "Sync-försök",
           "sync_delay": "Sync Fördröjning (sekunder)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Skapar ett attribut som listar alla medlems-entitets-ID:n.",
           "expose_attribute_sensors": "Skapar extra sensorentiteter för gruppens temperatur och fuktighet (användbart för grafer).",
           "debounce_delay": "Väntar en stund efter att du rört kontrollerna innan kommandon skickas. Förhindrar översvämning av ditt nätverk.",
-          "repeat_count": "Försöker automatiskt skicka kommandon igen om en enhet missar dem.",
-          "repeat_delay": "Tiden att vänta mellan försök.",
+          "retry_attempts": "Försöker automatiskt skicka kommandon igen om en enhet missar dem.",
+          "retry_delay": "Tiden att vänta mellan försök.",
           "sync_mode": "Styr hur gruppen interagerar med manuella ändringar som görs direkt på fysiska enheter.",
+          "sync_retry": "Hur många gånger gruppen försöker tvinga sitt tillstånd på en avvikande medlem innan ändringen accepteras.",
           "sync_delay": "En bufferttid för att låta manuella justeringar stabiliseras innan synkroniseringslogiken träder in."
         }
       }

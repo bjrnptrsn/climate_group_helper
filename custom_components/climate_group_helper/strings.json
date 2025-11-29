@@ -16,9 +16,10 @@
           "expose_member_entities": "Expose Member List",
           "expose_attribute_sensors": "Expose Smart Sensors",
           "debounce_delay": "Debounce Delay (seconds)",
-          "repeat_count": "Retry Attempts",
-          "repeat_delay": "Retry Delay (seconds)",
+          "retry_attempts": "Retry Attempts",
+          "retry_delay": "Retry Delay (seconds)",
           "sync_mode": "Synchronization Mode",
+          "sync_retry": "Sync Retry Attempts",
           "sync_delay": "Sync Delay (seconds)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Creates an attribute listing all member entity IDs.",
           "expose_attribute_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
           "debounce_delay": "Waits a moment after you touch controls before sending commands. Prevents flooding your network.",
-          "repeat_count": "Retries commands automatically if a device misses them.",
-          "repeat_delay": "The time to wait between retry attempts.",
+          "retry_attempts": "Number of times to retry a command if it fails to execute.",
+          "retry_delay": "The time to wait between retry attempts.",
           "sync_mode": "Control how the group interacts with manual changes made directly on physical devices.",
+          "sync_retry": "How many times the group attempts to enforce its state on a deviating member before accepting the change.",
           "sync_delay": "A buffer time to let manual adjustments settle before the sync logic kicks in."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Expose Member List",
           "expose_attribute_sensors": "Expose Smart Sensors",
           "debounce_delay": "Debounce Delay (seconds)",
-          "repeat_count": "Retry Attempts",
-          "repeat_delay": "Retry Delay (seconds)",
+          "retry_attempts": "Retry Attempts",
+          "retry_delay": "Retry Delay (seconds)",
           "sync_mode": "Synchronization Mode",
+          "sync_retry": "Sync Retry Attempts",
           "sync_delay": "Sync Delay (seconds)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Creates an attribute listing all member entity IDs.",
           "expose_attribute_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
           "debounce_delay": "Waits a moment after you touch controls before sending commands. Prevents flooding your network.",
-          "repeat_count": "Retries commands automatically if a device misses them.",
-          "repeat_delay": "The time to wait between retry attempts.",
+          "retry_attempts": "Number of times to retry a command if it fails to execute.",
+          "retry_delay": "The time to wait between retry attempts.",
           "sync_mode": "Control how the group interacts with manual changes made directly on physical devices.",
+          "sync_retry": "How many times the group attempts to enforce its state on a deviating member before accepting the change.",
           "sync_delay": "A buffer time to let manual adjustments settle before the sync logic kicks in."
         }
       }

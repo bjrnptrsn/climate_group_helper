@@ -16,9 +16,10 @@
           "expose_member_entities": "Zobrazit seznam členů",
           "expose_attribute_sensors": "Zobrazit chytré senzory",
           "debounce_delay": "Zpoždění odezvy (sekundy)",
-          "repeat_count": "Počet opakování",
-          "repeat_delay": "Zpoždění opakování (sekundy)",
+          "retry_attempts": "Počet opakování",
+          "retry_delay": "Zpoždění opakování (sekundy)",
           "sync_mode": "Režim synchronizace",
+          "sync_retry": "Pokusy o synchronizaci",
           "sync_delay": "Zpoždění synchronizace (sekundy)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
           "expose_attribute_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
           "debounce_delay": "Čeká chvíli po dotyku ovládacích prvků před odesláním příkazů. Zabraňuje zahlcení vaší sítě.",
-          "repeat_count": "Automaticky opakuje příkazy, pokud je zařízení zmešká.",
-          "repeat_delay": "Čas čekání mezi pokusy o opakování.",
+          "retry_attempts": "Automaticky opakuje příkazy, pokud je zařízení zmešká.",
+          "retry_delay": "Čas čekání mezi pokusy o opakování.",
           "sync_mode": "Řídí, jak skupina interaguje s manuálními změnami provedenými přímo na fyzických zařízeních.",
+          "sync_retry": "Kolikrát se skupina pokusí vynutit svůj stav na odchylujícím se členovi, než změnu přijme.",
           "sync_delay": "Vyrovnávací čas, aby se manuální úpravy ustálily, než zasáhne synchronizační logika."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Zobrazit seznam členů",
           "expose_attribute_sensors": "Zobrazit chytré senzory",
           "debounce_delay": "Zpoždění odezvy (sekundy)",
-          "repeat_count": "Počet opakování",
-          "repeat_delay": "Zpoždění opakování (sekundy)",
+          "retry_attempts": "Počet opakování",
+          "retry_delay": "Zpoždění opakování (sekundy)",
           "sync_mode": "Režim synchronizace",
+          "sync_retry": "Pokusy o synchronizaci",
           "sync_delay": "Zpoždění synchronizace (sekundy)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
           "expose_attribute_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
           "debounce_delay": "Čeká chvíli po dotyku ovládacích prvků před odesláním příkazů. Zabraňuje zahlcení vaší sítě.",
-          "repeat_count": "Automaticky opakuje příkazy, pokud je zařízení zmešká.",
-          "repeat_delay": "Čas čekání mezi pokusy o opakování.",
+          "retry_attempts": "Automaticky opakuje příkazy, pokud je zařízení zmešká.",
+          "retry_delay": "Čas čekání mezi pokusy o opakování.",
           "sync_mode": "Řídí, jak skupina interaguje s manuálními změnami provedenými přímo na fyzických zařízeních.",
+          "sync_retry": "Kolikrát se skupina pokusí vynutit svůj stav na odchylujícím se členovi, než změnu přijme.",
           "sync_delay": "Vyrovnávací čas, aby se manuální úpravy ustálily, než zasáhne synchronizační logika."
         }
       }

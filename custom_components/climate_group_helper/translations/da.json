@@ -16,9 +16,10 @@
           "expose_member_entities": "Vis Medlemsliste",
           "expose_attribute_sensors": "Vis Smarte Sensorer",
           "debounce_delay": "Debounce Forsinkelse (sekunder)",
-          "repeat_count": "Genforsøg",
-          "repeat_delay": "Genforsøgsforsinkelse (sekunder)",
+          "retry_attempts": "Genforsøg",
+          "retry_delay": "Genforsøgsforsinkelse (sekunder)",
           "sync_mode": "Synkroniseringstilstand",
+          "sync_retry": "Sync Genforsøg",
           "sync_delay": "Sync Forsinkelse (sekunder)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Opretter en attribut, der lister alle medlems enheds-ID'er.",
           "expose_attribute_sensors": "Opretter ekstra sensorenheder til gruppens temperatur og fugtighed (nyttigt til grafer).",
           "debounce_delay": "Venter et øjeblik efter du har betjent kontrollerne, før kommandoer sendes. Forhindrer oversvømmelse af dit netværk.",
-          "repeat_count": "Prøver automatisk kommandoer igen, hvis en enhed misser dem.",
-          "repeat_delay": "Tiden der skal ventes mellem genforsøg.",
+          "retry_attempts": "Prøver automatisk kommandoer igen, hvis en enhed misser dem.",
+          "retry_delay": "Tiden der skal ventes mellem genforsøg.",
           "sync_mode": "Styrer, hvordan gruppen interagerer med manuelle ændringer foretaget direkte på fysiske enheder.",
+          "sync_retry": "Hvor mange gange gruppen forsøger at håndhæve sin tilstand på et afvigende medlem, før ændringen accepteres.",
           "sync_delay": "En buffer tid til at lade manuelle justeringer falde til ro, før sync logikken træder i kraft."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Vis Medlemsliste",
           "expose_attribute_sensors": "Vis Smarte Sensorer",
           "debounce_delay": "Debounce Forsinkelse (sekunder)",
-          "repeat_count": "Genforsøg",
-          "repeat_delay": "Genforsøgsforsinkelse (sekunder)",
+          "retry_attempts": "Genforsøg",
+          "retry_delay": "Genforsøgsforsinkelse (sekunder)",
           "sync_mode": "Synkroniseringstilstand",
+          "sync_retry": "Sync Genforsøg",
           "sync_delay": "Sync Forsinkelse (sekunder)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Opretter en attribut, der lister alle medlems enheds-ID'er.",
           "expose_attribute_sensors": "Opretter ekstra sensorenheder til gruppens temperatur og fugtighed (nyttigt til grafer).",
           "debounce_delay": "Venter et øjeblik efter du har betjent kontrollerne, før kommandoer sendes. Forhindrer oversvømmelse af dit netværk.",
-          "repeat_count": "Prøver automatisk kommandoer igen, hvis en enhed misser dem.",
-          "repeat_delay": "Tiden der skal ventes mellem genforsøg.",
+          "retry_attempts": "Prøver automatisk kommandoer igen, hvis en enhed misser dem.",
+          "retry_delay": "Tiden der skal ventes mellem genforsøg.",
           "sync_mode": "Styrer, hvordan gruppen interagerer med manuelle ændringer foretaget direkte på fysiske enheder.",
+          "sync_retry": "Hvor mange gange gruppen forsøger at håndhæve sin tilstand på et afvigende medlem, før ændringen accepteres.",
           "sync_delay": "En buffer tid til at lade manuelle justeringer falde til ro, før sync logikken træder i kraft."
         }
       }

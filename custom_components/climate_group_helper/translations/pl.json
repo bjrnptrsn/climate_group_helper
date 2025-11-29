@@ -16,9 +16,10 @@
           "expose_member_entities": "Pokaż Listę Członków",
           "expose_attribute_sensors": "Pokaż Inteligentne Czujniki",
           "debounce_delay": "Opóźnienie Debounce (sekundy)",
-          "repeat_count": "Liczba Ponownych Prób",
-          "repeat_delay": "Opóźnienie Ponownej Próby (sekundy)",
+          "retry_attempts": "Liczba Ponownych Prób",
+          "retry_delay": "Opóźnienie Ponownej Próby (sekundy)",
           "sync_mode": "Tryb Synchronizacji",
+          "sync_retry": "Próby Synchronizacji",
           "sync_delay": "Opóźnienie Sync (sekundy)"
         },
         "data_description": {
@@ -33,9 +34,10 @@
           "expose_member_entities": "Tworzy atrybut wymieniający wszystkie identyfikatory encji członkowskich.",
           "expose_attribute_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne dla wykresów).",
           "debounce_delay": "Czeka chwilę po dotknięciu sterowania przed wysłaniem poleceń. Zapobiega zalewaniu sieci.",
-          "repeat_count": "Automatycznie ponawia polecenia, jeśli urządzenie je pominie.",
-          "repeat_delay": "Czas oczekiwania między ponownymi próbami.",
+          "retry_attempts": "Automatycznie ponawia polecenia, jeśli urządzenie je pominie.",
+          "retry_delay": "Czas oczekiwania między ponownymi próbami.",
           "sync_mode": "Kontroluje, jak grupa wchodzi w interakcje z ręcznymi zmianami dokonywanymi bezpośrednio na fizycznych urządzeniach.",
+          "sync_retry": "Ile razy grupa próbuje wymusić swój stan na odbiegającym członku przed zaakceptowaniem zmiany.",
           "sync_delay": "Czas buforowy, aby pozwolić ręcznym regulacjom ustabilizować się, zanim zadziała logika synchronizacji."
         }
       }
@@ -69,9 +71,10 @@
           "expose_member_entities": "Pokaż Listę Członków",
           "expose_attribute_sensors": "Pokaż Inteligentne Czujniki",
           "debounce_delay": "Opóźnienie Debounce (sekundy)",
-          "repeat_count": "Liczba Ponownych Prób",
-          "repeat_delay": "Opóźnienie Ponownej Próby (sekundy)",
+          "retry_attempts": "Liczba Ponownych Prób",
+          "retry_delay": "Opóźnienie Ponownej Próby (sekundy)",
           "sync_mode": "Tryb Synchronizacji",
+          "sync_retry": "Próby Synchronizacji",
           "sync_delay": "Opóźnienie Sync (sekundy)"
         },
         "data_description": {
@@ -86,9 +89,10 @@
           "expose_member_entities": "Tworzy atrybut wymieniający wszystkie identyfikatory encji członkowskich.",
           "expose_attribute_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne dla wykresów).",
           "debounce_delay": "Czeka chwilę po dotknięciu sterowania przed wysłaniem poleceń. Zapobiega zalewaniu sieci.",
-          "repeat_count": "Automatycznie ponawia polecenia, jeśli urządzenie je pominie.",
-          "repeat_delay": "Czas oczekiwania między ponownymi próbami.",
+          "retry_attempts": "Automatycznie ponawia polecenia, jeśli urządzenie je pominie.",
+          "retry_delay": "Czas oczekiwania między ponownymi próbami.",
           "sync_mode": "Kontroluje, jak grupa wchodzi w interakcje z ręcznymi zmianami dokonywanymi bezpośrednio na fizycznych urządzeniach.",
+          "sync_retry": "Ile razy grupa próbuje wymusić swój stan na odbiegającym członku przed zaakceptowaniem zmiany.",
           "sync_delay": "Czas buforowy, aby pozwolić ręcznym regulacjom ustabilizować się, zanim zadziała logika synchronizacji."
         }
       }

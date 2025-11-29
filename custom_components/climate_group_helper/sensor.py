@@ -1,6 +1,6 @@
 """Support for Climate Group sensors."""
-
 from __future__ import annotations
+
 from typing import Any
 
 import logging
