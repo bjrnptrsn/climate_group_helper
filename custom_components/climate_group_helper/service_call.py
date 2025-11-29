@@ -63,11 +63,21 @@ class ServiceCallHandler:
         """Initialize the service call handler."""
         self._group = group
         self._debouncers: dict[str, Debouncer] = {}
+        self._active_tasks: set[asyncio.Task] = set()
 
-    async def cancel_debouncers(self):
-        """Cancel all active debouncers."""
+    async def async_cancel_all(self):
+        """Cancel all active debouncers and running retry tasks."""
+        # Cancel debouncers (pending calls)
         for debouncer in self._debouncers.values():
             debouncer.async_cancel()
+
+        # Cancel running retry loops
+        for task in self._active_tasks:
+            task.cancel()
+
+        # Wait for them to finish cancelling
+        if self._active_tasks:
+            await asyncio.gather(*self._active_tasks, return_exceptions=True)
 
     async def execute_with_retry(self, executor_func, service_name, **kwargs):
         """Execute the service call, with retries if configured."""
@@ -104,9 +114,16 @@ class ServiceCallHandler:
 
         async def debounce_func():
             """The coroutine to be executed after debounce."""
-            await self.execute_with_retry(
-                executor_func, service_name, context=ctx_to_use, **kwargs
-            )
+            task = asyncio.current_task()
+            if task:
+                self._active_tasks.add(task)
+            try:
+                await self.execute_with_retry(
+                    executor_func, service_name, context=ctx_to_use, **kwargs
+                )
+            finally:
+                if task:
+                    self._active_tasks.discard(task)
 
         if service_name not in self._debouncers:
             self._debouncers[service_name] = Debouncer(

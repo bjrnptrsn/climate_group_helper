@@ -8,7 +8,12 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 
 from homeassistant.core import Context, State
 
-from .const import SYNC_MODE_WATCHED_ATTRIBUTES, SyncMode, SYNC_SAFETY_BUFFER_SECONDS
+from .const import (
+    SYNC_INTERNAL_CHANGE_TIMEOUT,
+    SYNC_MODE_WATCHED_ATTRIBUTES,
+    SYNC_SAFETY_BUFFER_SECONDS,
+    SyncMode,
+)
 
 if TYPE_CHECKING:
     from .climate import ClimateGroup
@@ -41,6 +46,7 @@ class SyncModeHandler:
         # Sync conflict tracking
         self._sync_retry_counter: int = 0                            # Attempts made to enforce state
         self._last_sync_attempt: float | None = None                 # Timestamp for fallback timeout
+        self._internal_change_start_time: float | None = None        # Timestamp for internal change timeout
         self._reset_delay_seconds = (
             (self._group._retry_attempts * self._group._retry_delay)  # Total retry duration
             + self._group._sync_mode_delay                           # Initial delay before first attempt
@@ -74,9 +80,10 @@ class SyncModeHandler:
 
         # Priority 1: User interaction - this becomes the new truth
         if self._is_internal_change():
-            _LOGGER.debug("SyncModeHandler: Internal change detected. Resetting tasks and updating snapshot.")
+            _LOGGER.debug("SyncModeHandler: Internal change detected. Resetting tasks.")
             self._cancel_active_tasks()
-            self._do_snapshot()
+            # DON'T call self._do_snapshot() here!
+            # Snapshot will be made in handle_sync_mode_changes() when states are stable
             return
 
         # Priority 2: Active syncing - protect the goal state
@@ -120,6 +127,46 @@ class SyncModeHandler:
             or self._group._states is None
         ):
             return
+
+        # Check if this was an internal change
+        if self._is_internal_change():
+            pending_calls = self._get_service_calls()
+            
+            if not pending_calls:
+                # Perfect sync
+                _LOGGER.debug("SyncModeHandler: Internal change complete, all members in sync. Updating snapshot.")
+                self._do_snapshot()
+                self._internal_change_start_time = None  # Clear timer
+            else:
+                # Members haven't caught up yet
+                if self._internal_change_start_time is None:
+                    # Start timer
+                    self._internal_change_start_time = time.time()
+                    _LOGGER.debug("SyncModeHandler: Internal change in progress, starting timer.")
+                elif (time.time() - self._internal_change_start_time) > SYNC_INTERNAL_CHANGE_TIMEOUT:
+                    # Timeout - force snapshot
+                    out_of_sync_info = []
+                    for service_name, kwargs in pending_calls:
+                        key = service_name.replace("set_", "")
+                        target = kwargs.get(key)
+                        out_of_sync_info.append(f"{key}={target}")
+                    
+                    _LOGGER.warning(
+                        "SyncModeHandler: Internal change timeout after %ds. Members not in sync: %s. Forcing snapshot.",
+                        SYNC_INTERNAL_CHANGE_TIMEOUT,
+                        ", ".join(out_of_sync_info)
+                    )
+                    self._do_snapshot()
+                    self._internal_change_start_time = None
+                else:
+                    # Still waiting
+                    elapsed = time.time() - self._internal_change_start_time
+                    _LOGGER.debug("SyncModeHandler: Internal change in progress, waiting... (%.1fs elapsed)", elapsed)
+            return
+
+        # Not internal change anymore - clear timer
+        if self._internal_change_start_time is not None:
+            self._internal_change_start_time = None
 
         # If a sync task is already active, let it finish.
         if self.is_syncing:

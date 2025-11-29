@@ -233,7 +233,7 @@ class ClimateGroup(GroupEntity, ClimateEntity):
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         await super().async_will_remove_from_hass()
-        await self._service_call_handler.cancel_debouncers()
+        await self._service_call_handler.async_cancel_all()
 
 
     @property
