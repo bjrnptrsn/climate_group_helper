@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.11.0 - 2025-11-29
+
+### ⚠️ Important Changes
+
+*   **Refined Retry Logic & Migration**: The configuration for retrying failed commands has been updated.
+    *   **Renamed**: "Repeat" is now "Retry" (`Retry Attempts`, `Retry Delay`) to better reflect its purpose.
+    *   **Logic Change**: Previously, a value of `1` meant "Execute once + Repeat once". Now, `Retry Attempts: 1` means "Execute once + Retry once if failed". A value of `0` means "Execute once, no retries".
+    *   **Auto-Migration**: Your existing configuration will be automatically migrated. Old "Repeat" values will be decremented by 1 (e.g., old `1` -> new `0`) to preserve the original behavior.
+
+### ✨ Features
+
+*   **Active Sync Enforcement**: The `Lock` and `Mirror` sync modes are now more robust. The group actively monitors member devices and fights deviations for a configured number of attempts (`Sync Retry Attempts`). If a device stubbornly refuses to change (e.g., due to a physical lock or connection loss), the group will eventually "capitulate" and accept the new state to prevent infinite loops and log spam.
+
+*   **Sync Retry Configuration**: You can now specifically configure how many times the group should try to enforce synchronization before giving up (`Sync Retry Attempts`).
+
+*   **Localization**: Updated all translations to reflect the new "Retry" terminology and added descriptions for the new sync settings.
+
+### 🔧 Fixes
+
+*   **Internal Change Handling**: Fixed a bug in `Lock` and `Mirror` modes where user-initiated changes to the group were sometimes mistakenly fought by the sync logic. The group now intelligently waits for members to synchronize before enforcing the new state.
+
 ## 0.10.0 - 2025-11-26
 
 > **⚠️ NOTE:** This release involves a comprehensive refactoring of the core logic to implement the new "Sync Mode" features. While extensive testing has been conducted, there might be edge cases or bugs in real-world usage. Please report any issues on GitHub.
