@@ -38,7 +38,7 @@
           "retry_delay": "Die Wartezeit zwischen Wiederholungsversuchen.",
           "sync_mode": "Steuert, wie die Gruppe mit manuellen Änderungen direkt an den physischen Geräten interagiert.",
           "sync_retry": "Wie oft die Gruppe versucht, ihren Status bei einem abweichenden Mitglied zu erzwingen, bevor sie die Änderung akzeptiert.",
-          "sync_delay": "Eine Pufferzeit, damit sich manuelle Anpassungen beruhigen können, bevor die Sync-Logik greift."
+          "sync_delay": "Die Wartezeit (in Sekunden) nach einem Sync-Befehl, damit Mitgliedsgeräte die Änderung vor der Überprüfung verarbeiten können."
         }
       }
     },
@@ -93,7 +93,7 @@
           "retry_delay": "Die Wartezeit zwischen Wiederholungsversuchen.",
           "sync_mode": "Steuert, wie die Gruppe mit manuellen Änderungen direkt an den physischen Geräten interagiert.",
           "sync_retry": "Wie oft die Gruppe versucht, ihren Status bei einem abweichenden Mitglied zu erzwingen, bevor sie die Änderung akzeptiert.",
-          "sync_delay": "Eine Pufferzeit, damit sich manuelle Anpassungen beruhigen können, bevor die Sync-Logik greift."
+          "sync_delay": "Die Wartezeit (in Sekunden) nach einem Sync-Befehl, damit Mitgliedsgeräte die Änderung vor der Überprüfung verarbeiten können."
         }
       }
     },

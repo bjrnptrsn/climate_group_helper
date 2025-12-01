@@ -38,7 +38,7 @@
           "retry_delay": "Tiden att vänta mellan försök.",
           "sync_mode": "Styr hur gruppen interagerar med manuella ändringar som görs direkt på fysiska enheter.",
           "sync_retry": "Hur många gånger gruppen försöker tvinga sitt tillstånd på en avvikande medlem innan ändringen accepteras.",
-          "sync_delay": "En bufferttid för att låta manuella justeringar stabiliseras innan synkroniseringslogiken träder in."
+          "sync_delay": "Väntetiden (i sekunder) efter ett synkroniseringskommando för att låta medlemsenheter bearbeta ändringen innan verifiering."
         }
       }
     },
@@ -93,7 +93,7 @@
           "retry_delay": "Tiden att vänta mellan försök.",
           "sync_mode": "Styr hur gruppen interagerar med manuella ändringar som görs direkt på fysiska enheter.",
           "sync_retry": "Hur många gånger gruppen försöker tvinga sitt tillstånd på en avvikande medlem innan ändringen accepteras.",
-          "sync_delay": "En bufferttid för att låta manuella justeringar stabiliseras innan synkroniseringslogiken träder in."
+          "sync_delay": "Väntetiden (i sekunder) efter ett synkroniseringskommando för att låta medlemsenheter bearbeta ändringen innan verifiering."
         }
       }
     },

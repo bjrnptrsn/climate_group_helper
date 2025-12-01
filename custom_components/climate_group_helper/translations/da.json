@@ -38,7 +38,7 @@
           "retry_delay": "Tiden der skal ventes mellem genforsøg.",
           "sync_mode": "Styrer, hvordan gruppen interagerer med manuelle ændringer foretaget direkte på fysiske enheder.",
           "sync_retry": "Hvor mange gange gruppen forsøger at håndhæve sin tilstand på et afvigende medlem, før ændringen accepteres.",
-          "sync_delay": "En buffer tid til at lade manuelle justeringer falde til ro, før sync logikken træder i kraft."
+          "sync_delay": "Ventetiden (i sekunder) efter en synkroniseringskommando for at lade medlemsenheder behandle ændringen før bekræftelse."
         }
       }
     },
@@ -93,7 +93,7 @@
           "retry_delay": "Tiden der skal ventes mellem genforsøg.",
           "sync_mode": "Styrer, hvordan gruppen interagerer med manuelle ændringer foretaget direkte på fysiske enheder.",
           "sync_retry": "Hvor mange gange gruppen forsøger at håndhæve sin tilstand på et afvigende medlem, før ændringen accepteres.",
-          "sync_delay": "En buffer tid til at lade manuelle justeringer falde til ro, før sync logikken træder i kraft."
+          "sync_delay": "Ventetiden (i sekunder) efter en synkroniseringskommando for at lade medlemsenheder behandle ændringen før bekræftelse."
         }
       }
     },

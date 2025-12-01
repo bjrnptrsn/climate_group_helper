@@ -38,7 +38,7 @@
           "retry_delay": "Čas čekání mezi pokusy o opakování.",
           "sync_mode": "Řídí, jak skupina interaguje s manuálními změnami provedenými přímo na fyzických zařízeních.",
           "sync_retry": "Kolikrát se skupina pokusí vynutit svůj stav na odchylujícím se členovi, než změnu přijme.",
-          "sync_delay": "Vyrovnávací čas, aby se manuální úpravy ustálily, než zasáhne synchronizační logika."
+          "sync_delay": "Doba čekání (v sekundách) po příkazu synchronizace, aby členská zařízení mohla zpracovat změnu před ověřením."
         }
       }
     },
@@ -93,7 +93,7 @@
           "retry_delay": "Čas čekání mezi pokusy o opakování.",
           "sync_mode": "Řídí, jak skupina interaguje s manuálními změnami provedenými přímo na fyzických zařízeních.",
           "sync_retry": "Kolikrát se skupina pokusí vynutit svůj stav na odchylujícím se členovi, než změnu přijme.",
-          "sync_delay": "Vyrovnávací čas, aby se manuální úpravy ustálily, než zasáhne synchronizační logika."
+          "sync_delay": "Doba čekání (v sekundách) po příkazu synchronizace, aby členská zařízení mohla zpracovat změnu před ověřením."
         }
       }
     },

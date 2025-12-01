@@ -38,7 +38,7 @@
           "retry_delay": "Le temps d'attente entre les tentatives de réessai.",
           "sync_mode": "Contrôle how the group interacts with manual changes made directly on physical devices.",
           "sync_retry": "Combien de fois le groupe tente d'imposer son état à un membre déviant avant d'accepter le changement.",
-          "sync_delay": "Un temps tampon pour laisser les ajustements manuels se stabiliser avant que la logique de sync n'intervienne."
+          "sync_delay": "Le temps d'attente (en secondes) après une commande de synchronisation pour permettre aux appareils membres de traiter le changement avant vérification."
         }
       }
     },
@@ -93,7 +93,7 @@
           "retry_delay": "Le temps d'attente entre les tentatives de réessai.",
           "sync_mode": "Contrôle how the group interacts with manual changes made directly on physical devices.",
           "sync_retry": "Combien de fois le groupe tente d'imposer son état à un membre déviant avant d'accepter le changement.",
-          "sync_delay": "Un temps tampon pour laisser les ajustements manuels se stabiliser avant que la logique de sync n'intervienne."
+          "sync_delay": "Le temps d'attente (en secondes) après une commande de synchronisation pour permettre aux appareils membres de traiter le changement avant vérification."
         }
       }
     },

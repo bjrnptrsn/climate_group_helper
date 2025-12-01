@@ -38,7 +38,7 @@
           "retry_delay": "De wachttijd tussen herhaalpogingen.",
           "sync_mode": "Regelt hoe de groep interageert met handmatige wijzigingen die direct op fysieke apparaten worden gemaakt.",
           "sync_retry": "Hoe vaak de groep probeert zijn status af te dwingen bij een afwijkend lid voordat de wijziging wordt geaccepteerd.",
-          "sync_delay": "Een buffertijd om handmatige aanpassingen te laten stabiliseren voordat de synclogica ingrijpt."
+          "sync_delay": "De wachttijd (in seconden) na een synchronisatiecommando om ledenapparaten de wijziging te laten verwerken vóór verificatie."
         }
       }
     },
@@ -93,7 +93,7 @@
           "retry_delay": "De wachttijd tussen herhaalpogingen.",
           "sync_mode": "Regelt hoe de groep interageert met handmatige wijzigingen die direct op fysieke apparaten worden gemaakt.",
           "sync_retry": "Hoe vaak de groep probeert zijn status af te dwingen bij een afwijkend lid voordat de wijziging wordt geaccepteerd.",
-          "sync_delay": "Een buffertijd om handmatige aanpassingen te laten stabiliseren voordat de synclogica ingrijpt."
+          "sync_delay": "De wachttijd (in seconden) na een synchronisatiecommando om ledenapparaten de wijziging te laten verwerken vóór verificatie."
         }
       }
     },

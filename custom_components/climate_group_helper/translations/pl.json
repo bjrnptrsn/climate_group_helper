@@ -38,7 +38,7 @@
           "retry_delay": "Czas oczekiwania między ponownymi próbami.",
           "sync_mode": "Kontroluje, jak grupa wchodzi w interakcje z ręcznymi zmianami dokonywanymi bezpośrednio na fizycznych urządzeniach.",
           "sync_retry": "Ile razy grupa próbuje wymusić swój stan na odbiegającym członku przed zaakceptowaniem zmiany.",
-          "sync_delay": "Czas buforowy, aby pozwolić ręcznym regulacjom ustabilizować się, zanim zadziała logika synchronizacji."
+          "sync_delay": "Czas oczekiwania (w sekundach) po poleceniu synchronizacji, aby pozwolić urządzeniom członkowskim na przetworzenie zmiany przed weryfikacją."
         }
       }
     },
@@ -93,7 +93,7 @@
           "retry_delay": "Czas oczekiwania między ponownymi próbami.",
           "sync_mode": "Kontroluje, jak grupa wchodzi w interakcje z ręcznymi zmianami dokonywanymi bezpośrednio na fizycznych urządzeniach.",
           "sync_retry": "Ile razy grupa próbuje wymusić swój stan na odbiegającym członku przed zaakceptowaniem zmiany.",
-          "sync_delay": "Czas buforowy, aby pozwolić ręcznym regulacjom ustabilizować się, zanim zadziała logika synchronizacji."
+          "sync_delay": "Czas oczekiwania (w sekundach) po poleceniu synchronizacji, aby pozwolić urządzeniom członkowskim na przetworzenie zmiany przed weryfikacją."
         }
       }
     },

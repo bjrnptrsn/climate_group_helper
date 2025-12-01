@@ -38,7 +38,7 @@
           "retry_delay": "Il tempo di attesa tra i tentativi di riprova.",
           "sync_mode": "Controlla come il gruppo interagisce con le modifiche manuali effettuate direttamente sui dispositivi fisici.",
           "sync_retry": "Quante volte il gruppo tenta di imporre il proprio stato su un membro deviante prima di accettare la modifica.",
-          "sync_delay": "Un tempo cuscinetto per lasciare che le regolazioni manuali si stabilizzino prima che la logica di sync intervenga."
+          "sync_delay": "Il tempo di attesa (in secondi) dopo un comando di sincronizzazione per consentire ai dispositivi membri di elaborare la modifica prima della verifica."
         }
       }
     },
@@ -93,7 +93,7 @@
           "retry_delay": "Il tempo di attesa tra i tentativi di riprova.",
           "sync_mode": "Controlla come il gruppo interagisce con le modifiche manuali effettuate direttamente sui dispositivi fisici.",
           "sync_retry": "Quante volte il gruppo tenta di imporre il proprio stato su un membro deviante prima di accettare la modifica.",
-          "sync_delay": "Un tempo cuscinetto per lasciare che le regolazioni manuali si stabilizzino prima che la logica di sync intervenga."
+          "sync_delay": "Il tempo di attesa (in secondi) dopo un comando di sincronizzazione per consentire ai dispositivi membri di elaborare la modifica prima della verifica."
         }
       }
     },
