@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.1 - 2025-12-01
+
+### 🔧 Improvements & Refactoring
+
+*   **Sync Mode Optimization**: Refactored the synchronization logic to use a streamlined "Snapshot-on-Demand" strategy. This significantly reduces code complexity and technical debt while maintaining the established reliability of `Lock` and `Mirror` modes.
+*   **Clean Shutdown**: Enhanced task management to explicitly cancel background processes when the component stops. This ensures a clean exit and resolves potential "task was destroyed but it is pending" warnings in Home Assistant logs.
+*   **Internal Cleanup**: General refactoring of service call handling to improve maintainability.
+
 ## 0.11.0 - 2025-11-29
 
 ### ⚠️ Important Changes
