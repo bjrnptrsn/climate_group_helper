@@ -53,10 +53,6 @@ class ServiceCallHandler:
     - retry_attempts: Number of retries AFTER initial attempt (min 0)
     - retry_delay: Wait time between retry attempts
     - Pre-check: Validates state before retry to avoid unnecessary calls
-    
-    Example:
-        retry_attempts=1, retry_delay=2.5s
-        → Total: 2 attempts over ~2.5 seconds
     """
 
     def __init__(self, group: ClimateGroup):
@@ -88,7 +84,6 @@ class ServiceCallHandler:
         for attempt in range(max_attempts):
             try:
                 _LOGGER.debug("Executing service call '%s' (attempt %d/%d) with: %s", service_name, attempt + 1, max_attempts, kwargs)
-                # No pre_check argument here anymore in executor_func
                 setting_applied = await executor_func(**kwargs)
 
                 if setting_applied: # If True, state is verified to be set
@@ -100,26 +95,24 @@ class ServiceCallHandler:
             if max_attempts > 1 and attempt < (max_attempts - 1):
                 await asyncio.sleep(retry_delay)
 
-    async def call_debounced(self, service_name, executor_func, custom_context: Context | None = None, custom_delay: float | None = None, **kwargs):
+    async def call_debounced(self, service_name, executor_func, custom_context: Context | None = None, **kwargs):
         """Debounce and execute a service call."""
-        debounce_delay = self._group._debounce_delay
-        # Use custom_delay if provided, otherwise fall back to configured debounce_delay
-        delay = custom_delay if custom_delay is not None else debounce_delay
+        _delay = self._group._debounce_delay
 
         if custom_context:
-            ctx_to_use = custom_context
+            context = custom_context
         else:
             self._group._last_group_context = self._group._context
-            ctx_to_use = self._group._context
+            context = self._group._context
 
-        async def debounce_func():
+        async def _debounce_func():
             """The coroutine to be executed after debounce."""
             task = asyncio.current_task()
             if task:
                 self._active_tasks.add(task)
             try:
                 await self.execute_with_retry(
-                    executor_func, service_name, context=ctx_to_use, **kwargs
+                    executor_func, service_name, context=context, **kwargs
                 )
             finally:
                 if task:
@@ -129,14 +122,14 @@ class ServiceCallHandler:
             self._debouncers[service_name] = Debouncer(
                 self._group.hass,
                 _LOGGER,
-                cooldown=delay,
+                cooldown=_delay,
                 immediate=False,
-                function=debounce_func,
+                function=_debounce_func,
             )
         else:
             # Update the function and cooldown with the latest values
-            self._debouncers[service_name].cooldown = delay
-            self._debouncers[service_name].function = debounce_func
+            self._debouncers[service_name].cooldown = _delay
+            self._debouncers[service_name].function = _debounce_func
 
         await self._debouncers[service_name].async_call()
 
@@ -157,10 +150,12 @@ class ServiceCallHandler:
         self._group.async_defer_or_update_ha_state()
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_HVAC_MODE: hvac_mode}
+
         _LOGGER.debug("Setting HVAC mode: %s", data)
         await self._group.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=context or self._group._context
         )
+
         return False
 
     async def execute_set_temperature(self, context: Context | None = None, **kwargs: Any) -> bool:
@@ -223,10 +218,12 @@ class ServiceCallHandler:
             return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_HUMIDITY: humidity}
+
         _LOGGER.debug("Setting humidity: %s", data)
         await self._group.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_HUMIDITY, data, blocking=True, context=context or self._group._context
         )
+
         return False
 
     async def execute_set_fan_mode(self, fan_mode: str, context: Context | None = None) -> bool:
@@ -242,10 +239,12 @@ class ServiceCallHandler:
             return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_FAN_MODE: fan_mode}
+
         _LOGGER.debug("Setting fan mode: %s", data)
         await self._group.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data, blocking=True, context=context or self._group._context
         )
+
         return False
 
     async def execute_set_preset_mode(self, preset_mode: str, context: Context | None = None) -> bool:
@@ -261,10 +260,12 @@ class ServiceCallHandler:
             return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_PRESET_MODE: preset_mode}
+
         _LOGGER.debug("Setting preset mode: %s", data)
         await self._group.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True, context=context or self._group._context,
         )
+
         return False
 
     async def execute_set_swing_mode(self, swing_mode: str, context: Context | None = None) -> bool:
@@ -280,10 +281,12 @@ class ServiceCallHandler:
             return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_SWING_MODE: swing_mode}
+
         _LOGGER.debug("Setting swing mode: %s", data)
         await self._group.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data, blocking=True, context=context or self._group._context,
         )
+
         return False
 
     async def execute_set_swing_horizontal_mode(self, swing_horizontal_mode: str, context: Context | None = None) -> bool:
@@ -299,8 +302,10 @@ class ServiceCallHandler:
             return False
 
         data = {ATTR_ENTITY_ID: entity_ids, ATTR_SWING_HORIZONTAL_MODE: swing_horizontal_mode}
+
         _LOGGER.debug("Setting horizontal swing mode: %s", data)
         await self._group.hass.services.async_call(
             CLIMATE_DOMAIN, SERVICE_SET_SWING_HORIZONTAL_MODE, data, blocking=True, context=context or self._group._context,
         )
+
         return False

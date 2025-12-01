@@ -145,7 +145,7 @@ class ClimateGroupTemperatureSensor(ClimateGroupBaseSensor):
         value = self._climate_group_state.attributes.get("averaged_current_temperature")
         
         if value is not None and not isinstance(value, (int, float)):
-            _LOGGER.warning("Invalid temperature value for %s: %s", self._attr_name, value)
+            _LOGGER.debug("Invalid temperature value for %s: %s", self._attr_name, value)
             return None
         
         return value
@@ -179,7 +179,7 @@ class ClimateGroupHumiditySensor(ClimateGroupBaseSensor):
         value = self._climate_group_state.attributes.get("current_humidity")
         
         if value is not None and not isinstance(value, (int, float)):
-            _LOGGER.warning("Invalid humidity value for %s: %s", self._attr_name, value)
+            _LOGGER.debug("Invalid humidity value for %s: %s", self._attr_name, value)
             return None
         
         return value

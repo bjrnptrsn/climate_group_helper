@@ -71,6 +71,3 @@ SYNC_MODE_WATCHED_ATTRIBUTES = {
     "preset_mode": "preset_mode",
     "swing_mode": "swing_mode",
 }
-
-SYNC_SAFETY_BUFFER_SECONDS = 5
-SYNC_INTERNAL_CHANGE_TIMEOUT = 10

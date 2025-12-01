@@ -52,10 +52,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Migrate old entry."""
-    _LOGGER.debug("Attempting to migrate config entry from version %s", entry.version)
+    # Check if we need to migrate the config entry
+    _LOGGER.info("Attempting to migrate config entry from version %s", entry.version)
 
     if entry.version == 1:
-        _LOGGER.debug("Migrating config entry to version 2")
+        _LOGGER.info("Migrating config entry to version 2")
 
         # For version 1, some configuration was stored in data and some in options.
         data_v1 = dict(entry.data)
@@ -77,7 +78,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER.info("Successfully migrated config entry to version 2")
 
     if entry.version == 2:
-        _LOGGER.debug("Migrating config entry to version 3")
+        _LOGGER.info("Migrating config entry to version 3")
         options_v3 = dict(entry.options)
 
         # Rename repeat_count to retry_attempts
@@ -87,7 +88,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
             # retry_attempts is retries after failure (min 0 in config flow).
             # So we subtract 1, but ensure at least 0.
             options_v3[CONF_RETRY_ATTEMPTS] = max(0, repeat_count - 1)
-            _LOGGER.debug(
+            _LOGGER.info(
                 "Migrated 'repeat_count' (%s) to '%s' (%s)",
                 repeat_count,
                 CONF_RETRY_ATTEMPTS,
@@ -97,7 +98,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
         # Rename repeat_delay to retry_delay
         if "repeat_delay" in options_v3:
             options_v3[CONF_RETRY_DELAY] = options_v3.pop("repeat_delay")
-            _LOGGER.debug("Migrated 'repeat_delay' to '%s'", CONF_RETRY_DELAY)
+            _LOGGER.info("Migrated 'repeat_delay' to '%s'", CONF_RETRY_DELAY)
 
         hass.config_entries.async_update_entry(entry, options=options_v3, version=3)
         _LOGGER.info("Successfully migrated config entry to version 3")

@@ -449,9 +449,9 @@ class ClimateGroup(GroupEntity, ClimateEntity):
                     try:
                         self._attr_current_temperature = float(sensor_state.state)
                     except (ValueError, TypeError):
-                        _LOGGER.warning("Could not retrieve temperature from sensor %s, falling back to averaged temperature", self._temp_sensor_entity_id)
+                        _LOGGER.debug("Could not retrieve temperature from sensor %s, falling back to averaged temperature", self._temp_sensor_entity_id)
                 else:
-                    _LOGGER.warning("Sensor %s is unavailable, falling back to averaged temperature", self._temp_sensor_entity_id)
+                    _LOGGER.debug("Sensor %s is unavailable, falling back to averaged temperature", self._temp_sensor_entity_id)
 
             # Target temperature is calculated using the 'average_option' method from all ATTR_TEMPERATURE values.
             self._attr_target_temperature = reduce_attribute(self._states, ATTR_TEMPERATURE, reduce=lambda *data: self._target_avg_calc(data))
