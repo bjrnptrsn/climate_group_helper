@@ -62,7 +62,7 @@ from .const import (
     ATTR_ASSUMED_STATE,
     ATTR_AVERAGED_CURRENT_TEMPERATURE,
     ATTR_CURRENT_HVAC_MODES,
-    ATTR_GROUP_IN_SYNC,
+    ATTR_EXTERNAL_CONTROLLED,
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_TARGET_HVAC_MODE,
     CONF_CURRENT_AVG_OPTION,
@@ -177,6 +177,9 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._sync_mode_delay = config.get(CONF_SYNC_DELAY, 5)
         self._sync_retry_attempts = int(config.get(CONF_SYNC_RETRY, 2))
         self._sync_mode_handler = SyncModeHandler(self, self._sync_mode)
+
+        # External control status (Mirror Mode)
+        self._is_external_controlled = False
 
         # The list of entities to be tracked by GroupEntity
         self._entity_ids = entity_ids.copy()
@@ -388,23 +391,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         # Capture current state for sync mode handling (e.g. Lock mode)
         self._sync_mode_handler.snapshot_group_state()
 
-        # Initialize extra state attributes
-        self._attr_extra_state_attributes = {
-            CONF_CURRENT_AVG_OPTION: self._current_avg_calc.__name__,
-            CONF_TARGET_AVG_OPTION: self._target_avg_calc.__name__,
-            CONF_ROUND_OPTION: self._round_option,
-            CONF_TEMP_SENSOR: self._temp_sensor_entity_id,
-            CONF_EXPOSE_MEMBER_ENTITIES: self._expose_member_entities,
-            CONF_SYNC_MODE: self._sync_mode,
-            CONF_HVAC_MODE_STRATEGY: self._hvac_mode_strategy,
-            CONF_FEATURE_STRATEGY: self._feature_strategy,
-            CONF_DEBOUNCE_DELAY: self._debounce_delay,
-            CONF_RETRY_ATTEMPTS: self._retry_attempts,
-            CONF_RETRY_DELAY: self._retry_delay,
-            CONF_SYNC_DELAY: self._sync_mode_delay,
-            CONF_SYNC_RETRY: self._sync_retry_attempts,
-        }
-
         # Determine assumed state and availability for the group
         self._states = self._get_valid_member_states()
 
@@ -520,21 +506,24 @@ class ClimateGroup(GroupEntity, ClimateEntity):
             # Remove unsupported features
             self._attr_supported_features &= SUPPORTED_FEATURES
 
+            # Handle sync logic
+            self._sync_mode_handler.handle_sync_mode_changes()
+
             # Update extra state attributes
-            self._attr_extra_state_attributes[ATTR_AVERAGED_CURRENT_TEMPERATURE] = self._attr_averaged_current_temperature
-            self._attr_extra_state_attributes[ATTR_ASSUMED_STATE] = self._attr_assumed_state
-            self._attr_extra_state_attributes[ATTR_LAST_ACTIVE_HVAC_MODE] = self._last_active_hvac_mode
-            self._attr_extra_state_attributes[ATTR_TARGET_HVAC_MODE] = self._target_hvac_mode
-            self._attr_extra_state_attributes[ATTR_CURRENT_HVAC_MODES] = current_hvac_modes
-            # Check if all members are in sync with the target HVAC mode
-            self._attr_extra_state_attributes[ATTR_GROUP_IN_SYNC] = (
-                len(set(current_hvac_modes)) == 1 and current_hvac_modes[0] == self._target_hvac_mode
-            )
+            self._attr_extra_state_attributes = {
+                CONF_TEMP_SENSOR: self._temp_sensor_entity_id,
+                CONF_SYNC_MODE: self._sync_mode,
+                ATTR_AVERAGED_CURRENT_TEMPERATURE: self._attr_averaged_current_temperature,
+                ATTR_ASSUMED_STATE: self._attr_assumed_state,
+                ATTR_LAST_ACTIVE_HVAC_MODE: self._last_active_hvac_mode,
+                ATTR_TARGET_HVAC_MODE: self._target_hvac_mode,
+                ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
+                ATTR_EXTERNAL_CONTROLLED: self._is_external_controlled,
+            }
+
             # Expose member entities if configured
             if self._expose_member_entities:
                 self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self._climate_entity_ids
-
-            self._sync_mode_handler.handle_sync_mode_changes()
 
         # No states available
         else:

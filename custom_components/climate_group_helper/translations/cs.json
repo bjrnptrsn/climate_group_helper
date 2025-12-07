@@ -156,10 +156,6 @@
       "climate_group": {
         "name": "Klimatická skupina",
         "state_attributes": {
-          "group_in_sync": {
-            "name": "Skupina synchronizována",
-            "description": "Pravda, pokud všichni členové odpovídají cíli skupiny."
-          },
           "last_active_hvac_mode": {
             "name": "Poslední aktivní režim",
             "description": "Naposledy použitý režim (Topení/Chlazení) před vypnutím."

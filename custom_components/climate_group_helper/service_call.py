@@ -35,6 +35,8 @@ from homeassistant.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES
 from homeassistant.core import Context
 from homeassistant.helpers.debounce import Debouncer
 
+from .const import SyncMode
+
 if TYPE_CHECKING:
     from .climate import ClimateGroup
 
@@ -81,6 +83,15 @@ class ServiceCallHandler:
         max_attempts = self._group._retry_attempts + 1
         retry_delay = self._group._retry_delay
 
+        # Determine 'external_controlled' state:
+        # 1. Context Match (User Action via call_debounced) → Set False
+        # 2. Context Mismatch (Sync Action) + Mirror Mode → Set True (External Propagation)
+        # Note: In Lock Mode, this flag remains False during sync enforcement
+        if kwargs.get("context") == self._group._last_group_context:
+            self._group._is_external_controlled = False
+        elif self._group._sync_mode == SyncMode.MIRROR:
+            self._group._is_external_controlled = True
+
         for attempt in range(max_attempts):
             try:
                 _LOGGER.debug("Executing service call '%s' (attempt %d/%d) with: %s", service_name, attempt + 1, max_attempts, kwargs)
@@ -95,15 +106,14 @@ class ServiceCallHandler:
             if max_attempts > 1 and attempt < (max_attempts - 1):
                 await asyncio.sleep(retry_delay)
 
-    async def call_debounced(self, service_name, executor_func, custom_context: Context | None = None, **kwargs):
+    async def call_debounced(self, service_name, executor_func, **kwargs):
         """Debounce and execute a service call."""
         _delay = self._group._debounce_delay
 
-        if custom_context:
-            context = custom_context
-        else:
-            self._group._last_group_context = self._group._context
-            context = self._group._context
+        # Capture the context of this User Action.
+        # Since call_debounced is only invoked by the Group Entity methods,
+        # we store this context to identify it as an internal change for sync mode.
+        self._group._last_group_context = self._group._context
 
         async def _debounce_func():
             """The coroutine to be executed after debounce."""
@@ -112,7 +122,7 @@ class ServiceCallHandler:
                 self._active_tasks.add(task)
             try:
                 await self.execute_with_retry(
-                    executor_func, service_name, context=context, **kwargs
+                    executor_func, service_name, context=self._group._context, **kwargs
                 )
             finally:
                 if task:

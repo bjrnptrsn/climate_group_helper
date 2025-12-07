@@ -156,10 +156,6 @@
       "climate_group": {
         "name": "Klimaatgroep",
         "state_attributes": {
-          "group_in_sync": {
-            "name": "Groep Synchroon",
-            "description": "Waar als alle leden overeenkomen met het groepsdoel."
-          },
           "last_active_hvac_mode": {
             "name": "Laatst Actieve Modus",
             "description": "De laatst gebruikte modus (Verwarmen/Koelen) voor uitschakelen."

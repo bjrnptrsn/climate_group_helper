@@ -156,10 +156,6 @@
       "climate_group": {
         "name": "空调组",
         "state_attributes": {
-          "group_in_sync": {
-            "name": "组已同步",
-            "description": "如果所有成员都符合组目标，则为真。"
-          },
           "last_active_hvac_mode": {
             "name": "最后活动模式",
             "description": "关闭前最后使用的模式 (加热/冷却)。"

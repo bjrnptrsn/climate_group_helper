@@ -156,10 +156,6 @@
       "climate_group": {
         "name": "Klimagruppe",
         "state_attributes": {
-          "group_in_sync": {
-            "name": "Gruppe i Sync",
-            "description": "Sant hvis alle medlemmer samsvarer med gruppens mål."
-          },
           "last_active_hvac_mode": {
             "name": "Sist aktive modus",
             "description": "Sist brukte modus (Varme/Kjøling) før den ble slått av."

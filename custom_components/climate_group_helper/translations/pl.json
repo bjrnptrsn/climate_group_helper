@@ -156,10 +156,6 @@
       "climate_group": {
         "name": "Grupa Klimatyczna",
         "state_attributes": {
-          "group_in_sync": {
-            "name": "Grupa Zsynchronizowana",
-            "description": "Prawda, jeśli wszyscy członkowie odpowiadają celowi grupy."
-          },
           "last_active_hvac_mode": {
             "name": "Ostatni Aktywny Tryb",
             "description": "Ostatnio używany tryb (Grzanie/Chłodzenie) przed wyłączeniem."

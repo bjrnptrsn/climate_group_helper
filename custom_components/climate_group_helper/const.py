@@ -59,9 +59,9 @@ FEATURE_STRATEGY_UNION = "union"
 ATTR_ASSUMED_STATE = "assumed_state"
 ATTR_AVERAGED_CURRENT_TEMPERATURE = "averaged_current_temperature"
 ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
-ATTR_GROUP_IN_SYNC = "group_in_sync"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
 ATTR_TARGET_HVAC_MODE = "target_hvac_mode"
+ATTR_EXTERNAL_CONTROLLED = "external_controlled"
 
 # Sync Mode
 SYNC_MODE_WATCHED_ATTRIBUTES = {

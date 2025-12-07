@@ -156,10 +156,6 @@
       "climate_group": {
         "name": "Klimatgrupp",
         "state_attributes": {
-          "group_in_sync": {
-            "name": "Grupp i Sync",
-            "description": "Sant om alla medlemmar matchar gruppens mål."
-          },
           "last_active_hvac_mode": {
             "name": "Senast Aktiva Läge",
             "description": "Det senast använda läget (Värme/Kyla) innan avstängning."
