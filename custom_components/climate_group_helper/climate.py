@@ -57,6 +57,7 @@ from homeassistant.const import (
 from homeassistant.core import Context, HomeAssistant, State, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     ATTR_ASSUMED_STATE,
@@ -145,7 +146,7 @@ async def async_setup_entry(
     )
 
 
-class ClimateGroup(GroupEntity, ClimateEntity):
+class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
     """Representation of a climate group."""
 
     def __init__(
@@ -177,9 +178,6 @@ class ClimateGroup(GroupEntity, ClimateEntity):
         self._sync_mode_delay = config.get(CONF_SYNC_DELAY, 5)
         self._sync_retry_attempts = int(config.get(CONF_SYNC_RETRY, 2))
         self._sync_mode_handler = SyncModeHandler(self, self._sync_mode)
-
-        # External control status (Mirror Mode)
-        self._is_external_controlled = False
 
         # The list of entities to be tracked by GroupEntity
         self._entity_ids = entity_ids.copy()
@@ -231,6 +229,35 @@ class ClimateGroup(GroupEntity, ClimateEntity):
 
         # Centralized service call handler
         self._service_call_handler = ServiceCallHandler(self)
+
+        # External control status (Mirror Mode)
+        self._is_external_controlled = False
+
+
+    async def async_added_to_hass(self) -> None:
+        """Restore states before registering listeners."""
+
+        # Some integrations, such as HomeKit, Google Home, and Alexa, require
+        # final property lists during the initialization process e.g. hvac_modes.
+        # Therefore, we restore some of the last known states before registering the listeners.
+        if (last_state := await self.async_get_last_state()) is not None:
+            last_attrs = last_state.attributes
+
+            if ATTR_HVAC_MODES in last_attrs:
+                self._attr_hvac_modes = self._sort_hvac_modes(last_attrs[ATTR_HVAC_MODES])
+            if ATTR_FAN_MODES in last_attrs:
+                self._attr_fan_modes = last_attrs[ATTR_FAN_MODES]
+            if ATTR_PRESET_MODES in last_attrs:
+                self._attr_preset_modes = last_attrs[ATTR_PRESET_MODES]
+            if ATTR_SWING_MODES in last_attrs:
+                self._attr_swing_modes = last_attrs[ATTR_SWING_MODES]
+            if ATTR_SWING_HORIZONTAL_MODES in last_attrs:
+                self._attr_swing_horizontal_modes = last_attrs[ATTR_SWING_HORIZONTAL_MODES]
+            if ATTR_SUPPORTED_FEATURES in last_attrs:
+                self._attr_supported_features = last_attrs[ATTR_SUPPORTED_FEATURES] & SUPPORTED_FEATURES
+
+        # Register listeners via GroupEntity
+        await super().async_added_to_hass()
 
 
     async def async_will_remove_from_hass(self) -> None:
