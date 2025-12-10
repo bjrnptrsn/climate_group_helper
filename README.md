@@ -12,6 +12,7 @@ Managing multiple climate devices individually is tedious. This integration solv
 *   **Smart Sensors**: Get a single, averaged temperature and humidity reading for the whole room.
 *   **Dynamic**: Add or remove devices on the fly without restarting Home Assistant.
 *   **100% UI Managed**: No YAML required. Set it up in seconds via the Helpers menu.
+*  The temperature range available to the Group helper is the union of the ranges of all the devices.  Attempting to set a temperature outside a devices available temperature range wil turn that device off.
 
 ## ⚙️ Customization Options
 
