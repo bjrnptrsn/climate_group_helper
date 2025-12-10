@@ -1,4 +1,4 @@
-# 🌡️ Home Assistant Climate Group Helper
+# 🌡️ Advanced Home Assistant Climate Group Helper
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
 
