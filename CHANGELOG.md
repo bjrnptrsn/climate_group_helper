@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.12.0 - 2025-12-11
+
+### ✨ Features
+
+*   **External Control Detection**: Introduced the `external_controlled` attribute. This boolean attribute helps automations distinguish between two types of updates:
+    *   `true`: The group was updated because a member device was physically changed (Mirror Mode propagation).
+    *   `false`: The group was controlled directly by the user (e.g., via Dashboard).
+*   **Integration Icons**: Added official integration icons, improving visual consistency within Home Assistant.
+
+### 🔧 Fixes
+
+*   **Improved HomeKit Compatibility**: Enhanced HomeKit integration by implementing `RestoreEntity`. This ensures that `hvac_modes`, `fan_modes`, `preset_modes`, and `supported_features` are restored on startup, preventing issues where HomeKit accessories might incorrectly display limited functionalities (e.g., only "Off" mode).
+
+### 🔀 Changes
+
+*   **Internal Cleanup & Streamlining**: Several outdated or unused internal attributes were removed, and the overall attribute exposure logic was refactored for better clarity and maintainability.
+
 ## 0.11.1 - 2025-12-01
 
 ### 🔧 Improvements & Refactoring
