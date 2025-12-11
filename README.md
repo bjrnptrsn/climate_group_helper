@@ -32,10 +32,10 @@ Tailor the group's logic to fit your home perfectly.
     *   `Half Degree (0.5°)`: Common for many digital devices.
     *   `Whole Numbers (1°)`: For simpler or older units.
 
-*   **HVAC Mode Strategy**: Determines how the group decides its overall state (e.g. "Heating", "Cooling", or "Off").
-    *   `Normal (Democratic)`: If most devices are active (e.g. heating), the group is active. It only switches to `off` when *all* members are off.
+*   **HVAC Mode Strategy**: Determines how the group decides its overall state ('heat', 'auto', 'off', ...).
+    *   `Normal (Democratic)`: If most devices are active (e.g. 'heat'), the group is active. It only switches to `off` when *all* members are off.
     *   `Off Priority (Master Switch)`: If *any* single device is turned off, the whole group reports as off. Great for quickly seeing if a zone is fully active.
-    *   `Auto (Smart)`: Dynamically switches strategies. Uses `Off Priority` when heating/cooling (to show if any device is off) and `Normal` when turning off (ensuring all devices are off).
+    *   `Auto (Smart)`: Dynamically switches strategies. Uses `Off Priority` when set to heat/cool/... (to show if any device is off), and uses `Normal` when set to off (ensuring all devices are off).
 
 *   **Feature Compatibility (Feature Strategy)**: How to handle devices with different capabilities (e.g. one supports "Fan Only", another doesn't).
     *   `Intersection (Strict)`: "Safe Mode". Only shows features that *every* device supports. Guarantees that every command works for everyone.
