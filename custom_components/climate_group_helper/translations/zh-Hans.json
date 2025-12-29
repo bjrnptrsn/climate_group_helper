@@ -79,6 +79,7 @@
     }
   },
   "options": {
+    "flow_title": "配置群组",
     "abort": {
       "no_changes": "未检测到更改。"
     },

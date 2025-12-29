@@ -79,6 +79,7 @@
     }
   },
   "options": {
+    "flow_title": "Groep configureren",
     "abort": {
       "no_changes": "Geen wijzigingen gedetecteerd."
     },

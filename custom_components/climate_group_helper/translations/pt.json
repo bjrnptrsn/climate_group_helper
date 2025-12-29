@@ -79,6 +79,7 @@
     }
   },
   "options": {
+    "flow_title": "Configurar grupo",
     "abort": {
       "no_changes": "Nenhuma alteração detectada."
     },

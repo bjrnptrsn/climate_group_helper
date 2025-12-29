@@ -79,6 +79,7 @@
     }
   },
   "options": {
+    "flow_title": "Konfigurovat skupinu",
     "abort": {
       "no_changes": "Nebyly zjištěny žádné změny."
     },

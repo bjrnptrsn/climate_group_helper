@@ -109,7 +109,12 @@ Use **multiple external sensors** for temperature and humidity. The group calcul
 3. Choose **Climate Group Helper**
 4. Enter a name and select your climate entities
 
-After creation, click **Configure** on the helper to access all options:
+To configure advanced options after creation:
+1. Open the entity (e.g., via the dashboard or entity list)
+2. Click the **⚙️ Settings** (gear icon)
+3. Select your group options
+
+**Available options:**
 - **Members & Modes**: Add/remove devices, set HVAC and feature strategies
 - **Temperature**: External sensors, calibration targets, averaging, rounding
 - **Humidity**: Same options as temperature
