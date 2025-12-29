@@ -1,154 +1,50 @@
 {
   "config": {
-    "step": {
-      "user": {
-        "title": "Klimaatgroep Assistent",
-        "description": "Maak een krachtige 'Virtuele Controller' voor uw klimaatapparaten. Deze groep verzamelt metingen en synchroniseert instellingen over alle leden, werkend als één slimme eenheid.",
-        "data": {
-          "name": "Groepsnaam",
-          "entities": "Klimaatapparaten",
-          "current_avg_option": "Huidige Waarden (Weergave)",
-          "target_avg_option": "Doelwaarden (Bediening)",
-          "round_option": "Precisiebediening (Afronding)",
-          "hvac_mode_strategy": "HVAC-modusstrategie",
-          "feature_strategy": "Functiecompatibiliteit",
-          "temp_sensor": "Externe Temperatuursensor",
-          "expose_member_entities": "Ledenlijst Tonen",
-          "expose_attribute_sensors": "Slimme Sensoren Tonen",
-          "debounce_delay": "Debouncevertraging (seconden)",
-          "retry_attempts": "Herhaalpogingen",
-          "retry_delay": "Herhaalvertraging (seconden)",
-          "sync_mode": "Synchronisatiemodus",
-          "sync_retry": "Sync Herhaalpogingen",
-          "sync_delay": "Syncvertraging (seconden)"
-        },
-        "data_description": {
-          "name": "Een vriendelijke naam voor uw groep (bijv. 'Woonkamer' of 'Hele Huis').",
-          "entities": "Selecteer de klimaatapparaten (thermostaten, airco's) om in deze groep op te nemen.",
-          "current_avg_option": "Hoe de groep sensorwaarden (Temperatuur/Vochtigheid) van zijn leden samenvat.",
-          "target_avg_option": "Hoe de groep het doelinstelpunt berekent om naar zijn leden te sturen.",
-          "round_option": "Voorkom het verzenden van waarden met overmatige precisie naar apparaten die strikte stappen verwachten.",
-          "hvac_mode_strategy": "Bepaalt hoe de groep zijn algehele status beslist (bijv. wanneer sommige apparaten uit staan).",
-          "feature_strategy": "Hoe om te gaan met apparaten met verschillende mogelijkheden (bijv. één ondersteunt 'Alleen Ventilator', een andere niet).",
-          "temp_sensor": "Selecteer een aparte sensor om weer te geven als de huidige temperatuur van de groep. Handig als apparaatsensoren onnauwkeurig zijn.",
-          "expose_member_entities": "Maakt een attribuut aan met een lijst van alle entiteit-ID's van leden.",
-          "expose_attribute_sensors": "Maakt extra sensorentiteiten aan voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
-          "debounce_delay": "Wacht even na het bedienen van de knoppen voordat commando's worden verzonden. Voorkomt overbelasting van uw netwerk.",
-          "retry_attempts": "Probeert commando's automatisch opnieuw als een apparaat ze mist.",
-          "retry_delay": "De wachttijd tussen herhaalpogingen.",
-          "sync_mode": "Regelt hoe de groep interageert met handmatige wijzigingen die direct op fysieke apparaten worden gemaakt.",
-          "sync_retry": "Hoe vaak de groep probeert zijn status af te dwingen bij een afwijkend lid voordat de wijziging wordt geaccepteerd.",
-          "sync_delay": "De wachttijd (in seconden) na een synchronisatiecommando om ledenapparaten de wijziging te laten verwerken vóór verificatie."
-        }
-      }
-    },
-    "error": {
-      "no_entities": "U moet ten minste één klimaatapparaat selecteren.",
-      "invalid_entity": "Eén of meer geselecteerde apparaten zijn geen geldige klimaatentiteiten.",
-      "duplicate_name": "Er bestaat al een klimaatgroep met deze naam.",
-      "unavailable_entities": "Sommige geselecteerde apparaten zijn niet beschikbaar. De groep wordt gemaakt maar werkt mogelijk niet volledig totdat ze gehoorzamen."
-    },
     "abort": {
       "already_configured": "Deze groep is al geconfigureerd.",
-      "single_instance_allowed": "Slechts één instantie is toegestaan.",
-      "no_changes": "Er zijn geen wijzigingen aangebracht."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Klimaatgroep Configureren",
-        "description": "Verfijn het gedrag van uw groep. Wijzigingen worden onmiddellijk van kracht.",
-        "data": {
-          "entities": "Klimaatapparaten",
-          "current_avg_option": "Huidige Waarden (Weergave)",
-          "target_avg_option": "Doelwaarden (Bediening)",
-          "round_option": "Precisiebediening (Afronding)",
-          "hvac_mode_strategy": "HVAC-modusstrategie",
-          "feature_strategy": "Functiecompatibiliteit",
-          "use_temp_sensor": "Gebruik Externe Sensor",
-          "temp_sensor": "Externe Temperatuursensor",
-          "expose_member_entities": "Ledenlijst Tonen",
-          "expose_attribute_sensors": "Slimme Sensoren Tonen",
-          "debounce_delay": "Debouncevertraging (seconden)",
-          "retry_attempts": "Herhaalpogingen",
-          "retry_delay": "Herhaalvertraging (seconden)",
-          "sync_mode": "Synchronisatiemodus",
-          "sync_retry": "Sync Herhaalpogingen",
-          "sync_delay": "Syncvertraging (seconden)"
-        },
-        "data_description": {
-          "entities": "Apparaten toevoegen of verwijderen. Verwijderen van apparaten stopt hun bediening door de groep.",
-          "current_avg_option": "Hoe de groep sensorwaarden (Temperatuur/Vochtigheid) van zijn leden samenvat.",
-          "target_avg_option": "Hoe de groep het doelinstelpunt berekent om naar zijn leden te sturen.",
-          "round_option": "Voorkom het verzenden van waarden met overmatige precisie naar apparaten die strikte stappen verwachten.",
-          "hvac_mode_strategy": "Bepaalt hoe de groep zijn algehele status beslist (bijv. wanneer sommige apparaten uit staan).",
-          "feature_strategy": "Hoe om te gaan met apparaten met verschillende mogelijkheden (bijv. één ondersteunt 'Alleen Ventilator', een andere niet).",
-          "use_temp_sensor": "Inschakelen om een aparte sensor te gebruiken voor de huidige temperatuur van de groep.",
-          "temp_sensor": "Selecteer de te gebruiken externe sensor.",
-          "expose_member_entities": "Maakt een attribuut aan met een lijst van alle entiteit-ID's van leden.",
-          "expose_attribute_sensors": "Maakt extra sensorentiteiten aan voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
-          "debounce_delay": "Wacht even na het bedienen van de knoppen voordat commando's worden verzonden. Voorkomt overbelasting van uw netwerk.",
-          "retry_attempts": "Probeert commando's automatisch opnieuw als een apparaat ze mist.",
-          "retry_delay": "De wachttijd tussen herhaalpogingen.",
-          "sync_mode": "Regelt hoe de groep interageert met handmatige wijzigingen die direct op fysieke apparaten worden gemaakt.",
-          "sync_retry": "Hoe vaak de groep probeert zijn status af te dwingen bij een afwijkend lid voordat de wijziging wordt geaccepteerd.",
-          "sync_delay": "De wachttijd (in seconden) na een synchronisatiecommando om ledenapparaten de wijziging te laten verwerken vóór verificatie."
-        }
-      }
+      "no_changes": "Er zijn geen wijzigingen aangebracht.",
+      "single_instance_allowed": "Slechts één instantie is toegestaan."
     },
     "error": {
-      "no_entities": "Ten minste één klimaatapparaat moet in de groep blijven.",
-      "invalid_entity": "Ongeldig apparaat geselecteerd.",
-      "configuration_error": "Kan configuratie niet bijwerken."
+      "duplicate_name": "Er bestaat al een klimaatgroep met deze naam.",
+      "invalid_entity": "Eén of meer geselecteerde apparaten zijn geen geldige klimaatentiteiten.",
+      "no_entities": "U moet ten minste één klimaatapparaat selecteren.",
+      "unavailable_entities": "Sommige geselecteerde apparaten zijn niet beschikbaar. De groep wordt gemaakt maar werkt mogelijk niet volledig totdat ze gehoorzamen."
     },
-    "abort": {
-      "no_changes": "Geen wijzigingen gedetecteerd."
+    "step": {
+      "user": {
+        "data": {
+          "entities": "Klimaatapparaten",
+          "name": "Groepsnaam"
+        },
+        "data_description": {
+          "entities": "Selecteer de klimaatapparaten (thermostaten, airco's) om in deze groep op te nemen.",
+          "name": "Een vriendelijke naam voor uw groep (bijv. 'Woonkamer' of 'Hele Huis')."
+        },
+        "description": "Maak een krachtige 'Virtuele Controller' voor uw klimaatapparaten. Deze groep verzamelt metingen en synchroniseert instellingen over alle leden, werkend als één slimme eenheid.",
+        "title": "Klimaatgroep Assistent"
+      }
     }
   },
-  "selector": {
-    "current_avg_option": {
-      "options": {
-        "mean": "Gemiddelde",
-        "median": "Mediaan (Negeer Uitschieters)",
-        "min": "Minimum (Laagste)",
-        "max": "Maximum (Hoogste)"
-      }
+  "device_automation": {
+    "action_type": {
+      "set_hvac_mode": "Stel HVAC-modus in",
+      "set_temperature": "Stel temperatuur in",
+      "turn_off": "Uitschakelen",
+      "turn_on": "Inschakelen"
     },
-    "target_avg_option": {
-      "options": {
-        "mean": "Gemiddelde",
-        "median": "Mediaan (Middelste Waarde)",
-        "min": "Minimum (Laagste)",
-        "max": "Maximum (Hoogste)"
-      }
+    "condition_type": {
+      "is_group_available": "Groep is beschikbaar",
+      "is_hvac_mode": "HVAC-modus is",
+      "is_temperature_above": "Temperatuur is boven",
+      "is_temperature_below": "Temperatuur is onder"
     },
-    "round_option": {
-      "options": {
-        "none": "Geen Afronding (Exact)",
-        "half": "Halve Graad (0,5°)",
-        "integer": "Hele Getallen (1°)"
-      }
-    },
-    "sync_mode": {
-      "options": {
-        "standard": "Standaard (Eenrichtings)",
-        "mirror": "Mirror (Magic Sync - Tweerichtings)",
-        "lock": "Lock (De Baas - Groep Afdwingen)"
-      }
-    },
-    "hvac_mode_strategy": {
-      "options": {
-        "normal": "Normaal (Democratisch)",
-        "off_priority": "Uit Prioriteit (Hoofdschakelaar)",
-        "auto": "Auto (Slim)"
-      }
-    },
-    "feature_strategy": {
-      "options": {
-        "intersection": "Doorsnede (Veilige Modus - Gemeenschappelijke Functies)",
-        "union": "Vereniging (Geavanceerde Gebruiker - Alle Functies)"
-      }
+    "trigger_type": {
+      "current_temperature_changed": "Huidige temperatuur gewijzigd",
+      "group_turned_off": "Groep uitgeschakeld",
+      "group_turned_on": "Groep ingeschakeld",
+      "hvac_mode_changed": "HVAC-modus gewijzigd",
+      "temperature_target_changed": "Doeltemperatuur gewijzigd"
     }
   },
   "entity": {
@@ -157,78 +53,250 @@
         "name": "Klimaatgroep",
         "state_attributes": {
           "last_active_hvac_mode": {
-            "name": "Laatst Actieve Modus",
-            "description": "De laatst gebruikte modus (Verwarmen/Koelen) voor uitschakelen."
+            "description": "De laatst gebruikte modus (Verwarmen/Koelen) voor uitschakelen.",
+            "name": "Laatst Actieve Modus"
           },
           "target_hvac_mode": {
-            "name": "Doel HVAC-modus",
-            "description": "De modus die de groep probeert in te stellen op alle leden."
+            "description": "De modus die de groep probeert in te stellen op alle leden.",
+            "name": "Doel HVAC-modus"
           }
         }
       }
     }
   },
-  "services": {
-    "set_temperature": {
-      "name": "Temperatuur Instellen",
-      "description": "Stel de doeltemperatuur in voor de hele groep.",
-      "fields": {
-        "entity_id": {
-          "name": "Klimaatgroep",
-          "description": "De te bedienen groep."
+  "issues": {
+    "conflicting_features": {
+      "description": "Groep '{group_name}' heeft leden met verschillende functies. Functionaliteit kan beperkt zijn tot wat iedereen ondersteunt.\n\nConflicten: {conflicting_entities}",
+      "title": "Functieconflicten"
+    },
+    "member_unavailable": {
+      "description": "Eén of meer apparaten in '{group_name}' zijn offline. De groep blijft werken met wat hij heeft.\n\nNiet beschikbaar: {unavailable_entities}",
+      "title": "Lidapparaat Niet Beschikbaar"
+    },
+    "no_members_available": {
+      "description": "Groep '{group_name}' heeft geen actieve leden en is effectief offline.\n\nControleer: {member_entities}",
+      "title": "Geen Leden Beschikbaar"
+    }
+  },
+  "options": {
+    "abort": {
+      "no_changes": "Geen wijzigingen gedetecteerd."
+    },
+    "error": {
+      "configuration_error": "Kan configuratie niet bijwerken.",
+      "invalid_entity": "Ongeldig apparaat geselecteerd.",
+      "no_entities": "Ten minste één klimaatapparaat moet in de groep blijven."
+    },
+    "step": {
+      "humidity": {
+        "data": {
+          "humidity_current_avg_option": "Huidige Luchtvochtigheid (Weergave)",
+          "humidity_sensors": "Externe Vochtigheidssensoren",
+          "humidity_target_avg_option": "Doel Luchtvochtigheid (Regeling)",
+          "humidity_target_round_option": "Precisie Doel Luchtvochtigheid",
+          "humidity_update_targets": "Schrijf Externe Luchtvochtigheid naar Entiteiten"
         },
-        "temperature": {
-          "name": "Doeltemperatuur",
-          "description": "De gewenste temperatuur."
+        "data_description": {
+          "humidity_current_avg_option": "Hoe de groep sensorwaarden van zijn leden samenvat.",
+          "humidity_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de luchtvochtigheid van de groep.",
+          "humidity_target_avg_option": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
+          "humidity_target_round_option": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
+          "humidity_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten. Handig voor kalibratie van luchtontvochtigers."
         },
-        "target_temp_high": {
-          "name": "Doel Hoog",
-          "description": "Bovengrens voor verwarmen/koelen modus."
+        "description": "Configureer aggregatie van luchtvochtigheid en externe sensoren. Merk op dat veel thermostaten alleen luchtvochtigheid rapporteren en geen regeling toestaan.",
+        "title": "Luchtvochtigheidsinstellingen"
+      },
+      "init": {
+        "description": "Verfijn het gedrag van uw groep. Wijzigingen worden onmiddellijk van kracht.",
+        "menu_options": {
+          "humidity": "Luchtvochtigheid",
+          "members": "Leden & Modi",
+          "other": "Andere Instellingen",
+          "sync": "Sync Modus",
+          "temperature": "Temperatuur",
+          "timings": "Timings"
         },
-        "target_temp_low": {
-          "name": "Doel Laag",
-          "description": "Ondergrens voor verwarmen/koelen modus."
+        "title": "Klimaatgroep Configureren"
+      },
+      "members": {
+        "data": {
+          "entities": "Klimaatapparaten",
+          "feature_strategy": "Functiecompatibiliteit",
+          "hvac_mode_strategy": "HVAC Modus Strategie"
         },
-        "hvac_mode": {
-          "name": "HVAC-modus",
-          "description": "Optioneel de modus wijzigen."
-        }
+        "data_description": {
+          "entities": "Apparaten toevoegen of verwijderen. Verwijderen stopt de besturing door de groep.",
+          "feature_strategy": "Bepaalt welke functies (bijv. preset modi, ventilatormodi) beschikbaar zijn in de groep wanneer leden verschillende mogelijkheden hebben.",
+          "hvac_mode_strategy": "Strategie voor het berekenen van de groepsstatus vanuit zijn leden (bijv. als één koelt en een ander uit staat)."
+        },
+        "description": "Selecteer uw apparaten en kies hoe de groep hun statussen en functies combineert. 'Strategie' definieert het gedrag van de groep wanneer leden in verschillende modi staan.",
+        "title": "Leden & Modi"
+      },
+      "other": {
+        "data": {
+          "expose_member_entities": "Toon Ledenlijst",
+          "expose_smart_sensors": "Toon Slimme Sensoren"
+        },
+        "data_description": {
+          "expose_member_entities": "Maakt een attribuut met een lijst van alle lid-entiteit-ID's.",
+          "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en luchtvochtigheid van de groep (handig voor grafieken)."
+        },
+        "description": "Extra functies en entiteit-blootstelling.",
+        "title": "Andere Instellingen"
+      },
+      "sync": {
+        "data": {
+          "sync_attributes": "Gesynchroniseerde Attributen",
+          "sync_mode": "Synchronisatiemodus"
+        },
+        "data_description": {
+          "sync_attributes": "Hier geselecteerde attributen worden afgedwongen in Lock/Mirror modi. Niet geselecteerde attributen staan lokale controle toe (bijv. temperatuur synchroniseren maar gebruikers lokaal ventilatorsnelheid laten wijzigen).",
+          "sync_mode": "Standaard: Groep toont geaggregeerde status maar dwingt deze niet af. Mirror: Wijzigingen op één apparaat worden naar alle andere gekopieerd. Lock: Handmatige wijzigingen op apparaten worden teruggedraaid om overeen te komen met de groep."
+        },
+        "description": "Beheer wat er gebeurt wanneer iemand fysiek een apparaat aanpast. WAARSCHUWING: Om 'Klimaatoorlogen' te voorkomen, zorg ervoor dat een apparaat niet aan meerdere groepen met actieve Sync Modus is toegewezen.",
+        "title": "Sync Modus & Attributen"
+      },
+      "temperature": {
+        "data": {
+          "temp_current_avg_option": "Huidige Temperatuur (Weergave)",
+          "temp_sensors": "Externe Temperatuursensoren",
+          "temp_target_avg_option": "Doeltemperatuur (Regeling)",
+          "temp_target_round_option": "Precisie Doeltemperatuur",
+          "temp_update_targets": "Schrijf Externe Temp naar Entiteiten"
+        },
+        "data_description": {
+          "temp_current_avg_option": "Hoe de groep sensorwaarden van zijn leden samenvat.",
+          "temp_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de temperatuur van de groep.",
+          "temp_target_avg_option": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
+          "temp_target_round_option": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
+          "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur."
+        },
+        "description": "Configureer hoe de groep temperatuuraggregatie en instelpunten beheert. Externe sensoren overschrijven metingen van leden indien geselecteerd.",
+        "title": "Temperatuurinstellingen"
+      },
+      "timings": {
+        "data": {
+          "debounce_delay": "Debounce Vertraging (seconden)",
+          "retry_attempts": "Herhaalpogingen",
+          "retry_delay": "Herhaalvertraging (seconden)"
+        },
+        "data_description": {
+          "debounce_delay": "Wachttijd voor het verzenden van commando's. Hogere waarden voorkomen 'mitrailleurvuur' commando's bij het schuiven van regelaars, maar voelen trager aan.",
+          "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
+          "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren."
+        },
+        "description": "Configureer hoe de 'Virtuele Controller' met uw netwerk communiceert. Correcte timings voorkomen Zigbee/Z-Wave congestie en verhogen de betrouwbaarheid van commando's.",
+        "title": "Communicatie Timings"
       }
     }
   },
-  "issues": {
-    "member_unavailable": {
-      "title": "Lidapparaat Niet Beschikbaar",
-      "description": "Eén of meer apparaten in '{group_name}' zijn offline. De groep blijft werken met wat hij heeft.\n\nNiet beschikbaar: {unavailable_entities}"
+  "selector": {
+    "feature_strategy": {
+      "options": {
+        "intersection": "Doorsnede (Veilige Modus - Gemeenschappelijke Functies)",
+        "union": "Vereniging (Geavanceerde Gebruiker - Alle Functies)"
+      }
     },
-    "no_members_available": {
-      "title": "Geen Leden Beschikbaar",
-      "description": "Groep '{group_name}' heeft geen actieve leden en is effectief offline.\n\nControleer: {member_entities}"
+    "humidity_current_avg_option": {
+      "options": {
+        "max": "Maximum (Hoogste)",
+        "mean": "Gemiddelde",
+        "median": "Mediaan (Negeer Uitschieters)",
+        "min": "Minimum (Laagste)"
+      }
     },
-    "conflicting_features": {
-      "title": "Functieconflicten",
-      "description": "Groep '{group_name}' heeft leden met verschillende functies. Functionaliteit kan beperkt zijn tot wat iedereen ondersteunt.\n\nConflicten: {conflicting_entities}"
+    "humidity_target_avg_option": {
+      "options": {
+        "max": "Maximum (Hoogste)",
+        "mean": "Gemiddelde",
+        "median": "Mediaan (Middelste Waarde)",
+        "min": "Minimum (Laagste)"
+      }
+    },
+    "humidity_target_round_option": {
+      "options": {
+        "half": "Half Procent (0.5%)",
+        "integer": "Gehele Getallen (1%)",
+        "none": "Geen Afronding (Exact)"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "auto": "Auto (Slim)",
+        "normal": "Normaal (Democratisch)",
+        "off_priority": "Uit Prioriteit (Hoofdschakelaar)"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "fan_mode": "Ventilatormodus",
+        "humidity": "Luchtvochtigheid (Doel)",
+        "hvac_mode": "HVAC Modus",
+        "preset_mode": "Preset Modus",
+        "swing_horizontal_mode": "Horizontale Swing",
+        "swing_mode": "Verticale Swing",
+        "target_temp_high": "Doeltemperatuur Hoog (Bereik)",
+        "target_temp_low": "Doeltemperatuur Laag (Bereik)",
+        "temperature": "Temperatuur (Doel)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "lock": "Lock (De Baas - Groep Afdwingen)",
+        "mirror": "Mirror (Magic Sync - Tweerichtings)",
+        "standard": "Standaard (Eenrichtings)"
+      }
+    },
+    "temp_current_avg_option": {
+      "options": {
+        "max": "Maximum (Hoogste)",
+        "mean": "Gemiddelde",
+        "median": "Mediaan (Negeer Uitschieters)",
+        "min": "Minimum (Laagste)"
+      }
+    },
+    "temp_target_avg_option": {
+      "options": {
+        "max": "Maximum (Hoogste)",
+        "mean": "Gemiddelde",
+        "median": "Mediaan (Middelste Waarde)",
+        "min": "Minimum (Laagste)"
+      }
+    },
+    "temp_target_round_option": {
+      "options": {
+        "half": "Half Graad (0.5°)",
+        "integer": "Gehele Getallen (1°)",
+        "none": "Geen Afronding (Exact)"
+      }
     }
   },
-  "device_automation": {
-    "trigger_type": {
-      "hvac_mode_changed": "HVAC-modus gewijzigd",
-      "temperature_target_changed": "Doeltemperatuur gewijzigd",
-      "current_temperature_changed": "Huidige temperatuur gewijzigd",
-      "group_turned_on": "Groep ingeschakeld",
-      "group_turned_off": "Groep uitgeschakeld"
-    },
-    "condition_type": {
-      "is_hvac_mode": "HVAC-modus is",
-      "is_temperature_above": "Temperatuur is boven",
-      "is_temperature_below": "Temperatuur is onder",
-      "is_group_available": "Groep is beschikbaar"
-    },
-    "action_type": {
-      "set_hvac_mode": "Stel HVAC-modus in",
-      "set_temperature": "Stel temperatuur in",
-      "turn_on": "Inschakelen",
-      "turn_off": "Uitschakelen"
+  "services": {
+    "set_temperature": {
+      "description": "Stel de doeltemperatuur in voor de hele groep.",
+      "fields": {
+        "entity_id": {
+          "description": "De te bedienen groep.",
+          "name": "Klimaatgroep"
+        },
+        "hvac_mode": {
+          "description": "Optioneel de modus wijzigen.",
+          "name": "HVAC-modus"
+        },
+        "target_temp_high": {
+          "description": "Bovengrens voor verwarmen/koelen modus.",
+          "name": "Doel Hoog"
+        },
+        "target_temp_low": {
+          "description": "Ondergrens voor verwarmen/koelen modus.",
+          "name": "Doel Laag"
+        },
+        "temperature": {
+          "description": "De gewenste temperatuur.",
+          "name": "Doeltemperatuur"
+        }
+      },
+      "name": "Temperatuur Instellen"
     }
   }
 }

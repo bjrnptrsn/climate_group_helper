@@ -1,154 +1,50 @@
 {
   "config": {
-    "step": {
-      "user": {
-        "title": "Pomocnik Grupy Klimatycznej",
-        "description": "Utwórz potężny 'Wirtualny Kontroler' dla swoich urządzeń klimatycznych. Ta grupa będzie agregować odczyty i synchronizować ustawienia dla wszystkich członków, działając jak jedna inteligentna jednostka.",
-        "data": {
-          "name": "Nazwa Grupy",
-          "entities": "Urządzenia Klimatyczne",
-          "current_avg_option": "Aktualne Wartości (Wyświetlanie)",
-          "target_avg_option": "Wartości Docelowe (Sterowanie)",
-          "round_option": "Precyzja Sterowania (Zaokrąglanie)",
-          "hvac_mode_strategy": "Strategia Trybu HVAC",
-          "feature_strategy": "Kompatybilność Funkcji",
-          "temp_sensor": "Zewnętrzny Czujnik Temperatury",
-          "expose_member_entities": "Pokaż Listę Członków",
-          "expose_attribute_sensors": "Pokaż Inteligentne Czujniki",
-          "debounce_delay": "Opóźnienie Debounce (sekundy)",
-          "retry_attempts": "Liczba Ponownych Prób",
-          "retry_delay": "Opóźnienie Ponownej Próby (sekundy)",
-          "sync_mode": "Tryb Synchronizacji",
-          "sync_retry": "Próby Synchronizacji",
-          "sync_delay": "Opóźnienie Sync (sekundy)"
-        },
-        "data_description": {
-          "name": "Przyjazna nazwa dla twojej grupy (np. 'Salon' lub 'Cały Dom').",
-          "entities": "Wybierz urządzenia klimatyczne (termostaty, klimatyzatory) do włączenia do tej grupy.",
-          "current_avg_option": "Jak grupa podsumowuje odczyty czujników (Temperatura/Wilgotność) od swoich członków.",
-          "target_avg_option": "Jak grupa oblicza docelową nastawę do wysłania do swoich członków.",
-          "round_option": "Unikaj wysyłania wartości ze zbyt dużą precyzją do urządzeń, które oczekują ścisłych kroków.",
-          "hvac_mode_strategy": "Określa, jak grupa decyduje o swoim ogólnym stanie (np. gdy niektóre urządzenia są wyłączone).",
-          "feature_strategy": "Jak obsługiwać urządzenia o różnych możliwościach (np. jedno obsługuje 'Tylko Wentylator', inne nie).",
-          "temp_sensor": "Wybierz oddzielny czujnik, który będzie wyświetlany jako aktualna temperatura grupy. Przydatne, jeśli czujniki urządzenia są niedokładne.",
-          "expose_member_entities": "Tworzy atrybut wymieniający wszystkie identyfikatory encji członkowskich.",
-          "expose_attribute_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne dla wykresów).",
-          "debounce_delay": "Czeka chwilę po dotknięciu sterowania przed wysłaniem poleceń. Zapobiega zalewaniu sieci.",
-          "retry_attempts": "Automatycznie ponawia polecenia, jeśli urządzenie je pominie.",
-          "retry_delay": "Czas oczekiwania między ponownymi próbami.",
-          "sync_mode": "Kontroluje, jak grupa wchodzi w interakcje z ręcznymi zmianami dokonywanymi bezpośrednio na fizycznych urządzeniach.",
-          "sync_retry": "Ile razy grupa próbuje wymusić swój stan na odbiegającym członku przed zaakceptowaniem zmiany.",
-          "sync_delay": "Czas oczekiwania (w sekundach) po poleceniu synchronizacji, aby pozwolić urządzeniom członkowskim na przetworzenie zmiany przed weryfikacją."
-        }
-      }
-    },
-    "error": {
-      "no_entities": "Musisz wybrać co najmniej jedno urządzenie klimatyczne.",
-      "invalid_entity": "Jedno lub więcej wybranych urządzeń nie jest prawidłowymi encjami klimatycznymi.",
-      "duplicate_name": "Grupa klimatyczna o tej nazwie już istnieje.",
-      "unavailable_entities": "Niektóre wybrane urządzenia są niedostępne. Grupa zostanie utworzona, ale może nie działać w pełni, dopóki nie będą posłuszne."
-    },
     "abort": {
       "already_configured": "Ta grupa jest już skonfigurowana.",
-      "single_instance_allowed": "Dozwolona jest tylko jedna instancja.",
-      "no_changes": "Nie wprowadzono żadnych zmian."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Konfiguruj Grupę Klimatyczną",
-        "description": "Dostosuj zachowanie swojej grupy. Zmiany wchodzą w życie natychmiast.",
-        "data": {
-          "entities": "Urządzenia Klimatyczne",
-          "current_avg_option": "Aktualne Wartości (Wyświetlanie)",
-          "target_avg_option": "Wartości Docelowe (Sterowanie)",
-          "round_option": "Precyzja Sterowania (Zaokrąglanie)",
-          "hvac_mode_strategy": "Strategia Trybu HVAC",
-          "feature_strategy": "Kompatybilność Funkcji",
-          "use_temp_sensor": "Użyj Zewnętrznego Czujnika",
-          "temp_sensor": "Zewnętrzny Czujnik Temperatury",
-          "expose_member_entities": "Pokaż Listę Członków",
-          "expose_attribute_sensors": "Pokaż Inteligentne Czujniki",
-          "debounce_delay": "Opóźnienie Debounce (sekundy)",
-          "retry_attempts": "Liczba Ponownych Prób",
-          "retry_delay": "Opóźnienie Ponownej Próby (sekundy)",
-          "sync_mode": "Tryb Synchronizacji",
-          "sync_retry": "Próby Synchronizacji",
-          "sync_delay": "Opóźnienie Sync (sekundy)"
-        },
-        "data_description": {
-          "entities": "Dodaj lub usuń urządzenia. Usunięcie urządzeń powoduje, że przestają być sterowane przez grupę.",
-          "current_avg_option": "Jak grupa podsumowuje odczyty czujników (Temperatura/Wilgotność) od swoich członków.",
-          "target_avg_option": "Jak grupa oblicza docelową nastawę do wysłania do swoich członków.",
-          "round_option": "Unikaj wysyłania wartości ze zbyt dużą precyzją do urządzeń, które oczekują ścisłych kroków.",
-          "hvac_mode_strategy": "Określa, jak grupa decyduje o swoim ogólnym stanie (np. gdy niektóre urządzenia są wyłączone).",
-          "feature_strategy": "Jak obsługiwać urządzenia o różnych możliwościach (np. jedno obsługuje 'Tylko Wentylator', inne nie).",
-          "use_temp_sensor": "Włącz, aby używać oddzielnego czujnika dla aktualnej temperatury grupy.",
-          "temp_sensor": "Wybierz zewnętrzny czujnik do użycia.",
-          "expose_member_entities": "Tworzy atrybut wymieniający wszystkie identyfikatory encji członkowskich.",
-          "expose_attribute_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne dla wykresów).",
-          "debounce_delay": "Czeka chwilę po dotknięciu sterowania przed wysłaniem poleceń. Zapobiega zalewaniu sieci.",
-          "retry_attempts": "Automatycznie ponawia polecenia, jeśli urządzenie je pominie.",
-          "retry_delay": "Czas oczekiwania między ponownymi próbami.",
-          "sync_mode": "Kontroluje, jak grupa wchodzi w interakcje z ręcznymi zmianami dokonywanymi bezpośrednio na fizycznych urządzeniach.",
-          "sync_retry": "Ile razy grupa próbuje wymusić swój stan na odbiegającym członku przed zaakceptowaniem zmiany.",
-          "sync_delay": "Czas oczekiwania (w sekundach) po poleceniu synchronizacji, aby pozwolić urządzeniom członkowskim na przetworzenie zmiany przed weryfikacją."
-        }
-      }
+      "no_changes": "Nie wprowadzono żadnych zmian.",
+      "single_instance_allowed": "Dozwolona jest tylko jedna instancja."
     },
     "error": {
-      "no_entities": "W grupie musi pozostać co najmniej jedno urządzenie klimatyczne.",
-      "invalid_entity": "Wybrano nieprawidłowe urządzenie.",
-      "configuration_error": "Nie można zaktualizować konfiguracji."
+      "duplicate_name": "Grupa klimatyczna o tej nazwie już istnieje.",
+      "invalid_entity": "Jedno lub więcej wybranych urządzeń nie jest poprawną encją klimatyczną.",
+      "no_entities": "Musisz wybrać co najmniej jedno urządzenie klimatyczne.",
+      "unavailable_entities": "Niektóre wybrane urządzenia są niedostępne. Grupa zostanie utworzona, ale może nie działać w pełni, dopóki nie będą dostępne."
     },
-    "abort": {
-      "no_changes": "Nie wykryto zmian."
+    "step": {
+      "user": {
+        "data": {
+          "entities": "Urządzenia Klimatyczne",
+          "name": "Nazwa Grupy"
+        },
+        "data_description": {
+          "entities": "Wybierz urządzenia klimatyczne (termostaty, klimatyzatory), które mają należeć do tej grupy.",
+          "name": "Przyjazna nazwa dla Twojej grupy (np. 'Salon' lub 'Cały Dom')."
+        },
+        "description": "Utwórz potężny 'Wirtualny Kontroler' dla swoich urządzeń klimatycznych. Ta grupa będzie agregować odczyty i synchronizować ustawienia wszystkich członków, działając jako jedna inteligentna jednostka.",
+        "title": "Pomocnik Grupy Klimatycznej"
+      }
     }
   },
-  "selector": {
-    "current_avg_option": {
-      "options": {
-        "mean": "Średnia",
-        "median": "Mediana (Ignoruj Odstające)",
-        "min": "Minimum (Najniższa)",
-        "max": "Maksimum (Najwyższa)"
-      }
+  "device_automation": {
+    "action_type": {
+      "set_hvac_mode": "Ustaw tryb HVAC",
+      "set_temperature": "Ustaw temperaturę",
+      "turn_off": "Wyłącz",
+      "turn_on": "Włącz"
     },
-    "target_avg_option": {
-      "options": {
-        "mean": "Średnia",
-        "median": "Mediana (Wartość Środkowa)",
-        "min": "Minimum (Najniższa)",
-        "max": "Maksimum (Najwyższa)"
-      }
+    "condition_type": {
+      "is_group_available": "Grupa jest dostępna",
+      "is_hvac_mode": "Tryb HVAC to",
+      "is_temperature_above": "Temperatura jest powyżej",
+      "is_temperature_below": "Temperatura jest poniżej"
     },
-    "round_option": {
-      "options": {
-        "none": "Bez Zaokrąglania (Dokładne)",
-        "half": "Pół Stopnia (0.5°)",
-        "integer": "Liczby Całkowite (1°)"
-      }
-    },
-    "sync_mode": {
-      "options": {
-        "standard": "Standard (Jednokierunkowy)",
-        "mirror": "Mirror (Magic Sync - Dwukierunkowy)",
-        "lock": "Lock (Szef - Wymuś Grupę)"
-      }
-    },
-    "hvac_mode_strategy": {
-      "options": {
-        "normal": "Normalny (Demokratyczny)",
-        "off_priority": "Priorytet Wyłączenia (Główny Wyłącznik)",
-        "auto": "Auto (Inteligentny)"
-      }
-    },
-    "feature_strategy": {
-      "options": {
-        "intersection": "Przecięcie (Tryb Bezpieczny - Wspólne Funkcje)",
-        "union": "Suma (Zaawansowany Użytkownik - Wszystkie Funkcje)"
-      }
+    "trigger_type": {
+      "current_temperature_changed": "Zmieniono aktualną temperaturę",
+      "group_turned_off": "Grupa wyłączona",
+      "group_turned_on": "Grupa włączona",
+      "hvac_mode_changed": "Zmieniono tryb HVAC",
+      "temperature_target_changed": "Zmieniono docelową temperaturę"
     }
   },
   "entity": {
@@ -157,78 +53,250 @@
         "name": "Grupa Klimatyczna",
         "state_attributes": {
           "last_active_hvac_mode": {
-            "name": "Ostatni Aktywny Tryb",
-            "description": "Ostatnio używany tryb (Grzanie/Chłodzenie) przed wyłączeniem."
+            "description": "Ostatni używany tryb (Grzanie/Chłodzenie) przed wyłączeniem.",
+            "name": "Ostatni Aktywny Tryb"
           },
           "target_hvac_mode": {
-            "name": "Docelowy Tryb HVAC",
-            "description": "Tryb, który grupa próbuje ustawić na wszystkich członkach."
+            "description": "Tryb, który grupa próbuje ustawić na wszystkich członkach.",
+            "name": "Docelowy Tryb HVAC"
           }
         }
       }
     }
   },
-  "services": {
-    "set_temperature": {
-      "name": "Ustaw Temperaturę",
-      "description": "Ustaw docelową temperaturę dla całej grupy.",
-      "fields": {
-        "entity_id": {
-          "name": "Grupa Klimatyczna",
-          "description": "Grupa do sterowania."
+  "issues": {
+    "conflicting_features": {
+      "description": "Grupa '{group_name}' ma członków z różnymi funkcjami. Funkcjonalność może być ograniczona do tego, co obsługują wszyscy.\n\nKonflikty: {conflicting_entities}",
+      "title": "Konflikt Funkcji"
+    },
+    "member_unavailable": {
+      "description": "Jeden lub więcej urządzeń w '{group_name}' jest offline. Grupa będzie nadal działać z tym, co ma.\n\nNiedostępne: {unavailable_entities}",
+      "title": "Urządzenie Członkowskie Niedostępne"
+    },
+    "no_members_available": {
+      "description": "Grupa '{group_name}' nie ma aktywnych członków i jest faktycznie offline.\n\nSprawdź: {member_entities}",
+      "title": "Brak Dostępnych Członków"
+    }
+  },
+  "options": {
+    "abort": {
+      "no_changes": "Nie wykryto zmian."
+    },
+    "error": {
+      "configuration_error": "Nie można zaktualizować konfiguracji.",
+      "invalid_entity": "Wybrano nieprawidłowe urządzenie.",
+      "no_entities": "Co najmniej jedno urządzenie klimatyczne musi pozostać w grupie."
+    },
+    "step": {
+      "humidity": {
+        "data": {
+          "humidity_current_avg_option": "Obecna Wilgotność (Wyświetlanie)",
+          "humidity_sensors": "Zewnętrzne Czujniki Wilgotności",
+          "humidity_target_avg_option": "Docelowa Wilgotność (Sterowanie)",
+          "humidity_target_round_option": "Precyzja Docelowej Wilgotności",
+          "humidity_update_targets": "Zapisz Zewnętrzną Wilgotność do Encji"
         },
-        "temperature": {
-          "name": "Temperatura Docelowa",
-          "description": "Pożądana temperatura."
+        "data_description": {
+          "humidity_current_avg_option": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
+          "humidity_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla wilgotności grupy.",
+          "humidity_target_avg_option": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
+          "humidity_target_round_option": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
+          "humidity_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych. Przydatne do kalibracji osuszaczy."
         },
-        "target_temp_high": {
-          "name": "Cel Wysoki",
-          "description": "Górny limit dla trybu grzania/chłodzenia."
+        "description": "Skonfiguruj agregację wilgotności i czujniki zewnętrzne. Pamiętaj, że wiele termostatów tylko raportuje wilgotność i nie pozwala na sterowanie.",
+        "title": "Ustawienia Wilgotności"
+      },
+      "init": {
+        "description": "Dostosuj zachowanie swojej grupy. Zmiany wchodzą w życie natychmiast.",
+        "menu_options": {
+          "humidity": "Wilgotność",
+          "members": "Członkowie i Tryby",
+          "other": "Inne Ustawienia",
+          "sync": "Tryb Synchronizacji",
+          "temperature": "Temperatura",
+          "timings": "Czasy"
         },
-        "target_temp_low": {
-          "name": "Cel Niski",
-          "description": "Dolny limit dla trybu grzania/chłodzenia."
+        "title": "Konfiguruj Grupę Klimatyczną"
+      },
+      "members": {
+        "data": {
+          "entities": "Urządzenia Klimatyczne",
+          "feature_strategy": "Kompatybilność Funkcji",
+          "hvac_mode_strategy": "Strategia Trybu HVAC"
         },
-        "hvac_mode": {
-          "name": "Tryb HVAC",
-          "description": "Opcjonalnie zmień tryb."
-        }
+        "data_description": {
+          "entities": "Dodaj lub usuń urządzenia. Usunięcie urządzeń zatrzymuje ich sterowanie przez grupę.",
+          "feature_strategy": "Określa, które funkcje (np. tryby wstępne, tryby wentylatora) są dostępne w grupie, gdy członkowie mają różne możliwości.",
+          "hvac_mode_strategy": "Strategia obliczania stanu grupy na podstawie jej członków (np. jeśli jeden chłodzi, a inny jest wyłączony)."
+        },
+        "description": "Wybierz swoje urządzenia i sposób, w jaki grupa łączy ich stany i funkcje. 'Strategia' definiuje zachowanie grupy, gdy członkowie są w różnych trybach.",
+        "title": "Członkowie i Tryby"
+      },
+      "other": {
+        "data": {
+          "expose_member_entities": "Pokaż Listę Członków",
+          "expose_smart_sensors": "Pokaż Inteligentne Czujniki"
+        },
+        "data_description": {
+          "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
+          "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów)."
+        },
+        "description": "Dodatkowe funkcje i eksponowanie encji.",
+        "title": "Inne Ustawienia"
+      },
+      "sync": {
+        "data": {
+          "sync_attributes": "Synchronizowane Atrybuty",
+          "sync_mode": "Tryb Synchronizacji"
+        },
+        "data_description": {
+          "sync_attributes": "Wybrane tutaj atrybuty będą wymuszane w trybach Lock/Mirror. Niewybrane atrybuty pozwalają na sterowanie lokalne (np. synchronizuj temperaturę, ale pozwól użytkownikom zmieniać prędkość wentylatora lokalnie).",
+          "sync_mode": "Standard: Grupa pokazuje zagregowany stan, ale go nie wymusza. Mirror: Zmiany na jednym urządzeniu są kopiowane na wszystkie inne. Lock: Manualne zmiany na urządzeniach są cofane, aby pasowały do grupy."
+        },
+        "description": "Kontroluj, co się dzieje, gdy ktoś fizycznie reguluje urządzenie. OSTRZEŻENIE: Aby uniknąć 'Wojen Klimatycznych', upewnij się, że urządzenie nie jest przypisane do wielu grup z aktywnym Trybem Synchronizacji.",
+        "title": "Tryb Synchronizacji i Atrybuty"
+      },
+      "temperature": {
+        "data": {
+          "temp_current_avg_option": "Obecna Temperatura (Wyświetlanie)",
+          "temp_sensors": "Zewnętrzne Czujniki Temperatury",
+          "temp_target_avg_option": "Docelowa Temperatura (Sterowanie)",
+          "temp_target_round_option": "Precyzja Docelowej Temperatury",
+          "temp_update_targets": "Zapisz Zewnętrzną Temp do Encji"
+        },
+        "data_description": {
+          "temp_current_avg_option": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
+          "temp_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla temperatury grupy.",
+          "temp_target_avg_option": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
+          "temp_target_round_option": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
+          "temp_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych (np. offsety kalibracji TRV). Przydatne, aby termostaty znały rzeczywistą temperaturę w pomieszczeniu."
+        },
+        "description": "Skonfiguruj, jak grupa obsługuje agregację temperatury i punkty nastawy. Czujniki zewnętrzne nadpiszą odczyty członków, jeśli zostaną wybrane.",
+        "title": "Ustawienia Temperatury"
+      },
+      "timings": {
+        "data": {
+          "debounce_delay": "Opóźnienie Debounce (sekundy)",
+          "retry_attempts": "Próby Ponowienia",
+          "retry_delay": "Opóźnienie Ponowienia (sekundy)"
+        },
+        "data_description": {
+          "debounce_delay": "Czas oczekiwania przed wysłaniem poleceń. Wyższe wartości zapobiegają poleceniom typu 'karabin maszynowy' przy przesuwaniu suwaków, ale wydają się wolniejsze.",
+          "retry_attempts": "Ile razy ponownie wysłać polecenie, jeśli urządzenie nie odpowiada. Ustaw na 0, aby wyłączyć.",
+          "retry_delay": "Pauza między próbami. Danie urządzeniom chwili na odzyskanie sprawności może poprawić niezawodność."
+        },
+        "description": "Skonfiguruj, jak 'Wirtualny Kontroler' interakuje z Twoją siecią. Prawidłowe czasy zapobiegają zatorom Zigbee/Z-Wave i zwiększają niezawodność poleceń.",
+        "title": "Czasy Komunikacji"
       }
     }
   },
-  "issues": {
-    "member_unavailable": {
-      "title": "Urządzenie Członkowskie Niedostępne",
-      "description": "Jedno lub więcej urządzeń w '{group_name}' jest offline. Grupa będzie działać dalej z tym, co ma.\n\nNiedostępne: {unavailable_entities}"
+  "selector": {
+    "feature_strategy": {
+      "options": {
+        "intersection": "Część Wspólna (Tryb Bezpieczny - Wspólne Funkcje)",
+        "union": "Suma (Zaawansowany - Wszystkie Funkcje)"
+      }
     },
-    "no_members_available": {
-      "title": "Brak Dostępnych Członków",
-      "description": "Grupa '{group_name}' nie ma aktywnych członków i jest faktycznie offline.\n\nSprawdź: {member_entities}"
+    "humidity_current_avg_option": {
+      "options": {
+        "max": "Maksimum (Najwyższa)",
+        "mean": "Średnia",
+        "median": "Mediana (Ignoruj Odchylenia)",
+        "min": "Minimum (Najniższa)"
+      }
     },
-    "conflicting_features": {
-      "title": "Konflikty Funkcji",
-      "description": "Grupa '{group_name}' ma członków z różnymi funkcjami. Funkcjonalność może być ograniczona do tego, co wszyscy obsługują.\n\nKonflikty: {conflicting_entities}"
+    "humidity_target_avg_option": {
+      "options": {
+        "max": "Maksimum (Najwyższa)",
+        "mean": "Średnia",
+        "median": "Mediana (Wartość Środkowa)",
+        "min": "Minimum (Najniższa)"
+      }
+    },
+    "humidity_target_round_option": {
+      "options": {
+        "half": "Pół Procenta (0.5%)",
+        "integer": "Liczby Całkowite (1%)",
+        "none": "Bez Zaokrąglania (Dokładne)"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "auto": "Auto (Inteligentny)",
+        "normal": "Normalny (Demokratyczny)",
+        "off_priority": "Priorytet Wyłączenia (Główny Wyłącznik)"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "fan_mode": "Tryb Wentylatora",
+        "humidity": "Wilgotność (Cel)",
+        "hvac_mode": "Tryb HVAC",
+        "preset_mode": "Tryb Zaprogramowany",
+        "swing_horizontal_mode": "Ruch Poziomy",
+        "swing_mode": "Ruch Pionowy",
+        "target_temp_high": "Temperatura Docelowa Wysoka (Zakres)",
+        "target_temp_low": "Temperatura Docelowa Niska (Zakres)",
+        "temperature": "Temperatura (Cel)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "lock": "Lock (Szef - Wymuś Grupę)",
+        "mirror": "Mirror (Magic Sync - Dwujierunkowy)",
+        "standard": "Standard (Jednokierunkowy)"
+      }
+    },
+    "temp_current_avg_option": {
+      "options": {
+        "max": "Maksimum (Najwyższa)",
+        "mean": "Średnia",
+        "median": "Mediana (Ignoruj Odchylenia)",
+        "min": "Minimum (Najniższa)"
+      }
+    },
+    "temp_target_avg_option": {
+      "options": {
+        "max": "Maksimum (Najwyższa)",
+        "mean": "Średnia",
+        "median": "Mediana (Wartość Środkowa)",
+        "min": "Minimum (Najniższa)"
+      }
+    },
+    "temp_target_round_option": {
+      "options": {
+        "half": "Pół Stopnia (0.5°)",
+        "integer": "Liczby Całkowite (1°)",
+        "none": "Bez Zaokrąglania (Dokładne)"
+      }
     }
   },
-  "device_automation": {
-    "trigger_type": {
-      "hvac_mode_changed": "Zmieniono tryb HVAC",
-      "temperature_target_changed": "Zmieniono temperaturę docelową",
-      "current_temperature_changed": "Zmieniono aktualną temperaturę",
-      "group_turned_on": "Grupa włączona",
-      "group_turned_off": "Grupa wyłączona"
-    },
-    "condition_type": {
-      "is_hvac_mode": "Tryb HVAC to",
-      "is_temperature_above": "Temperatura jest powyżej",
-      "is_temperature_below": "Temperatura jest poniżej",
-      "is_group_available": "Grupa jest dostępna"
-    },
-    "action_type": {
-      "set_hvac_mode": "Ustaw tryb HVAC",
-      "set_temperature": "Ustaw temperaturę",
-      "turn_on": "Włącz",
-      "turn_off": "Wyłącz"
+  "services": {
+    "set_temperature": {
+      "description": "Ustaw temperaturę docelową dla całej grupy.",
+      "fields": {
+        "entity_id": {
+          "description": "Grupa do sterowania.",
+          "name": "Grupa Klimatyczna"
+        },
+        "hvac_mode": {
+          "description": "Opcjonalnie zmień tryb.",
+          "name": "Tryb HVAC"
+        },
+        "target_temp_high": {
+          "description": "Górny limit dla trybu ogrzewania/chłodzenia.",
+          "name": "Cel Wysoki"
+        },
+        "target_temp_low": {
+          "description": "Dolny limit dla trybu ogrzewania/chłodzenia.",
+          "name": "Cel Niski"
+        },
+        "temperature": {
+          "description": "Pożądana temperatura.",
+          "name": "Temperatura Docelowa"
+        }
+      },
+      "name": "Ustaw Temperaturę"
     }
   }
 }

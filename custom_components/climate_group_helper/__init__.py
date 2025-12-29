@@ -1,4 +1,5 @@
 """The Climate Group helper integration."""
+
 from __future__ import annotations
 
 import logging
@@ -8,14 +9,32 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .const import (
-    CONF_EXPOSE_ATTRIBUTE_SENSORS,
+    CONF_EXPOSE_SMART_SENSORS,
+    CONF_HUMIDITY_CURRENT_AVG_OPTION,
+    CONF_HUMIDITY_SENSORS,
+    CONF_HUMIDITY_TARGET_AVG_OPTION,
+    CONF_HUMIDITY_TARGET_ROUND_OPTION,
+    CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
-    CONF_TARGET_AVG_OPTION,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
+    CONF_TEMP_CURRENT_AVG_OPTION,
+    CONF_TEMP_SENSORS,
+    CONF_TEMP_TARGET_AVG_OPTION,
+    CONF_TEMP_TARGET_ROUND_OPTION,
+    CONF_TEMP_UPDATE_TARGETS,
     DOMAIN,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
+    AverageOption,
+    RoundOption,
 )
+
+# Legacy Configuration keys for migration
+_LEGACY_CONF_CURRENT_AVG_OPTION = "current_avg_option"
+_LEGACY_CONF_TARGET_AVG_OPTION = "target_avg_option"
+_LEGACY_CONF_ROUND_OPTION = "round_option"
+_LEGACY_CONF_TEMP_TARGETS = "temp_targets"
+_LEGACY_CONF_HUMIDITY_TARGETS = "humidity_targets"
 
 # Track which platforms have been set up per entry
 SETUP_PLATFORMS = "setup_platforms"
@@ -40,7 +59,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.CLIMATE)
 
     # Set up sensor platform if exposed
-    if entry.options.get(CONF_EXPOSE_ATTRIBUTE_SENSORS):
+    if entry.options.get(CONF_EXPOSE_SMART_SENSORS):
         await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
         hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SENSOR)
 
@@ -71,10 +90,12 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         # Migrate average_option to target_avg_option (since Release 0.7.0)
         if (old_avg_option := options_v2.pop("average_option", None)) is not None:
-            options_v2[CONF_TARGET_AVG_OPTION] = old_avg_option
+            options_v2[_LEGACY_CONF_TARGET_AVG_OPTION] = old_avg_option
 
         # Update the entry with empty data and all config in options
-        hass.config_entries.async_update_entry(entry, data={}, options=options_v2, version=2)
+        hass.config_entries.async_update_entry(
+            entry, data={}, options=options_v2, version=2
+        )
         _LOGGER.info("Successfully migrated config entry to version 2")
 
     if entry.version == 2:
@@ -102,6 +123,48 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         hass.config_entries.async_update_entry(entry, options=options_v3, version=3)
         _LOGGER.info("Successfully migrated config entry to version 3")
+
+    if entry.version == 3:
+        _LOGGER.info("Migrating config entry to version 4")
+        options_v4 = dict(entry.options)
+
+        # 1. Split global averaging and rounding options
+        current_avg = options_v4.pop(_LEGACY_CONF_CURRENT_AVG_OPTION, AverageOption.MEAN)
+        options_v4[CONF_TEMP_CURRENT_AVG_OPTION] = current_avg
+        options_v4[CONF_HUMIDITY_CURRENT_AVG_OPTION] = current_avg
+
+        target_avg = options_v4.pop(_LEGACY_CONF_TARGET_AVG_OPTION, AverageOption.MEAN)
+        options_v4[CONF_TEMP_TARGET_AVG_OPTION] = target_avg
+        options_v4[CONF_HUMIDITY_TARGET_AVG_OPTION] = target_avg
+
+        round_opt = options_v4.pop(_LEGACY_CONF_ROUND_OPTION, RoundOption.NONE)
+        options_v4[CONF_TEMP_TARGET_ROUND_OPTION] = round_opt
+        options_v4[CONF_HUMIDITY_TARGET_ROUND_OPTION] = round_opt
+
+        # 2. Rename target entities keys for clarity
+        if _LEGACY_CONF_TEMP_TARGETS in options_v4:
+            options_v4[CONF_TEMP_UPDATE_TARGETS] = options_v4.pop(_LEGACY_CONF_TEMP_TARGETS)
+        if _LEGACY_CONF_HUMIDITY_TARGETS in options_v4:
+            options_v4[CONF_HUMIDITY_UPDATE_TARGETS] = options_v4.pop(_LEGACY_CONF_HUMIDITY_TARGETS)
+
+        # 3. Temperature Sensor: Single String -> List
+        # Note: config_flow already uses EntitySelector with multiple=True, 
+        # but old entries might have a single string if they were created before multi-sensor support.
+        temp_sensors = options_v4.get(CONF_TEMP_SENSORS)
+        if isinstance(temp_sensors, str):
+            options_v4[CONF_TEMP_SENSORS] = [temp_sensors] if temp_sensors else []
+
+        # 4. Sensor Attribute Rename
+        if "expose_attribute_sensors" in options_v4:
+            options_v4[CONF_EXPOSE_SMART_SENSORS] = options_v4.pop("expose_attribute_sensors")
+
+        # 5. Remove deprecated keys
+        options_v4.pop("use_temp_sensor", None)
+        options_v4.pop("sync_retry", None)
+        options_v4.pop("sync_delay", None)
+
+        hass.config_entries.async_update_entry(entry, options=options_v4, version=4)
+        _LOGGER.info("Successfully migrated config entry to version 4")
 
     return True
 

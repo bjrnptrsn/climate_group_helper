@@ -1,17 +1,44 @@
 # Changelog
 
+## 0.13.0 - 2025-12-29
+
+### ✨ Configuration 2.0
+
+*   **Menu-Based Configuration**: The overwhelming list of settings is gone! The configuration is now organized into logical categories: **Members**, **Temperature**, **Humidity**, **Timings**, **Sync Mode** and **Other Settings**.
+
+### 🚀 Major Features
+
+*   **Calibration Sync (Write Targets)**: A powerful new feature! The group can now write the calculated external sensor value back to specific number entities (e.g. `number.thermostat_external_input`). This keeps your physical devices aware of the *real* room temperature measured by your external sensors.
+*   **Multi-Sensor Support**: Select multiple external sensors for both Temperature and Humidity. The group will calculate the average of all valid sensors to get the perfect room reading.
+*   **Selective Attribute Sync**: Power users can now choose *exactly* which attributes should be synchronized in Lock/Mirror modes. Want to sync Temperature but let users set the Fan Mode individually on each device? Now you can.
+*   **Split Temperature & Humidity Settings**: You can now configure averaging (Mean, Median, Min, Max) and rounding options separately for Temperature and Humidity.
+
+### ⚡ Improvements & Fixes
+
+*   **Sync-after-Debounce**: Synchronization actions are now strictly subject to the centralized `Debounce Delay`. The group intelligently waits for the system (and your fingers) to settle before enforcing states, preventing network flapping and Zigbee congestion.
+*   **Smarter Sync Logic**: The Sync Mode (Lock/Mirror) is now smarter about "User Intent". It prioritizes what you *wanted* to set (Target) over what the group calculated, solving conflicts where the group might have fought against your command.
+*   **Simplified Setup**: The initial setup screen now asks only for the Name and Members to get you started quickly. Advanced settings are available via "Configure" after creation.
+*   **Unified Timings**: The separate `Sync Retry` and `Sync Delay` settings have been removed. The synchronization logic now uses the robust global `Retry Attempts`, `Retry Delay` and `Debounce` settings, simplifying configuration.
+
+### ⚠️ Breaking Changes
+
+*   **Configuration Migration (v4)**: Your settings will be automatically migrated.
+    *   Global averaging/rounding settings are copied to both Temperature and Humidity options.
+    *   Legacy sync timing options are removed.
+    *   **Note:** Downgrading to previous versions is not supported without restoring a backup.
+
 ## 0.12.0 - 2025-12-11
 
 ### ✨ Features
 
 *   **External Control Detection**: Introduced the `external_controlled` attribute. This boolean attribute helps automations distinguish between two types of updates:
     *   `true`: The group was updated because a member device was physically changed (Mirror Mode propagation).
-    *   `false`: The group was controlled directly by the user (e.g., via Dashboard).
+    *   `false`: The group was controlled directly by the user (e.g. via Dashboard).
 *   **Integration Icons**: Added official integration icons, improving visual consistency within Home Assistant.
 
 ### 🔧 Fixes
 
-*   **Improved HomeKit Compatibility**: Enhanced HomeKit integration by implementing `RestoreEntity`. This ensures that `hvac_modes`, `fan_modes`, `preset_modes`, and `supported_features` are restored on startup, preventing issues where HomeKit accessories might incorrectly display limited functionalities (e.g., only "Off" mode).
+*   **Improved HomeKit Compatibility**: Enhanced HomeKit integration by implementing `RestoreEntity`. This ensures that `hvac_modes`, `fan_modes`, `preset_modes`, and `supported_features` are restored on startup, preventing issues where HomeKit accessories might incorrectly display limited functionalities (e.g. only "Off" mode).
 
 ### 🔀 Changes
 

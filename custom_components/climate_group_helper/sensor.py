@@ -5,7 +5,7 @@ from typing import Any
 
 import logging
 
-from homeassistant.components.climate import ATTR_CURRENT_HUMIDITY
+from homeassistant.components.climate import ATTR_CURRENT_HUMIDITY, ATTR_CURRENT_TEMPERATURE
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE
@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.event import async_track_state_change_event
 
-from .const import ATTR_AVERAGED_CURRENT_TEMPERATURE, DOMAIN
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ async def async_setup_entry(
         new_sensors = []
 
         # Add temperature sensor
-        if ("temperature" not in added_sensors and state.attributes.get(ATTR_AVERAGED_CURRENT_TEMPERATURE) is not None):
+        if ("temperature" not in added_sensors and state.attributes.get(ATTR_CURRENT_TEMPERATURE) is not None):
             new_sensors.append(ClimateGroupTemperatureSensor(hass, config_entry, climate_group_entity_id))
             added_sensors.add("temperature")
             _LOGGER.debug("Adding temperature sensor for %s", config_entry.title)
@@ -142,7 +142,7 @@ class ClimateGroupTemperatureSensor(ClimateGroupBaseSensor):
         if not self._climate_group_state:
             return None
         
-        value = self._climate_group_state.attributes.get("averaged_current_temperature")
+        value = self._climate_group_state.attributes.get(ATTR_CURRENT_TEMPERATURE)
         
         if value is not None and not isinstance(value, (int, float)):
             _LOGGER.debug("Invalid temperature value for %s: %s", self._attr_name, value)
@@ -176,7 +176,7 @@ class ClimateGroupHumiditySensor(ClimateGroupBaseSensor):
         if not self._climate_group_state:
             return None
         
-        value = self._climate_group_state.attributes.get("current_humidity")
+        value = self._climate_group_state.attributes.get(ATTR_CURRENT_HUMIDITY)
         
         if value is not None and not isinstance(value, (int, float)):
             _LOGGER.debug("Invalid humidity value for %s: %s", self._attr_name, value)

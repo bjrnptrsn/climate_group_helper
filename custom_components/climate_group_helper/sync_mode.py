@@ -1,4 +1,5 @@
 """Sync mode logic for the climate group."""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,7 +9,8 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 from homeassistant.core import Context, State
 
 from .const import (
-    SYNC_MODE_WATCHED_ATTRIBUTES,
+    CONF_SYNC_ATTRIBUTES,
+    SYNCABLE_ATTRIBUTES,
     SyncMode,
 )
 
@@ -38,6 +40,9 @@ class SyncModeHandler:
         """Initialize the sync mode handler."""
         self._group = group
         self._sync_mode = sync_mode
+        # Load enabled attributes (default to ALL for backward compatibility)
+        self._enabled_sync_attributes = self._group._config.get(CONF_SYNC_ATTRIBUTES, SYNCABLE_ATTRIBUTES)
+
         self._snapshot_attrs: dict[str, Any] = {}
         self._snapshot_states: list[State] | None = None
         self._active_tasks: set[asyncio.Task] = set()
@@ -61,19 +66,19 @@ class SyncModeHandler:
         3. Active syncing: Preserve snapshot (the "Truth")
         4. External change: Create/update snapshot
         """
-        
+
         if self._sync_mode == SyncMode.STANDARD:
             return
-        
+
         if self._is_internal_change():
             _LOGGER.debug("Internal change detected. Clearing snapshot.")
             self._cancel_active_tasks()
             self._clear_snapshot()
             return
-        
+
         if self.is_syncing:
             return
-        
+
         self._make_snapshot()
 
     def handle_sync_mode_changes(self):
@@ -96,82 +101,63 @@ class SyncModeHandler:
             or self._group._states is None
         ):
             return
-        
+
         if self.is_syncing:
             return
-        
+
         pending_calls = self._get_service_calls()
-        
+
         if not pending_calls:
             self._clear_snapshot()
             return
 
         _LOGGER.debug("SyncModeHandler for group '%s': Starting enforcement loop.", self._group.entity_id)
         task = self._group.hass.async_create_background_task(
-            self._enforce_group_state(),
-            name="climate_group_sync_enforcement"
+            self._enforce_group_state(), name="climate_group_sync_enforcement"
         )
         self._active_tasks.add(task)
         task.add_done_callback(self._active_tasks.discard)
 
     async def _enforce_group_state(self):
-        """Enforce the group state onto deviating members with retries.
+        """Enforce the group state onto deviating members.
 
-        This background task runs a loop to correct member states that do not
-        match the snapshot.
+        This background task corrects member states that do not match the snapshot.
 
-        Logic:
-        1. Loop for `sync_retry_attempts`:
-           a. Check for deviations. If none, the sync is successful.
-           b. Execute correction service calls for all deviating members.
-              - This uses the "Context Trick": Each call gets a new `Context()`
-                to distinguish these system-actions from user-actions, which
-                is the core mechanism for sync stability.
-           c. Wait for `sync_mode_delay` to allow devices to update.
-        2. Capitulation: If deviations persist after all attempts, clear the
-           snapshot to prevent infinite loops and accept the new state.
+        Crucially, it passes a NEW System Context to 'call_debounced'. This:
+        1. Ensures the correction is treated as a Sync Action (Internal)
+        2. Allows the Debouncer to coalesce rapid corrections without overwriting
+           the User Action context.
         """
-        
-        max_attempts = self._group._sync_retry_attempts + 1
-        
-        for attempt in range(max_attempts):
-            pending_calls = self._get_service_calls()
-            
-            if not pending_calls:
-                _LOGGER.debug("SyncModeHandler: All members in sync. Enforcement complete.")
-                return
+        pending_calls = self._get_service_calls()
 
-            _LOGGER.debug("SyncModeHandler: Enforcement Attempt %d/%d. Calls pending: %s", attempt + 1, max_attempts, len(pending_calls))
+        if not pending_calls:
+            _LOGGER.debug("SyncModeHandler: All members in sync. Enforcement complete.")
+            return
 
-            # Create a task for each correction and run them all together.
-            tasks = []
-            for service_name, kwargs in pending_calls:
-                exec_func = getattr(self._group._service_call_handler, f"execute_{service_name}")
-                
-                tasks.append(
-                    self._group._service_call_handler.execute_with_retry(
-                        exec_func,
-                        service_name,
-                        context=Context(),
-                        **kwargs
-                    )
+        _LOGGER.debug("SyncModeHandler: Enforcement started. Calls to dispatch: %s", len(pending_calls))
+
+        # Create a task for each correction and run them all together.
+        tasks = []
+        for service_name, kwargs in pending_calls:
+            exec_func = getattr(self._group._service_call_handler, f"execute_{service_name}")
+
+            # Dispatch via call_debounced using a FRESH System Context.
+            # This triggers the standard retry/debounce logic of the group.
+            tasks.append(
+                self._group._service_call_handler.call_debounced(
+                    service_name,
+                    exec_func,
+                    context=Context(),  # <--- CRITICAL: System Context
+                    **kwargs,
                 )
-            if tasks:
-                await asyncio.gather(*tasks)
+            )
 
-            # Wait for devices to process
-            if (delay := self._group._sync_mode_delay) > 0:
-                _LOGGER.debug("SyncModeHandler: Waiting %ss for devices to settle...", delay)
-                await asyncio.sleep(delay)
+        if tasks:
+            await asyncio.gather(*tasks)
 
-            # Verify states
-            if not self._group._get_valid_member_states():
-                _LOGGER.debug("Failed to refresh member states. Aborting enforcement.")
-                return
-
-        # Capitulation after max attempts
-        _LOGGER.debug("Failed to enforce state after %d attempts. Accepting new reality.", max_attempts)
-        self._clear_snapshot()
+        # We do NOT clear the snapshot here. The snapshot remains valid until
+        # all members report the correct state (handled in handle_sync_mode_changes)
+        # or an Internal Change clears it.
 
     def _get_service_calls(self) -> list[ServiceCall]:
         """Determine necessary service calls by comparing current states to the snapshot.
@@ -194,10 +180,10 @@ class SyncModeHandler:
             # Determine changed attributes
             if last_state is None:
                 # If previous state is unknown, assume everything might have changed
-                changed_keys = list(SYNC_MODE_WATCHED_ATTRIBUTES.keys())
+                changed_keys = SYNCABLE_ATTRIBUTES
             else:
                 changed_keys = [
-                    key for key in SYNC_MODE_WATCHED_ATTRIBUTES
+                    key for key in SYNCABLE_ATTRIBUTES
                     if self._get_attr_value(last_state, key) != self._get_attr_value(state, key)
                 ]
 
@@ -212,6 +198,11 @@ class SyncModeHandler:
             service_calls = {}
 
             for key in changed_keys:
+                # CHECK: Is this attribute enabled for sync?
+                if key not in self._enabled_sync_attributes:
+                    _LOGGER.debug("SyncModeHandler: Ignoring change for attribute '%s' (not in enabled sync attributes).", key)
+                    continue
+
                 if self._sync_mode == SyncMode.LOCK:
                     target_value = self._snapshot_attrs.get(key)
                 elif self._sync_mode == SyncMode.MIRROR:
@@ -255,10 +246,7 @@ class SyncModeHandler:
 
     def _make_snapshot(self):
         """Create snapshot of current group state."""
-        self._snapshot_attrs = {
-            key: self._get_group_value(key)
-            for key in SYNC_MODE_WATCHED_ATTRIBUTES
-        }
+        self._snapshot_attrs = {key: self._get_group_value(key) for key in SYNCABLE_ATTRIBUTES}
         group_states = self._group._states or []
         self._snapshot_states = [State(s.entity_id, s.state, s.attributes.copy()) for s in group_states]
         _LOGGER.debug("SyncModeHandler: Snapshot created for '%s'.", self._group.entity_id)
@@ -274,11 +262,21 @@ class SyncModeHandler:
         """Get current value of watched attribute from group."""
         if key == "temperature":
             return self._group._attr_target_temperature
+        if key == "hvac_mode":
+            # Use target HVAC mode for sync, not the strategy-calculated mode
+            # Fallback to calculated mode if no explicit target was set
+            return self._group._target_hvac_mode or self._group._attr_hvac_mode
+        if key == "humidity":
+            return self._group._attr_target_humidity
+        if key == "target_temp_high":
+            return self._group._attr_target_temperature_high
+        if key == "target_temp_low":
+            return self._group._attr_target_temperature_low
+
         return getattr(self._group, f"_attr_{key}", None)
 
     def _get_attr_value(self, state: State, key: str) -> Any:
         """Get value of watched attribute from member state."""
-        attribute = SYNC_MODE_WATCHED_ATTRIBUTES[key]
-        if attribute is None:
+        if key == "hvac_mode":
             return state.state
-        return state.attributes.get(attribute)
+        return state.attributes.get(key)

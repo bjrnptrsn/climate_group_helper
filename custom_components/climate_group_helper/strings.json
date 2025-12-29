@@ -3,42 +3,14 @@
     "step": {
       "user": {
         "title": "Climate Group Helper",
-        "description": "Create a powerful 'Virtual Controller' for your climate devices. This group will aggregate readings and synchronize settings across all members, acting as a single smart unit.",
+        "description": "Create a virtual controller that synchronizes multiple heating/cooling units. This group acts as a single smart entity in your dashboard and automations, consolidating states and commands.",
         "data": {
           "name": "Group Name",
-          "entities": "Climate Devices",
-          "current_avg_option": "Current Values (Display)",
-          "target_avg_option": "Target Values (Control)",
-          "round_option": "Precision Control (Rounding)",
-          "hvac_mode_strategy": "HVAC Mode Strategy",
-          "feature_strategy": "Feature Compatibility",
-          "temp_sensor": "External Temperature Sensor",
-          "expose_member_entities": "Expose Member List",
-          "expose_attribute_sensors": "Expose Smart Sensors",
-          "debounce_delay": "Debounce Delay (seconds)",
-          "retry_attempts": "Retry Attempts",
-          "retry_delay": "Retry Delay (seconds)",
-          "sync_mode": "Synchronization Mode",
-          "sync_retry": "Sync Retry Attempts",
-          "sync_delay": "Sync Delay (seconds)"
+          "entities": "Climate Devices"
         },
         "data_description": {
           "name": "A friendly name for your group (e.g. 'Living Room' or 'Whole House').",
-          "entities": "Select the climate devices (thermostats, ACs) to include in this group.",
-          "current_avg_option": "How the group summarizes sensor readings (Temperature/Humidity) from its members.",
-          "target_avg_option": "How the group calculates the target setpoint to send to its members.",
-          "round_option": "Avoid sending values with excessive precision to devices that expect strict steps.",
-          "hvac_mode_strategy": "Determines how the group decides its overall state (e.g. when some devices are off).",
-          "feature_strategy": "How to handle devices with different capabilities (e.g. one supports 'Fan Only', another doesn't).",
-          "temp_sensor": "Select a separate sensor to be shown as the group's current temperature. Useful if device sensors are inaccurate.",
-          "expose_member_entities": "Creates an attribute listing all member entity IDs.",
-          "expose_attribute_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
-          "debounce_delay": "Waits a moment after you touch controls before sending commands. Prevents flooding your network.",
-          "retry_attempts": "Number of times to retry a command if it fails to execute.",
-          "retry_delay": "The time to wait between retry attempts.",
-          "sync_mode": "Control how the group interacts with manual changes made directly on physical devices.",
-          "sync_retry": "How many times the group attempts to enforce its state on a deviating member before accepting the change.",
-          "sync_delay": "The wait time (in seconds) after a sync command to let member devices process the change before verification."
+          "entities": "Select the climate devices (thermostats, ACs) to include in this group."
         }
       }
     },
@@ -55,45 +27,106 @@
     }
   },
   "options": {
+    "flow_title": "Configure Group",
     "step": {
       "init": {
         "title": "Configure Climate Group",
-        "description": "Fine-tune your group's behavior. Changes take effect immediately.",
+        "description": "Manage members, sensor logic, timings, and synchronization behavior.",
+        "menu_options": {
+          "members": "Members & Modes",
+          "temperature": "Temperature",
+          "humidity": "Humidity",
+          "timings": "Timings",
+          "sync": "Sync Mode",
+          "other": "Other Settings"
+        }
+      },
+      "members": {
+        "title": "Members & Modes",
+        "description": "Select your devices and choose how the group combines their states and features. 'Strategy' defines the group's behavior when members are in different modes.",
         "data": {
           "entities": "Climate Devices",
-          "current_avg_option": "Current Values (Display)",
-          "target_avg_option": "Target Values (Control)",
-          "round_option": "Precision Control (Rounding)",
           "hvac_mode_strategy": "HVAC Mode Strategy",
-          "feature_strategy": "Feature Compatibility",
-          "use_temp_sensor": "Use External Sensor",
-          "temp_sensor": "External Temperature Sensor",
-          "expose_member_entities": "Expose Member List",
-          "expose_attribute_sensors": "Expose Smart Sensors",
-          "debounce_delay": "Debounce Delay (seconds)",
-          "retry_attempts": "Retry Attempts",
-          "retry_delay": "Retry Delay (seconds)",
-          "sync_mode": "Synchronization Mode",
-          "sync_retry": "Sync Retry Attempts",
-          "sync_delay": "Sync Delay (seconds)"
+          "feature_strategy": "Feature Compatibility"
         },
         "data_description": {
           "entities": "Add or remove devices. Removing devices stops them from being controlled by the group.",
-          "current_avg_option": "How the group summarizes sensor readings (Temperature/Humidity) from its members.",
-          "target_avg_option": "How the group calculates the target setpoint to send to its members.",
-          "round_option": "Avoid sending values with excessive precision to devices that expect strict steps.",
-          "hvac_mode_strategy": "Determines how the group decides its overall state (e.g. when some devices are off).",
-          "feature_strategy": "How to handle devices with different capabilities (e.g. one supports 'Fan Only', another doesn't).",
-          "use_temp_sensor": "Enable to use a separate sensor for the group's current temperature.",
-          "temp_sensor": "Select the external sensor to use.",
-          "expose_member_entities": "Creates an attribute listing all member entity IDs.",
-          "expose_attribute_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
-          "debounce_delay": "Waits a moment after you touch controls before sending commands. Prevents flooding your network.",
-          "retry_attempts": "Number of times to retry a command if it fails to execute.",
-          "retry_delay": "The time to wait between retry attempts.",
-          "sync_mode": "Control how the group interacts with manual changes made directly on physical devices.",
-          "sync_retry": "How many times the group attempts to enforce its state on a deviating member before accepting the change.",
-          "sync_delay": "The wait time (in seconds) after a sync command to let member devices process the change before verification."
+          "hvac_mode_strategy": "Strategy for calculating the group's state from its members (e.g. if one is cooling and another is off).",
+          "feature_strategy": "Determines which features (e.g. preset modes, fan modes) are available on the group when members have different capabilities."
+        }
+      },
+      "temperature": {
+        "title": "Temperature Settings",
+        "description": "Configure how the group handles temperature aggregation and setpoints. External sensors will override member readings if selected.",
+        "data": {
+          "temp_current_avg_option": "Current Temperature (Display)",
+          "temp_target_avg_option": "Target Temperature (Control)",
+          "temp_target_round_option": "Target Temperature Precision",
+          "temp_sensors": "External Temperature Sensors",
+          "temp_update_targets": "Write External Temp to Entities"
+        },
+        "data_description": {
+          "temp_current_avg_option": "How the group summarizes sensor readings from its members.",
+          "temp_target_avg_option": "How the group calculates the target setpoint to send to its members.",
+          "temp_target_round_option": "Only applies to values sent to devices, not to current/displayed values.",
+          "temp_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's temperature.",
+          "temp_update_targets": "Write the external sensor value to number entities (e.g. TRV calibration offsets). Useful for keeping thermostats aware of actual room temperature."
+        }
+      },
+      "humidity": {
+        "title": "Humidity Settings",
+        "description": "Configure humidity aggregation and external sensors. Note that many thermostats only report humidity and don't allow control.",
+        "data": {
+          "humidity_current_avg_option": "Current Humidity (Display)",
+          "humidity_target_avg_option": "Target Humidity (Control)",
+          "humidity_target_round_option": "Target Humidity Precision",
+          "humidity_sensors": "External Humidity Sensors",
+          "humidity_update_targets": "Write External Humidity to Entities"
+        },
+        "data_description": {
+          "humidity_current_avg_option": "How the group summarizes sensor readings from its members.",
+          "humidity_target_avg_option": "How the group calculates the target setpoint to send to its members.",
+          "humidity_target_round_option": "Only applies to values sent to devices, not to current/displayed values.",
+          "humidity_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's humidity.",
+          "humidity_update_targets": "Write the external sensor value to number entities. Useful for dehumidifier calibration."
+        }
+      },
+      "timings": {
+        "title": "Communication Timings",
+        "description": "Configure how the 'Virtual Controller' interacts with your network. Correct timings prevent Zigbee/Z-Wave congestion and increase command reliability.",
+        "data": {
+          "debounce_delay": "Debounce Delay (seconds)",
+          "retry_attempts": "Retry Attempts",
+          "retry_delay": "Retry Delay (seconds)"
+        },
+        "data_description": {
+          "debounce_delay": "Time to wait before sending commands. Higher values prevent 'machine gun' commands when sliding controls, but feel slower.",
+          "retry_attempts": "How many times to resend a command if a device doesn't respond. Set to 0 to disable.",
+          "retry_delay": "Pause between retry attempts. Giving devices a moment to recover can improve reliability."
+        }
+      },
+      "sync": {
+        "title": "Sync Mode & Attributes",
+        "description": "Control what happens when someone physically adjusts a device. WARNING: To avoid 'Climate Wars', ensure a device is not assigned to multiple groups with active Sync Mode.",
+        "data": {
+          "sync_mode": "Synchronization Mode",
+          "sync_attributes": "Synced Attributes"
+        },
+        "data_description": {
+          "sync_mode": "Standard: Group shows aggregated state but doesn't enforce it. Mirror: Changes on one device are copied to all others. Lock: Manual changes on devices are reverted to match the group.",
+          "sync_attributes": "Attributes selected here will be enforced in Lock/Mirror modes. Unselected attributes allow for local control (e.g. sync temperature but let users change fan speed locally)."
+        }
+      },
+      "other": {
+        "title": "Other Settings",
+        "description": "Additional features and entity exposure.",
+        "data": {
+          "expose_smart_sensors": "Expose Smart Sensors",
+          "expose_member_entities": "Expose Member List"
+        },
+        "data_description": {
+          "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
+          "expose_member_entities": "Creates an attribute listing all member entity IDs."
         }
       }
     },
@@ -107,7 +140,7 @@
     }
   },
   "selector": {
-    "current_avg_option": {
+    "temp_current_avg_option": {
       "options": {
         "mean": "Mean (Average)",
         "median": "Median (Ignore Outliers)",
@@ -115,7 +148,7 @@
         "max": "Maximum (Highest)"
       }
     },
-    "target_avg_option": {
+    "temp_target_avg_option": {
       "options": {
         "mean": "Mean (Average)",
         "median": "Median (Middle Value)",
@@ -123,31 +156,67 @@
         "max": "Maximum (Highest)"
       }
     },
-    "round_option": {
+    "temp_target_round_option": {
       "options": {
         "none": "No Rounding (Exact)",
         "half": "Half Degree (0.5°)",
         "integer": "Whole Numbers (1°)"
       }
     },
+    "humidity_current_avg_option": {
+      "options": {
+        "mean": "Mean (Average)",
+        "median": "Median (Ignore Outliers)",
+        "min": "Minimum (Lowest)",
+        "max": "Maximum (Highest)"
+      }
+    },
+    "humidity_target_avg_option": {
+      "options": {
+        "mean": "Mean (Average)",
+        "median": "Median (Middle Value)",
+        "min": "Minimum (Lowest)",
+        "max": "Maximum (Highest)"
+      }
+    },
+    "humidity_target_round_option": {
+      "options": {
+        "none": "No Rounding (Exact)",
+        "half": "Half Percent (0.5%)",
+        "integer": "Whole Numbers (1%)"
+      }
+    },
     "sync_mode": {
       "options": {
-        "standard": "Standard (One-way)",
-        "mirror": "Mirror (Magic Sync - Two-way)",
-        "lock": "Lock (The Boss - Enforce Group)"
+        "standard": "Standard – Aggregates state only, manual changes are allowed",
+        "mirror": "Mirror – Manual changes on one device update all members",
+        "lock": "Lock – Reverts manual changes to match the group state"
       }
     },
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normal (Democratic)",
-        "off_priority": "Off Priority (Master Switch)",
-        "auto": "Auto (Smart)"
+        "normal": "Normal – The group adopts the most common member mode",
+        "off_priority": "Off Priority – If any member is Off, the whole group is Off",
+        "auto": "Auto – Smart switching between Normal and Off Priority"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Intersection (Safe Mode - Common Features)",
-        "union": "Union (Power User - All Features)"
+        "intersection": "Intersection – Support features only if ALL members have them",
+        "union": "Union – Support all features present on ANY member"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "HVAC Mode",
+        "preset_mode": "Preset Mode",
+        "temperature": "Temperature (Target)",
+        "target_temp_high": "Target Temperature High (Range)",
+        "target_temp_low": "Target Temperature Low (Range)",
+        "fan_mode": "Fan Mode",
+        "swing_mode": "Vertical Swing",
+        "swing_horizontal_mode": "Horizontal Swing",
+        "humidity": "Humidity (Target)"
       }
     }
   },

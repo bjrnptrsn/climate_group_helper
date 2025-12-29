@@ -1,154 +1,50 @@
 {
   "config": {
-    "step": {
-      "user": {
-        "title": "空调组助手",
-        "description": "为您的空调设备创建一个强大的‘虚拟控制器’。该组将汇总读数并同步所有成员的设置，作为一个智能单元运行。",
-        "data": {
-          "name": "组名称",
-          "entities": "空调设备",
-          "current_avg_option": "当前值 (显示)",
-          "target_avg_option": "目标值 (控制)",
-          "round_option": "精度控制 (取整)",
-          "hvac_mode_strategy": "HVAC 模式策略",
-          "feature_strategy": "功能兼容性",
-          "temp_sensor": "外部温度传感器",
-          "expose_member_entities": "显示成员列表",
-          "expose_attribute_sensors": "显示智能传感器",
-          "debounce_delay": "防抖延迟 (秒)",
-          "retry_attempts": "重试次数",
-          "retry_delay": "重试延迟 (秒)",
-          "sync_mode": "同步模式",
-          "sync_retry": "同步重试次数",
-          "sync_delay": "同步延迟 (秒)"
-        },
-        "data_description": {
-          "name": "为您的组起一个友好的名称 (例如 '客厅' 或 '全屋')。",
-          "entities": "选择要包含在此组中的空调设备 (恒温器, 空调)。",
-          "current_avg_option": "组如何汇总成员的传感器读数 (温度/湿度)。",
-          "target_avg_option": "组如何计算发送给成员的目标设定值。",
-          "round_option": "避免向需要严格步长的设备发送精度过高的值。",
-          "hvac_mode_strategy": "确定组如何决定其整体状态 (例如，当某些设备关闭时)。",
-          "feature_strategy": "如何处理具有不同功能的设备 (例如，一个支持 '仅风扇'，另一个不支持)。",
-          "temp_sensor": "选择一个单独的传感器作为组的当前温度显示。如果设备传感器不准确，这很有用。",
-          "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
-          "expose_attribute_sensors": "为组的温度和湿度创建额外的传感器实体 (用于图表)。",
-          "debounce_delay": "触摸控制后等待片刻再发送命令。防止网络拥塞。",
-          "retry_attempts": "如果设备错过命令，自动重试。",
-          "retry_delay": "重试尝试之间的等待时间。",
-          "sync_mode": "控制组如何与直接在物理设备上进行的手动更改进行交互。",
-          "sync_retry": "组在接受更改之前尝试强制偏差成员恢复状态的次数。",
-          "sync_delay": "同步命令后的等待时间（秒），以便成员设备在验证前处理更改。"
-        }
-      }
-    },
-    "error": {
-      "no_entities": "您必须至少选择一个空调设备。",
-      "invalid_entity": "一个或多个选定的设备不是有效的空调实体。",
-      "duplicate_name": "已存在同名的空调组。",
-      "unavailable_entities": "某些选定的设备不可用。组将被创建，但在它们服从之前可能无法完全工作。"
-    },
     "abort": {
       "already_configured": "此组已配置。",
-      "single_instance_allowed": "仅允许一个实例。",
-      "no_changes": "未做任何更改。"
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "配置空调组",
-        "description": "微调组的行为。更改立即生效。",
-        "data": {
-          "entities": "空调设备",
-          "current_avg_option": "当前值 (显示)",
-          "target_avg_option": "目标值 (控制)",
-          "round_option": "精度控制 (取整)",
-          "hvac_mode_strategy": "HVAC 模式策略",
-          "feature_strategy": "功能兼容性",
-          "use_temp_sensor": "使用外部传感器",
-          "temp_sensor": "外部温度传感器",
-          "expose_member_entities": "显示成员列表",
-          "expose_attribute_sensors": "显示智能传感器",
-          "debounce_delay": "防抖延迟 (秒)",
-          "retry_attempts": "重试次数",
-          "retry_delay": "重试延迟 (秒)",
-          "sync_mode": "同步模式",
-          "sync_retry": "同步重试次数",
-          "sync_delay": "同步延迟 (秒)"
-        },
-        "data_description": {
-          "entities": "添加或删除设备。删除设备将停止组对其的控制。",
-          "current_avg_option": "组如何汇总成员的传感器读数 (温度/湿度)。",
-          "target_avg_option": "组如何计算发送给成员的目标设定值。",
-          "round_option": "避免向需要严格步长的设备发送精度过高的值。",
-          "hvac_mode_strategy": "确定组如何决定其整体状态 (例如，当某些设备关闭时)。",
-          "feature_strategy": "如何处理具有不同功能的设备 (例如，一个支持 '仅风扇'，另一个不支持)。",
-          "use_temp_sensor": "启用以使用单独的传感器作为组的当前温度。",
-          "temp_sensor": "选择要使用的外部传感器。",
-          "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
-          "expose_attribute_sensors": "为组的温度和湿度创建额外的传感器实体 (用于图表)。",
-          "debounce_delay": "触摸控制后等待片刻再发送命令。防止网络拥塞。",
-          "retry_attempts": "如果设备错过命令，自动重试。",
-          "retry_delay": "重试尝试之间的等待时间。",
-          "sync_mode": "控制组如何与直接在物理设备上进行的手动更改进行交互。",
-          "sync_retry": "组在接受更改之前尝试强制偏差成员恢复状态的次数。",
-          "sync_delay": "同步命令后的等待时间（秒），以便成员设备在验证前处理更改。"
-        }
-      }
+      "no_changes": "未做任何更改。",
+      "single_instance_allowed": "仅允许一个实例。"
     },
     "error": {
-      "no_entities": "组中必须至少保留一个空调设备。",
-      "invalid_entity": "选定的设备无效。",
-      "configuration_error": "无法更新配置。"
+      "duplicate_name": "以该名称命名的空调组已存在。",
+      "invalid_entity": "一个或多个选定的设备不是有效的空调实体。",
+      "no_entities": "您必须至少选择一个空调设备。",
+      "unavailable_entities": "某些选定的设备不可用。组将被创建，但在它们上线之前可能无法完全工作。"
     },
-    "abort": {
-      "no_changes": "未检测到更改。"
+    "step": {
+      "user": {
+        "data": {
+          "entities": "空调设备",
+          "name": "组名称"
+        },
+        "data_description": {
+          "entities": "选择要包含在此组中的空调设备 (恒温器, 空调)。",
+          "name": "您的组的友好名称 (例如 '客厅' 或 '全屋')。"
+        },
+        "description": "为您的空调设备创建一个强大的‘虚拟控制器’。该组将汇总读数并同步所有成员的设置，作为一个智能单元运行。",
+        "title": "空调组助手"
+      }
     }
   },
-  "selector": {
-    "current_avg_option": {
-      "options": {
-        "mean": "平均值",
-        "median": "中位数 (忽略异常值)",
-        "min": "最小值 (最低)",
-        "max": "最大值 (最高)"
-      }
+  "device_automation": {
+    "action_type": {
+      "set_hvac_mode": "设置 HVAC 模式",
+      "set_temperature": "设置温度",
+      "turn_off": "关闭",
+      "turn_on": "开启"
     },
-    "target_avg_option": {
-      "options": {
-        "mean": "平均值",
-        "median": "中位数 (中间值)",
-        "min": "最小值 (最低)",
-        "max": "最大值 (最高)"
-      }
+    "condition_type": {
+      "is_group_available": "组可用",
+      "is_hvac_mode": "HVAC 模式是",
+      "is_temperature_above": "温度高于",
+      "is_temperature_below": "温度低于"
     },
-    "round_option": {
-      "options": {
-        "none": "不取整 (精确)",
-        "half": "半度 (0.5°)",
-        "integer": "整数 (1°)"
-      }
-    },
-    "sync_mode": {
-      "options": {
-        "standard": "标准 (单向)",
-        "mirror": "Mirror (Magic Sync - 双向)",
-        "lock": "Lock (老板 - 强制组)"
-      }
-    },
-    "hvac_mode_strategy": {
-      "options": {
-        "normal": "正常 (民主)",
-        "off_priority": "关闭优先 (主开关)",
-        "auto": "自动 (智能)"
-      }
-    },
-    "feature_strategy": {
-      "options": {
-        "intersection": "交集 (安全模式 - 共同功能)",
-        "union": "并集 (高级用户 - 所有功能)"
-      }
+    "trigger_type": {
+      "current_temperature_changed": "当前温度已更改",
+      "group_turned_off": "组已关闭",
+      "group_turned_on": "组已开启",
+      "hvac_mode_changed": "HVAC 模式已更改",
+      "temperature_target_changed": "目标温度已更改"
     }
   },
   "entity": {
@@ -157,78 +53,250 @@
         "name": "空调组",
         "state_attributes": {
           "last_active_hvac_mode": {
-            "name": "最后活动模式",
-            "description": "关闭前最后使用的模式 (加热/冷却)。"
+            "description": "关闭前最后使用的模式 (加热/冷却)。",
+            "name": "最后活动模式"
           },
           "target_hvac_mode": {
-            "name": "目标 HVAC 模式",
-            "description": "组试图在所有成员上设置的模式。"
+            "description": "组试图在所有成员上设置的模式。",
+            "name": "目标 HVAC 模式"
           }
         }
       }
     }
   },
-  "services": {
-    "set_temperature": {
-      "name": "设置温度",
-      "description": "设置整个组的目标温度。",
-      "fields": {
-        "entity_id": {
-          "name": "空调组",
-          "description": "要控制的组。"
+  "issues": {
+    "conflicting_features": {
+      "description": "组 '{group_name}' 的成员具有不同的功能。功能可能仅限于所有成员都支持的部分。\n\n冲突: {conflicting_entities}",
+      "title": "功能冲突"
+    },
+    "member_unavailable": {
+      "description": "'{group_name}' 中的一个或多个设备离线。组将继续使用现有设备工作。\n\n不可用: {unavailable_entities}",
+      "title": "成员设备不可用"
+    },
+    "no_members_available": {
+      "description": "组 '{group_name}' 没有活动成员，实际上处于离线状态。\n\n检查: {member_entities}",
+      "title": "无可用成员"
+    }
+  },
+  "options": {
+    "abort": {
+      "no_changes": "未检测到更改。"
+    },
+    "error": {
+      "configuration_error": "无法更新配置。",
+      "invalid_entity": "选定的设备无效。",
+      "no_entities": "组中必须至少保留一个空调设备。"
+    },
+    "step": {
+      "humidity": {
+        "data": {
+          "humidity_current_avg_option": "当前湿度 (显示)",
+          "humidity_sensors": "外部湿度传感器",
+          "humidity_target_avg_option": "目标湿度 (控制)",
+          "humidity_target_round_option": "目标湿度精度",
+          "humidity_update_targets": "将外部湿度写入实体"
         },
-        "temperature": {
-          "name": "目标温度",
-          "description": "所需的温度。"
+        "data_description": {
+          "humidity_current_avg_option": "组如何汇总成员的传感器读数。",
+          "humidity_sensors": "使用外部传感器代替成员读数。这将成为组湿度的唯一真实来源。",
+          "humidity_target_avg_option": "组如何计算要发送给成员的目标设定值。",
+          "humidity_target_round_option": "仅适用于发送到设备的值，不适用于当前/显示的值。",
+          "humidity_update_targets": "将外部传感器值写入数字实体。用于除湿机校准。"
         },
-        "target_temp_high": {
-          "name": "目标高",
-          "description": "加热/冷却模式的上限。"
+        "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
+        "title": "湿度设置"
+      },
+      "init": {
+        "description": "微调组的行为。更改立即生效。",
+        "menu_options": {
+          "humidity": "湿度",
+          "members": "成员 & 模式",
+          "other": "其他设置",
+          "sync": "同步模式",
+          "temperature": "温度",
+          "timings": "时序"
         },
-        "target_temp_low": {
-          "name": "目标低",
-          "description": "加热/冷却模式的下限。"
+        "title": "配置空调组"
+      },
+      "members": {
+        "data": {
+          "entities": "空调设备",
+          "feature_strategy": "功能兼容性",
+          "hvac_mode_strategy": "HVAC 模式策略"
         },
-        "hvac_mode": {
-          "name": "HVAC 模式",
-          "description": "可选更改模式。"
-        }
+        "data_description": {
+          "entities": "添加或删除设备。移除设备将停止组对其的控制。",
+          "feature_strategy": "确定当成员具有不同能力时，组上可用的功能 (例如预设模式, 风扇模式)。",
+          "hvac_mode_strategy": "从成员计算组状态的策略 (例如，如果一个正在冷却，另一个已关闭)。"
+        },
+        "description": "选择您的设备并选择组如何组合它们的状态和功能。‘策略’定义了成员处于不同模式时组的行为。",
+        "title": "成员 & 模式"
+      },
+      "other": {
+        "data": {
+          "expose_member_entities": "公开成员列表",
+          "expose_smart_sensors": "公开智能传感器"
+        },
+        "data_description": {
+          "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
+          "expose_smart_sensors": "为组的温度和湿度创建额外的传感器实体 (用于图表)。"
+        },
+        "description": "其他功能和实体公开。",
+        "title": "其他设置"
+      },
+      "sync": {
+        "data": {
+          "sync_attributes": "同步属性",
+          "sync_mode": "同步模式"
+        },
+        "data_description": {
+          "sync_attributes": "在此处选择的属性将在锁定/镜像模式下强制执行。未选择的属性允许本地控制 (例如同步温度但允许用户本地更改风扇速度)。",
+          "sync_mode": "标准: 组显示聚合状态但不强制执行。镜像: 一个设备上的更改将复制到所有其他设备。锁定: 设备上的手动更改将恢复为与组匹配。"
+        },
+        "description": "控制当有人物理调整设备时会发生什么。警告: 为避免‘空调大战’，请确保设备未分配给多个启用了主动同步模式的组。",
+        "title": "同步模式 & 属性"
+      },
+      "temperature": {
+        "data": {
+          "temp_current_avg_option": "当前温度 (显示)",
+          "temp_sensors": "外部温度传感器",
+          "temp_target_avg_option": "目标温度 (控制)",
+          "temp_target_round_option": "目标温度精度",
+          "temp_update_targets": "将外部温度写入实体"
+        },
+        "data_description": {
+          "temp_current_avg_option": "组如何汇总成员的传感器读数。",
+          "temp_sensors": "使用外部传感器代替成员读数。这将成为组温度的唯一真实来源。",
+          "temp_target_avg_option": "组如何计算要发送给成员的目标设定值。",
+          "temp_target_round_option": "仅适用于发送到设备的值，不适用于当前/显示的值。",
+          "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。"
+        },
+        "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
+        "title": "温度设置"
+      },
+      "timings": {
+        "data": {
+          "debounce_delay": "防抖延迟 (秒)",
+          "retry_attempts": "重试次数",
+          "retry_delay": "重试延迟 (秒)"
+        },
+        "data_description": {
+          "debounce_delay": "发送命令前等待的时间。较高的值可防止滑动控件时的‘机枪’命令，但感觉较慢。",
+          "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
+          "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。"
+        },
+        "description": "配置‘虚拟控制器’如何与您的网络交互。正确的时序可防止 Zigbee/Z-Wave 拥塞并提高命令可靠性。",
+        "title": "通信时序"
       }
     }
   },
-  "issues": {
-    "member_unavailable": {
-      "title": "成员设备不可用",
-      "description": "'{group_name}' 中的一个或多个设备离线。组将继续使用现有设备工作。\n\n不可用: {unavailable_entities}"
+  "selector": {
+    "feature_strategy": {
+      "options": {
+        "intersection": "交集 (安全模式 - 共同功能)",
+        "union": "并集 (高级用户 - 所有功能)"
+      }
     },
-    "no_members_available": {
-      "title": "无可用成员",
-      "description": "组 '{group_name}' 没有活动成员，实际上处于离线状态。\n\n检查: {member_entities}"
+    "humidity_current_avg_option": {
+      "options": {
+        "max": "最大值 (最高)",
+        "mean": "平均值",
+        "median": "中位数 (忽略异常值)",
+        "min": "最小值 (最低)"
+      }
     },
-    "conflicting_features": {
-      "title": "功能冲突",
-      "description": "组 '{group_name}' 的成员具有不同的功能。功能可能仅限于所有成员都支持的部分。\n\n冲突: {conflicting_entities}"
+    "humidity_target_avg_option": {
+      "options": {
+        "max": "最大值 (最高)",
+        "mean": "平均值",
+        "median": "中位数 (中间值)",
+        "min": "最小值 (最低)"
+      }
+    },
+    "humidity_target_round_option": {
+      "options": {
+        "half": "半个百分点 (0.5%)",
+        "integer": "整数 (1%)",
+        "none": "不四舍五入 (精确)"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "auto": "自动 (智能)",
+        "normal": "正常 (民主)",
+        "off_priority": "关闭优先 (主开关)"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "fan_mode": "风扇模式",
+        "humidity": "湿度 (目标)",
+        "hvac_mode": "HVAC 模式",
+        "preset_mode": "预设模式",
+        "swing_horizontal_mode": "水平摆动",
+        "swing_mode": "垂直摆动",
+        "target_temp_high": "目标温度高 (范围)",
+        "target_temp_low": "目标温度低 (范围)",
+        "temperature": "温度 (目标)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "lock": "锁定 (老板 - 强制组)",
+        "mirror": "镜像 (Magic Sync - 双向)",
+        "standard": "标准 (单向)"
+      }
+    },
+    "temp_current_avg_option": {
+      "options": {
+        "max": "最大值 (最高)",
+        "mean": "平均值",
+        "median": "中位数 (忽略异常值)",
+        "min": "最小值 (最低)"
+      }
+    },
+    "temp_target_avg_option": {
+      "options": {
+        "max": "最大值 (最高)",
+        "mean": "平均值",
+        "median": "中位数 (中间值)",
+        "min": "最小值 (最低)"
+      }
+    },
+    "temp_target_round_option": {
+      "options": {
+        "half": "半度 (0.5°)",
+        "integer": "整数 (1°)",
+        "none": "不四舍五入 (精确)"
+      }
     }
   },
-  "device_automation": {
-    "trigger_type": {
-      "hvac_mode_changed": "HVAC 模式已更改",
-      "temperature_target_changed": "目标温度已更改",
-      "current_temperature_changed": "当前温度已更改",
-      "group_turned_on": "组已开启",
-      "group_turned_off": "组已关闭"
-    },
-    "condition_type": {
-      "is_hvac_mode": "HVAC 模式是",
-      "is_temperature_above": "温度高于",
-      "is_temperature_below": "温度低于",
-      "is_group_available": "组可用"
-    },
-    "action_type": {
-      "set_hvac_mode": "设置 HVAC 模式",
-      "set_temperature": "设置温度",
-      "turn_on": "开启",
-      "turn_off": "关闭"
+  "services": {
+    "set_temperature": {
+      "description": "设置整个组的目标温度。",
+      "fields": {
+        "entity_id": {
+          "description": "要控制的组。",
+          "name": "空调组"
+        },
+        "hvac_mode": {
+          "description": "可选更改模式。",
+          "name": "HVAC 模式"
+        },
+        "target_temp_high": {
+          "description": "加热/冷却模式的上限。",
+          "name": "目标高"
+        },
+        "target_temp_low": {
+          "description": "加热/冷却模式的下限。",
+          "name": "目标低"
+        },
+        "temperature": {
+          "description": "所需的温度。",
+          "name": "目标温度"
+        }
+      },
+      "name": "设置温度"
     }
   }
 }

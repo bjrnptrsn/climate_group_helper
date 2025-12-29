@@ -1,4 +1,5 @@
 """Service call execution logic for the climate group."""
+
 from __future__ import annotations
 
 import asyncio
@@ -32,7 +33,6 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_SUPPORTED_FEATURES
-from homeassistant.core import Context
 from homeassistant.helpers.debounce import Debouncer
 
 from .const import SyncMode
@@ -50,7 +50,7 @@ class ServiceCallHandler:
     - Debouncing of rapid service calls to prevent network flooding
     - Retry logic for failed calls (configurable attempts + delay)
     - Context tracking for sync mode differentiation
-    
+
     Retry Logic:
     - retry_attempts: Number of retries AFTER initial attempt (min 0)
     - retry_delay: Wait time between retry attempts
@@ -83,15 +83,6 @@ class ServiceCallHandler:
         max_attempts = self._group._retry_attempts + 1
         retry_delay = self._group._retry_delay
 
-        # Determine 'external_controlled' state:
-        # 1. Context Match (User Action via call_debounced) → Set False
-        # 2. Context Mismatch (Sync Action) + Mirror Mode → Set True (External Propagation)
-        # Note: In Lock Mode, this flag remains False during sync enforcement
-        if kwargs.get("context") == self._group._last_group_context:
-            self._group._is_external_controlled = False
-        elif self._group._sync_mode == SyncMode.MIRROR:
-            self._group._is_external_controlled = True
-
         for attempt in range(max_attempts):
             try:
                 _LOGGER.debug("Executing service call '%s' (attempt %d/%d) with: %s", service_name, attempt + 1, max_attempts, kwargs)
@@ -110,10 +101,24 @@ class ServiceCallHandler:
         """Debounce and execute a service call."""
         _delay = self._group._debounce_delay
 
-        # Capture the context of this User Action.
-        # Since call_debounced is only invoked by the Group Entity methods,
-        # we store this context to identify it as an internal change for sync mode.
-        self._group._last_group_context = self._group._context
+        # Determine Context:
+        # 1. Sync/System Action: context is passed in kwargs. Use it.
+        # 2. User Action: context is missing. Use self._group._context AND update _last_group_context.
+
+        # Determine Context & Control State:
+        # Check if context is already in kwargs (Sync Action)
+        if kwargs.get("context"):
+            # Sync Action: Do not touch _last_group_context.
+            # If in Mirror Mode, this IS an external control event (system correcting state).
+            if self._group._sync_mode == SyncMode.MIRROR:
+                self._group._is_external_controlled = True
+        else:
+            # User Action: Capture the context.
+            user_context = self._group._context
+            kwargs["context"] = user_context
+            self._group._last_group_context = user_context
+            # User Actions reset external control
+            self._group._is_external_controlled = False
 
         async def _debounce_func():
             """The coroutine to be executed after debounce."""
@@ -121,9 +126,7 @@ class ServiceCallHandler:
             if task:
                 self._active_tasks.add(task)
             try:
-                await self.execute_with_retry(
-                    executor_func, service_name, context=self._group._context, **kwargs
-                )
+                await self.execute_with_retry(executor_func, service_name, **kwargs)
             finally:
                 if task:
                     self._active_tasks.discard(task)
@@ -143,9 +146,13 @@ class ServiceCallHandler:
 
         await self._debouncers[service_name].async_call()
 
-    async def execute_set_hvac_mode(self, hvac_mode: HVACMode, context: Context | None = None) -> bool:
+    async def execute_set_hvac_mode(self, hvac_mode: HVACMode, **kwargs: Any) -> bool:
         """Forward the set_hvac_mode command to all climate in the climate group."""
-        if self._group._attr_hvac_mode == hvac_mode:
+
+        # Both conditions must be true to skip:
+        # - target_hvac_mode == hvac_mode: User already set this as target
+        # - attr_hvac_mode == hvac_mode: Devices actually reached this mode
+        if self._group._target_hvac_mode == hvac_mode and self._group._attr_hvac_mode == hvac_mode:
             _LOGGER.debug("HVAC mode is already %s.", hvac_mode)
             return True
 
@@ -163,12 +170,12 @@ class ServiceCallHandler:
 
         _LOGGER.debug("Setting HVAC mode: %s", data)
         await self._group.hass.services.async_call(
-            CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=context or self._group._context
+            CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE, data, blocking=True, context=kwargs.get("context")
         )
 
         return False
 
-    async def execute_set_temperature(self, context: Context | None = None, **kwargs: Any) -> bool:
+    async def execute_set_temperature(self, **kwargs: Any) -> bool:
         """Execute the set_temperature service call."""
         if not kwargs:
             return False
@@ -182,7 +189,7 @@ class ServiceCallHandler:
             return True
 
         if (hvac_mode := kwargs.get(ATTR_HVAC_MODE)):
-            await self.execute_set_hvac_mode(hvac_mode)
+            await self.execute_set_hvac_mode(hvac_mode, **kwargs)
 
         if ATTR_TEMPERATURE in kwargs:
             if (entity_ids := self._group._get_supporting_entities(ATTR_SUPPORTED_FEATURES, ClimateEntityFeature.TARGET_TEMPERATURE)):
@@ -193,7 +200,7 @@ class ServiceCallHandler:
 
                 _LOGGER.debug("Setting temperature: %s", data)
                 await self._group.hass.services.async_call(
-                    CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=context or self._group._context
+                    CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=kwargs.get("context")
                 )
             else:
                 _LOGGER.debug("No entities support the target temperature feature, skipping service call")
@@ -208,14 +215,14 @@ class ServiceCallHandler:
 
                 _LOGGER.debug("Setting temperature range: %s", data)
                 await self._group.hass.services.async_call(
-                    CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=context or self._group._context
+                    CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE, data, blocking=True, context=kwargs.get("context")
                 )
             else:
                 _LOGGER.debug("No entities support the target temperature range feature, skipping service call")
 
         return False
 
-    async def execute_set_humidity(self, humidity: int, context: Context | None = None) -> bool:
+    async def execute_set_humidity(self, humidity: int, **kwargs: Any) -> bool:
         """Set new target humidity."""
         if self._group._attr_target_humidity == humidity:
             _LOGGER.debug("Humidity is already %s.", humidity)
@@ -231,12 +238,12 @@ class ServiceCallHandler:
 
         _LOGGER.debug("Setting humidity: %s", data)
         await self._group.hass.services.async_call(
-            CLIMATE_DOMAIN, SERVICE_SET_HUMIDITY, data, blocking=True, context=context or self._group._context
+            CLIMATE_DOMAIN, SERVICE_SET_HUMIDITY, data, blocking=True, context=kwargs.get("context")
         )
 
         return False
 
-    async def execute_set_fan_mode(self, fan_mode: str, context: Context | None = None) -> bool:
+    async def execute_set_fan_mode(self, fan_mode: str, **kwargs: Any) -> bool:
         """Forward the set_fan_mode to all climate in the climate group."""
         if self._group._attr_fan_mode == fan_mode:
             _LOGGER.debug("Fan mode is already %s.", fan_mode)
@@ -252,12 +259,12 @@ class ServiceCallHandler:
 
         _LOGGER.debug("Setting fan mode: %s", data)
         await self._group.hass.services.async_call(
-            CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data, blocking=True, context=context or self._group._context
+            CLIMATE_DOMAIN, SERVICE_SET_FAN_MODE, data, blocking=True, context=kwargs.get("context")
         )
 
         return False
 
-    async def execute_set_preset_mode(self, preset_mode: str, context: Context | None = None) -> bool:
+    async def execute_set_preset_mode(self, preset_mode: str, **kwargs: Any) -> bool:
         """Forward the set_preset_mode to all climate in the climate group."""
         if self._group._attr_preset_mode == preset_mode:
             _LOGGER.debug("Preset mode is already %s.", preset_mode)
@@ -273,12 +280,12 @@ class ServiceCallHandler:
 
         _LOGGER.debug("Setting preset mode: %s", data)
         await self._group.hass.services.async_call(
-            CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True, context=context or self._group._context,
+            CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE, data, blocking=True, context=kwargs.get("context")
         )
 
         return False
 
-    async def execute_set_swing_mode(self, swing_mode: str, context: Context | None = None) -> bool:
+    async def execute_set_swing_mode(self, swing_mode: str, **kwargs: Any) -> bool:
         """Forward the set_swing_mode to all climate in the climate group."""
         if self._group._attr_swing_mode == swing_mode:
             _LOGGER.debug("Swing mode is already %s.", swing_mode)
@@ -294,12 +301,12 @@ class ServiceCallHandler:
 
         _LOGGER.debug("Setting swing mode: %s", data)
         await self._group.hass.services.async_call(
-            CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data, blocking=True, context=context or self._group._context,
+            CLIMATE_DOMAIN, SERVICE_SET_SWING_MODE, data, blocking=True, context=kwargs.get("context")
         )
 
         return False
 
-    async def execute_set_swing_horizontal_mode(self, swing_horizontal_mode: str, context: Context | None = None) -> bool:
+    async def execute_set_swing_horizontal_mode(self, swing_horizontal_mode: str, **kwargs: Any) -> bool:
         """Set new target horizontal swing operation."""
         if self._group._attr_swing_horizontal_mode == swing_horizontal_mode:
             _LOGGER.debug("Horizontal swing mode is already %s.", swing_horizontal_mode)
@@ -315,7 +322,7 @@ class ServiceCallHandler:
 
         _LOGGER.debug("Setting horizontal swing mode: %s", data)
         await self._group.hass.services.async_call(
-            CLIMATE_DOMAIN, SERVICE_SET_SWING_HORIZONTAL_MODE, data, blocking=True, context=context or self._group._context,
+            CLIMATE_DOMAIN, SERVICE_SET_SWING_HORIZONTAL_MODE, data, blocking=True, context=kwargs.get("context")
         )
 
         return False

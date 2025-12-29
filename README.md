@@ -1,93 +1,127 @@
-# 🌡️ Home Assistant Climate Group Helper
+# 🌡️ Climate Group Helper
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
+<p align="center">
+  <img src="assets/icon@2x.png" alt="Climate Group Helper Icon" width="128"/>
+</p>
 
-The **Climate Group Helper** for Home Assistant allows you to combine multiple climate devices into a single, powerful entity. Simplify your dashboard, clean up your automations, and control entire rooms or zones as one unit.
+<p align="center">
+  <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Default-orange.svg" alt="HACS"/></a>
+  <a href="https://github.com/bjrnptrsn/climate_group_helper/releases"><img src="https://img.shields.io/github/v/release/bjrnptrsn/climate_group_helper" alt="Release"/></a>
+</p>
 
-## ✨ Why use this?
+Combine multiple climate devices into a single, powerful entity for Home Assistant. Simplify your dashboard, streamline automations, and control entire rooms or zones as one unit.
 
-Managing multiple climate devices individually is tedious. This integration solves that by creating a "Virtual Controller" that handles the complexity for you.
+---
 
-*   **Centralized Control**: Change settings on the group, and all *available* member devices will be updated to match.
-*   **Smart Sensors**: Get a single, averaged temperature and humidity reading for the whole room.
-*   **Dynamic**: Add or remove devices on the fly without restarting Home Assistant.
-*   **100% UI Managed**: No YAML required. Set it up in seconds via the Helpers menu.
+## ✨ Key Features
 
-## ⚙️ Customization Options
+### 🎛️ Unified Control
+Change settings on the group, and all member devices update to match. No more managing 5 thermostats individually.
 
-Tailor the group's logic to fit your home perfectly.
+### 🌡️ Multi-Sensor Aggregation
+Use **multiple external sensors** for temperature and humidity. The group calculates the average (or min/max/median) to get the true room reading—not just what one device thinks.
 
-*   **Intelligent Value Aggregation**: Configure how the group *displays its own* **Current** temperature/humidity, and how it *calculates* the **Target** temperature/humidity to send to its members.
-    *   **For Current Values (Display)**: How the group summarizes sensor readings from its members.
-        *   `Mean (Average)`: The classic average. Good for balanced comfort in large spaces.
-        *   `Median`: Ignores outliers (e.g. a sensor near an open window or heat source).
-        *   `Minimum / Maximum`: Shows the lowest/highest reading from any member.
-    *   **For Target Values (Control)**: How the group calculates the target setpoint shown in the UI based on member values.
-        *   `Mean (Average)`: Displays the average of all member setpoints.
-        *   `Median`: Displays the median of all member setpoints.
-        *   `Minimum / Maximum`: Displays the lowest/highest of all member setpoints.
+### 🔄 Calibration Sync (Write Targets)
+*New in v0.13!* Sync the calculated sensor value **back to physical devices**. Perfect for TRVs that support external temperature calibration offsets.
 
-*   **Precision Control (Rounding)**: Avoid sending values with excessive precision (like "21.33 °C") to devices that expect strict steps.
-    *   `No Rounding`: Exact values.
-    *   `Half Degree (0.5°)`: Common for many digital devices.
-    *   `Whole Numbers (1°)`: For simpler or older units.
+### 🔒 Advanced Sync Modes
+- **Standard**: Classic one-way control.
+- **Mirror**: Change one device, all others follow.
+- **Lock**: Enforce group state—reverts manual changes.
 
-*   **HVAC Mode Strategy**: Determines how the group decides its overall state ('heat', 'auto', 'off', ...).
-    *   `Normal (Democratic)`: If most devices are active (e.g. 'heat'), the group is active. It only switches to `off` when *all* members are off.
-    *   `Off Priority (Master Switch)`: If *any* single device is turned off, the whole group reports as off. Great for quickly seeing if a zone is fully active.
-    *   `Auto (Smart)`: Dynamically switches strategies. Uses `Off Priority` when set to heat/cool/... (to show if any device is off), and uses `Normal` when set to off (ensuring all devices are off).
+### 🎚️ Selective Attribute Sync
+*New in v0.13!* Choose exactly which attributes to sync. Want unified temperature but individual fan control? Now possible.
 
-*   **Feature Compatibility (Feature Strategy)**: How to handle devices with different capabilities (e.g. one supports "Fan Only", another doesn't).
-    *   `Intersection (Strict)`: "Safe Mode". Only shows features that *every* device supports. Guarantees that every command works for everyone.
-    *   `Union (Inclusive)`: "Power User". Shows *all* available features from any device. Commands are sent to everyone, but devices will simply ignore what they don't understand.
+---
 
-*   **External Temperature Sensor**: Select a separate sensor to be shown as the group's current temperature. Useful if the device sensors are inaccurate or poorly placed.
-    *   ⚠️ **Note**: This only affects the group's display. It does **not** change how individual devices regulate their temperature (they still use their own internal sensors).
+## ⚙️ Configuration Options
 
-*   **Expose Attributes as Sensors**: Creates extra sensor entities for the group's temperature and humidity. Perfect for long-term history graphs (InfluxDB, etc.).
+### Temperature & Humidity
 
-*   **Expose Member List**: Creates an attribute listing all member entity IDs. Useful for templates or advanced automations.
+| Option | Description |
+|--------|-------------|
+| **External Sensors** | Select one or more sensors to override member readings |
+| **Calibration Targets** | Number entities to receive the calculated value (e.g. TRV offsets) |
+| **Averaging Method** | Mean, Median, Min, or Max—separately for current and target values |
+| **Rounding** | Exact, Half Degree (0.5°), or Whole Numbers (1°) |
 
-*   **Reliability Settings**: Fine-tune communication for chatty networks or sleepy devices.
-    *   **Debounce Delay**: Waits a moment after you touch the controls before sending commands. Prevents flooding your network when you slide the temperature bar.
-    *   **Retry Attempts**: Number of times to retry a command if it fails to execute.
-    *   **Retry Delay**: Time to wait between retries.
+### HVAC Mode Strategy
 
-*   **Synchronization Mode**: Control how the group interacts with manual changes made directly on physical devices (e.g. adjusting controls on a wall unit).
-    *   `Standard (One-way)`: **Default.** Group commands update members. Manual changes on members update the group's *average*, but don't change the other members.
-    *   `Mirror (Magic Sync - Two-way)`: If you change settings on *one* device manually, the group detects this and instantly updates *all other* members to match. Keeps a zone in sync regardless of which unit you adjust.
-    *   `Lock (The Boss - Enforce Group)`: If a device is changed manually, the group immediately reverts it back to the group's setting. Ideal for public spaces, or preventing tampering.
-    *   **Sync Delay**: The wait time (in seconds) after a sync command to let member devices process the change before verification.
-    *   **Sync Retry Attempts**: Number of times the group tries to re-enforce the state if the initial sync attempt fails.
+| Strategy | Behavior |
+|----------|----------|
+| **Normal** | Group shows most common mode. Only `off` when all are off. |
+| **Off Priority** | Group shows `off` if *any* device is off. |
+| **Auto** | Smart switching based on target mode. |
+
+### Feature Strategy
+
+| Strategy | Behavior |
+|----------|----------|
+| **Intersection** | Only features supported by *all* devices. Safe mode. |
+| **Union** | All features from *any* device. Commands routed intelligently. |
+
+### Sync Mode
+
+| Mode | Behavior |
+|------|----------|
+| **Standard** | One-way: Group → Members |
+| **Mirror** | Two-way: Any change propagates to all |
+| **Lock** | Enforce: Reverts unauthorized changes |
+
+**Selective Sync**: Enable specific attributes (temperature, hvac_mode, fan_mode, etc.) for enforcement.
+
+### Reliability
+
+| Option | Description |
+|--------|-------------|
+| **Debounce Delay** | Wait before sending commands (prevents network flooding) |
+| **Retry Attempts** | Number of retries if command fails |
+| **Retry Delay** | Time between retries |
+
+### Other Options
+
+- **Expose Sensors**: Create separate sensor entities for temperature/humidity history
+- **Expose Member List**: Show member entity IDs as an attribute
+
+---
 
 ## 📦 Installation
 
 ### Via HACS (Recommended)
 
-1.  Open **HACS** > **Integrations**.
-2.  Menu (⋮) > **Custom repositories**.
-3.  Add `https://github.com/bjrnptrsn/climate_group_helper` as an `Integration`.
-4.  Click **Install** on "Climate Group Helper".
-5.  Restart Home Assistant.
+1. Open **HACS** > **Integrations**
+2. Search for **Climate Group Helper**
+3. Click **Install**
+4. Restart Home Assistant
 
 ### Manual
 
-1.  Download the latest release from GitHub.
-2.  Copy `custom_components/climate_group_helper` to your `custom_components` folder.
-3.  Restart Home Assistant.
+1. Download the [latest release](https://github.com/bjrnptrsn/climate_group_helper/releases)
+2. Copy `custom_components/climate_group_helper` to your `custom_components` folder
+3. Restart Home Assistant
 
-## 🛠️ Configuration
+---
 
-1.  Go to **Settings > Devices & Services > Helpers**.
-2.  Click **+ Create Helper**.
-3.  Choose **Climate Group Helper**.
-4.  Follow the UI wizard to select your entities and preferences.
+## 🛠️ Setup
 
-💡 **Tip:** You can always change these settings later by clicking on the helper entity in the list.
+1. Go to **Settings > Devices & Services > Helpers**
+2. Click **+ Create Helper**
+3. Choose **Climate Group Helper**
+4. Enter a name and select your climate entities
+
+After creation, click **Configure** on the helper to access all options:
+- **Members & Modes**: Add/remove devices, set HVAC and feature strategies
+- **Temperature**: External sensors, calibration targets, averaging, rounding
+- **Humidity**: Same options as temperature
+- **Timings**: Debounce, retry settings
+- **Sync Mode**: Standard/Mirror/Lock, selective attribute sync
+- **Other**: Sensor exposure, member list
+
+---
 
 ## 🔍 Troubleshooting
 
-Something acting up? Enable debug logging in your `configuration.yaml` to see exactly what the group is thinking:
+Enable debug logging to see what's happening:
 
 ```yaml
 logger:
@@ -95,9 +129,13 @@ logger:
     custom_components.climate_group_helper: debug
 ```
 
+---
+
 ## ❤️ Contributing
 
 Found a bug or have an idea? [Open an issue](https://github.com/bjrnptrsn/climate_group_helper/issues) on GitHub.
+
+---
 
 ## 📄 License
 
