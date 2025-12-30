@@ -373,7 +373,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 ): selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=0,
-                        max=3,
+                        max=10,
                         step=0.1,
                         unit_of_measurement="s",
                         mode=selector.NumberSelectorMode.SLIDER,

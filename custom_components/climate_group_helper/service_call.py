@@ -140,6 +140,10 @@ class ServiceCallHandler:
                 function=_debounce_func,
             )
         else:
+            # Cancel the pending timer to restart the cooldown from this call.
+            # Without this, the HA Debouncer continues the original timer
+            # and only updates the function, not the timing.
+            self._debouncers[service_name].async_cancel()
             # Update the function and cooldown with the latest values
             self._debouncers[service_name].cooldown = _delay
             self._debouncers[service_name].function = _debounce_func
