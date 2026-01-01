@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.1 - 2026-01-01
+
+### 🔧 Fixes
+
+*   **Debounce Logic**: Fixed an issue where new changes occurring during the configured debounce delay did not correctly restart the waiting time. Now, the delay resets with each change, ensuring only the final value is applied after the full debounce time.
+*   **Debounce Limit**: Increased the maximum configurable `Debounce Delay` from 3s to 10s to support devices that require longer settling times.
+
 ## 0.13.0 - 2025-12-29
 
 ### ✨ Configuration 2.0
