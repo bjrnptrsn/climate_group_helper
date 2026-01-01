@@ -121,10 +121,11 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 **Issues after updating?**
 If you experience strange behavior after an update (e.g. settings not saving), try re-creating the group. This resolves potential migration issues.
 
-Enable debug logging to see more details:
+To see more details, enable debug logging by adding the following to your `configuration.yaml` file:
 
 ```yaml
 logger:
+  default: info
   logs:
     custom_components.climate_group_helper: debug
 ```
