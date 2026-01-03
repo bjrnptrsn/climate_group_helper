@@ -295,10 +295,6 @@ class SyncModeHandler:
             return self._group._target_hvac_mode or self._group._attr_hvac_mode
         if key == "humidity":
             return self._group._attr_target_humidity
-        if key == "target_temp_high":
-            return self._group._attr_target_temperature_high
-        if key == "target_temp_low":
-            return self._group._attr_target_temperature_low
 
         return getattr(self._group, f"_attr_{key}", None)
 

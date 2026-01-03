@@ -11,7 +11,6 @@ from homeassistant.core import HomeAssistant
 from .const import (
     CONF_EXPOSE_SMART_SENSORS,
     CONF_HUMIDITY_CURRENT_AVG_OPTION,
-    CONF_HUMIDITY_SENSORS,
     CONF_HUMIDITY_TARGET_AVG_OPTION,
     CONF_HUMIDITY_TARGET_ROUND_OPTION,
     CONF_HUMIDITY_UPDATE_TARGETS,
@@ -23,6 +22,7 @@ from .const import (
     CONF_TEMP_TARGET_AVG_OPTION,
     CONF_TEMP_TARGET_ROUND_OPTION,
     CONF_TEMP_UPDATE_TARGETS,
+    CONF_SYNC_ATTRIBUTES,
     DOMAIN,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
     AverageOption,
@@ -165,6 +165,30 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         hass.config_entries.async_update_entry(entry, options=options_v4, version=4)
         _LOGGER.info("Successfully migrated config entry to version 4")
+
+    if entry.version == 4:
+        _LOGGER.info("Migrating config entry to version 5")
+        options_v5 = dict(entry.options)
+
+        # Remove deprecated sync attributes
+        if CONF_SYNC_ATTRIBUTES in options_v5:
+            current_attrs = options_v5[CONF_SYNC_ATTRIBUTES]
+            # Use list comprehension to filter out deprecated keys
+            # 'target_temp_high' and 'target_temp_low' are no longer valid
+            new_attrs = [
+                attr for attr in current_attrs 
+                if attr not in ["target_temp_high", "target_temp_low"]
+            ]
+            
+            if len(new_attrs) != len(current_attrs):
+                options_v5[CONF_SYNC_ATTRIBUTES] = new_attrs
+                _LOGGER.info(
+                    "Removed deprecated attributes from sync_attributes: %s",
+                    set(current_attrs) - set(new_attrs)
+                )
+
+        hass.config_entries.async_update_entry(entry, options=options_v5, version=5)
+        _LOGGER.info("Successfully migrated config entry to version 5")
 
     return True
 

@@ -55,7 +55,7 @@ _LOGGER = logging.getLogger(__name__)
 class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 4
+    VERSION = 5
 
     @staticmethod
     @callback
