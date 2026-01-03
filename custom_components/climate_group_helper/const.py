@@ -75,8 +75,6 @@ ATTR_EXTERNAL_CONTROLLED = "external_controlled"
 SYNCABLE_ATTRIBUTES = [
     "hvac_mode",
     "temperature",
-    "target_temp_high",
-    "target_temp_low",
     "humidity",
     "fan_mode",
     "preset_mode",

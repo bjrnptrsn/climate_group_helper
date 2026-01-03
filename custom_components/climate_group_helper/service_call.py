@@ -85,7 +85,10 @@ class ServiceCallHandler:
 
         for attempt in range(max_attempts):
             try:
-                _LOGGER.debug("Executing service call '%s' (attempt %d/%d) with: %s", service_name, attempt + 1, max_attempts, kwargs)
+                msg = f"Executing service call '{service_name}' (attempt {attempt + 1}/{max_attempts}) with: {kwargs}"
+                if kwargs.get("context"):
+                    msg += f" (Context ID: {kwargs['context'].id})"
+                _LOGGER.debug(msg)
                 setting_applied = await executor_func(**kwargs)
 
                 if setting_applied: # If True, state is verified to be set
@@ -117,6 +120,7 @@ class ServiceCallHandler:
             user_context = self._group._context
             kwargs["context"] = user_context
             self._group._last_group_context = user_context
+            _LOGGER.debug("Store last user context ID: %s", user_context.id if user_context else None)
             # User Actions reset external control
             self._group._is_external_controlled = False
 
