@@ -99,6 +99,12 @@ class ServiceCallHandler:
 
             if max_attempts > 1 and attempt < (max_attempts - 1):
                 await asyncio.sleep(retry_delay)
+        
+        # After all retries complete, clear syncing flag if it was set
+        # This handles cleanup regardless of whether context was provided
+        if self._group.is_syncing:
+            self._group.is_syncing = False
+            _LOGGER.debug("Sync enforcement complete. Sync flag cleared.")
 
     async def call_debounced(self, service_name, executor_func, **kwargs):
         """Debounce and execute a service call."""

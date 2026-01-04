@@ -255,6 +255,10 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # External control status (Mirror Mode)
         self._is_external_controlled = False
+        
+        # Centralized syncing flag - managed by SyncModeHandler and ServiceCallHandler
+        # Set to True when enforcement starts, False when all retries complete
+        self.is_syncing = False
 
     async def async_added_to_hass(self) -> None:
         """Restore states before registering listeners."""

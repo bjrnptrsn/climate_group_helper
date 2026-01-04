@@ -52,10 +52,7 @@ class SyncModeHandler:
 
         _LOGGER.debug("SyncModeHandler initialized for group '%s' with sync_mode: %s", self._group.entity_id, sync_mode)
 
-    @property
-    def is_syncing(self) -> bool:
-        """Check if any sync tasks are currently active."""
-        return bool(self._active_sync_tasks)
+
 
     def snapshot_group_state(self):
         """Manage the state snapshot based on the origin of a state change.
@@ -78,7 +75,7 @@ class SyncModeHandler:
             self._group._context.id if self._group._context else None,
             list(self._sync_context_history),
             self._group._last_group_context.id if self._group._last_group_context else None,
-            self.is_syncing,
+            self._group.is_syncing,
         )
 
         if self._is_internal_change():
@@ -91,7 +88,7 @@ class SyncModeHandler:
             _LOGGER.debug("Sync echo detected. Ignoring change.")
             return
 
-        if self.is_syncing:
+        if self._group.is_syncing:
             _LOGGER.debug("Already syncing. Preserving snapshot.")
             return
 
@@ -119,7 +116,7 @@ class SyncModeHandler:
         ):
             return
 
-        if self.is_syncing:
+        if self._group.is_syncing:
             return
 
         pending_calls = self._get_service_calls()
@@ -149,6 +146,10 @@ class SyncModeHandler:
         2. Allows the Debouncer to coalesce rapid corrections without overwriting
            the User Action context.
         """
+        # Set syncing flag to prevent new snapshots during enforcement
+        self._group.is_syncing = True
+        _LOGGER.debug("Starting sync enforcement. Sync flag set.")
+        
         pending_calls = self._get_service_calls()
 
         if not pending_calls:
@@ -177,9 +178,10 @@ class SyncModeHandler:
         if service_call_tasks:
             await asyncio.gather(*service_call_tasks)
 
-        # We do NOT clear the snapshot here. The snapshot remains valid until
+        # We do NOT clear the snapshot OR history here. The snapshot remains valid until
         # all members report the correct state (handled in handle_sync_mode_changes)
-        # or an Internal Change clears it.
+        # or an Internal Change clears it. Flag and history are cleared by ServiceCallHandler
+        # after all retries complete.
 
     def _get_service_calls(self) -> list[ServiceCall]:
         """Determine necessary service calls by comparing current states to the snapshot.
@@ -284,6 +286,8 @@ class SyncModeHandler:
         for task in self._active_sync_tasks:
             task.cancel()
         self._active_sync_tasks.clear()
+        # Clear syncing flag when tasks are cancelled
+        self._group.is_syncing = False
 
     def _get_group_value(self, key: str) -> Any:
         """Get current value of watched attribute from group."""
