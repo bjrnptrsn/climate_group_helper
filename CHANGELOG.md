@@ -1,11 +1,26 @@
 # Changelog
- 
- ## 0.13.2 - 2026-01-03
- 
- ### 🔧 Fixes
- 
- *   **Sync Mode: Robust Echo Detection (Bounceback Fix)**: Implemented a new history-based mechanism to reliably detect when a device reports back a state change that was originated by the group itself. This solves the "bounceback" loop where the group would mistake its own command echo for a manual user intervention and revert it back.
- *   **Sync Stability (Race Conditions)**: The new logic uses a history buffer to correctly identify echoes even if they arrive out of order or interleaved with other events.
+
+## 0.14.0-beta1 - 2026-01-10
+
+> **⚠️ Major Architectural Update:** This release replaces the Context-ID-based change detection with a new timeline-based "Sync Block" approach. This fundamental change solves reliability issues caused by Home Assistant's Context-ID recycling behavior.
+
+### ✨ Features
+
+*   **Reliable Sync Timing**: After you change a setting, the group now waits 5 seconds for devices to settle before processing new changes. This prevents sync loops and ensures commands are applied correctly. The previous detection method was unreliable due to a [Home Assistant limitation](https://github.com/home-assistant/core/issues/60302).
+*   **Source-Aware Blocking**: Consecutive changes from the same entity (e.g. adjusting a slider multiple times) bypass the 5-second window and are processed immediately. Only changes from *different* sources are held back.
+*   **Stable Lock Mode**: The group now maintains a **Persistent Target State**. This prevents "state drift" where the group would slowly deviate from your intended settings over time.
+
+### 🔧 Improvements & Refactoring
+
+*   **Faster Service Calls**: Optimized command logic eliminates unnecessary calls and uses debouncing more effectively.
+*   **Cleaner Migration (Soft Reset)**: Version 5 migration cleans up your configuration by removing legacy settings, ensuring a stable foundation for future updates.
+
+## 0.13.2 - 2026-01-03
+
+### 🔧 Fixes
+
+*   **Sync Mode: Robust Echo Detection (Bounceback Fix)**: Implemented a new history-based mechanism to reliably detect when a device reports back a state change that was originated by the group itself. This solves the "bounceback" loop where the group would mistake its own command echo for a manual user intervention and revert it back.
+*   **Sync Stability (Race Conditions)**: The new logic uses a history buffer to correctly identify echoes even if they arrive out of order or interleaved with other events.
 
 ## 0.13.1 - 2026-01-01
 

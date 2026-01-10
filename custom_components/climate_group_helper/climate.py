@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import reduce
 import logging
 from statistics import mean, median
-from typing import Any
+from typing import Any, Callable
 
 from homeassistant.components.climate import (
     ATTR_CURRENT_HUMIDITY,
@@ -14,6 +14,7 @@ from homeassistant.components.climate import (
     ATTR_FAN_MODES,
     ATTR_HUMIDITY,
     ATTR_HVAC_ACTION,
+    ATTR_HVAC_MODE,
     ATTR_HVAC_MODES,
     ATTR_MAX_HUMIDITY,
     ATTR_MAX_TEMP,
@@ -64,9 +65,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .const import (
     ATTR_ASSUMED_STATE,
     ATTR_CURRENT_HVAC_MODES,
-    ATTR_EXTERNAL_CONTROLLED,
     ATTR_LAST_ACTIVE_HVAC_MODE,
-    ATTR_TARGET_HVAC_MODE,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
@@ -84,8 +83,10 @@ from .const import (
     CONF_TEMP_TARGET_AVG_OPTION,
     CONF_TEMP_TARGET_ROUND_OPTION,
     CONF_TEMP_UPDATE_TARGETS,
+    CONTROLLABLE_ATTRIBUTES,
     DOMAIN,
     FEATURE_STRATEGY_INTERSECTION,
+    FLOAT_TOLERANCE,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
@@ -167,8 +168,8 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.hass = hass
         self._attr_unique_id = unique_id
         self._attr_name = name
-        self._climate_entity_ids = entity_ids
-        self._config = config
+        self.climate_entity_ids = entity_ids
+        self.config = config
         
         # Temperature calculation options
         self._temp_current_avg_calc = CALC_TYPES[config.get(CONF_TEMP_CURRENT_AVG_OPTION, AverageOption.MEAN)]
@@ -180,9 +181,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._humidity_target_avg_calc = CALC_TYPES[config.get(CONF_HUMIDITY_TARGET_AVG_OPTION, AverageOption.MEAN)]
         self._humidity_round_option = config.get(CONF_HUMIDITY_TARGET_ROUND_OPTION, RoundOption.NONE)
 
-        self._debounce_delay = config.get(CONF_DEBOUNCE_DELAY, 0)
-        self._retry_attempts = int(config.get(CONF_RETRY_ATTEMPTS, 1))
-        self._retry_delay = config.get(CONF_RETRY_DELAY, 1)
+        self.debounce_delay = config.get(CONF_DEBOUNCE_DELAY, 0)
+        self.retry_attempts = int(config.get(CONF_RETRY_ATTEMPTS, 1))
+        self.retry_delay = config.get(CONF_RETRY_DELAY, 1)
         self._hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL)
         self._feature_strategy = config.get(CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION)
         
@@ -198,8 +199,6 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._humidity_update_target_entity_ids = config.get(CONF_HUMIDITY_UPDATE_TARGETS, [])
         
         self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
-        self._sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
-        self._sync_mode_handler = SyncModeHandler(self, self._sync_mode)
 
         # The list of entities to be tracked by GroupEntity
         self._entity_ids = entity_ids.copy()
@@ -208,10 +207,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if self._humidity_sensor_entity_ids:
             self._entity_ids.extend(self._humidity_sensor_entity_ids)
 
-        self._target_hvac_mode = None
         self._last_active_hvac_mode = None
-        self._last_group_context: Context | None = None
-        self._states: list[State] | None = None
+        self.target_state_store: dict[str, Any] = {}
+        self.states: list[State] | None = None
 
         self._attr_supported_features = DEFAULT_SUPPORTED_FEATURES
         self._attr_temperature_unit = UnitOfTemperature.CELSIUS
@@ -251,19 +249,50 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_swing_horizontal_mode = None
 
         # Centralized service call handler
-        self._service_call_handler = ServiceCallHandler(self)
+        self.service_call_handler = ServiceCallHandler(self)
+        # Track the time of the last service call for sync block logic
+        self.last_service_call_time: float = 0.0
+        # Track the source entity of the last command (for source-aware sync block)
+        self.last_service_call_entity: str | None = None
 
-        # External control status (Mirror Mode)
-        self._is_external_controlled = False
+        # Sync mode must be set before SyncModeHandler initialization
+        self.sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
+        self.sync_mode_handler = SyncModeHandler(self)
+
+    @property
+    def device_info(self) -> dict[str, Any]:
+        """Return the device info."""
+        return {
+            "identifiers": {(DOMAIN, self._attr_unique_id)},
+            "name": self._attr_name,
+        }
+
+    @property
+    def context(self) -> Context | None:
+        """Return the context of the last change."""
+        return self._context
+
+    @context.setter
+    def context(self, value: Context | None) -> None:
+        """Set the context of the last change."""
+        self._context = value
 
     async def async_added_to_hass(self) -> None:
         """Restore states before registering listeners."""
 
-        # Some integrations, such as HomeKit, Google Home, and Alexa, require
-        # final property lists during the initialization process e.g. hvac_modes.
+        # Some integrations, such as HomeKit, Google Home, and Alexa
+        # require final property lists during the initialization process e.g. hvac_modes.
         # Therefore, we restore some of the last known states before registering the listeners.
         if (last_state := await self.async_get_last_state()) is not None:
             last_attrs = last_state.attributes
+            
+            # Restore Persistent Target State
+            # We filter for CONTROLLABLE_ATTRIBUTES to ensure we only store relevant state
+            self._init_target_state(
+                lambda key: last_state.state if key == "hvac_mode" else last_attrs.get(key)
+            )
+            
+            _LOGGER.debug("Restored Persistent Target State for '%s': %s", self.entity_id, self.target_state_store)
 
             if ATTR_HVAC_MODES in last_attrs:
                 self._attr_hvac_modes = self._sort_hvac_modes(last_attrs[ATTR_HVAC_MODES])
@@ -281,38 +310,10 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Register listeners via GroupEntity
         await super().async_added_to_hass()
 
-
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         await super().async_will_remove_from_hass()
-        await self._service_call_handler.async_cancel_all()
-
-
-    @property
-    def device_info(self) -> dict[str, Any]:
-        """Return the device info."""
-        return {
-            "identifiers": {(DOMAIN, self._attr_unique_id)},
-            "name": self._attr_name,
-        }
-
-    def _get_supporting_entities(self, check_attribute: str, check_value: int | str) -> list[str]:
-        """Get entity ids that match a specific check for a given attribute."""
-        supporting_entities = []
-
-        for entity_id in self._climate_entity_ids:
-            state = self.hass.states.get(entity_id)
-
-            if state is None:
-                continue
-            if isinstance(check_value, int) and not (check_value & state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)):
-                continue
-            if isinstance(check_value, str) and (check_value not in state.attributes.get(check_attribute, [])):
-                continue
-
-            supporting_entities.append(entity_id)
-
-        return supporting_entities
+        await self.service_call_handler.async_cancel_all()
 
     def _reduce_attributes(self, attributes: list[Any], default: Any = None) -> list | int:
         """Reduce a list of attributes (modes or features) based on the feature strategy."""
@@ -365,7 +366,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Auto strategy
         if strategy == HVAC_MODE_STRATEGY_AUTO:
             # If target HVAC mode is OFF or None, use normal strategy
-            if self._target_hvac_mode in (HVACMode.OFF, None):
+            if self.target_state_store.get("hvac_mode") in (HVACMode.OFF, None):
                 strategy = HVAC_MODE_STRATEGY_NORMAL
             # If target HVAC mode is ON (e.g. heat, cool), use off priority strategy
             else:
@@ -412,7 +413,14 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         return None
 
     @staticmethod
-    def _mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
+    def within_range(value1: float, value2: float, tolerance: float = FLOAT_TOLERANCE) -> bool:
+        """Check if two values are within a given tolerance."""
+        if isinstance(value1, (int, float)) and isinstance(value2, (int, float)):
+            return abs(value1 - value2) < tolerance
+        return False
+
+    @staticmethod
+    def mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
         """Round the decimal part of a float to an fractional value with a certain precision."""
 
         if value is None:
@@ -474,24 +482,51 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 continue
 
     @callback
+    def update_target_state(self, updates: dict[str, Any]) -> None:
+        """Update the persistent target state store managed by the group.
+        
+        This serves as the single entry point for modifying the intended state,
+        ensuring specific attributes (like temperature) are always treated 
+        as valid targets for synchronization.
+        """
+        for key, value in updates.items():
+            self.target_state_store[key] = value
+            _LOGGER.debug("Updated Target State '%s' to %s", key, value)
+
+    def _init_target_state(self, value_provider: Callable[[str], Any]) -> None:
+        """Populate the target state store using a value provider function.
+        
+        Iterates over all syncable attributes and uses the provider to fetch values.
+        
+        Args:
+            value_provider: A callable that takes an attribute key (str) and returns
+                            the corresponding value. Used to abstract the value source
+                            (e.g., restored state vs. current group state).
+        """
+        for key in CONTROLLABLE_ATTRIBUTES:
+            value = value_provider(key)
+            if value is not None:
+                self.update_target_state({key: value})
+
+    @callback
     def async_update_group_state(self) -> None:
         """Query all members and determine the climate group state."""
 
-        # Capture current state for sync mode handling (e.g. Lock mode)
-        self._sync_mode_handler.snapshot_group_state()
-
         # Determine assumed state and availability for the group
-        self._states = self._get_valid_member_states(self._climate_entity_ids)
+        self.states = self._get_valid_member_states(self.climate_entity_ids)
+
+        # Check for sync mode deviations using the FRESH states
+        self.sync_mode_handler.resync()
 
         # Check if there are any valid states
-        if self._states:
+        if self.states:
             # All available HVAC modes --> list of HVACMode (str), e.g. [<HVACMode.OFF: 'off'>, <HVACMode.HEAT: 'heat'>, <HVACMode.AUTO: 'auto'>, ...]
             self._attr_hvac_modes = self._sort_hvac_modes(
-                self._reduce_attributes(list(find_state_attributes(self._states, ATTR_HVAC_MODES)))
+                self._reduce_attributes(list(find_state_attributes(self.states, ATTR_HVAC_MODES)))
             )
 
             # A list of all HVAC modes that are currently set
-            current_hvac_modes = [state.state for state in self._states]
+            current_hvac_modes = [state.state for state in self.states]
 
             # Determine the group's HVAC mode and update the attribute
             self._attr_hvac_mode = self._determine_hvac_mode(current_hvac_modes)
@@ -504,10 +539,10 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             self._attr_available = True
 
             # The group state is assumed if not all states are equal
-            self._attr_assumed_state = not states_equal(self._states)
+            self._attr_assumed_state = not states_equal(self.states)
 
             # Determine HVAC action
-            current_hvac_actions = list(find_state_attributes(self._states, ATTR_HVAC_ACTION))
+            current_hvac_actions = list(find_state_attributes(self.states, ATTR_HVAC_ACTION))
             self._attr_hvac_action = self._determine_hvac_action(current_hvac_actions)
 
             # Get temperature unit from system settings
@@ -523,34 +558,34 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                     _LOGGER.debug("External sensors %s configured but unavailable. Current temperature will be None.", self._temp_sensor_entity_ids)
             else:
                 # Use member average if NO external sensors configured
-                self._attr_current_temperature = reduce_attribute(self._states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._temp_current_avg_calc(data))
+                self._attr_current_temperature = reduce_attribute(self.states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._temp_current_avg_calc(data))
             
             # Target temperature is calculated using the 'average_option' method from all ATTR_TEMPERATURE values.
-            self._attr_target_temperature = reduce_attribute(self._states, ATTR_TEMPERATURE, reduce=lambda *data: self._temp_target_avg_calc(data))
+            self._attr_target_temperature = reduce_attribute(self.states, ATTR_TEMPERATURE, reduce=lambda *data: self._temp_target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature is not None:
-                self._attr_target_temperature = self._mean_round(self._attr_target_temperature, self._temp_round_option)
+                self._attr_target_temperature = self.mean_round(self._attr_target_temperature, self._temp_round_option)
 
             # Target temperature low is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_LOW values
-            self._attr_target_temperature_low = reduce_attribute(self._states, ATTR_TARGET_TEMP_LOW, reduce=lambda *data: self._temp_target_avg_calc(data))
+            self._attr_target_temperature_low = reduce_attribute(self.states, ATTR_TARGET_TEMP_LOW, reduce=lambda *data: self._temp_target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature_low is not None:
-                self._attr_target_temperature_low = self._mean_round(self._attr_target_temperature_low, self._temp_round_option)
+                self._attr_target_temperature_low = self.mean_round(self._attr_target_temperature_low, self._temp_round_option)
 
             # Target temperature high is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_HIGH values
-            self._attr_target_temperature_high = reduce_attribute(self._states, ATTR_TARGET_TEMP_HIGH, reduce=lambda *data: self._temp_target_avg_calc(data))
+            self._attr_target_temperature_high = reduce_attribute(self.states, ATTR_TARGET_TEMP_HIGH, reduce=lambda *data: self._temp_target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_temperature_high is not None:
-                self._attr_target_temperature_high = self._mean_round(self._attr_target_temperature_high, self._temp_round_option)
+                self._attr_target_temperature_high = self.mean_round(self._attr_target_temperature_high, self._temp_round_option)
 
             # Target temperature step is the highest of all ATTR_TARGET_TEMP_STEP values
-            self._attr_target_temperature_step = reduce_attribute(self._states, ATTR_TARGET_TEMP_STEP, reduce=max)
+            self._attr_target_temperature_step = reduce_attribute(self.states, ATTR_TARGET_TEMP_STEP, reduce=max)
 
             # Min temperature is the highest of all ATTR_MIN_TEMP values
-            self._attr_min_temp = reduce_attribute(self._states, ATTR_MIN_TEMP, reduce=max, default=DEFAULT_MIN_TEMP)
+            self._attr_min_temp = reduce_attribute(self.states, ATTR_MIN_TEMP, reduce=max, default=DEFAULT_MIN_TEMP)
 
             # Max temperature is the lowest of all ATTR_MAX_TEMP values
-            self._attr_max_temp = reduce_attribute(self._states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
+            self._attr_max_temp = reduce_attribute(self.states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
 
             # Calculate Current Humidity
             if self._humidity_sensor_entity_ids:
@@ -562,38 +597,38 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                     _LOGGER.debug("External sensors %s configured but unavailable. Current humidity will be None.", self._humidity_sensor_entity_ids)
             else:
                 # Use member average if NO external sensors configured
-                self._attr_current_humidity = reduce_attribute(self._states, ATTR_CURRENT_HUMIDITY, reduce=lambda *data: self._humidity_current_avg_calc(data))
+                self._attr_current_humidity = reduce_attribute(self.states, ATTR_CURRENT_HUMIDITY, reduce=lambda *data: self._humidity_current_avg_calc(data))
 
             # Target humidity is calculated using the 'average_option' method from all ATTR_HUMIDITY values.
-            self._attr_target_humidity = reduce_attribute(self._states, ATTR_HUMIDITY, reduce=lambda *data: self._humidity_target_avg_calc(data))
+            self._attr_target_humidity = reduce_attribute(self.states, ATTR_HUMIDITY, reduce=lambda *data: self._humidity_target_avg_calc(data))
             # The result is rounded according to the 'round_option' config
             if self._attr_target_humidity is not None:
-                self._attr_target_humidity = self._mean_round(self._attr_target_humidity, self._humidity_round_option)
+                self._attr_target_humidity = self.mean_round(self._attr_target_humidity, self._humidity_round_option)
 
             # Min humidity is the highest of all ATTR_MIN_HUMIDITY values
-            self._attr_min_humidity = reduce_attribute(self._states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY)
+            self._attr_min_humidity = reduce_attribute(self.states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY)
 
             # Max humidity is the lowest of all ATTR_MAX_HUMIDITY values
-            self._attr_max_humidity = reduce_attribute(self._states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
+            self._attr_max_humidity = reduce_attribute(self.states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
 
             # Available fan modes --> list of list of strings, e.g. [['auto', 'low', 'medium', 'high'], ['auto', 'silent', 'turbo'], ...]
-            self._attr_fan_modes = sorted(self._reduce_attributes(list(find_state_attributes(self._states, ATTR_FAN_MODES))))
-            self._attr_fan_mode = most_frequent_attribute(self._states, ATTR_FAN_MODE)
+            self._attr_fan_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_FAN_MODES))))
+            self._attr_fan_mode = most_frequent_attribute(self.states, ATTR_FAN_MODE)
 
             # Available preset modes --> list of list of strings, e.g. [['home', 'away', 'eco'], ['home', 'sleep', 'away', 'boost'], ...]
-            self._attr_preset_modes = sorted(self._reduce_attributes(list(find_state_attributes(self._states, ATTR_PRESET_MODES))))
-            self._attr_preset_mode = most_frequent_attribute(self._states, ATTR_PRESET_MODE)
+            self._attr_preset_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_PRESET_MODES))))
+            self._attr_preset_mode = most_frequent_attribute(self.states, ATTR_PRESET_MODE)
 
             # Available swing modes --> list of list of strings, e.g. [['off', 'left', 'right', 'center', 'swing'], ['off', 'swing'], ...]
-            self._attr_swing_modes = sorted(self._reduce_attributes(list(find_state_attributes(self._states, ATTR_SWING_MODES))))
-            self._attr_swing_mode = most_frequent_attribute(self._states, ATTR_SWING_MODE)
+            self._attr_swing_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_MODES))))
+            self._attr_swing_mode = most_frequent_attribute(self.states, ATTR_SWING_MODE)
 
             # Available horizontal swing modes --> list of list of strings, e.g. [['off', 'left', 'right', 'center', 'swing'], ['off', 'swing'], ...]
-            self._attr_swing_horizontal_modes = sorted(self._reduce_attributes(list(find_state_attributes(self._states, ATTR_SWING_HORIZONTAL_MODES))))
-            self._attr_swing_horizontal_mode = most_frequent_attribute(self._states, ATTR_SWING_HORIZONTAL_MODE)
+            self._attr_swing_horizontal_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_HORIZONTAL_MODES))))
+            self._attr_swing_horizontal_mode = most_frequent_attribute(self.states, ATTR_SWING_HORIZONTAL_MODE)
 
             # Supported features --> list of unionized ClimateEntityFeature (int), e.g. [<ClimateEntityFeature.TARGET_TEMPERATURE_RANGE|FAN_MODE|PRESET_MODE|SWING_MODE|TURN_OFF|TURN_ON: 442>, <ClimateEntityFeature...: 941>, ...]
-            attr_supported_features = self._reduce_attributes(list(find_state_attributes(self._states, ATTR_SUPPORTED_FEATURES)), default=0)
+            attr_supported_features = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SUPPORTED_FEATURES)), default=0)
 
             # Add default supported features
             self._attr_supported_features = attr_supported_features | DEFAULT_SUPPORTED_FEATURES
@@ -601,24 +636,34 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             # Remove unsupported features
             self._attr_supported_features &= SUPPORTED_FEATURES
 
-            # Handle sync logic
-            self._sync_mode_handler.handle_sync_mode_changes()
-
             # Update extra state attributes
             self._attr_extra_state_attributes = {
                 CONF_TEMP_SENSORS: self._temp_sensor_entity_ids,
                 CONF_HUMIDITY_SENSORS: self._humidity_sensor_entity_ids,
-                CONF_SYNC_MODE: self._sync_mode,
+                CONF_SYNC_MODE: self.sync_mode,
                 ATTR_ASSUMED_STATE: self._attr_assumed_state,
                 ATTR_LAST_ACTIVE_HVAC_MODE: self._last_active_hvac_mode,
-                ATTR_TARGET_HVAC_MODE: self._target_hvac_mode,
                 ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
-                ATTR_EXTERNAL_CONTROLLED: self._is_external_controlled,
             }
 
             # Expose member entities if configured
             if self._expose_member_entities:
-                self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self._climate_entity_ids
+                self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self.climate_entity_ids
+
+            # Cold Start: Populate target store from current group state if empty.
+            # Maps sync attribute names to their corresponding group properties.
+            if not self.target_state_store:
+                self._init_target_state(
+                    lambda key: (
+                        self.hvac_mode if key == "hvac_mode"
+                        else self.target_temperature if key == "temperature"
+                        else self.target_humidity if key == "humidity"
+                        else getattr(self, key, None)
+                    )
+                )
+                
+                if self.target_state_store:
+                     _LOGGER.debug("Initialized Persistent Target State from current group values: %s", self.target_state_store)
 
         # No states available
         else:
@@ -627,45 +672,39 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
-        await self._service_call_handler.call_debounced(
-            "set_hvac_mode", self._service_call_handler.execute_set_hvac_mode, hvac_mode=hvac_mode
-        )
+        self.update_target_state({ATTR_HVAC_MODE: hvac_mode})
+        await self.service_call_handler.call_debounced()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Forward the set_temperature command to all climate in the climate group."""
-        await self._service_call_handler.call_debounced(
-            "set_temperature", self._service_call_handler.execute_set_temperature, **kwargs
-        )
+        # Update target store with provided arguments
+        self.update_target_state({key: kwargs[key] for key in kwargs if key in [ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH]})
+        await self.service_call_handler.call_debounced()
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
-        await self._service_call_handler.call_debounced(
-            "set_humidity", self._service_call_handler.execute_set_humidity, humidity=humidity
-        )
+        self.update_target_state({ATTR_HUMIDITY: humidity})
+        await self.service_call_handler.call_debounced()
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Forward the set_fan_mode to all climate in the climate group."""
-        await self._service_call_handler.call_debounced(
-            "set_fan_mode", self._service_call_handler.execute_set_fan_mode, fan_mode=fan_mode
-        )
+        self.update_target_state({ATTR_FAN_MODE: fan_mode})
+        await self.service_call_handler.call_debounced()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Forward the set_preset_mode to all climate in the climate group."""
-        await self._service_call_handler.call_debounced(
-            "set_preset_mode", self._service_call_handler.execute_set_preset_mode, preset_mode=preset_mode
-        )
+        self.update_target_state({ATTR_PRESET_MODE: preset_mode})
+        await self.service_call_handler.call_debounced()
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Forward the set_swing_mode to all climate in the climate group."""
-        await self._service_call_handler.call_debounced(
-            "set_swing_mode", self._service_call_handler.execute_set_swing_mode, swing_mode=swing_mode
-        )
+        self.update_target_state({ATTR_SWING_MODE: swing_mode})
+        await self.service_call_handler.call_debounced()
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""
-        await self._service_call_handler.call_debounced(
-            "set_swing_horizontal_mode", self._service_call_handler.execute_set_swing_horizontal_mode, swing_horizontal_mode=swing_horizontal_mode
-        )
+        self.update_target_state({ATTR_SWING_HORIZONTAL_MODE: swing_horizontal_mode})
+        await self.service_call_handler.call_debounced()
 
     async def async_turn_on(self) -> None:
         """Forward the turn_on command to all climate in the climate group."""

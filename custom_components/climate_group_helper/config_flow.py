@@ -43,7 +43,7 @@ from .const import (
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
-    SYNCABLE_ATTRIBUTES,
+    CONTROLLABLE_ATTRIBUTES,
     AverageOption,
     SyncMode,
     RoundOption,
@@ -55,7 +55,7 @@ _LOGGER = logging.getLogger(__name__)
 class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 4
+    VERSION = 5
 
     @staticmethod
     @callback
@@ -436,11 +436,11 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(
                     CONF_SYNC_ATTRIBUTES,
                     default=current_config.get(
-                        CONF_SYNC_ATTRIBUTES, SYNCABLE_ATTRIBUTES
+                        CONF_SYNC_ATTRIBUTES, CONTROLLABLE_ATTRIBUTES
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=SYNCABLE_ATTRIBUTES,
+                        options=CONTROLLABLE_ATTRIBUTES,
                         mode=selector.SelectSelectorMode.LIST,
                         multiple=True,
                         translation_key="sync_attributes",
