@@ -1,5 +1,4 @@
 """This platform allows several climate devices to be grouped into one climate device."""
-
 from __future__ import annotations
 
 from functools import reduce
@@ -57,7 +56,9 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
-from homeassistant.core import Context, HomeAssistant, State, callback
+from homeassistant.core import HomeAssistant, State, callback, Event
+
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -95,6 +96,7 @@ from .const import (
     SyncMode,
 )
 from .service_call import ServiceCallHandler
+from .state import TargetState, ChangeState
 from .sync_mode import SyncModeHandler
 
 CALC_TYPES = {
@@ -170,7 +172,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_name = name
         self.climate_entity_ids = entity_ids
         self.config = config
-        
+        self.event: Event | None = None
         # Temperature calculation options
         self._temp_current_avg_calc = CALC_TYPES[config.get(CONF_TEMP_CURRENT_AVG_OPTION, AverageOption.MEAN)]
         self._temp_target_avg_calc = CALC_TYPES[config.get(CONF_TEMP_TARGET_AVG_OPTION, AverageOption.MEAN)]
@@ -197,18 +199,21 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._temp_update_target_entity_ids = config.get(CONF_TEMP_UPDATE_TARGETS, [])
         self._humidity_sensor_entity_ids = config.get(CONF_HUMIDITY_SENSORS, [])
         self._humidity_update_target_entity_ids = config.get(CONF_HUMIDITY_UPDATE_TARGETS, [])
-        
+
         self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
 
         # The list of entities to be tracked by GroupEntity
-        self._entity_ids = entity_ids.copy()
+        self._entities = entity_ids.copy()
+        self._entity_ids = self._entities # Keep legacy reference if needed
         if self._temp_sensor_entity_ids:
             self._entity_ids.extend(self._temp_sensor_entity_ids)
         if self._humidity_sensor_entity_ids:
             self._entity_ids.extend(self._humidity_sensor_entity_ids)
 
         self._last_active_hvac_mode = None
-        self.target_state_store: dict[str, Any] = {}
+
+        self.change_state: ChangeState | None = None
+        self.target_state = TargetState()
         self.states: list[State] | None = None
 
         self._attr_supported_features = DEFAULT_SUPPORTED_FEATURES
@@ -258,7 +263,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Sync mode must be set before SyncModeHandler initialization
         self.sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
         self.sync_mode_handler = SyncModeHandler(self)
-
+        
     @property
     def device_info(self) -> dict[str, Any]:
         """Return the device info."""
@@ -266,16 +271,6 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             "identifiers": {(DOMAIN, self._attr_unique_id)},
             "name": self._attr_name,
         }
-
-    @property
-    def context(self) -> Context | None:
-        """Return the context of the last change."""
-        return self._context
-
-    @context.setter
-    def context(self, value: Context | None) -> None:
-        """Set the context of the last change."""
-        self._context = value
 
     async def async_added_to_hass(self) -> None:
         """Restore states before registering listeners."""
@@ -292,7 +287,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 lambda key: last_state.state if key == "hvac_mode" else last_attrs.get(key)
             )
             
-            _LOGGER.debug("Restored Persistent Target State for '%s': %s", self.entity_id, self.target_state_store)
+            _LOGGER.debug("Restored Persistent Target State for '%s': %s", self.entity_id, self.target_state)
 
             if ATTR_HVAC_MODES in last_attrs:
                 self._attr_hvac_modes = self._sort_hvac_modes(last_attrs[ATTR_HVAC_MODES])
@@ -307,11 +302,19 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             if ATTR_SUPPORTED_FEATURES in last_attrs:
                 self._attr_supported_features = last_attrs[ATTR_SUPPORTED_FEATURES] & SUPPORTED_FEATURES
 
-        # Register listeners via GroupEntity
-        await super().async_added_to_hass()
+        # Register listeners
+        self.async_on_remove(
+            async_track_state_change_event(
+                self.hass, self._entities, self._on_state_change
+            )
+        )
+
+        # Update initial state
+        self.async_update_group_state()
+        self.async_write_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
-        """Run when entity will be removed from hass."""
+        """Handle removal."""
         await super().async_will_remove_from_hass()
         await self.service_call_handler.async_cancel_all()
 
@@ -366,7 +369,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Auto strategy
         if strategy == HVAC_MODE_STRATEGY_AUTO:
             # If target HVAC mode is OFF or None, use normal strategy
-            if self.target_state_store.get("hvac_mode") in (HVACMode.OFF, None):
+            if self.target_state.hvac_mode in (HVACMode.OFF, None):
                 strategy = HVAC_MODE_STRATEGY_NORMAL
             # If target HVAC mode is ON (e.g. heat, cool), use off priority strategy
             else:
@@ -413,11 +416,12 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         return None
 
     @staticmethod
-    def within_range(value1: float, value2: float, tolerance: float = FLOAT_TOLERANCE) -> bool:
+    def within_tolerance(val1: float, val2: float, tolerance: float = FLOAT_TOLERANCE) -> bool:
         """Check if two values are within a given tolerance."""
-        if isinstance(value1, (int, float)) and isinstance(value2, (int, float)):
-            return abs(value1 - value2) < tolerance
-        return False
+        try:
+            return abs(float(val1) - float(val2)) < tolerance
+        except (ValueError, TypeError):
+            return False
 
     @staticmethod
     def mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
@@ -482,16 +486,24 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 continue
 
     @callback
+    def async_update_and_write_state(self) -> None:
+        """Helper to update group state and write to HA."""
+        self.async_update_group_state()
+        self.async_write_ha_state()
+
+    @callback
     def update_target_state(self, updates: dict[str, Any]) -> None:
         """Update the persistent target state store managed by the group.
         
-        This serves as the single entry point for modifying the intended state,
-        ensuring specific attributes (like temperature) are always treated 
-        as valid targets for synchronization.
+        Args:
+            updates: Dictionary of attributes to update.
         """
-        for key, value in updates.items():
-            self.target_state_store[key] = value
-            _LOGGER.debug("Updated Target State '%s' to %s", key, value)
+        # Parallel State Update
+        try:
+            self.target_state = self.target_state.update(**updates)
+            _LOGGER.debug("Updated Target State to %s", self.target_state)
+        except Exception as e:
+            _LOGGER.error("Failed to update TargetState: %s", e)
 
     def _init_target_state(self, value_provider: Callable[[str], Any]) -> None:
         """Populate the target state store using a value provider function.
@@ -509,14 +521,27 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 self.update_target_state({key: value})
 
     @callback
+    def _on_state_change(self, event: Event) -> None:
+        """Handle state changes."""
+        
+        self.event = event
+        self.async_update_group_state()
+        self.async_write_ha_state()
+
+    @callback
     def async_update_group_state(self) -> None:
         """Query all members and determine the climate group state."""
 
         # Determine assumed state and availability for the group
         self.states = self._get_valid_member_states(self.climate_entity_ids)
 
-        # Check for sync mode deviations using the FRESH states
-        self.sync_mode_handler.resync()
+        # Calculate and store ChangeState
+        if self.event:
+            self.change_state = ChangeState.create_diff(self.event, self.target_state)
+
+        # Check if the change state is from a member entity
+        if self.change_state and self.change_state.entity_id in self.climate_entity_ids:
+            self.sync_mode_handler.resync()
 
         # Check if there are any valid states
         if self.states:
@@ -652,7 +677,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
             # Cold Start: Populate target store from current group state if empty.
             # Maps sync attribute names to their corresponding group properties.
-            if not self.target_state_store:
+            if self.target_state == TargetState():
                 self._init_target_state(
                     lambda key: (
                         self.hvac_mode if key == "hvac_mode"
@@ -662,8 +687,8 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                     )
                 )
                 
-                if self.target_state_store:
-                     _LOGGER.debug("Initialized Persistent Target State from current group values: %s", self.target_state_store)
+                if self.target_state != TargetState():
+                     _LOGGER.debug("Initialized Persistent Target State from current group values: %s", self.target_state)
 
         # No states available
         else:

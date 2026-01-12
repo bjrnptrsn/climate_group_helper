@@ -128,7 +128,7 @@
         "data_description": {
           "entities": "Apparaten toevoegen of verwijderen. Verwijderen stopt de besturing door de groep.",
           "feature_strategy": "Bepaalt welke functies (bijv. preset modi, ventilatormodi) beschikbaar zijn in de groep wanneer leden verschillende mogelijkheden hebben.",
-          "hvac_mode_strategy": "Strategie voor het berekenen van de groepsstatus vanuit zijn leden (bijv. als één koelt en een ander uit staat)."
+          "hvac_mode_strategy": "Strategie voor het berekenen van de groepsstatus vanuit zijn leden (bijv. als één 'heat' en een ander 'off' staat)."
         },
         "description": "Selecteer uw apparaten en kies hoe de groep hun statussen en functies combineert. 'Strategie' definieert het gedrag van de groep wanneer leden in verschillende modi staan.",
         "title": "Leden & Modi"

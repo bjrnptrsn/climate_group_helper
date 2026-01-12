@@ -78,6 +78,13 @@ CONF_HUMIDITY_SENSORS = "humidity_sensors"
 
 CONF_SYNC_ATTRIBUTES = "sync_attributes"
 
+# Restore Behavior Options
+RESTORE_ALWAYS = "always"
+RESTORE_IF_OFF = "if_off"
+RESTORE_NEVER = "never"
+DEFAULT_RESTORE_BEHAVIOR = RESTORE_IF_OFF
+DEFAULT_RESTORE_ATTRIBUTES = ["hvac_mode", "temperature"]
+
 # HVAC mode strategies
 HVAC_MODE_STRATEGY_AUTO = "auto"
 HVAC_MODE_STRATEGY_NORMAL = "normal"
@@ -118,7 +125,3 @@ CONTROLLABLE_ATTRIBUTES = list(ATTR_SERVICE_MAPPING.keys())
 
 # Float comparison tolerance for temperature and humidity
 FLOAT_TOLERANCE = 0.1
-
-# Home Assistant recycles Context-IDs for approximately 5 seconds.
-# This value reflects HA internals and should NOT be made configurable.
-SYNC_BLOCK_WINDOW: float = 5.0

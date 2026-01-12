@@ -128,7 +128,7 @@
         "data_description": {
           "entities": "Adicionar ou remover dispositivos. A remoção de dispositivos para o seu controlo pelo grupo.",
           "feature_strategy": "Determina quais funcionalidades (ex. modos predefinidos, modos ventoinha) estão disponíveis no grupo quando os membros têm capacidades diferentes.",
-          "hvac_mode_strategy": "Estratégia para calcular o estado do grupo a partir dos seus membros (ex. se um está a arrefecer e outro está desligado)."
+          "hvac_mode_strategy": "Estratégia para calcular o estado do grupo a partir dos seus membros (ex. se um está 'heat' e outro está 'off')."
         },
         "description": "Selecione os seus dispositivos e escolha como o grupo combina os seus estados e funcionalidades. A 'Estratégia' define o comportamento do grupo quando os membros estão em modos diferentes.",
         "title": "Membros & Modos"

@@ -71,15 +71,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Sync Mode** | Standard (One-way), Mirror (Two-way), or Lock (Enforced). |
 | **Selective Sync** | Choose which attributes to enforce (e.g. sync temperature but allow local fan control). |
 
-### ⚠️ Mirror Mode & Settling Time
-Due to limitations in Home Assistant's Context system (Context-ID recycling), the integration implements a **5-second Settling Window** after any group command.
-
-- **During this 5s window:** Changes originating from a **different source** (e.g. User sets Group -> then sets Member A) will be reverted to prevent sync loops.
-- **Why?** Home Assistant recycles Context IDs for different entities within ~5s.
-- **Exception (New in v0.14):** Changes from the **same source** (e.g. User sildes Member A -> slides Member A again) are **allowed immediately**. This prevents "jumping sliders" and improves usability.
-
 ### Known Limitations
-- **Home Assistant Context Recycling:** See "Mirror Mode & Settling Time" above.
 - **"Climate Wars":** Assigning one device to TWO Sync-Mode groups will cause infinite fighting.
 - **Rounding:** Temperature rounding might vary slightly between devices.
 

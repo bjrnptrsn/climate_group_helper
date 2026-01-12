@@ -1,5 +1,4 @@
 """Config flow for Climate Group helper integration."""
-
 from __future__ import annotations
 
 import logging
@@ -11,15 +10,19 @@ from homeassistant import config_entries
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
 from homeassistant.const import CONF_ENTITIES, CONF_NAME
 from homeassistant.core import callback
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.helpers import selector
 
 from .const import (
+    AverageOption,
+    RoundOption,
+    SyncMode,
     CONF_DEBOUNCE_DELAY,
-    CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
+    CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
     CONF_HUMIDITY_CURRENT_AVG_OPTION,
     CONF_HUMIDITY_SENSORS,
@@ -36,17 +39,19 @@ from .const import (
     CONF_TEMP_TARGET_AVG_OPTION,
     CONF_TEMP_TARGET_ROUND_OPTION,
     CONF_TEMP_UPDATE_TARGETS,
+    CONTROLLABLE_ATTRIBUTES,
     DEFAULT_NAME,
+    DEFAULT_RESTORE_ATTRIBUTES,
+    DEFAULT_RESTORE_BEHAVIOR,
     DOMAIN,
     FEATURE_STRATEGY_INTERSECTION,
     FEATURE_STRATEGY_UNION,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
-    CONTROLLABLE_ATTRIBUTES,
-    AverageOption,
-    SyncMode,
-    RoundOption,
+    RESTORE_ALWAYS,
+    RESTORE_IF_OFF,
+    RESTORE_NEVER,
 )
 
 _LOGGER = logging.getLogger(__name__)
