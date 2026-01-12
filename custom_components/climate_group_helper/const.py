@@ -1,6 +1,29 @@
 """Constants for the Climate Group helper integration."""
 
 from enum import StrEnum
+from homeassistant.components.climate import (
+    ATTR_HVAC_MODE,
+    ATTR_HVAC_MODES,
+    ATTR_TARGET_TEMP_LOW,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_HUMIDITY,
+    ATTR_FAN_MODE,
+    ATTR_FAN_MODES,
+    ATTR_PRESET_MODE,
+    ATTR_PRESET_MODES,
+    ATTR_SWING_MODE,
+    ATTR_SWING_MODES,
+    ATTR_SWING_HORIZONTAL_MODE,
+    ATTR_SWING_HORIZONTAL_MODES,
+    SERVICE_SET_FAN_MODE,
+    SERVICE_SET_HUMIDITY,
+    SERVICE_SET_HVAC_MODE,
+    SERVICE_SET_PRESET_MODE,
+    SERVICE_SET_SWING_HORIZONTAL_MODE,
+    SERVICE_SET_SWING_MODE,
+    SERVICE_SET_TEMPERATURE,
+)
+from homeassistant.const import ATTR_TEMPERATURE
 
 DOMAIN = "climate_group_helper"
 DEFAULT_NAME = "Climate Group"
@@ -55,6 +78,13 @@ CONF_HUMIDITY_SENSORS = "humidity_sensors"
 
 CONF_SYNC_ATTRIBUTES = "sync_attributes"
 
+# Restore Behavior Options
+RESTORE_ALWAYS = "always"
+RESTORE_IF_OFF = "if_off"
+RESTORE_NEVER = "never"
+DEFAULT_RESTORE_BEHAVIOR = RESTORE_IF_OFF
+DEFAULT_RESTORE_ATTRIBUTES = ["hvac_mode", "temperature"]
+
 # HVAC mode strategies
 HVAC_MODE_STRATEGY_AUTO = "auto"
 HVAC_MODE_STRATEGY_NORMAL = "normal"
@@ -68,16 +98,30 @@ FEATURE_STRATEGY_UNION = "union"
 ATTR_ASSUMED_STATE = "assumed_state"
 ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
-ATTR_TARGET_HVAC_MODE = "target_hvac_mode"
-ATTR_EXTERNAL_CONTROLLED = "external_controlled"
 
-# Sync Mode
-SYNCABLE_ATTRIBUTES = [
-    "hvac_mode",
-    "temperature",
-    "humidity",
-    "fan_mode",
-    "preset_mode",
-    "swing_mode",
-    "swing_horizontal_mode",
-]
+# Attribute to service call mapping
+ATTR_SERVICE_MAPPING = {
+    ATTR_HVAC_MODE: SERVICE_SET_HVAC_MODE,
+    ATTR_TEMPERATURE: SERVICE_SET_TEMPERATURE,
+    ATTR_TARGET_TEMP_LOW: SERVICE_SET_TEMPERATURE,
+    ATTR_TARGET_TEMP_HIGH: SERVICE_SET_TEMPERATURE,
+    ATTR_HUMIDITY: SERVICE_SET_HUMIDITY,
+    ATTR_FAN_MODE: SERVICE_SET_FAN_MODE,
+    ATTR_PRESET_MODE: SERVICE_SET_PRESET_MODE,
+    ATTR_SWING_MODE: SERVICE_SET_SWING_MODE,
+    ATTR_SWING_HORIZONTAL_MODE: SERVICE_SET_SWING_HORIZONTAL_MODE,
+}
+
+ATTR_MODES_MAPPING = {
+    ATTR_FAN_MODE: ATTR_FAN_MODES,
+    ATTR_HVAC_MODE: ATTR_HVAC_MODES,
+    ATTR_PRESET_MODE: ATTR_PRESET_MODES,
+    ATTR_SWING_MODE: ATTR_SWING_MODES,
+    ATTR_SWING_HORIZONTAL_MODE: ATTR_SWING_HORIZONTAL_MODES,
+}
+
+# Controllable sync attributes
+CONTROLLABLE_ATTRIBUTES = list(ATTR_SERVICE_MAPPING.keys())
+
+# Float comparison tolerance for temperature and humidity
+FLOAT_TOLERANCE = 0.1

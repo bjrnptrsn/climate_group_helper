@@ -51,7 +51,7 @@
         },
         "data_description": {
           "entities": "Add or remove devices. Removing devices stops them from being controlled by the group.",
-          "hvac_mode_strategy": "Strategy for calculating the group's state from its members (e.g. if one is cooling and another is off).",
+          "hvac_mode_strategy": "Strategy for calculating the group's state from its members (e.g. if one is 'heat' and another is 'off').",
           "feature_strategy": "Determines which features (e.g. preset modes, fan modes) are available on the group when members have different capabilities."
         }
       },
@@ -204,6 +204,24 @@
       "options": {
         "intersection": "Intersection – Support features only if ALL members have them",
         "union": "Union – Support all features present on ANY member"
+      }
+    },
+    "restore_behavior": {
+      "options": {
+        "always": "Always Restore (Force)",
+        "if_off": "Only if Heating is OFF (Smart)",
+        "never": "Never Restore (Manual)"
+      }
+    },
+    "restore_attributes": {
+      "options": {
+        "hvac_mode": "HVAC Mode",
+        "temperature": "Temperature (Target)",
+        "target_temp_low": "Temperature Low (Range)",
+        "target_temp_high": "Temperature High (Range)",
+        "preset_mode": "Preset Mode",
+        "fan_mode": "Fan Mode",
+        "swing_mode": "Swing Mode"
       }
     },
     "sync_attributes": {

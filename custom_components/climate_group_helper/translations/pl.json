@@ -128,7 +128,7 @@
         "data_description": {
           "entities": "Dodaj lub usuń urządzenia. Usunięcie urządzeń zatrzymuje ich sterowanie przez grupę.",
           "feature_strategy": "Określa, które funkcje (np. tryby wstępne, tryby wentylatora) są dostępne w grupie, gdy członkowie mają różne możliwości.",
-          "hvac_mode_strategy": "Strategia obliczania stanu grupy na podstawie jej członków (np. jeśli jeden chłodzi, a inny jest wyłączony)."
+          "hvac_mode_strategy": "Strategia obliczania stanu grupy na podstawie jej członków (np. jeśli jeden 'heat', a inny jest 'off')."
         },
         "description": "Wybierz swoje urządzenia i sposób, w jaki grupa łączy ich stany i funkcje. 'Strategia' definiuje zachowanie grupy, gdy członkowie są w różnych trybach.",
         "title": "Członkowie i Tryby"

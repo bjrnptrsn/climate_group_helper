@@ -128,7 +128,7 @@
         "data_description": {
           "entities": "Geräte hinzufügen oder entfernen. Das Entfernen stoppt deren Steuerung durch die Gruppe.",
           "feature_strategy": "Bestimmt, welche Funktionen (z.B. Preset-Modi, Lüfter-Modi) in der Gruppe verfügbar sind, wenn Mitglieder unterschiedliche Fähigkeiten haben.",
-          "hvac_mode_strategy": "Strategie zur Berechnung des Gruppenstatus aus den Mitgliedern (z.B. wenn eines kühlt und ein anderes aus ist)."
+          "hvac_mode_strategy": "Strategie zur Berechnung des Gruppenstatus aus den Mitgliedern (z.B. wenn eines 'heat' und ein anderes 'off' ist)."
         },
         "description": "Wähle deine Geräte und entscheide, wie die Gruppe deren Status und Funktionen kombiniert. Die 'Strategie' definiert das Verhalten, wenn Mitglieder unterschiedliche Modi haben.",
         "title": "Mitglieder & Modi"

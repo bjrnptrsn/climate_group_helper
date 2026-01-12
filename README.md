@@ -71,7 +71,9 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Sync Mode** | Standard (One-way), Mirror (Two-way), or Lock (Enforced). |
 | **Selective Sync** | Choose which attributes to enforce (e.g. sync temperature but allow local fan control). |
 
-> ⚠️ **Warning**: Never assign the same device to multiple groups with active Mirror/Lock mode to prevent **Climate Wars** (infinite loops).
+### Known Limitations
+- **"Climate Wars":** Assigning one device to TWO Sync-Mode groups will cause infinite fighting.
+- **Rounding:** Temperature rounding might vary slightly between devices.
 
 ### Availability & Timings
 

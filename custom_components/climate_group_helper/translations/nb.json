@@ -128,7 +128,7 @@
         "data_description": {
           "entities": "Legg til eller fjern enheter. Fjerning av enheter stopper kontrollen av dem fra gruppen.",
           "feature_strategy": "Bestemmer hvilke funksjoner (f.eks. forhåndsinnstilte moduser, viftemoduser) som er tilgjengelige i gruppen når medlemmene har forskjellige evner.",
-          "hvac_mode_strategy": "Strategi for å beregne gruppens status fra medlemmene (f.eks. hvis en kjøler og en annen er av)."
+          "hvac_mode_strategy": "Strategi for å beregne gruppens status fra medlemmene (f.eks. hvis en 'heat' og en annen er 'off')."
         },
         "description": "Velg enhetene dine og hvordan gruppen kombinerer deres statuser og funksjoner. 'Strategi' definerer gruppens oppførsel når medlemmene er i forskjellige moduser.",
         "title": "Medlemmer og moduser"

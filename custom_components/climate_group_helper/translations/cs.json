@@ -128,7 +128,7 @@
         "data_description": {
           "entities": "Přidat nebo odebrat zařízení. Odebrání zařízení zastaví jejich ovládání skupinou.",
           "feature_strategy": "Určuje, které funkce (např. přednastavené režimy, režimy ventilátoru) jsou ve skupině dostupné, když mají členové různé možnosti.",
-          "hvac_mode_strategy": "Strategie pro výpočet stavu skupiny z jejích členů (např. pokud jeden chladí a další je vypnutý)."
+          "hvac_mode_strategy": "Strategie pro výpočet stavu skupiny z jejích členů (např. pokud jeden 'heat' a další je 'off')."
         },
         "description": "Vyberte svá zařízení a zvolte, jak skupina kombinuje jejich stavy a funkce. 'Strategie' definuje chování skupiny, když jsou členové v různých režimech.",
         "title": "Členové a Režimy"

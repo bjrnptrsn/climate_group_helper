@@ -84,7 +84,7 @@ class ClimateGroupBaseSensor(SensorEntity):
     ):
         """Initialize the sensor."""
         self.hass = hass
-        self._config_entry = config_entry
+        self.config_entry = config_entry
         self._climate_group_entity_id = climate_group_entity_id
         self._climate_group_state = None
         self._attr_should_poll = False
@@ -113,8 +113,8 @@ class ClimateGroupBaseSensor(SensorEntity):
     def device_info(self) -> dict[str, Any]:
         """Return the device info."""
         return {
-            "identifiers": {(DOMAIN, self._config_entry.unique_id)},
-            "name": self._config_entry.title,
+            "identifiers": {(DOMAIN, self.config_entry.unique_id)},
+            "name": self.config_entry.title,
         }
 
 

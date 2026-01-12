@@ -1,12 +1,34 @@
 # Changelog
- 
- ## 0.13.3 - 2026-01-03
- 
- ### 🔧 Fixes
- 
- *   **Sync Mode: Robust Echo Detection (Bounceback Fix)**: Implemented a new history-based mechanism to reliably detect when a device reports back a state change that was originated by the group itself. This solves the "bounceback" loop where the group would mistake its own command echo for a manual user intervention and revert it back.
- *   **Sync Stability (Race Conditions)**: The new logic uses a history buffer to correctly identify echoes even if they arrive out of order or interleaved with other events.
- *   **Configuration Migration**: Automatically removes deprecated `target_temp_high` and `target_temp_low` attributes from existing configurations to prevent issues in the options menu.
+
+## 0.14.0 - 2026-01-12
+
+> **⚠️ Major Architecture Update:** This release introduces a fundamental upgrade to the internal "Target State" engine. While the interface remains the same, the brain of the integration is now significantly more robust.
+
+### ♻️ Core Refactoring
+
+*   **Improved Stability**: Completely rewritten how the group tracks its desired state. It now uses a strict "Single Source of Truth" model, which effectively eliminates "ghost" synchronization bugs where the group and devices could drift apart silently.
+*   **Robust Synchronization**: The logic for filtering attributes (Selective Sync) has been restructured to be much more robust.
+
+### 🔧 Fixes
+
+*   **Reliability**: Improved handling of rapid-fire command updates to prevent conflicts and race conditions.
+*   **Selective Sync**: Fixed an issue where attributes excluded from synchronization might still be enforced in rare "Cold Start" scenarios.
+*   **Migration Safe-Mode**: The configuration migration now performs a "Soft Reset" to automatically clean up any legacy data from older versions, ensuring a fresh start for the new engine.
+
+## 0.13.3 - 2026-01-03
+
+### 🔧 Fixes
+
+*   **Sync Mode: Robust Echo Detection (Bounceback Fix)**: Implemented a new history-based mechanism to reliably detect when a device reports back a state change that was originated by the group itself. This solves the "bounceback" loop where the group would mistake its own command echo for a manual user intervention and revert it back.
+*   **Sync Stability (Race Conditions)**: The new logic uses a history buffer to correctly identify echoes even if they arrive out of order or interleaved with other events.
+*   **Configuration Migration**: Automatically removes deprecated `target_temp_high` and `target_temp_low` attributes from existing configurations to prevent issues in the options menu.
+
+## 0.13.2 - 2026-01-03
+
+### 🔧 Fixes
+
+*   **Sync Mode: Robust Echo Detection (Bounceback Fix)**: Implemented a new history-based mechanism to reliably detect when a device reports back a state change that was originated by the group itself. This solves the "bounceback" loop where the group would mistake its own command echo for a manual user intervention and revert it back.
+*   **Sync Stability (Race Conditions)**: The new logic uses a history buffer to correctly identify echoes even if they arrive out of order or interleaved with other events.
 
 ## 0.13.1 - 2026-01-01
 

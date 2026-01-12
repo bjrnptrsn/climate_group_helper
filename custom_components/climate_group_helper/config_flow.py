@@ -1,5 +1,4 @@
 """Config flow for Climate Group helper integration."""
-
 from __future__ import annotations
 
 import logging
@@ -17,9 +16,12 @@ from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.helpers import selector
 
 from .const import (
+    AverageOption,
+    RoundOption,
+    SyncMode,
     CONF_DEBOUNCE_DELAY,
-    CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
+    CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
     CONF_HUMIDITY_CURRENT_AVG_OPTION,
     CONF_HUMIDITY_SENSORS,
@@ -36,6 +38,7 @@ from .const import (
     CONF_TEMP_TARGET_AVG_OPTION,
     CONF_TEMP_TARGET_ROUND_OPTION,
     CONF_TEMP_UPDATE_TARGETS,
+    CONTROLLABLE_ATTRIBUTES,
     DEFAULT_NAME,
     DOMAIN,
     FEATURE_STRATEGY_INTERSECTION,
@@ -43,10 +46,6 @@ from .const import (
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
-    SYNCABLE_ATTRIBUTES,
-    AverageOption,
-    SyncMode,
-    RoundOption,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -436,11 +435,11 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(
                     CONF_SYNC_ATTRIBUTES,
                     default=current_config.get(
-                        CONF_SYNC_ATTRIBUTES, SYNCABLE_ATTRIBUTES
+                        CONF_SYNC_ATTRIBUTES, CONTROLLABLE_ATTRIBUTES
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=SYNCABLE_ATTRIBUTES,
+                        options=CONTROLLABLE_ATTRIBUTES,
                         mode=selector.SelectSelectorMode.LIST,
                         multiple=True,
                         translation_key="sync_attributes",
