@@ -128,7 +128,7 @@
         "data_description": {
           "entities": "Tilføj eller fjern enheder. Fjernelse af enheder stopper dem fra at blive kontrolleret af gruppen.",
           "feature_strategy": "Bestemmer hvilke funktioner (f.eks. forudindstillede tilstande, blæsertilstande) der er tilgængelige på gruppen, når medlemmer har forskellige evner.",
-          "hvac_mode_strategy": "Strategi for beregning af gruppens tilstand ud fra dens medlemmer (f.eks. hvis en køler og en anden er slukket)."
+          "hvac_mode_strategy": "Strategi for beregning af gruppens tilstand ud fra dens medlemmer (f.eks. hvis en 'heat' og en anden er 'off')."
         },
         "description": "Vælg dine enheder og vælg, hvordan gruppen kombinerer deres tilstande og funktioner. 'Strategi' definerer gruppens adfærd, når medlemmer er i forskellige tilstande.",
         "title": "Medlemmer & Tilstande"

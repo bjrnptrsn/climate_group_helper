@@ -1,5 +1,4 @@
 """Service call execution logic for the climate group."""
-
 from __future__ import annotations
 
 import asyncio
@@ -18,10 +17,13 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.const import ATTR_ENTITY_ID
-from homeassistant.core import Context
 from homeassistant.helpers.debounce import Debouncer
 
-from .const import ATTR_MODES_MAPPING, ATTR_SERVICE_MAPPING
+from .const import (
+    ATTR_MODES_MAPPING,
+    ATTR_SERVICE_MAPPING,
+)
+from .state import FilterState
 
 if TYPE_CHECKING:
     from .climate import ClimateGroup
@@ -58,16 +60,8 @@ class ServiceCallHandler:
         if self._active_tasks:
             await asyncio.gather(*self._active_tasks, return_exceptions=True)
 
-    async def call_debounced(self, context: Context | None = None):
+    async def call_debounced(self, state: FilterState | None = None):
         """Debounce and execute a service call."""
-
-        # Group Action (no context passed) vs Sync Action (context passed)
-        if not context:
-            context = self._group.context
-            # Update source tracking with group entity ID
-            self._group.last_service_call_entity = self._group.entity_id
-
-            _LOGGER.debug("Group action, context ID: %s", context.id if context else None)
 
         async def debounce_func():
             """The coroutine to be executed after debounce."""
@@ -75,7 +69,7 @@ class ServiceCallHandler:
             if task:
                 self._active_tasks.add(task)
             try:
-                await self._execute_calls(context=context)
+                await self._execute_calls(state=state)
             finally:
                 if task:
                     self._active_tasks.discard(task)
@@ -94,21 +88,21 @@ class ServiceCallHandler:
 
         await self._debouncer.async_call()
 
-    async def _execute_calls(self, context: Context | None = None):
+    async def _execute_calls(self, state: FilterState | None = None):
         """Execute service calls to sync members, with retry logic.
         
-        Generates sync calls from target_state_store and executes them.
+        Generates sync calls from target_state and executes them.
         Retries failed calls up to retry_attempts times with retry_delay between.
         
         Args:
-            context: Optional context for tracking command origin.
+            filter_state: Optional FilterState to enforce. If None, uses group.target_state.
         """
         attempts = self._group.retry_attempts + 1
         delay = self._group.retry_delay
 
         for attempt in range(attempts):
             try:
-                calls = self._generate_calls()
+                calls = self._generate_calls(filter_state=state)
 
                 if not calls:
                     _LOGGER.debug("All members synced, stopping retry loop.")
@@ -128,8 +122,7 @@ class ServiceCallHandler:
                         CLIMATE_DOMAIN,
                         service=service,
                         service_data=data,
-                        blocking=True,
-                        context=context
+                        blocking=True
                     )
 
             except Exception as e:
@@ -138,7 +131,7 @@ class ServiceCallHandler:
             if attempts > 1 and attempt < (attempts - 1):
                 await asyncio.sleep(delay)
 
-    def _generate_calls(self) -> list[dict[str, Any]]:
+    def _generate_calls(self, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
         """Generate all service calls needed to sync members to target_state.
         
         Handles special cases:
@@ -149,17 +142,19 @@ class ServiceCallHandler:
         Returns:
             List of call dicts with 'service', 'kwargs', and 'entity_ids'.
         """
-        
+
         calls = []
-        target_state = self._group.target_state_store
-        target_hvac_mode = target_state.get(ATTR_HVAC_MODE)
+        target_state_dict = self._group.target_state.to_dict()
+        target_hvac_mode = target_state_dict.get(ATTR_HVAC_MODE)
+
+        filter_attrs = filter_state.to_dict() if filter_state else target_state_dict
 
         temp_range_processed = False
-        
-        for attr, target in target_state.items():
-            if target is None:
+
+        for attr, target in target_state_dict.items():
+            if attr not in filter_attrs:
                 continue
-            
+
             # Prevent "Wake Up" bug: If target is OFF, only process HVAC_MODE (to turn off).
             # Skip all other attributes (temp, fan, etc.) which might perform implicit wakeups.
             if target_hvac_mode == HVACMode.OFF and attr != ATTR_HVAC_MODE:
@@ -167,16 +162,20 @@ class ServiceCallHandler:
 
             if attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
                 if not temp_range_processed:
-                    low, high = target_state.get(ATTR_TARGET_TEMP_LOW), target_state.get(ATTR_TARGET_TEMP_HIGH)
+                    low = target_state_dict.get(ATTR_TARGET_TEMP_LOW)
+                    high = target_state_dict.get(ATTR_TARGET_TEMP_HIGH)
+
                     for temp_attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
-                        if (entity := self._get_unsynced_entities(temp_attr)):
-                            calls.append({
-                                "service": SERVICE_SET_TEMPERATURE,
-                                "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
-                                "entity_ids": entity
-                            })
-                            temp_range_processed = True
-                            break
+                        # Ensure we have both values before trying to sync range
+                        if low is not None and high is not None:
+                            if (entity := self._get_unsynced_entities(temp_attr)):
+                                calls.append({
+                                    "service": SERVICE_SET_TEMPERATURE,
+                                    "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
+                                    "entity_ids": entity
+                                })
+                                temp_range_processed = True
+                                break
                 continue
 
             service = ATTR_SERVICE_MAPPING.get(attr)
@@ -202,12 +201,17 @@ class ServiceCallHandler:
         
         Args:
             attr: The attribute to check (e.g., 'temperature', 'hvac_mode')
+            target_state_dict: Optional dict of target values. If None, uses group.target_state.
             
         Returns:
             List of entity IDs that need to be synced.
         """
         entity_ids = []
-        target_value = self._group.target_state_store.get(attr)
+        
+        target_value = getattr(self._group.target_state, attr, None)
+
+        if target_value is None:
+            return []
 
         for entity_id in self._group.climate_entity_ids:
             state = self._group.hass.states.get(entity_id)
@@ -226,7 +230,7 @@ class ServiceCallHandler:
 
             # Special handling for temperature and humidity tolerance
             if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH, ATTR_HUMIDITY):
-                if self._group.within_range(current_value, target_value):
+                if self._group.within_tolerance(current_value, target_value):
                     continue
 
             if current_value != target_value:

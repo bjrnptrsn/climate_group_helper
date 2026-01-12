@@ -1,6 +1,17 @@
 # Changelog
 
-## 0.14.0-beta1 - 2026-01-10
+## 0.14.0-beta2 - 2026-01-12
+
+### ⚠️ Major Sync Logic Update
+
+*   **Removal of 5s Sync Block**: The rigid 5-second "Settling Window" has been completely removed. The integration no longer blocks changes based on time.
+*   **Diff-Based State Logic**: The detailed synchronization logic (formerly relying on complex echo detection) now strictly uses value comparison. By calculating the exact difference ("Diff") between the target state and member reports, the system reliably identifies deviations without needing to guess the command source.
+
+### 🔧 Refactoring
+
+*   **TargetState Architecture**: Introduced a typed `TargetState` object as the single source of truth for the group's state, improving type safety and maintainability.
+
+## 0.14.0-beta1 - 2026-01-07
 
 > **⚠️ Major Architectural Update:** This release replaces the Context-ID-based change detection with a new timeline-based "Sync Block" approach. This fundamental change solves reliability issues caused by Home Assistant's Context-ID recycling behavior.
 

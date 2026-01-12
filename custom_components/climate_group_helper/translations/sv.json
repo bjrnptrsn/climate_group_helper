@@ -128,7 +128,7 @@
         "data_description": {
           "entities": "Lägg till eller ta bort enheter. Att ta bort enheter stoppar dem från att kontrolleras av gruppen.",
           "feature_strategy": "Bestämmer vilka funktioner (t.ex. förinställda lägen, fläktlägen) som är tillgängliga på gruppen när medlemmar har olika kapaciteter.",
-          "hvac_mode_strategy": "Strategi för att beräkna gruppens tillstånd från sina medlemmar (t.ex. om en kyler och en annan är avstängd)."
+          "hvac_mode_strategy": "Strategi för att beräkna gruppens tillstånd från sina medlemmar (t.ex. om en 'heat' och en annan är 'off')."
         },
         "description": "Välj dina enheter och välj hur gruppen kombinerar deras tillstånd och funktioner. 'Strategi' definierar gruppens beteende när medlemmar är i olika lägen.",
         "title": "Medlemmar & Lägen"

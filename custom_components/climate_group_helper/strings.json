@@ -51,7 +51,7 @@
         },
         "data_description": {
           "entities": "Add or remove devices. Removing devices stops them from being controlled by the group.",
-          "hvac_mode_strategy": "Strategy for calculating the group's state from its members (e.g. if one is cooling and another is off).",
+          "hvac_mode_strategy": "Strategy for calculating the group's state from its members (e.g. if one is 'heat' and another is 'off').",
           "feature_strategy": "Determines which features (e.g. preset modes, fan modes) are available on the group when members have different capabilities."
         }
       },

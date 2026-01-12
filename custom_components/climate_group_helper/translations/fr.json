@@ -128,7 +128,7 @@
         "data_description": {
           "entities": "Ajouter ou supprimer des appareils. La suppression des appareils arrête leur contrôle par le groupe.",
           "feature_strategy": "Détermine quelles fonctionnalités (ex. modes prédéfinis, modes ventilateur) sont disponibles sur le groupe lorsque les membres ont des capacités différentes.",
-          "hvac_mode_strategy": "Stratégie pour calculer l'état du groupe à partir de ses membres (ex. si l'un refroidit et un autre est éteint)."
+          "hvac_mode_strategy": "Stratégie pour calculer l'état du groupe à partir de ses membres (ex. si l'un 'heat' et un autre est 'off')."
         },
         "description": "Sélectionnez vos appareils et choisissez comment le groupe combine leurs états et fonctionnalités. La 'Stratégie' définit le comportement du groupe lorsque les membres sont dans des modes différents.",
         "title": "Membres & Modes"
