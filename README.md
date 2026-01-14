@@ -34,6 +34,15 @@ Use **multiple external sensors** for temperature and humidity. The group calcul
 ### 🎚️ Selective Attribute Sync
 *New in v0.13!* Choose **exactly** which attributes to sync in Lock/Mirror modes. Example: Sync temperature but allow individual fan control.
 
+### 🪟 Window Control
+*New in v0.15!* Automatically turn off heating when windows open and restore it when they close.
+
+*   **Room Sensor:** Fast reaction (default 15s). Use for sensors **directly in the room** (e.g. window contact sensor on the living room window).
+*   **Zone Sensor:** Slow reaction (default 5min). Use for **whole-house sensors** (e.g. grouped "window" binary sensor). This prevents heating shutdown in rooms with closed windows when only a distant window is open.
+*   **Snapshot Restoration:** When windows open, the current state is saved as a snapshot. When all windows close, the snapshot is restored. You can configure **which attributes** to restore (similar to Selective Attribute Sync).
+*   **User Blocking:** Manual HVAC mode changes are blocked while windows are open.
+*   **Sync Blocking:** Sync Mode (Lock/Mirror) ignores all state changes caused by Window Control to prevent conflicts.
+
 ---
 
 ## ⚙️ Configuration Options
@@ -70,6 +79,17 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 |--------|-------------|
 | **Sync Mode** | Standard (One-way), Mirror (Two-way), or Lock (Enforced). |
 | **Selective Sync** | Choose which attributes to enforce (e.g. sync temperature but allow local fan control). |
+
+### Window Control
+
+| Option | Description |
+|--------|-------------|
+| **Room Sensor** | Binary sensor for fast reaction (window in the same room). |
+| **Zone Sensor** | Binary sensor for slow reaction (e.g. whole-house "any window open"). |
+| **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
+| **Close Delay** | Time before restoring heating after windows close (default: 30s). |
+| **Restore Attributes** | Select which attributes to restore (temperature, HVAC mode, etc.). |
+| **Default HVAC Mode** | Fallback mode for restoration after restart (when no snapshot exists). |
 
 ### Known Limitations
 - **"Climate Wars":** Assigning one device to TWO Sync-Mode groups will cause infinite fighting.

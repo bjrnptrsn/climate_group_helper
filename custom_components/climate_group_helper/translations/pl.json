@@ -91,17 +91,17 @@
     "step": {
       "humidity": {
         "data": {
-          "humidity_current_avg_option": "Obecna Wilgotność (Wyświetlanie)",
+          "humidity_current_avg": "Obecna Wilgotność (Wyświetlanie)",
           "humidity_sensors": "Zewnętrzne Czujniki Wilgotności",
-          "humidity_target_avg_option": "Docelowa Wilgotność (Sterowanie)",
-          "humidity_target_round_option": "Precyzja Docelowej Wilgotności",
+          "humidity_target_avg": "Docelowa Wilgotność (Sterowanie)",
+          "humidity_target_round": "Precyzja Docelowej Wilgotności",
           "humidity_update_targets": "Zapisz Zewnętrzną Wilgotność do Encji"
         },
         "data_description": {
-          "humidity_current_avg_option": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
+          "humidity_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
           "humidity_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla wilgotności grupy.",
-          "humidity_target_avg_option": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
-          "humidity_target_round_option": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
+          "humidity_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
+          "humidity_target_round": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
           "humidity_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych. Przydatne do kalibracji osuszaczy."
         },
         "description": "Skonfiguruj agregację wilgotności i czujniki zewnętrzne. Pamiętaj, że wiele termostatów tylko raportuje wilgotność i nie pozwala na sterowanie.",
@@ -159,17 +159,17 @@
       },
       "temperature": {
         "data": {
-          "temp_current_avg_option": "Obecna Temperatura (Wyświetlanie)",
+          "temp_current_avg": "Obecna Temperatura (Wyświetlanie)",
           "temp_sensors": "Zewnętrzne Czujniki Temperatury",
-          "temp_target_avg_option": "Docelowa Temperatura (Sterowanie)",
-          "temp_target_round_option": "Precyzja Docelowej Temperatury",
+          "temp_target_avg": "Docelowa Temperatura (Sterowanie)",
+          "temp_target_round": "Precyzja Docelowej Temperatury",
           "temp_update_targets": "Zapisz Zewnętrzną Temp do Encji"
         },
         "data_description": {
-          "temp_current_avg_option": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
+          "temp_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
           "temp_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla temperatury grupy.",
-          "temp_target_avg_option": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
-          "temp_target_round_option": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
+          "temp_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
+          "temp_target_round": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
           "temp_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych (np. offsety kalibracji TRV). Przydatne, aby termostaty znały rzeczywistą temperaturę w pomieszczeniu."
         },
         "description": "Skonfiguruj, jak grupa obsługuje agregację temperatury i punkty nastawy. Czujniki zewnętrzne nadpiszą odczyty członków, jeśli zostaną wybrane.",
@@ -198,7 +198,7 @@
         "union": "Suma (Zaawansowany - Wszystkie Funkcje)"
       }
     },
-    "humidity_current_avg_option": {
+    "humidity_current_avg": {
       "options": {
         "max": "Maksimum (Najwyższa)",
         "mean": "Średnia",
@@ -206,7 +206,7 @@
         "min": "Minimum (Najniższa)"
       }
     },
-    "humidity_target_avg_option": {
+    "humidity_target_avg": {
       "options": {
         "max": "Maksimum (Najwyższa)",
         "mean": "Średnia",
@@ -214,7 +214,7 @@
         "min": "Minimum (Najniższa)"
       }
     },
-    "humidity_target_round_option": {
+    "humidity_target_round": {
       "options": {
         "half": "Pół Procenta (0.5%)",
         "integer": "Liczby Całkowite (1%)",
@@ -248,7 +248,7 @@
         "standard": "Standard (Jednokierunkowy)"
       }
     },
-    "temp_current_avg_option": {
+    "temp_current_avg": {
       "options": {
         "max": "Maksimum (Najwyższa)",
         "mean": "Średnia",
@@ -256,7 +256,7 @@
         "min": "Minimum (Najniższa)"
       }
     },
-    "temp_target_avg_option": {
+    "temp_target_avg": {
       "options": {
         "max": "Maksimum (Najwyższa)",
         "mean": "Średnia",
@@ -264,7 +264,7 @@
         "min": "Minimum (Najniższa)"
       }
     },
-    "temp_target_round_option": {
+    "temp_target_round": {
       "options": {
         "half": "Pół Stopnia (0.5°)",
         "integer": "Liczby Całkowite (1°)",

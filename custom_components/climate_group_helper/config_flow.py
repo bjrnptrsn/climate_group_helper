@@ -7,7 +7,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN, HVACMode
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import CONF_ENTITIES, CONF_NAME
@@ -16,36 +16,48 @@ from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.helpers import selector
 
 from .const import (
-    AverageOption,
-    RoundOption,
-    SyncMode,
+    CONF_CLOSE_DELAY,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
-    CONF_HUMIDITY_CURRENT_AVG_OPTION,
+    CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_SENSORS,
-    CONF_HUMIDITY_TARGET_AVG_OPTION,
-    CONF_HUMIDITY_TARGET_ROUND_OPTION,
+    CONF_HUMIDITY_TARGET_AVG,
+    CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_RESTORE_ATTRS,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
-    CONF_SYNC_ATTRIBUTES,
+    CONF_ROOM_OPEN_DELAY,
+    CONF_ROOM_SENSOR,
+    CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
-    CONF_TEMP_CURRENT_AVG_OPTION,
+    CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_SENSORS,
-    CONF_TEMP_TARGET_AVG_OPTION,
-    CONF_TEMP_TARGET_ROUND_OPTION,
+    CONF_TEMP_TARGET_AVG,
+    CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
-    CONTROLLABLE_ATTRIBUTES,
+    CONF_TARGET_ATTRS,
+    CONF_DEFAULT_HVAC_MODE,
+    CONF_WINDOW_MODE,
+    CONF_ZONE_OPEN_DELAY,
+    CONF_ZONE_SENSOR,
+    DEFAULT_CLOSE_DELAY,
     DEFAULT_NAME,
+    DEFAULT_ROOM_OPEN_DELAY,
+    DEFAULT_ZONE_OPEN_DELAY,
     DOMAIN,
     FEATURE_STRATEGY_INTERSECTION,
     FEATURE_STRATEGY_UNION,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
+    AverageOption,
+    RoundOption,
+    SyncMode,
+    WindowControlMode,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -132,6 +144,8 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 "humidity",
                 "timings",
                 "sync",
+                "window_control",
+                "window_restore",
                 "other",
             ],
         )
@@ -217,39 +231,39 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         schema = vol.Schema(
             {
                 vol.Required(
-                    CONF_TEMP_TARGET_AVG_OPTION,
+                    CONF_TEMP_TARGET_AVG,
                     default=current_config.get(
-                        CONF_TEMP_TARGET_AVG_OPTION, AverageOption.MEAN
+                        CONF_TEMP_TARGET_AVG, AverageOption.MEAN
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[opt.value for opt in AverageOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
-                        translation_key="temp_target_avg_option",
+                        translation_key="temp_target_avg",
                     )
                 ),
                 vol.Required(
-                    CONF_TEMP_TARGET_ROUND_OPTION,
+                    CONF_TEMP_TARGET_ROUND,
                     default=current_config.get(
-                        CONF_TEMP_TARGET_ROUND_OPTION, RoundOption.NONE
+                        CONF_TEMP_TARGET_ROUND, RoundOption.NONE
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[opt.value for opt in RoundOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
-                        translation_key="temp_target_round_option",
+                        translation_key="temp_target_round",
                     )
                 ),
                 vol.Required(
-                    CONF_TEMP_CURRENT_AVG_OPTION,
+                    CONF_TEMP_CURRENT_AVG,
                     default=current_config.get(
-                        CONF_TEMP_CURRENT_AVG_OPTION, AverageOption.MEAN
+                        CONF_TEMP_CURRENT_AVG, AverageOption.MEAN
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[opt.value for opt in AverageOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
-                        translation_key="temp_current_avg_option",
+                        translation_key="temp_current_avg",
                     )
                 ),
                 vol.Optional(
@@ -292,39 +306,39 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         schema = vol.Schema(
             {
                 vol.Required(
-                    CONF_HUMIDITY_TARGET_AVG_OPTION,
+                    CONF_HUMIDITY_TARGET_AVG,
                     default=current_config.get(
-                        CONF_HUMIDITY_TARGET_AVG_OPTION, AverageOption.MEAN
+                        CONF_HUMIDITY_TARGET_AVG, AverageOption.MEAN
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[opt.value for opt in AverageOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
-                        translation_key="humidity_target_avg_option",
+                        translation_key="humidity_target_avg",
                     )
                 ),
                 vol.Required(
-                    CONF_HUMIDITY_TARGET_ROUND_OPTION,
+                    CONF_HUMIDITY_TARGET_ROUND,
                     default=current_config.get(
-                        CONF_HUMIDITY_TARGET_ROUND_OPTION, RoundOption.NONE
+                        CONF_HUMIDITY_TARGET_ROUND, RoundOption.NONE
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[opt.value for opt in RoundOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
-                        translation_key="humidity_target_round_option",
+                        translation_key="humidity_target_round",
                     )
                 ),
                 vol.Required(
-                    CONF_HUMIDITY_CURRENT_AVG_OPTION,
+                    CONF_HUMIDITY_CURRENT_AVG,
                     default=current_config.get(
-                        CONF_HUMIDITY_CURRENT_AVG_OPTION, AverageOption.MEAN
+                        CONF_HUMIDITY_CURRENT_AVG, AverageOption.MEAN
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[opt.value for opt in AverageOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
-                        translation_key="humidity_current_avg_option",
+                        translation_key="humidity_current_avg",
                     )
                 ),
                 vol.Optional(
@@ -418,7 +432,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             self._update_config_if_changed(current_config)
             # Auto-navigate to next step
-            return await self.async_step_other()
+            return await self.async_step_window_control()
 
         schema = vol.Schema(
             {
@@ -433,13 +447,13 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     )
                 ),
                 vol.Required(
-                    CONF_SYNC_ATTRIBUTES,
+                    CONF_SYNC_ATTRS,
                     default=current_config.get(
-                        CONF_SYNC_ATTRIBUTES, CONTROLLABLE_ATTRIBUTES
+                        CONF_SYNC_ATTRS, CONF_TARGET_ATTRS
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=CONTROLLABLE_ATTRIBUTES,
+                        options=CONF_TARGET_ATTRS,
                         mode=selector.SelectSelectorMode.LIST,
                         multiple=True,
                         translation_key="sync_attributes",
@@ -450,6 +464,139 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="sync",
+            data_schema=schema,
+        )
+
+    async def async_step_window_control(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage window control settings."""
+        current_config = {**self._config_entry.options, **(user_input or {})}
+
+        if user_input is not None:
+            # If user clears a sensor field, remove it from config
+            for key in [CONF_ROOM_SENSOR, CONF_ZONE_SENSOR]:
+                if key not in user_input or not user_input.get(key):
+                    current_config.pop(key, None)
+            # Auto-disable window control if no sensors configured
+            if CONF_ROOM_SENSOR not in current_config and CONF_ZONE_SENSOR not in current_config:
+                current_config[CONF_WINDOW_MODE] = WindowControlMode.OFF
+            
+            self._update_config_if_changed(current_config)
+            return await self.async_step_window_restore()
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_WINDOW_MODE,
+                    default=current_config.get(CONF_WINDOW_MODE, WindowControlMode.OFF),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[opt.value for opt in WindowControlMode],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="window_mode",
+                    )
+                ),
+                vol.Optional(
+                    CONF_ROOM_SENSOR,
+                    description={"suggested_value": current_config.get(CONF_ROOM_SENSOR)},
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain="binary_sensor",
+                    )
+                ),
+                vol.Optional(
+                    CONF_ZONE_SENSOR,
+                    description={"suggested_value": current_config.get(CONF_ZONE_SENSOR)},
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain="binary_sensor",
+                    )
+                ),
+                vol.Optional(
+                    CONF_ROOM_OPEN_DELAY,
+                    default=current_config.get(CONF_ROOM_OPEN_DELAY, DEFAULT_ROOM_OPEN_DELAY),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=120,
+                        step=1,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(
+                    CONF_ZONE_OPEN_DELAY,
+                    default=current_config.get(CONF_ZONE_OPEN_DELAY, DEFAULT_ZONE_OPEN_DELAY),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=1,
+                        max=900,
+                        step=5,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(
+                    CONF_CLOSE_DELAY,
+                    default=current_config.get(CONF_CLOSE_DELAY, DEFAULT_CLOSE_DELAY),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=300,
+                        step=1,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="window_control",
+            data_schema=schema,
+        )
+
+    async def async_step_window_restore(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage window restore attributes."""
+        current_config = {**self._config_entry.options, **(user_input or {})}
+
+        if user_input is not None:
+            self._update_config_if_changed(current_config)
+            return await self.async_step_other()
+
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_DEFAULT_HVAC_MODE,
+                    description={"suggested_value": current_config.get(CONF_DEFAULT_HVAC_MODE, "none")},
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=["none"] + list(HVACMode),
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="default_hvac_mode",
+                    )
+                ),
+                vol.Required(
+                    CONF_RESTORE_ATTRS,
+                    default=current_config.get(
+                        CONF_RESTORE_ATTRS, CONF_TARGET_ATTRS
+                    ),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=CONF_TARGET_ATTRS,
+                        mode=selector.SelectSelectorMode.LIST,
+                        multiple=True,
+                        translation_key="restore_attributes",
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="window_restore",
             data_schema=schema,
         )
 

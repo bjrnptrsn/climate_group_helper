@@ -91,17 +91,17 @@
     "step": {
       "humidity": {
         "data": {
-          "humidity_current_avg_option": "Aktuelle Luftfeuchtigkeit (Anzeige)",
+          "humidity_current_avg": "Aktuelle Luftfeuchtigkeit (Anzeige)",
           "humidity_sensors": "Externe Feuchtigkeitssensoren",
-          "humidity_target_avg_option": "Ziel-Luftfeuchtigkeit (Steuerung)",
-          "humidity_target_round_option": "Ziel-Feuchtigkeit Präzision",
+          "humidity_target_avg": "Ziel-Luftfeuchtigkeit (Steuerung)",
+          "humidity_target_round": "Ziel-Feuchtigkeit Präzision",
           "humidity_update_targets": "Schreibe externe Feuchtigkeit in Entitäten"
         },
         "data_description": {
-          "humidity_current_avg_option": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
+          "humidity_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
           "humidity_sensors": "Verwende externe Sensoren anstelle der Mitgliederwerte. Diese werden zur einzigen Wahrheitsquelle für die Feuchtigkeit der Gruppe.",
-          "humidity_target_avg_option": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
-          "humidity_target_round_option": "Gilt nur für Werte, die an Geräte gesendet werden, nicht für aktuelle/angezeigte Werte.",
+          "humidity_target_avg": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
+          "humidity_target_round": "Gilt nur für Werte, die an Geräte gesendet werden, nicht für aktuelle/angezeigte Werte.",
           "humidity_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten. Nützlich für die Kalibrierung von Luftentfeuchtern."
         },
         "description": "Konfiguriere Feuchtigkeits-Aggregation und externe Sensoren. Beachte, dass viele Thermostate Feuchtigkeit nur melden, aber keine Steuerung erlauben.",
@@ -159,17 +159,17 @@
       },
       "temperature": {
         "data": {
-          "temp_current_avg_option": "Aktuelle Temperatur (Anzeige)",
+          "temp_current_avg": "Aktuelle Temperatur (Anzeige)",
           "temp_sensors": "Externer Temperatursensor",
-          "temp_target_avg_option": "Zieltemperatur (Steuerung)",
-          "temp_target_round_option": "Zieltemperatur Präzision",
+          "temp_target_avg": "Zieltemperatur (Steuerung)",
+          "temp_target_round": "Zieltemperatur Präzision",
           "temp_update_targets": "Schreibe externe Temp. in Entitäten"
         },
         "data_description": {
-          "temp_current_avg_option": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
+          "temp_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
           "temp_sensors": "Verwende externe Sensoren anstelle der Mitgliederwerte. Diese werden zur einzigen Wahrheitsquelle für die Temperatur der Gruppe.",
-          "temp_target_avg_option": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
-          "temp_target_round_option": "Gilt nur für Werte, die an Geräte gesendet werden, nicht für aktuelle/angezeigte Werte.",
+          "temp_target_avg": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
+          "temp_target_round": "Gilt nur für Werte, die an Geräte gesendet werden, nicht für aktuelle/angezeigte Werte.",
           "temp_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten (z.B. TRV-Kalibrierung). Nützlich, um Thermostate über die tatsächliche Raumtemperatur zu informieren."
         },
         "description": "Konfiguriere, wie die Gruppe Temperatur-Aggregation und Sollwerte handhabt. Externe Sensoren überschreiben Mitglieder-Messwerte, falls ausgewählt.",
@@ -198,7 +198,7 @@
         "union": "Vereinigung (Power User - Alle Funktionen)"
       }
     },
-    "humidity_current_avg_option": {
+    "humidity_current_avg": {
       "options": {
         "max": "Maximum (Höchster)",
         "mean": "Mittelwert (Durchschnitt)",
@@ -206,7 +206,7 @@
         "min": "Minimum (Niedrigster)"
       }
     },
-    "humidity_target_avg_option": {
+    "humidity_target_avg": {
       "options": {
         "max": "Maximum (Höchster)",
         "mean": "Mittelwert (Durchschnitt)",
@@ -214,7 +214,7 @@
         "min": "Minimum (Niedrigster)"
       }
     },
-    "humidity_target_round_option": {
+    "humidity_target_round": {
       "options": {
         "half": "Halbes Prozent (0.5%)",
         "integer": "Ganze Zahl (1%)",
@@ -248,7 +248,7 @@
         "standard": "Standard (Einweg)"
       }
     },
-    "temp_current_avg_option": {
+    "temp_current_avg": {
       "options": {
         "max": "Maximum (Höchster)",
         "mean": "Mittelwert (Durchschnitt)",
@@ -256,7 +256,7 @@
         "min": "Minimum (Niedrigster)"
       }
     },
-    "temp_target_avg_option": {
+    "temp_target_avg": {
       "options": {
         "max": "Maximum (Höchster)",
         "mean": "Mittelwert (Durchschnitt)",
@@ -264,7 +264,7 @@
         "min": "Minimum (Niedrigster)"
       }
     },
-    "temp_target_round_option": {
+    "temp_target_round": {
       "options": {
         "half": "Halbes Grad (0.5°)",
         "integer": "Ganze Zahl (1°)",

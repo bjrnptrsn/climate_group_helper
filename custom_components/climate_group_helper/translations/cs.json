@@ -91,17 +91,17 @@
     "step": {
       "humidity": {
         "data": {
-          "humidity_current_avg_option": "Aktuální Vlhkost (Zobrazení)",
+          "humidity_current_avg": "Aktuální Vlhkost (Zobrazení)",
           "humidity_sensors": "Externí Senzory Vlhkosti",
-          "humidity_target_avg_option": "Cílová Vlhkost (Ovládání)",
-          "humidity_target_round_option": "Přesnost Cílové Vlhkosti",
+          "humidity_target_avg": "Cílová Vlhkost (Ovládání)",
+          "humidity_target_round": "Přesnost Cílové Vlhkosti",
           "humidity_update_targets": "Zapsat Externí Vlhkost do Entit"
         },
         "data_description": {
-          "humidity_current_avg_option": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
+          "humidity_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
           "humidity_sensors": "Použít externí senzory místo údajů od členů. Ty se stanou jediným zdrojem pravdy pro vlhkost skupiny.",
-          "humidity_target_avg_option": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
-          "humidity_target_round_option": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
+          "humidity_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
+          "humidity_target_round": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
           "humidity_update_targets": "Zapsat hodnotu externího senzoru do číselných entit. Užitečné pro kalibraci odvlhčovačů."
         },
         "description": "Nakonfigurujte agregaci vlhkosti a externí senzory. Pamatujte, že mnoho termostatů pouze hlásí vlhkost a neumožňuje ovládání.",
@@ -159,17 +159,17 @@
       },
       "temperature": {
         "data": {
-          "temp_current_avg_option": "Aktuální Teplota (Zobrazení)",
+          "temp_current_avg": "Aktuální Teplota (Zobrazení)",
           "temp_sensors": "Externí Senzory Teploty",
-          "temp_target_avg_option": "Cílová Teplota (Ovládání)",
-          "temp_target_round_option": "Přesnost Cílové Teploty",
+          "temp_target_avg": "Cílová Teplota (Ovládání)",
+          "temp_target_round": "Přesnost Cílové Teploty",
           "temp_update_targets": "Zapsat Externí Teplotu do Entit"
         },
         "data_description": {
-          "temp_current_avg_option": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
+          "temp_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
           "temp_sensors": "Použít externí senzory místo údajů od členů. Ty se stanou jediným zdrojem pravdy pro teplotu skupiny.",
-          "temp_target_avg_option": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
-          "temp_target_round_option": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
+          "temp_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
+          "temp_target_round": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
           "temp_update_targets": "Zapsat hodnotu externího senzoru do číselných entit (např. offsety kalibrace TRV). Užitečné pro udržení termostatů v obraze o skutečné pokojové teplotě."
         },
         "description": "Nakonfigurujte, jak skupina zvládá agregaci teploty a nastavené hodnoty. Externí senzory přepíší údaje členů, pokud jsou vybrány.",
@@ -198,7 +198,7 @@
         "union": "Sjednocení (Pokročilý Uživatel - Všechny Funkce)"
       }
     },
-    "humidity_current_avg_option": {
+    "humidity_current_avg": {
       "options": {
         "max": "Maximum (Nejvyšší)",
         "mean": "Průměr",
@@ -206,7 +206,7 @@
         "min": "Minimum (Nejnižší)"
       }
     },
-    "humidity_target_avg_option": {
+    "humidity_target_avg": {
       "options": {
         "max": "Maximum (Nejvyšší)",
         "mean": "Průměr",
@@ -214,7 +214,7 @@
         "min": "Minimum (Nejnižší)"
       }
     },
-    "humidity_target_round_option": {
+    "humidity_target_round": {
       "options": {
         "half": "Půl Procenta (0.5%)",
         "integer": "Celá Čísla (1%)",
@@ -248,7 +248,7 @@
         "standard": "Standardní (Jednosměrný)"
       }
     },
-    "temp_current_avg_option": {
+    "temp_current_avg": {
       "options": {
         "max": "Maximum (Nejvyšší)",
         "mean": "Průměr",
@@ -256,7 +256,7 @@
         "min": "Minimum (Nejnižší)"
       }
     },
-    "temp_target_avg_option": {
+    "temp_target_avg": {
       "options": {
         "max": "Maximum (Nejvyšší)",
         "mean": "Průměr",
@@ -264,7 +264,7 @@
         "min": "Minimum (Nejnižší)"
       }
     },
-    "temp_target_round_option": {
+    "temp_target_round": {
       "options": {
         "half": "Půl Stupně (0.5°)",
         "integer": "Celá Čísla (1°)",

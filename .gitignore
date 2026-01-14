@@ -47,6 +47,3 @@ htmlcov/
 
 # MyPy
 .mypy_cache/
-
-# Gemini
-.gemini

@@ -91,17 +91,17 @@
     "step": {
       "humidity": {
         "data": {
-          "humidity_current_avg_option": "当前湿度 (显示)",
+          "humidity_current_avg": "当前湿度 (显示)",
           "humidity_sensors": "外部湿度传感器",
-          "humidity_target_avg_option": "目标湿度 (控制)",
-          "humidity_target_round_option": "目标湿度精度",
+          "humidity_target_avg": "目标湿度 (控制)",
+          "humidity_target_round": "目标湿度精度",
           "humidity_update_targets": "将外部湿度写入实体"
         },
         "data_description": {
-          "humidity_current_avg_option": "组如何汇总成员的传感器读数。",
+          "humidity_current_avg": "组如何汇总成员的传感器读数。",
           "humidity_sensors": "使用外部传感器代替成员读数。这将成为组湿度的唯一真实来源。",
-          "humidity_target_avg_option": "组如何计算要发送给成员的目标设定值。",
-          "humidity_target_round_option": "仅适用于发送到设备的值，不适用于当前/显示的值。",
+          "humidity_target_avg": "组如何计算要发送给成员的目标设定值。",
+          "humidity_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
           "humidity_update_targets": "将外部传感器值写入数字实体。用于除湿机校准。"
         },
         "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
@@ -159,17 +159,17 @@
       },
       "temperature": {
         "data": {
-          "temp_current_avg_option": "当前温度 (显示)",
+          "temp_current_avg": "当前温度 (显示)",
           "temp_sensors": "外部温度传感器",
-          "temp_target_avg_option": "目标温度 (控制)",
-          "temp_target_round_option": "目标温度精度",
+          "temp_target_avg": "目标温度 (控制)",
+          "temp_target_round": "目标温度精度",
           "temp_update_targets": "将外部温度写入实体"
         },
         "data_description": {
-          "temp_current_avg_option": "组如何汇总成员的传感器读数。",
+          "temp_current_avg": "组如何汇总成员的传感器读数。",
           "temp_sensors": "使用外部传感器代替成员读数。这将成为组温度的唯一真实来源。",
-          "temp_target_avg_option": "组如何计算要发送给成员的目标设定值。",
-          "temp_target_round_option": "仅适用于发送到设备的值，不适用于当前/显示的值。",
+          "temp_target_avg": "组如何计算要发送给成员的目标设定值。",
+          "temp_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
           "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。"
         },
         "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
@@ -198,7 +198,7 @@
         "union": "并集 (高级用户 - 所有功能)"
       }
     },
-    "humidity_current_avg_option": {
+    "humidity_current_avg": {
       "options": {
         "max": "最大值 (最高)",
         "mean": "平均值",
@@ -206,7 +206,7 @@
         "min": "最小值 (最低)"
       }
     },
-    "humidity_target_avg_option": {
+    "humidity_target_avg": {
       "options": {
         "max": "最大值 (最高)",
         "mean": "平均值",
@@ -214,7 +214,7 @@
         "min": "最小值 (最低)"
       }
     },
-    "humidity_target_round_option": {
+    "humidity_target_round": {
       "options": {
         "half": "半个百分点 (0.5%)",
         "integer": "整数 (1%)",
@@ -248,7 +248,7 @@
         "standard": "标准 (单向)"
       }
     },
-    "temp_current_avg_option": {
+    "temp_current_avg": {
       "options": {
         "max": "最大值 (最高)",
         "mean": "平均值",
@@ -256,7 +256,7 @@
         "min": "最小值 (最低)"
       }
     },
-    "temp_target_avg_option": {
+    "temp_target_avg": {
       "options": {
         "max": "最大值 (最高)",
         "mean": "平均值",
@@ -264,7 +264,7 @@
         "min": "最小值 (最低)"
       }
     },
-    "temp_target_round_option": {
+    "temp_target_round": {
       "options": {
         "half": "半度 (0.5°)",
         "integer": "整数 (1°)",

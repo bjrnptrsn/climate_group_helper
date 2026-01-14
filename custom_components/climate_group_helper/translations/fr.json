@@ -91,17 +91,17 @@
     "step": {
       "humidity": {
         "data": {
-          "humidity_current_avg_option": "Humidité Actuelle (Affichage)",
+          "humidity_current_avg": "Humidité Actuelle (Affichage)",
           "humidity_sensors": "Capteurs d'Humidité Externes",
-          "humidity_target_avg_option": "Humidité Cible (Contrôle)",
-          "humidity_target_round_option": "Précision de l'Humidité Cible",
+          "humidity_target_avg": "Humidité Cible (Contrôle)",
+          "humidity_target_round": "Précision de l'Humidité Cible",
           "humidity_update_targets": "Écrire l'Humidité Externe vers les Entités"
         },
         "data_description": {
-          "humidity_current_avg_option": "Comment le groupe résume les relevés des capteurs de ses membres.",
+          "humidity_current_avg": "Comment le groupe résume les relevés des capteurs de ses membres.",
           "humidity_sensors": "Utiliser des capteurs externes au lieu des relevés des membres. Ils deviennent la seule source de vérité pour l'humidité du groupe.",
-          "humidity_target_avg_option": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
-          "humidity_target_round_option": "S'applique uniquement aux valeurs envoyées aux appareils, pas aux valeurs actuelles/affichées.",
+          "humidity_target_avg": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
+          "humidity_target_round": "S'applique uniquement aux valeurs envoyées aux appareils, pas aux valeurs actuelles/affichées.",
           "humidity_update_targets": "Écrire la valeur du capteur externe vers des entités numériques. Utile pour l'étalonnage des déshumidificateurs."
         },
         "description": "Configurer l'agrégation de l'humidité et les capteurs externes. Notez que de nombreux thermostats ne font que signaler l'humidité et ne permettent pas le contrôle.",
@@ -159,17 +159,17 @@
       },
       "temperature": {
         "data": {
-          "temp_current_avg_option": "Température Actuelle (Affichage)",
+          "temp_current_avg": "Température Actuelle (Affichage)",
           "temp_sensors": "Capteurs de Température Externes",
-          "temp_target_avg_option": "Température Cible (Contrôle)",
-          "temp_target_round_option": "Précision de la Température Cible",
+          "temp_target_avg": "Température Cible (Contrôle)",
+          "temp_target_round": "Précision de la Température Cible",
           "temp_update_targets": "Écrire la Temp Externe vers les Entités"
         },
         "data_description": {
-          "temp_current_avg_option": "Comment le groupe résume les relevés des capteurs de ses membres.",
+          "temp_current_avg": "Comment le groupe résume les relevés des capteurs de ses membres.",
           "temp_sensors": "Utiliser des capteurs externes au lieu des relevés des membres. Ils deviennent la seule source de vérité pour la température du groupe.",
-          "temp_target_avg_option": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
-          "temp_target_round_option": "S'applique uniquement aux valeurs envoyées aux appareils, pas aux valeurs actuelles/affichées.",
+          "temp_target_avg": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
+          "temp_target_round": "S'applique uniquement aux valeurs envoyées aux appareils, pas aux valeurs actuelles/affichées.",
           "temp_update_targets": "Écrire la valeur du capteur externe vers des entités numériques (ex. offsets de calibration TRV). Utile pour garder les thermostats informés de la température réelle de la pièce."
         },
         "description": "Configurer comment le groupe gère l'agrégation de la température et les consignes. Les capteurs externes remplaceront les relevés des membres si sélectionnés.",
@@ -198,7 +198,7 @@
         "union": "Union (Utilisateur Avancé - Toutes Fonctions)"
       }
     },
-    "humidity_current_avg_option": {
+    "humidity_current_avg": {
       "options": {
         "max": "Maximum (Le plus haut)",
         "mean": "Moyenne",
@@ -206,7 +206,7 @@
         "min": "Minimum (Le plus bas)"
       }
     },
-    "humidity_target_avg_option": {
+    "humidity_target_avg": {
       "options": {
         "max": "Maximum (Le plus haut)",
         "mean": "Moyenne",
@@ -214,7 +214,7 @@
         "min": "Minimum (Le plus bas)"
       }
     },
-    "humidity_target_round_option": {
+    "humidity_target_round": {
       "options": {
         "half": "Demi Pourcent (0.5%)",
         "integer": "Nombres Entiers (1%)",
@@ -248,7 +248,7 @@
         "standard": "Standard (Unidirectionnel)"
       }
     },
-    "temp_current_avg_option": {
+    "temp_current_avg": {
       "options": {
         "max": "Maximum (Le plus haut)",
         "mean": "Moyenne",
@@ -256,7 +256,7 @@
         "min": "Minimum (Le plus bas)"
       }
     },
-    "temp_target_avg_option": {
+    "temp_target_avg": {
       "options": {
         "max": "Maximum (Le plus haut)",
         "mean": "Moyenne",
@@ -264,7 +264,7 @@
         "min": "Minimum (Le plus bas)"
       }
     },
-    "temp_target_round_option": {
+    "temp_target_round": {
       "options": {
         "half": "Demi Degré (0.5°)",
         "integer": "Nombres Entiers (1°)",

@@ -91,17 +91,17 @@
     "step": {
       "humidity": {
         "data": {
-          "humidity_current_avg_option": "Nuværende Fugtighed (Visning)",
+          "humidity_current_avg": "Nuværende Fugtighed (Visning)",
           "humidity_sensors": "Eksterne Fugtighedssensorer",
-          "humidity_target_avg_option": "Mål Fugtighed (Kontrol)",
-          "humidity_target_round_option": "Mål Fugtighed Præcision",
+          "humidity_target_avg": "Mål Fugtighed (Kontrol)",
+          "humidity_target_round": "Mål Fugtighed Præcision",
           "humidity_update_targets": "Skriv Ekstern Fugtighed til Entiteter"
         },
         "data_description": {
-          "humidity_current_avg_option": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
+          "humidity_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
           "humidity_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens fugtighed.",
-          "humidity_target_avg_option": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
-          "humidity_target_round_option": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
+          "humidity_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
+          "humidity_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
           "humidity_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter. Nyttigt til kalibrering af affugtere."
         },
         "description": "Konfigurer fugtighedsaggregering og eksterne sensorer. Bemærk, at mange termostater kun rapporterer fugtighed og ikke tillader kontrol.",
@@ -159,17 +159,17 @@
       },
       "temperature": {
         "data": {
-          "temp_current_avg_option": "Nuværende Temperatur (Visning)",
+          "temp_current_avg": "Nuværende Temperatur (Visning)",
           "temp_sensors": "Eksterne Temperatursensorer",
-          "temp_target_avg_option": "Mål Temperatur (Kontrol)",
-          "temp_target_round_option": "Mål Temperatur Præcision",
+          "temp_target_avg": "Mål Temperatur (Kontrol)",
+          "temp_target_round": "Mål Temperatur Præcision",
           "temp_update_targets": "Skriv Ekstern Temp til Entiteter"
         },
         "data_description": {
-          "temp_current_avg_option": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
+          "temp_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
           "temp_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens temperatur.",
-          "temp_target_avg_option": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
-          "temp_target_round_option": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
+          "temp_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
+          "temp_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
           "temp_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter (f.eks. TRV kalibrering forskydninger). Nyttigt for at holde termostater opmærksomme på den faktiske stuetemperatur."
         },
         "description": "Konfigurer, hvordan gruppen håndterer temperaturaggregering og sætpunkter. Eksterne sensorer vil tilsidesætte medlemsmålinger, hvis de vælges.",
@@ -198,7 +198,7 @@
         "union": "Forening (Avanceret Bruger - Alle Funktioner)"
       }
     },
-    "humidity_current_avg_option": {
+    "humidity_current_avg": {
       "options": {
         "max": "Maksimum (Højest)",
         "mean": "Gennemsnit",
@@ -206,7 +206,7 @@
         "min": "Minimum (Lavest)"
       }
     },
-    "humidity_target_avg_option": {
+    "humidity_target_avg": {
       "options": {
         "max": "Maksimum (Højest)",
         "mean": "Gennemsnit",
@@ -214,7 +214,7 @@
         "min": "Minimum (Lavest)"
       }
     },
-    "humidity_target_round_option": {
+    "humidity_target_round": {
       "options": {
         "half": "Halv Procent (0.5%)",
         "integer": "Hele Tal (1%)",
@@ -248,7 +248,7 @@
         "standard": "Standard (En-vejs)"
       }
     },
-    "temp_current_avg_option": {
+    "temp_current_avg": {
       "options": {
         "max": "Maksimum (Højest)",
         "mean": "Gennemsnit",
@@ -256,7 +256,7 @@
         "min": "Minimum (Lavest)"
       }
     },
-    "temp_target_avg_option": {
+    "temp_target_avg": {
       "options": {
         "max": "Maksimum (Højest)",
         "mean": "Gennemsnit",
@@ -264,7 +264,7 @@
         "min": "Minimum (Lavest)"
       }
     },
-    "temp_target_round_option": {
+    "temp_target_round": {
       "options": {
         "half": "Halv Grad (0.5°)",
         "integer": "Hele Tal (1°)",

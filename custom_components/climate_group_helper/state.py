@@ -54,7 +54,11 @@ class TargetState:
 
 @dataclass(frozen=True)
 class FilterState(TargetState):
-    """State that is used as a filter for masking."""
+    """State that is used as a filter for masking.
+    
+    True: attribute is allowed to update the target state.
+    False: attribute is masked and not allowed to update the target state.
+    """
 
     hvac_mode: bool = True
     temperature: bool = True

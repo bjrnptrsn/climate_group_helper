@@ -38,6 +38,8 @@
           "humidity": "Humidity",
           "timings": "Timings",
           "sync": "Sync Mode",
+          "window_control": "Window Control",
+          "window_restore": "Window Restore",
           "other": "Other Settings"
         }
       },
@@ -59,16 +61,16 @@
         "title": "Temperature Settings",
         "description": "Configure how the group handles temperature aggregation and setpoints. External sensors will override member readings if selected.",
         "data": {
-          "temp_current_avg_option": "Current Temperature (Display)",
-          "temp_target_avg_option": "Target Temperature (Control)",
-          "temp_target_round_option": "Target Temperature Precision",
+          "temp_current_avg": "Current Temperature (Display)",
+          "temp_target_avg": "Target Temperature (Control)",
+          "temp_target_round": "Target Temperature Precision",
           "temp_sensors": "External Temperature Sensors",
           "temp_update_targets": "Write External Temp to Entities"
         },
         "data_description": {
-          "temp_current_avg_option": "How the group summarizes sensor readings from its members.",
-          "temp_target_avg_option": "How the group calculates the target setpoint to send to its members.",
-          "temp_target_round_option": "Only applies to values sent to devices, not to current/displayed values.",
+          "temp_current_avg": "How the group summarizes sensor readings from its members.",
+          "temp_target_avg": "How the group calculates the target setpoint to send to its members.",
+          "temp_target_round": "Only applies to values sent to devices, not to current/displayed values.",
           "temp_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's temperature.",
           "temp_update_targets": "Write the external sensor value to number entities (e.g. TRV calibration offsets). Useful for keeping thermostats aware of actual room temperature."
         }
@@ -77,16 +79,16 @@
         "title": "Humidity Settings",
         "description": "Configure humidity aggregation and external sensors. Note that many thermostats only report humidity and don't allow control.",
         "data": {
-          "humidity_current_avg_option": "Current Humidity (Display)",
-          "humidity_target_avg_option": "Target Humidity (Control)",
-          "humidity_target_round_option": "Target Humidity Precision",
+          "humidity_current_avg": "Current Humidity (Display)",
+          "humidity_target_avg": "Target Humidity (Control)",
+          "humidity_target_round": "Target Humidity Precision",
           "humidity_sensors": "External Humidity Sensors",
           "humidity_update_targets": "Write External Humidity to Entities"
         },
         "data_description": {
-          "humidity_current_avg_option": "How the group summarizes sensor readings from its members.",
-          "humidity_target_avg_option": "How the group calculates the target setpoint to send to its members.",
-          "humidity_target_round_option": "Only applies to values sent to devices, not to current/displayed values.",
+          "humidity_current_avg": "How the group summarizes sensor readings from its members.",
+          "humidity_target_avg": "How the group calculates the target setpoint to send to its members.",
+          "humidity_target_round": "Only applies to values sent to devices, not to current/displayed values.",
           "humidity_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's humidity.",
           "humidity_update_targets": "Write the external sensor value to number entities. Useful for dehumidifier calibration."
         }
@@ -117,6 +119,38 @@
           "sync_attributes": "Attributes selected here will be enforced in Lock/Mirror modes. Unselected attributes allow for local control (e.g. sync temperature but let users change fan speed locally)."
         }
       },
+      "window_control": {
+        "title": "Window Control",
+        "description": "Configure automatic heating/cooling shutdown when windows are opened. Both sensors are optional - leave empty to disable.",
+        "data": {
+          "window_mode": "Window Control Mode",
+          "room_sensor": "Room Window Sensor",
+          "zone_sensor": "Zone Window Sensor",
+          "room_open_delay": "Room Open Delay (seconds)",
+          "zone_open_delay": "Zone Open Delay (seconds)",
+          "close_delay": "Close Delay (seconds)"
+        },
+        "data_description": {
+          "window_mode": "Enable or disable climate group based on window/door sensors. When enabled, HVAC mode sets to 'off' when windows open and restores to the previous state when closed.",
+          "room_sensor": "Binary sensor for the room's own window/door. Triggers the shorter delay.",
+          "zone_sensor": "Binary sensor for other windows/doors in the zone/floor. Triggers the longer delay.",
+          "room_open_delay": "Time to wait after room window opens before turning off heating.",
+          "zone_open_delay": "Time to wait after zone window opens before turning off heating.",
+          "close_delay": "Time to wait after all windows close before restoring heating."
+        }
+      },
+      "window_restore": {
+        "title": "Window Restore Attributes",
+        "description": "Select which attributes should be restored when all windows are closed and heating resumes.",
+        "data": {
+          "default_hvac_mode": "Default HVAC Mode",
+          "restore_attributes": "Restore Attributes"
+        },
+        "data_description": {
+          "default_hvac_mode": "HVAC mode to restore if no snapshot exists (e.g. after restart). Leave empty to skip restore.",
+          "restore_attributes": "Attributes to restore after window control ends. Unselected attributes will remain unchanged."
+        }
+      },
       "other": {
         "title": "Other Settings",
         "description": "Additional features and entity exposure.",
@@ -140,7 +174,7 @@
     }
   },
   "selector": {
-    "temp_current_avg_option": {
+    "temp_current_avg": {
       "options": {
         "mean": "Mean (Average)",
         "median": "Median (Ignore Outliers)",
@@ -148,7 +182,7 @@
         "max": "Maximum (Highest)"
       }
     },
-    "temp_target_avg_option": {
+    "temp_target_avg": {
       "options": {
         "mean": "Mean (Average)",
         "median": "Median (Middle Value)",
@@ -156,14 +190,14 @@
         "max": "Maximum (Highest)"
       }
     },
-    "temp_target_round_option": {
+    "temp_target_round": {
       "options": {
         "none": "No Rounding (Exact)",
         "half": "Half Degree (0.5°)",
         "integer": "Whole Numbers (1°)"
       }
     },
-    "humidity_current_avg_option": {
+    "humidity_current_avg": {
       "options": {
         "mean": "Mean (Average)",
         "median": "Median (Ignore Outliers)",
@@ -171,7 +205,7 @@
         "max": "Maximum (Highest)"
       }
     },
-    "humidity_target_avg_option": {
+    "humidity_target_avg": {
       "options": {
         "mean": "Mean (Average)",
         "median": "Median (Middle Value)",
@@ -179,7 +213,7 @@
         "max": "Maximum (Highest)"
       }
     },
-    "humidity_target_round_option": {
+    "humidity_target_round": {
       "options": {
         "none": "No Rounding (Exact)",
         "half": "Half Percent (0.5%)",
@@ -191,6 +225,12 @@
         "standard": "Standard – Aggregates state only, manual changes are allowed",
         "mirror": "Mirror – Manual changes on one device update all members",
         "lock": "Lock – Reverts manual changes to match the group state"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Off – Window control is disabled",
+        "on": "On – Window control is enabled"
       }
     },
     "hvac_mode_strategy": {
@@ -206,25 +246,20 @@
         "union": "Union – Support all features present on ANY member"
       }
     },
-    "restore_behavior": {
+    "sync_attributes": {
       "options": {
-        "always": "Always Restore (Force)",
-        "if_off": "Only if Heating is OFF (Smart)",
-        "never": "Never Restore (Manual)"
+        "hvac_mode": "HVAC Mode",
+        "preset_mode": "Preset Mode",
+        "temperature": "Temperature (Target)",
+        "target_temp_high": "Target Temperature High (Range)",
+        "target_temp_low": "Target Temperature Low (Range)",
+        "fan_mode": "Fan Mode",
+        "swing_mode": "Vertical Swing",
+        "swing_horizontal_mode": "Horizontal Swing",
+        "humidity": "Humidity (Target)"
       }
     },
     "restore_attributes": {
-      "options": {
-        "hvac_mode": "HVAC Mode",
-        "temperature": "Temperature (Target)",
-        "target_temp_low": "Temperature Low (Range)",
-        "target_temp_high": "Temperature High (Range)",
-        "preset_mode": "Preset Mode",
-        "fan_mode": "Fan Mode",
-        "swing_mode": "Swing Mode"
-      }
-    },
-    "sync_attributes": {
       "options": {
         "hvac_mode": "HVAC Mode",
         "preset_mode": "Preset Mode",

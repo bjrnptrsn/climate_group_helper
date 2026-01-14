@@ -91,17 +91,17 @@
     "step": {
       "humidity": {
         "data": {
-          "humidity_current_avg_option": "Humedad Actual (Visualización)",
+          "humidity_current_avg": "Humedad Actual (Visualización)",
           "humidity_sensors": "Sensores de Humedad Externos",
-          "humidity_target_avg_option": "Humedad Objetivo (Control)",
-          "humidity_target_round_option": "Precisión de Humedad Objetivo",
+          "humidity_target_avg": "Humedad Objetivo (Control)",
+          "humidity_target_round": "Precisión de Humedad Objetivo",
           "humidity_update_targets": "Escribir Humedad Externa en Entidades"
         },
         "data_description": {
-          "humidity_current_avg_option": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
+          "humidity_current_avg": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
           "humidity_sensors": "Usar sensores externos en lugar de lecturas de miembros. Se convierten en la única fuente de verdad para la humedad del grupo.",
-          "humidity_target_avg_option": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
-          "humidity_target_round_option": "Solo se aplica a valores enviados a dispositivos, no a valores actuales/visualizados.",
+          "humidity_target_avg": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
+          "humidity_target_round": "Solo se aplica a valores enviados a dispositivos, no a valores actuales/visualizados.",
           "humidity_update_targets": "Escribir el valor del sensor externo en entidades numéricas. Útil para calibración de deshumidificadores."
         },
         "description": "Configura la agregación de humedad y sensores externos. Ten en cuenta que muchos termostatos solo reportan humedad y no permiten control.",
@@ -159,17 +159,17 @@
       },
       "temperature": {
         "data": {
-          "temp_current_avg_option": "Temperatura Actual (Visualización)",
+          "temp_current_avg": "Temperatura Actual (Visualización)",
           "temp_sensors": "Sensores de Temperatura Externos",
-          "temp_target_avg_option": "Temperatura Objetivo (Control)",
-          "temp_target_round_option": "Precisión de Temperatura Objetivo",
+          "temp_target_avg": "Temperatura Objetivo (Control)",
+          "temp_target_round": "Precisión de Temperatura Objetivo",
           "temp_update_targets": "Escribir Temp Externa en Entidades"
         },
         "data_description": {
-          "temp_current_avg_option": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
+          "temp_current_avg": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
           "temp_sensors": "Usar sensores externos en lugar de lecturas de miembros. Se convierten en la única fuente de verdad para la temperatura del grupo.",
-          "temp_target_avg_option": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
-          "temp_target_round_option": "Solo se aplica a valores enviados a dispositivos, no a valores actuales/visualizados.",
+          "temp_target_avg": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
+          "temp_target_round": "Solo se aplica a valores enviados a dispositivos, no a valores actuales/visualizados.",
           "temp_update_targets": "Escribir el valor del sensor externo en entidades numéricas (ej. offsets calibración TRV). Útil para mantener termostatos conscientes de la temperatura real."
         },
         "description": "Configura cómo el grupo maneja la agregación de temperatura y puntos de ajuste. Los sensores externos anularán lecturas de miembros si se seleccionan.",
@@ -198,7 +198,7 @@
         "union": "Unión (Usuario Avanzado - Todas las Funciones)"
       }
     },
-    "humidity_current_avg_option": {
+    "humidity_current_avg": {
       "options": {
         "max": "Máximo (Más Alto)",
         "mean": "Media",
@@ -206,7 +206,7 @@
         "min": "Mínimo (Más Bajo)"
       }
     },
-    "humidity_target_avg_option": {
+    "humidity_target_avg": {
       "options": {
         "max": "Máximo (Más Alto)",
         "mean": "Media",
@@ -214,7 +214,7 @@
         "min": "Mínimo (Más Bajo)"
       }
     },
-    "humidity_target_round_option": {
+    "humidity_target_round": {
       "options": {
         "half": "Medio Porcentaje (0.5%)",
         "integer": "Números Enteros (1%)",
@@ -248,7 +248,7 @@
         "standard": "Estándar (Unidireccional)"
       }
     },
-    "temp_current_avg_option": {
+    "temp_current_avg": {
       "options": {
         "max": "Máximo (Más Alto)",
         "mean": "Media",
@@ -256,7 +256,7 @@
         "min": "Mínimo (Más Bajo)"
       }
     },
-    "temp_target_avg_option": {
+    "temp_target_avg": {
       "options": {
         "max": "Máximo (Más Alto)",
         "mean": "Media",
@@ -264,7 +264,7 @@
         "min": "Mínimo (Más Bajo)"
       }
     },
-    "temp_target_round_option": {
+    "temp_target_round": {
       "options": {
         "half": "Medio Grado (0.5°)",
         "integer": "Números Enteros (1°)",
