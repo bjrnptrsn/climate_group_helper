@@ -91,17 +91,17 @@
     "step": {
       "humidity": {
         "data": {
-          "humidity_current_avg_option": "Huidige Luchtvochtigheid (Weergave)",
+          "humidity_current_avg": "Huidige Luchtvochtigheid (Weergave)",
           "humidity_sensors": "Externe Vochtigheidssensoren",
-          "humidity_target_avg_option": "Doel Luchtvochtigheid (Regeling)",
-          "humidity_target_round_option": "Precisie Doel Luchtvochtigheid",
+          "humidity_target_avg": "Doel Luchtvochtigheid (Regeling)",
+          "humidity_target_round": "Precisie Doel Luchtvochtigheid",
           "humidity_update_targets": "Schrijf Externe Luchtvochtigheid naar Entiteiten"
         },
         "data_description": {
-          "humidity_current_avg_option": "Hoe de groep sensorwaarden van zijn leden samenvat.",
+          "humidity_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
           "humidity_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de luchtvochtigheid van de groep.",
-          "humidity_target_avg_option": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
-          "humidity_target_round_option": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
+          "humidity_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
+          "humidity_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
           "humidity_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten. Handig voor kalibratie van luchtontvochtigers."
         },
         "description": "Configureer aggregatie van luchtvochtigheid en externe sensoren. Merk op dat veel thermostaten alleen luchtvochtigheid rapporteren en geen regeling toestaan.",
@@ -159,17 +159,17 @@
       },
       "temperature": {
         "data": {
-          "temp_current_avg_option": "Huidige Temperatuur (Weergave)",
+          "temp_current_avg": "Huidige Temperatuur (Weergave)",
           "temp_sensors": "Externe Temperatuursensoren",
-          "temp_target_avg_option": "Doeltemperatuur (Regeling)",
-          "temp_target_round_option": "Precisie Doeltemperatuur",
+          "temp_target_avg": "Doeltemperatuur (Regeling)",
+          "temp_target_round": "Precisie Doeltemperatuur",
           "temp_update_targets": "Schrijf Externe Temp naar Entiteiten"
         },
         "data_description": {
-          "temp_current_avg_option": "Hoe de groep sensorwaarden van zijn leden samenvat.",
+          "temp_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
           "temp_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de temperatuur van de groep.",
-          "temp_target_avg_option": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
-          "temp_target_round_option": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
+          "temp_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
+          "temp_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
           "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur."
         },
         "description": "Configureer hoe de groep temperatuuraggregatie en instelpunten beheert. Externe sensoren overschrijven metingen van leden indien geselecteerd.",
@@ -198,7 +198,7 @@
         "union": "Vereniging (Geavanceerde Gebruiker - Alle Functies)"
       }
     },
-    "humidity_current_avg_option": {
+    "humidity_current_avg": {
       "options": {
         "max": "Maximum (Hoogste)",
         "mean": "Gemiddelde",
@@ -206,7 +206,7 @@
         "min": "Minimum (Laagste)"
       }
     },
-    "humidity_target_avg_option": {
+    "humidity_target_avg": {
       "options": {
         "max": "Maximum (Hoogste)",
         "mean": "Gemiddelde",
@@ -214,7 +214,7 @@
         "min": "Minimum (Laagste)"
       }
     },
-    "humidity_target_round_option": {
+    "humidity_target_round": {
       "options": {
         "half": "Half Procent (0.5%)",
         "integer": "Gehele Getallen (1%)",
@@ -248,7 +248,7 @@
         "standard": "Standaard (Eenrichtings)"
       }
     },
-    "temp_current_avg_option": {
+    "temp_current_avg": {
       "options": {
         "max": "Maximum (Hoogste)",
         "mean": "Gemiddelde",
@@ -256,7 +256,7 @@
         "min": "Minimum (Laagste)"
       }
     },
-    "temp_target_avg_option": {
+    "temp_target_avg": {
       "options": {
         "max": "Maximum (Hoogste)",
         "mean": "Gemiddelde",
@@ -264,7 +264,7 @@
         "min": "Minimum (Laagste)"
       }
     },
-    "temp_target_round_option": {
+    "temp_target_round": {
       "options": {
         "half": "Half Graad (0.5°)",
         "integer": "Gehele Getallen (1°)",

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.15.0 - 2026-01-14
+
+> **✨ Window Control:** Automatically turn off heating when windows open and restore it when they close!
+
+### 🚀 Major Features
+
+*   **Window Control**: The group can now monitor window sensors and automatically shut down heating when windows are opened.
+    *   **Dual Sensor Support**: Configure a "Room" sensor (fast reaction, 15s default) and/or a "Zone" sensor (slow reaction, 5min default).
+    *   **Configurable Delays**: Set custom delays for window open and close events to avoid flickering.
+    *   **State Restoration**: When all windows close, the group restores the previous state from a snapshot. You can configure which attributes to restore.
+    *   **Default HVAC Mode**: Configure a fallback HVAC mode for restoration after restart (when no snapshot exists).
+    *   **User Blocking**: Prevents manual heating activation while windows are open.
+
+*   **Window Control + Sync Mode Stability**: Context-based echo suppression ensures that Window Control and Sync Mode (Lock/Mirror) work together without conflicts.
+
+### 📝 Configuration
+
+*   **New Steps**: Two new configuration steps in the options menu:
+    *   **Window Control**: Configure sensors, delays, and enable/disable the feature.
+    *   **Window Restore**: Select which attributes to restore and set a default HVAC mode.
+
 ## 0.14.0 - 2026-01-12
 
 > **⚠️ Major Architecture Update:** This release introduces a fundamental upgrade to the internal "Target State" engine. While the interface remains the same, the brain of the integration is now significantly more robust.

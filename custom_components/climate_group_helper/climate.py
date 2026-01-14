@@ -69,19 +69,19 @@ from .const import (
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
-    CONF_HUMIDITY_CURRENT_AVG_OPTION,
+    CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_SENSORS,
-    CONF_HUMIDITY_TARGET_AVG_OPTION,
-    CONF_HUMIDITY_TARGET_ROUND_OPTION,
+    CONF_HUMIDITY_TARGET_AVG,
+    CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_SYNC_MODE,
-    CONF_TEMP_CURRENT_AVG_OPTION,
+    CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_SENSORS,
-    CONF_TEMP_TARGET_AVG_OPTION,
-    CONF_TEMP_TARGET_ROUND_OPTION,
+    CONF_TEMP_TARGET_AVG,
+    CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
     DOMAIN,
     FEATURE_STRATEGY_INTERSECTION,
@@ -92,10 +92,12 @@ from .const import (
     AverageOption,
     RoundOption,
     SyncMode,
+    WindowControlMode,
 )
 from .service_call import ServiceCallHandler
 from .state import TargetState, ChangeState
 from .sync_mode import SyncModeHandler
+from .window_control import WindowControlHandler
 
 CALC_TYPES = {
     AverageOption.MIN: min,
@@ -135,6 +137,15 @@ async def async_setup_entry(
     """Initialize Climate Group config entry."""
 
     config = {**config_entry.options}
+    
+    # This is a temporary shortcuts to convert old config keys to new format
+    # without changing the config version
+    #
+    # 1. Remove 
+    for key in list(config.keys()):
+        if key.endswith("_option"):
+            config[key[:-7]] = config[key]
+            del config[key]
 
     registry = er.async_get(hass)
     entities = er.async_validate_entity_ids(registry, config[CONF_ENTITIES])
@@ -170,30 +181,30 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_name = name
         self.climate_entity_ids = entity_ids
         self.config = config
-        self.event: Event | None = None
+        self.event: Event = None
         # Temperature calculation options
-        self._temp_current_avg_calc = CALC_TYPES[config.get(CONF_TEMP_CURRENT_AVG_OPTION, AverageOption.MEAN)]
-        self._temp_target_avg_calc = CALC_TYPES[config.get(CONF_TEMP_TARGET_AVG_OPTION, AverageOption.MEAN)]
-        self._temp_round_option = config.get(CONF_TEMP_TARGET_ROUND_OPTION, RoundOption.NONE)
-        
+        self._temp_current_avg_calc = CALC_TYPES[config.get(CONF_TEMP_CURRENT_AVG, AverageOption.MEAN)]
+        self._temp_target_avg_calc = CALC_TYPES[config.get(CONF_TEMP_TARGET_AVG, AverageOption.MEAN)]
+        self._temp_round = config.get(CONF_TEMP_TARGET_ROUND, RoundOption.NONE)
         # Humidity calculation options
-        self._humidity_current_avg_calc = CALC_TYPES[config.get(CONF_HUMIDITY_CURRENT_AVG_OPTION, AverageOption.MEAN)]
-        self._humidity_target_avg_calc = CALC_TYPES[config.get(CONF_HUMIDITY_TARGET_AVG_OPTION, AverageOption.MEAN)]
-        self._humidity_round_option = config.get(CONF_HUMIDITY_TARGET_ROUND_OPTION, RoundOption.NONE)
-
+        self._humidity_current_avg_calc = CALC_TYPES[config.get(CONF_HUMIDITY_CURRENT_AVG, AverageOption.MEAN)]
+        self._humidity_target_avg_calc = CALC_TYPES[config.get(CONF_HUMIDITY_TARGET_AVG, AverageOption.MEAN)]
+        self._humidity_round = config.get(CONF_HUMIDITY_TARGET_ROUND, RoundOption.NONE)
+        # HVAC mode strategy
+        self._hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL)
+        # Feature strategy
+        self._feature_strategy = config.get(CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION)
+        # Debounce options
         self.debounce_delay = config.get(CONF_DEBOUNCE_DELAY, 0)
         self.retry_attempts = int(config.get(CONF_RETRY_ATTEMPTS, 1))
         self.retry_delay = config.get(CONF_RETRY_DELAY, 1)
-        self._hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL)
-        self._feature_strategy = config.get(CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION)
-        
         # Migrate old single temp sensor to list (if still present in config)
         temp_sensor = config.get(CONF_TEMP_SENSORS)
         if isinstance(temp_sensor, str):
             self._temp_sensor_entity_ids = [temp_sensor]
         else:
             self._temp_sensor_entity_ids = temp_sensor or []
-            
+
         self._temp_update_target_entity_ids = config.get(CONF_TEMP_UPDATE_TARGETS, [])
         self._humidity_sensor_entity_ids = config.get(CONF_HUMIDITY_SENSORS, [])
         self._humidity_update_target_entity_ids = config.get(CONF_HUMIDITY_UPDATE_TARGETS, [])
@@ -201,8 +212,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
 
         # The list of entities to be tracked by GroupEntity
-        self._entities = entity_ids.copy()
-        self._entity_ids = self._entities # Keep legacy reference if needed
+        self._entity_ids = entity_ids.copy()
         if self._temp_sensor_entity_ids:
             self._entity_ids.extend(self._temp_sensor_entity_ids)
         if self._humidity_sensor_entity_ids:
@@ -255,12 +265,13 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.service_call_handler = ServiceCallHandler(self)
         # Track the time of the last service call for sync block logic
         self.last_service_call_time: float = 0.0
-        # Track the source entity of the last command (for source-aware sync block)
-        self.last_service_call_entity: str | None = None
 
         # Sync mode must be set before SyncModeHandler initialization
         self.sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
         self.sync_mode_handler = SyncModeHandler(self)
+
+        # Window control handler (optional, based on config)
+        self.window_control_handler = WindowControlHandler(self)
         
     @property
     def device_info(self) -> dict[str, Any]:
@@ -308,18 +319,21 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Register listeners
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, self._entities, self._state_change_listener
+                self.hass, self._entity_ids, self._state_change_listener
             )
         )
 
+        # Setup window control (subscribes to sensor events)
+        await self.window_control_handler.async_setup()
+
         # Update initial state
-        self.async_update_group_state()
-        self.async_write_ha_state()
+        self.async_defer_or_update_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
         await super().async_will_remove_from_hass()
         await self.service_call_handler.async_cancel_all()
+        self.window_control_handler.async_teardown()
 
     def _reduce_attributes(self, attributes: list[Any], default: Any = None) -> list | int:
         """Reduce a list of attributes (modes or features) based on the feature strategy."""
@@ -427,7 +441,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             return False
 
     @staticmethod
-    def mean_round(value: float | None, round_option: str = RoundOption.NONE) -> float | None:
+    def mean_round(value: float | None, round_option: RoundOption = RoundOption.NONE) -> float | None:
         """Round the decimal part of a float to an fractional value with a certain precision."""
 
         if value is None:
@@ -565,21 +579,21 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         
         # Target temperature is calculated using the 'average_option' method from all ATTR_TEMPERATURE values.
         self._attr_target_temperature = reduce_attribute(self.states, ATTR_TEMPERATURE, reduce=lambda *data: self._temp_target_avg_calc(data))
-        # The result is rounded according to the 'round_option' config
+        # The result is rounded according to the 'round' config
         if self._attr_target_temperature is not None:
-            self._attr_target_temperature = self.mean_round(self._attr_target_temperature, self._temp_round_option)
+            self._attr_target_temperature = self.mean_round(self._attr_target_temperature, self._temp_round)
 
         # Target temperature low is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_LOW values
         self._attr_target_temperature_low = reduce_attribute(self.states, ATTR_TARGET_TEMP_LOW, reduce=lambda *data: self._temp_target_avg_calc(data))
-        # The result is rounded according to the 'round_option' config
+        # The result is rounded according to the 'round' config
         if self._attr_target_temperature_low is not None:
-            self._attr_target_temperature_low = self.mean_round(self._attr_target_temperature_low, self._temp_round_option)
+            self._attr_target_temperature_low = self.mean_round(self._attr_target_temperature_low, self._temp_round)
 
         # Target temperature high is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_HIGH values
         self._attr_target_temperature_high = reduce_attribute(self.states, ATTR_TARGET_TEMP_HIGH, reduce=lambda *data: self._temp_target_avg_calc(data))
-        # The result is rounded according to the 'round_option' config
+        # The result is rounded according to the 'round' config
         if self._attr_target_temperature_high is not None:
-            self._attr_target_temperature_high = self.mean_round(self._attr_target_temperature_high, self._temp_round_option)
+            self._attr_target_temperature_high = self.mean_round(self._attr_target_temperature_high, self._temp_round)
 
         # Target temperature step is the highest of all ATTR_TARGET_TEMP_STEP values
         self._attr_target_temperature_step = reduce_attribute(self.states, ATTR_TARGET_TEMP_STEP, reduce=max)
@@ -604,9 +618,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Target humidity is calculated using the 'average_option' method from all ATTR_HUMIDITY values.
         self._attr_target_humidity = reduce_attribute(self.states, ATTR_HUMIDITY, reduce=lambda *data: self._humidity_target_avg_calc(data))
-        # The result is rounded according to the 'round_option' config
+        # The result is rounded according to the 'round' config
         if self._attr_target_humidity is not None:
-            self._attr_target_humidity = self.mean_round(self._attr_target_humidity, self._humidity_round_option)
+            self._attr_target_humidity = self.mean_round(self._attr_target_humidity, self._humidity_round)
 
         # Min humidity is the highest of all ATTR_MIN_HUMIDITY values
         self._attr_min_humidity = reduce_attribute(self.states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY)
@@ -675,6 +689,11 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
+        # Check if window control is forcing OFF - block user commands
+        if self.window_control_handler.force_off and hvac_mode != HVACMode.OFF:
+            _LOGGER.info("[%s] Window control active, ignoring HVAC mode change to %s", self.entity_id, hvac_mode)
+            return
+  
         self.target_state = self.target_state.update(hvac_mode=hvac_mode)
         await self.service_call_handler.call_debounced()
 

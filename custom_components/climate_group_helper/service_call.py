@@ -17,11 +17,12 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.core import Context
 from homeassistant.helpers.debounce import Debouncer
 
 from .const import (
-    ATTR_MODES_MAPPING,
-    ATTR_SERVICE_MAPPING,
+    MODE_MODES_MAP,
+    ATTR_SERVICE_MAP,
 )
 from .state import FilterState
 
@@ -62,7 +63,7 @@ class ServiceCallHandler:
         if self._active_tasks:
             await asyncio.gather(*self._active_tasks, return_exceptions=True)
 
-    async def call_debounced(self, filter_state: FilterState | None = None):
+    async def call_debounced(self, filter_state: FilterState | None = None, context_id: str | None = None):
         """Debounce and execute a service call."""
 
         async def debounce_func():
@@ -71,7 +72,7 @@ class ServiceCallHandler:
             if task:
                 self._active_tasks.add(task)
             try:
-                await self._execute_calls(filter_state=filter_state)
+                await self._execute_calls(filter_state=filter_state, context_id=context_id)
             finally:
                 if task:
                     self._active_tasks.discard(task)
@@ -90,7 +91,7 @@ class ServiceCallHandler:
 
         await self._debouncer.async_call()
 
-    async def _execute_calls(self, filter_state: FilterState | None = None):
+    async def _execute_calls(self, filter_state: FilterState | None = None, context_id: str | None = None):
         """Execute service calls to sync members, with retry logic.
         
         Generates sync calls from target_state and executes them.
@@ -98,9 +99,11 @@ class ServiceCallHandler:
         
         Args:
             filter_state: Optional FilterState to enforce. If None, uses group.target_state.
+            context_id: Optional context ID to tag service calls (for echo detection).
         """
         attempts = self._group.retry_attempts + 1
         delay = self._group.retry_delay
+        context = Context(id=context_id) if context_id else None
 
         for attempt in range(attempts):
             try:
@@ -124,7 +127,8 @@ class ServiceCallHandler:
                         CLIMATE_DOMAIN,
                         service=service,
                         service_data=data,
-                        blocking=True
+                        blocking=True,
+                        context=context,
                     )
 
             except Exception as e:
@@ -139,7 +143,7 @@ class ServiceCallHandler:
         Handles special cases:
         - Temperature range (target_temp_low/high): Sent together in one call
         - Single temperature: Sent separately to devices without range support
-        - Other attributes: Mapped via ATTR_SERVICE_MAPPING
+        - Other attributes: Mapped via ATTR_SERVICE_MAP
         
         Returns:
             List of call dicts with 'service', 'kwargs', and 'entity_ids'.
@@ -179,7 +183,7 @@ class ServiceCallHandler:
                                 break
                 continue
 
-            service = ATTR_SERVICE_MAPPING.get(attr)
+            service = ATTR_SERVICE_MAP.get(attr)
             if not service:
                 continue
 
@@ -219,8 +223,8 @@ class ServiceCallHandler:
                 continue
 
             # Modes: Check if attr is in its modes list and get value
-            if attr in ATTR_MODES_MAPPING:
-                if target_value not in state.attributes.get(ATTR_MODES_MAPPING[attr], []):
+            if attr in MODE_MODES_MAP:
+                if target_value not in state.attributes.get(MODE_MODES_MAP[attr], []):
                     continue
             # Temperature/Humidity: Check if attr exists in state and get value
             elif attr not in state.attributes:

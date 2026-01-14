@@ -6,16 +6,14 @@ import logging
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 from .const import (
-    CONF_SYNC_ATTRIBUTES,
-    CONTROLLABLE_ATTRIBUTES,
+    CONF_SYNC_ATTRS,
+    CONF_TARGET_ATTRS,
     SyncMode,
 )
 from .state import FilterState
 
 if TYPE_CHECKING:
     from .climate import ClimateGroup
-
-ServiceCall: TypeAlias = dict[str, Any]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,7 +34,7 @@ class SyncModeHandler:
         """Initialize the sync mode handler."""
         self._group = group
         self._filter_state = FilterState.from_keys(
-            self._group.config.get(CONF_SYNC_ATTRIBUTES, CONTROLLABLE_ATTRIBUTES)
+            self._group.config.get(CONF_SYNC_ATTRS, CONF_TARGET_ATTRS)
         )
         _LOGGER.debug("[%s] Initialize sync mode: %s with FilterState: %s", self._group.entity_id, self._group.sync_mode, self._filter_state)
         self._active_sync_tasks: set[asyncio.Task] = set()
@@ -54,19 +52,23 @@ class SyncModeHandler:
             _LOGGER.debug("[%s] No changes detected. Ignoring changes.", self._group.entity_id)
             return
 
-        _LOGGER.debug("[%s] Change detected: %s (Source: %s)",
-            self._group.entity_id,
-            change_dict,
-            change_entity_id
-        )
+        # Suppress echoes from window_control service calls
+        if self._group.event and self._group.event.context.id == "window_control":
+            _LOGGER.debug("[%s] Ignoring window_control echo: %s", self._group.entity_id, change_dict)
+            return
 
-        # Mirror mode: update group target
+        _LOGGER.debug("[%s] Change detected: %s (Source: %s)", self._group.entity_id, change_dict, change_entity_id)
+
+        # Mirror mode: update target_state with filtered changes
         if self._group.sync_mode == SyncMode.MIRROR:
-            _LOGGER.debug("[%s] Mirror Mode: Updating TargetState.", self._group.entity_id)
-            # Update the group's target state with the deviations
-            self._group.target_state = self._group.target_state.update(**change_dict)
-            # Update source tracking when adopting a member change
-            self._group.last_service_call_entity = change_entity_id
+            if filtered_dict := {
+                key: value for key, value in change_dict.items() 
+                if self._filter_state.to_dict().get(key)
+            }:
+                self._group.target_state = self._group.target_state.update(**filtered_dict)
+                _LOGGER.debug("[%s] Updated TargetState: %s", self._group.entity_id, self._group.target_state)
+            else:
+                _LOGGER.debug("[%s] Changes filtered out. TargetState not updated.", self._group.entity_id)
 
         # Mirror/lock mode: enforce group target
         sync_task = self._group.hass.async_create_background_task(
