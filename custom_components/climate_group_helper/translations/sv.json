@@ -79,7 +79,6 @@
     }
   },
   "options": {
-    "flow_title": "Konfigurera grupp",
     "abort": {
       "no_changes": "Inga ändringar upptäcktes."
     },
@@ -88,6 +87,7 @@
       "invalid_entity": "Ogiltig enhet vald.",
       "no_entities": "Minst en klimatenhet måste finnas kvar i gruppen."
     },
+    "flow_title": "Konfigurera grupp",
     "step": {
       "humidity": {
         "data": {
@@ -110,12 +110,14 @@
       "init": {
         "description": "Finjustera din grupps beteende. Ändringar träder i kraft omedelbart.",
         "menu_options": {
-          "humidity": "Luftfuktighet",
+          "humidity": "Fuktighet",
           "members": "Medlemmar & Lägen",
           "other": "Andra Inställningar",
-          "sync": "Sync Läge",
+          "schedule": "Schema",
+          "sync": "Synkroniseringsläge",
           "temperature": "Temperatur",
-          "timings": "Timings"
+          "timings": "Tider",
+          "window_control": "Fönsterkontroll"
         },
         "title": "Konfigurera Klimatgrupp"
       },
@@ -144,6 +146,16 @@
         },
         "description": "Ytterligare funktioner och entitetsexponering.",
         "title": "Andra Inställningar"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Schema Enhet"
+        },
+        "data_description": {
+          "schedule_entity": "Välj en schema-enhet. Fältet 'Ytterligare data' kan innehålla YAML med attribut som 'temperature: 20.5' eller 'hvac_mode: heat'."
+        },
+        "description": "Länka en Home Assistant schema-enhet för att automatisera temperatur- och lägesändringar.",
+        "title": "Schema"
       },
       "sync": {
         "data": {
@@ -188,6 +200,26 @@
         },
         "description": "Konfigurera hur den 'Virtuella Kontrollern' interagerar med ditt nätverk. Korrekta timings förhindrar Zigbee/Z-Wave överbelastning och ökar kommandotillförlitlighet.",
         "title": "Kommunikation Timings"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Fördröjning Stängning (s)",
+          "room_open_delay": "Fördröjning Rum (s)",
+          "room_sensor": "Rumfönstersensor",
+          "window_mode": "Fönsterkontrollsläge",
+          "zone_open_delay": "Fördröjning Zon (s)",
+          "zone_sensor": "Zonfönstersensor"
+        },
+        "data_description": {
+          "close_delay": "Väntetid efter stängning av fönster.",
+          "room_open_delay": "Väntetid efter öppning av rumsfönster.",
+          "room_sensor": "Binär sensor för rummets fönster. Kortare fördröjning.",
+          "window_mode": "Aktivera grupp baserat på sensorer. HVAC sätts till 'off' vid öppna fönster.",
+          "zone_open_delay": "Väntetid efter öppning av zonfönster.",
+          "zone_sensor": "Binär sensor för andra fönster i zonen. Längre fördröjning."
+        },
+        "description": "Konfigurera automatisk avstängning av värme/kyla när fönster öppnas.",
+        "title": "Fönsterkontroll"
       }
     }
   },
@@ -269,6 +301,12 @@
         "half": "Halv Grad (0.5°)",
         "integer": "Heltal (1°)",
         "none": "Ingen Avrundning (Exakt)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Av – Fönsterkontroll är inaktiverad",
+        "on": "På – Fönsterkontroll är aktiverad"
       }
     }
   },

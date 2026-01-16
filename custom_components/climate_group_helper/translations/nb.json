@@ -79,7 +79,6 @@
     }
   },
   "options": {
-    "flow_title": "Konfigurer gruppe",
     "abort": {
       "no_changes": "Ingen endringer oppdaget."
     },
@@ -88,6 +87,7 @@
       "invalid_entity": "Ugyldig enhet valgt.",
       "no_entities": "Minst én klimaenhet må være igjen i gruppen."
     },
+    "flow_title": "Konfigurer gruppe",
     "step": {
       "humidity": {
         "data": {
@@ -111,11 +111,13 @@
         "description": "Finjuster gruppens oppførsel. Endringer trer i kraft umiddelbart.",
         "menu_options": {
           "humidity": "Fuktighet",
-          "members": "Medlemmer og moduser",
-          "other": "Andre innstillinger",
-          "sync": "Synkroniseringsmodus",
+          "members": "Medlemmer & Moduser",
+          "other": "Andre Innstillinger",
+          "schedule": "Tidsplan",
+          "sync": "Sync Modus",
           "temperature": "Temperatur",
-          "timings": "Tidsinnstillinger"
+          "timings": "Tidspunkter",
+          "window_control": "Vinduskontroll"
         },
         "title": "Konfigurer Klimagruppe"
       },
@@ -144,6 +146,16 @@
         },
         "description": "Tilleggsfunksjoner og entitetseksponering.",
         "title": "Andre innstillinger"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Tidsplan Enhet"
+        },
+        "data_description": {
+          "schedule_entity": "Velg en tidsplan-enhet. Feltet 'Tilleggsdata' kan inneholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'."
+        },
+        "description": "Koble til en Home Assistant tidsplan-enhet for å automatisere endringer i temperatur og modus.",
+        "title": "Tidsplan"
       },
       "sync": {
         "data": {
@@ -188,6 +200,26 @@
         },
         "description": "Konfigurer hvordan den 'Virtuelle Kontrolleren' samhandler med nettverket ditt. Riktige tidsinnstillinger forhindrer Zigbee/Z-Wave-tekst og øker kommandopåliteligheten.",
         "title": "Kommunikasjonstider"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Forsinkelse Lukking (s)",
+          "room_open_delay": "Forsinkelse Rom (s)",
+          "room_sensor": "Romvindussensor",
+          "window_mode": "Vinduskontrollmodus",
+          "zone_open_delay": "Forsinkelse Sone (s)",
+          "zone_sensor": "Sonevindussensor"
+        },
+        "data_description": {
+          "close_delay": "Ventetid etter lukking av vinduer.",
+          "room_open_delay": "Ventetid etter åpning av romvindu.",
+          "room_sensor": "Binærsensor for rommets vindu. Kortere forsinkelse.",
+          "window_mode": "Aktiver gruppe basert på vindussensorer. HVAC settes til 'off' ved åpne vinduer.",
+          "zone_open_delay": "Ventetid etter åpning av sonevindu.",
+          "zone_sensor": "Binærsensor for andre vinduer i sonen. Lengre forsinkelse."
+        },
+        "description": "Konfigurer automatisk avstenging av varme/kjøling når vinduer åpnes.",
+        "title": "Vinduskontroll"
       }
     }
   },
@@ -269,6 +301,12 @@
         "half": "Halv grad (0.5°)",
         "integer": "Hele tall (1°)",
         "none": "Ingen avrunding (Nøyaktig)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Av – Vinduskontroll er deaktivert",
+        "on": "På – Vinduskontroll er aktivert"
       }
     }
   },

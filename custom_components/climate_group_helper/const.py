@@ -1,20 +1,21 @@
 """Constants for the Climate Group helper integration."""
 
 from enum import StrEnum
+
 from homeassistant.components.climate import (
-    ATTR_HVAC_MODE,
-    ATTR_HVAC_MODES,
-    ATTR_TARGET_TEMP_LOW,
-    ATTR_TARGET_TEMP_HIGH,
-    ATTR_HUMIDITY,
     ATTR_FAN_MODE,
     ATTR_FAN_MODES,
+    ATTR_HUMIDITY,
+    ATTR_HVAC_MODE,
+    ATTR_HVAC_MODES,
     ATTR_PRESET_MODE,
     ATTR_PRESET_MODES,
-    ATTR_SWING_MODE,
-    ATTR_SWING_MODES,
     ATTR_SWING_HORIZONTAL_MODE,
     ATTR_SWING_HORIZONTAL_MODES,
+    ATTR_SWING_MODE,
+    ATTR_SWING_MODES,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
     SERVICE_SET_FAN_MODE,
     SERVICE_SET_HUMIDITY,
     SERVICE_SET_HVAC_MODE,
@@ -71,9 +72,8 @@ DEFAULT_ROOM_OPEN_DELAY = 15
 DEFAULT_ZONE_OPEN_DELAY = 300
 DEFAULT_CLOSE_DELAY = 30
 
-# Windows restore options
-CONF_RESTORE_ATTRS = "restore_attributes"
-CONF_DEFAULT_HVAC_MODE = "default_hvac_mode"
+# Schedule options
+CONF_SCHEDULE_ENTITY = "schedule_entity"
 
 # Other options
 CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
@@ -110,7 +110,7 @@ class WindowControlMode(StrEnum):
 
     OFF = "off"
     ON = "on"
-        
+
 
 # Extra attribute keys
 ATTR_ASSUMED_STATE = "assumed_state"
@@ -140,10 +140,9 @@ MODE_MODES_MAP = {
 }
 
 # Controllable sync attributes
-CONF_TARGET_ATTRS = list(ATTR_SERVICE_MAP.keys())
+SYNC_TARGET_ATTRS = list(ATTR_SERVICE_MAP.keys())
 
 # Float comparison tolerance for temperature and humidity
 FLOAT_TOLERANCE = 0.1
 
-WINDOW_CONTROL_MODE_OFF = "off"
-WINDOW_CONTROL_MODE_ON = "on"
+STARTUP_BLOCK_DELAY = 5.0

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import (
@@ -13,6 +12,7 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_LOW,
     ATTR_TEMPERATURE,
     DOMAIN as CLIMATE_DOMAIN,
+    SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
@@ -63,6 +63,27 @@ class ServiceCallHandler:
         if self._active_tasks:
             await asyncio.gather(*self._active_tasks, return_exceptions=True)
 
+    async def call_hvac_off(self, context_id: str | None = None):
+        """Execute a service call to turn off HVAC on all member entities.
+        
+        This bypasses target_state entirely - used by Window Control to force OFF
+        while preserving target_state for later restoration.
+        """
+        await self._group.hass.services.async_call(
+            domain=CLIMATE_DOMAIN,
+            service=SERVICE_SET_HVAC_MODE,
+            service_data={
+                ATTR_ENTITY_ID: self._group.climate_entity_ids,
+                ATTR_HVAC_MODE: HVACMode.OFF
+            },
+            blocking=True,
+            context=Context(id=context_id) if context_id else None,
+        )
+
+    async def call_immediate(self, filter_state: FilterState | None = None, context_id: str | None = None):
+        """Execute a service call immediately."""
+        await self._execute_calls(filter_state=filter_state, context_id=context_id)
+
     async def call_debounced(self, filter_state: FilterState | None = None, context_id: str | None = None):
         """Debounce and execute a service call."""
 
@@ -98,7 +119,7 @@ class ServiceCallHandler:
         Retries failed calls up to retry_attempts times with retry_delay between.
         
         Args:
-            filter_state: Optional FilterState to enforce. If None, uses group.target_state.
+            filter_state: Optional FilterState to filter calls. If None, uses group.target_state.
             context_id: Optional context ID to tag service calls (for echo detection).
         """
         attempts = self._group.retry_attempts + 1
@@ -107,24 +128,21 @@ class ServiceCallHandler:
 
         for attempt in range(attempts):
             try:
-                calls = self._generate_calls(filter_state=filter_state)
+                calls = self._generate_calls(filter_state=filter_state, context_id=context_id)
 
                 if not calls:
-                    _LOGGER.debug("All members synced, stopping retry loop.")
+                    _LOGGER.debug("[%s] No pending calls, stopping retry loop", self._group.entity_id)
                     return
 
                 for call in calls:
                     service=call["service"]
                     data={ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
 
-                    # Track the time of the last service call for sync block logic
-                    self._group.last_service_call_time = time.time()
-
-                    _LOGGER.debug("Executing service %s: %s", service, data)    
+                    _LOGGER.debug("[%s] Call (%d/%d) '%s' with data: %s", self._group.entity_id, attempt + 1, attempts, service, data)    
 
                     # Generic handling for all services
                     await self._group.hass.services.async_call(
-                        CLIMATE_DOMAIN,
+                        domain=CLIMATE_DOMAIN,
                         service=service,
                         service_data=data,
                         blocking=True,
@@ -132,12 +150,12 @@ class ServiceCallHandler:
                     )
 
             except Exception as e:
-                _LOGGER.warning("Enforcement attempt %d/%d failed: %s", attempt + 1, attempts, e)
+                _LOGGER.warning("[%s] Call attempt (%d/%d) failed: %s", self._group.entity_id, attempt + 1, attempts, e)
 
             if attempts > 1 and attempt < (attempts - 1):
                 await asyncio.sleep(delay)
 
-    def _generate_calls(self, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
+    def _generate_calls(self, filter_state: FilterState | None = None, context_id: str | None = None) -> list[dict[str, Any]]:
         """Generate all service calls needed to sync members to target_state.
         
         Handles special cases:
@@ -150,9 +168,16 @@ class ServiceCallHandler:
         """
 
         calls = []
+
+        # Block calls when blocking mode is active
+        if self._group.blocking_mode and context_id != "window_control":
+            _LOGGER.debug("[%s] Blocking mode active (context_id=%s), skipping calls", self._group.entity_id, context_id)
+            return calls
+
         target_state_dict = self._group.target_state.to_dict()
 
         filter_attrs = filter_state.to_dict() if filter_state else FilterState().to_dict()
+
 
         temp_range_processed = False
 
@@ -222,21 +247,22 @@ class ServiceCallHandler:
             if not state:
                 continue
 
-            # Modes: Check if attr is in its modes list and get value
+            # Modes: Check if attr is in its modes list
             if attr in MODE_MODES_MAP:
                 if target_value not in state.attributes.get(MODE_MODES_MAP[attr], []):
                     continue
-            # Temperature/Humidity: Check if attr exists in state and get value
+            # Temperature/Humidity: Check if attr exists in state
             elif attr not in state.attributes:
                 continue
 
             current_value = state.state if attr == ATTR_HVAC_MODE else state.attributes.get(attr)
 
-            # Special handling for temperature and humidity tolerance
+            # Float values: Check if current_value is within tolerance of target_value
             if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH, ATTR_HUMIDITY):
                 if self._group.within_tolerance(current_value, target_value):
                     continue
 
+            # If current/target values differ, add to list
             if current_value != target_value:
                 entity_ids.append(entity_id)
 

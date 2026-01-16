@@ -7,7 +7,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN, HVACMode
+from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import CONF_ENTITIES, CONF_NAME
@@ -27,11 +27,11 @@ from .const import (
     CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
-    CONF_RESTORE_ATTRS,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
     CONF_ROOM_SENSOR,
+    CONF_SCHEDULE_ENTITY,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
     CONF_TEMP_CURRENT_AVG,
@@ -39,8 +39,6 @@ from .const import (
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
-    CONF_TARGET_ATTRS,
-    CONF_DEFAULT_HVAC_MODE,
     CONF_WINDOW_MODE,
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
@@ -54,6 +52,7 @@ from .const import (
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
+    SYNC_TARGET_ATTRS,
     AverageOption,
     RoundOption,
     SyncMode,
@@ -66,7 +65,7 @@ _LOGGER = logging.getLogger(__name__)
 class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 5
+    VERSION = 6
 
     @staticmethod
     @callback
@@ -145,7 +144,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 "timings",
                 "sync",
                 "window_control",
-                "window_restore",
+                "schedule",
                 "other",
             ],
         )
@@ -449,11 +448,11 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(
                     CONF_SYNC_ATTRS,
                     default=current_config.get(
-                        CONF_SYNC_ATTRS, CONF_TARGET_ATTRS
+                        CONF_SYNC_ATTRS, SYNC_TARGET_ATTRS
                     ),
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=CONF_TARGET_ATTRS,
+                        options=SYNC_TARGET_ATTRS,
                         mode=selector.SelectSelectorMode.LIST,
                         multiple=True,
                         translation_key="sync_attributes",
@@ -483,7 +482,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 current_config[CONF_WINDOW_MODE] = WindowControlMode.OFF
             
             self._update_config_if_changed(current_config)
-            return await self.async_step_window_restore()
+            return await self.async_step_schedule()
 
         schema = vol.Schema(
             {
@@ -557,46 +556,35 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             data_schema=schema,
         )
 
-    async def async_step_window_restore(
+    async def async_step_schedule(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Manage window restore attributes."""
+        """Manage schedule settings."""
         current_config = {**self._config_entry.options, **(user_input or {})}
 
         if user_input is not None:
+            # If user clears the schedule entity field, remove it from config
+            if CONF_SCHEDULE_ENTITY not in user_input or not user_input.get(CONF_SCHEDULE_ENTITY):
+                current_config.pop(CONF_SCHEDULE_ENTITY, None)
+            
             self._update_config_if_changed(current_config)
             return await self.async_step_other()
 
         schema = vol.Schema(
             {
                 vol.Optional(
-                    CONF_DEFAULT_HVAC_MODE,
-                    description={"suggested_value": current_config.get(CONF_DEFAULT_HVAC_MODE, "none")},
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=["none"] + list(HVACMode),
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                        translation_key="default_hvac_mode",
-                    )
-                ),
-                vol.Required(
-                    CONF_RESTORE_ATTRS,
-                    default=current_config.get(
-                        CONF_RESTORE_ATTRS, CONF_TARGET_ATTRS
-                    ),
-                ): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=CONF_TARGET_ATTRS,
-                        mode=selector.SelectSelectorMode.LIST,
-                        multiple=True,
-                        translation_key="restore_attributes",
+                    CONF_SCHEDULE_ENTITY,
+                    description={"suggested_value": current_config.get(CONF_SCHEDULE_ENTITY)},
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain="schedule",
                     )
                 ),
             }
         )
 
         return self.async_show_form(
-            step_id="window_restore",
+            step_id="schedule",
             data_schema=schema,
         )
 

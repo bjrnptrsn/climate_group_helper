@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.16.0 - 2026-01-16
+
+### 🚀 New Features
+- **Schedule Helper Integration**: Native support for Home Assistant `schedule` entities. Automate your climate group's temperature and mode directly via a schedule helper.
+
+- **Smart Window Control (Redesigned)**: Simplified and more robust logic. Opening a window now directly forces members off while maintaining the group's target state. Closing the window instantly restores the group's intended state.
+
+- **Source-Aware State Management**: The group now distinguishes between changes from users, schedules, window control and sync mode to prevent conflicts and loops.
+
+### 🧹 Improvements
+- **Simplified Configuration**: Removed complex "Restore Source" and "Window Snapshot" options in favor of a "just works" standard behavior.
+
+- **Robustness**: Significantly improved stability in complex scenarios (rapid changes, sync conflicts).
+
+- **Migration**: Automatic migration to Config Version 6 ensures your settings are always valid and up-to-date.
+
+> [!IMPORTANT]
+> Please check your configuration after update, as some advanced options were removed/consolidated.
+
 ## 0.15.0 - 2026-01-14
 
 > **✨ Window Control:** Automatically turn off heating when windows open and restore it when they close!
@@ -19,7 +38,7 @@
 
 *   **New Steps**: Two new configuration steps in the options menu:
     *   **Window Control**: Configure sensors, delays, and enable/disable the feature.
-    *   **Window Restore**: Select which attributes to restore and set a default HVAC mode.
+    *   **Window Control Snapshot**: Select which attributes to restore and set a default HVAC mode.
 
 ## 0.14.0 - 2026-01-12
 

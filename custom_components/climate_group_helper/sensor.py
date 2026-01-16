@@ -29,7 +29,7 @@ async def async_setup_entry(
     climate_group_entity_id = entity_registry.async_get_entity_id("climate", DOMAIN, config_entry.unique_id)
 
     if not climate_group_entity_id:
-        _LOGGER.warning("Climate group entity not found for config entry %s", config_entry.title)
+        _LOGGER.warning("[%s] Climate group entity not found for config entry", config_entry.title)
         return
 
     # Keep track of already added sensors
@@ -47,13 +47,13 @@ async def async_setup_entry(
         if ("temperature" not in added_sensors and state.attributes.get(ATTR_CURRENT_TEMPERATURE) is not None):
             new_sensors.append(ClimateGroupTemperatureSensor(hass, config_entry, climate_group_entity_id))
             added_sensors.add("temperature")
-            _LOGGER.debug("Adding temperature sensor for %s", config_entry.title)
+            _LOGGER.debug("[%s] Adding temperature sensor", config_entry.title)
 
         # Add humidity sensor
         if ("humidity" not in added_sensors and state.attributes.get(ATTR_CURRENT_HUMIDITY) is not None):
             new_sensors.append(ClimateGroupHumiditySensor(hass, config_entry, climate_group_entity_id))
             added_sensors.add("humidity")
-            _LOGGER.debug("Adding humidity sensor for %s", config_entry.title)
+            _LOGGER.debug("[%s] Adding humidity sensor", config_entry.title)
 
         if new_sensors:
             async_add_entities(new_sensors)
@@ -145,7 +145,7 @@ class ClimateGroupTemperatureSensor(ClimateGroupBaseSensor):
         value = self._climate_group_state.attributes.get(ATTR_CURRENT_TEMPERATURE)
         
         if value is not None and not isinstance(value, (int, float)):
-            _LOGGER.debug("Invalid temperature value for %s: %s", self._attr_name, value)
+            _LOGGER.debug("[%s] Invalid temperature value for %s: %s", self._attr_name, self.entity_id, value)
             return None
         
         return value
@@ -179,7 +179,7 @@ class ClimateGroupHumiditySensor(ClimateGroupBaseSensor):
         value = self._climate_group_state.attributes.get(ATTR_CURRENT_HUMIDITY)
         
         if value is not None and not isinstance(value, (int, float)):
-            _LOGGER.debug("Invalid humidity value for %s: %s", self._attr_name, value)
+            _LOGGER.debug("[%s] Invalid humidity value for %s: %s", self._attr_name, self.entity_id, value)
             return None
         
         return value

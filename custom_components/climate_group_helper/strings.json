@@ -39,7 +39,7 @@
           "timings": "Timings",
           "sync": "Sync Mode",
           "window_control": "Window Control",
-          "window_restore": "Window Restore",
+          "schedule": "Schedule",
           "other": "Other Settings"
         }
       },
@@ -139,16 +139,14 @@
           "close_delay": "Time to wait after all windows close before restoring heating."
         }
       },
-      "window_restore": {
-        "title": "Window Restore Attributes",
-        "description": "Select which attributes should be restored when all windows are closed and heating resumes.",
+      "schedule": {
+        "title": "Schedule",
+        "description": "Link a Home Assistant Schedule entity to automate temperature and mode changes at specific times.",
         "data": {
-          "default_hvac_mode": "Default HVAC Mode",
-          "restore_attributes": "Restore Attributes"
+          "schedule_entity": "Schedule Entity"
         },
         "data_description": {
-          "default_hvac_mode": "HVAC mode to restore if no snapshot exists (e.g. after restart). Leave empty to skip restore.",
-          "restore_attributes": "Attributes to restore after window control ends. Unselected attributes will remain unchanged."
+          "schedule_entity": "Select a schedule entity. The schedule's 'Additional data' field can contain YAML with attributes like 'temperature: 20.5' or 'hvac_mode: heat'."
         }
       },
       "other": {
@@ -247,19 +245,6 @@
       }
     },
     "sync_attributes": {
-      "options": {
-        "hvac_mode": "HVAC Mode",
-        "preset_mode": "Preset Mode",
-        "temperature": "Temperature (Target)",
-        "target_temp_high": "Target Temperature High (Range)",
-        "target_temp_low": "Target Temperature Low (Range)",
-        "fan_mode": "Fan Mode",
-        "swing_mode": "Vertical Swing",
-        "swing_horizontal_mode": "Horizontal Swing",
-        "humidity": "Humidity (Target)"
-      }
-    },
-    "restore_attributes": {
       "options": {
         "hvac_mode": "HVAC Mode",
         "preset_mode": "Preset Mode",

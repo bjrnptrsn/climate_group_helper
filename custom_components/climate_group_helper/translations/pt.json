@@ -79,7 +79,6 @@
     }
   },
   "options": {
-    "flow_title": "Configurar grupo",
     "abort": {
       "no_changes": "Nenhuma alteração detectada."
     },
@@ -88,6 +87,7 @@
       "invalid_entity": "Dispositivo selecionado inválido.",
       "no_entities": "Pelo menos um dispositivo climático deve permanecer no grupo."
     },
+    "flow_title": "Configurar grupo",
     "step": {
       "humidity": {
         "data": {
@@ -110,12 +110,14 @@
       "init": {
         "description": "Ajuste o comportamento do seu grupo. As alterações entram em vigor imediatamente.",
         "menu_options": {
-          "humidity": "Humidade",
+          "humidity": "Umidade",
           "members": "Membros & Modos",
-          "other": "Outras Definições",
+          "other": "Outros Ajustes",
+          "schedule": "Agenda",
           "sync": "Modo Sync",
           "temperature": "Temperatura",
-          "timings": "Tempos"
+          "timings": "Tempos",
+          "window_control": "Controle de Janela"
         },
         "title": "Configurar Grupo Climático"
       },
@@ -144,6 +146,16 @@
         },
         "description": "Funcionalidades adicionais e exposição de entidades.",
         "title": "Outras Definições"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Entidade de Agenda"
+        },
+        "data_description": {
+          "schedule_entity": "Selecione uma entidade de agenda. O campo 'Dados adicionais' pode conter YAML com atributos como 'temperature: 20.5' ou 'hvac_mode: heat'."
+        },
+        "description": "Vincule uma entidade de agenda do Home Assistant para automatizar mudanças de temperatura e modo.",
+        "title": "Agenda"
       },
       "sync": {
         "data": {
@@ -188,6 +200,26 @@
         },
         "description": "Configurar como o 'Controlador Virtual' interage com a sua rede. Tempos corretos previnem congestionamento Zigbee/Z-Wave e aumentam fiabilidade de comandos.",
         "title": "Tempos de Comunicação"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Atraso Fechamento (s)",
+          "room_open_delay": "Atraso Abertura Quarto (s)",
+          "room_sensor": "Sensor Janela Quarto",
+          "window_mode": "Modo Controle Janela",
+          "zone_open_delay": "Atraso Abertura Zona (s)",
+          "zone_sensor": "Sensor Janela Zona"
+        },
+        "data_description": {
+          "close_delay": "Tempo de espera após fechar janelas.",
+          "room_open_delay": "Tempo de espera após abrir janela do quarto.",
+          "room_sensor": "Sensor binário para janela do quarto. Atraso mais curto.",
+          "window_mode": "Habilitar grupo baseado em sensores. HVAC vai para 'off' quando janelas abertas.",
+          "zone_open_delay": "Tempo de espera após abrir janela da zona.",
+          "zone_sensor": "Sensor binário para outras janelas na zona. Atraso mais longo."
+        },
+        "description": "Configure o desligamento automático do aquecimento/resfriamento ao abrir janelas.",
+        "title": "Controle de Janela"
       }
     }
   },
@@ -269,6 +301,12 @@
         "half": "Meio Grau (0.5°)",
         "integer": "Números Inteiros (1°)",
         "none": "Sem Arredondamento (Exato)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Desligado – O controle de janela está desativado",
+        "on": "Ligado – O controle de janela está ativado"
       }
     }
   },

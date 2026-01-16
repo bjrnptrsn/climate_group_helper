@@ -9,17 +9,22 @@ from homeassistant.const import CONF_ENTITIES, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_CLOSE_DELAY,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_HUMIDITY_CURRENT_AVG,
+    CONF_HUMIDITY_SENSORS,
     CONF_HUMIDITY_TARGET_AVG,
     CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
+    CONF_ROOM_OPEN_DELAY,
+    CONF_ROOM_SENSOR,
+    CONF_SCHEDULE_ENTITY,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
     CONF_TEMP_CURRENT_AVG,
@@ -27,6 +32,9 @@ from .const import (
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
+    CONF_WINDOW_MODE,
+    CONF_ZONE_OPEN_DELAY,
+    CONF_ZONE_SENSOR,
     DOMAIN,
 )
 
@@ -34,22 +42,38 @@ from .const import (
 VALID_CONFIG_KEYS = {
     CONF_NAME,
     CONF_ENTITIES,
+    # HVAC options
     CONF_HVAC_MODE_STRATEGY,
     CONF_FEATURE_STRATEGY,
+    # Temperature options
     CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_SENSORS,
     CONF_TEMP_UPDATE_TARGETS,
+    # Humidity options
     CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_TARGET_AVG,
     CONF_HUMIDITY_TARGET_ROUND,
+    CONF_HUMIDITY_SENSORS,
     CONF_HUMIDITY_UPDATE_TARGETS,
+    # Service call options
     CONF_DEBOUNCE_DELAY,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
+    # Sync mode options
     CONF_SYNC_MODE,
     CONF_SYNC_ATTRS,
+    # Window control options
+    CONF_WINDOW_MODE,
+    CONF_ROOM_SENSOR,
+    CONF_ZONE_SENSOR,
+    CONF_ROOM_OPEN_DELAY,
+    CONF_ZONE_OPEN_DELAY,
+    CONF_CLOSE_DELAY,
+    # Schedule options
+    CONF_SCHEDULE_ENTITY,
+    # Other options
     CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
 }
@@ -89,29 +113,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Migrate old config entries to version 5 using a 'Soft Reset' strategy.
+    """Migrate old config entries to version 6 using a 'Soft Reset' strategy.
     
     This ensures that no invalid or legacy keys survive the migration, potentially
     resetting some user customizations if keys were renamed, but guaranteeing a 
     valid configuration state.
     """
-    if entry.version < 5:
-        _LOGGER.info("Migrating config entry from version %s to 5 (Soft Reset)", entry.version)
+    if entry.version < 6:
+        _LOGGER.info("[%s] Migrating config entry from version %s to 6 (Soft Reset)", entry.title, entry.version)
         
         # Combine data + options (old versions stored some keys in data)
         old_config = {**entry.data, **entry.options}
-        
+
+        # Convert old keys (ending with '_option') to new format
+        for key in list(old_config.keys()):
+            if key.endswith("_option"):
+                old_config[key[:-7]] = old_config[key]
+                del old_config[key]
+
         # Whitelist Filter: Keep only currently valid keys
         new_options = {k: v for k, v in old_config.items() if k in VALID_CONFIG_KEYS}
         
         # Update entry
-        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=5)
+        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=6)
         
-        _LOGGER.info(
-            "Migration complete. %d valid keys preserved, %d keys discarded.", 
-            len(new_options), 
-            len(old_config) - len(new_options)
-        )
+        _LOGGER.info("[%s] Migration complete. %d valid keys preserved, %d keys discarded.", entry.title, len(new_options), len(old_config) - len(new_options))
     
     return True
 

@@ -79,7 +79,6 @@
     }
   },
   "options": {
-    "flow_title": "Gruppe konfigurieren",
     "abort": {
       "no_changes": "Keine Änderungen erkannt."
     },
@@ -88,6 +87,7 @@
       "invalid_entity": "Ungültiges Gerät ausgewählt.",
       "no_entities": "Mindestens ein Klimagerät muss in der Gruppe verbleiben."
     },
+    "flow_title": "Gruppe konfigurieren",
     "step": {
       "humidity": {
         "data": {
@@ -113,9 +113,11 @@
           "humidity": "Feuchtigkeit",
           "members": "Mitglieder & Modi",
           "other": "Andere Einstellungen",
+          "schedule": "Zeitplan",
           "sync": "Sync-Modus",
           "temperature": "Temperatur",
-          "timings": "Zeiten (Timings)"
+          "timings": "Zeiten (Timings)",
+          "window_control": "Fenstersteuerung"
         },
         "title": "Klimagruppe konfigurieren"
       },
@@ -144,6 +146,16 @@
         },
         "description": "Zusätzliche Funktionen und Entitäten-Bereitstellung.",
         "title": "Andere Einstellungen"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Zeitplan-Entität"
+        },
+        "data_description": {
+          "schedule_entity": "Wähle eine Zeitplan-Entität. Das Feld 'Zusätzliche Daten' des Zeitplans kann YAML mit Attributen wie 'temperature: 20.5' oder 'hvac_mode: heat' enthalten."
+        },
+        "description": "Verknüpfe eine Home Assistant Zeitplan-Entität, um Temperatur- und Modusänderungen zu bestimmten Zeiten zu automatisieren.",
+        "title": "Zeitplan"
       },
       "sync": {
         "data": {
@@ -188,6 +200,26 @@
         },
         "description": "Konfiguriere, wie der 'Virtuelle Controller' mit deinem Netzwerk interagiert. Korrekte Timings verhindern Zigbee/Z-Wave-Überlastung und erhöhen die Zuverlässigkeit.",
         "title": "Kommunikationszeiten"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Verzögerung Schließen (Sekunden)",
+          "room_open_delay": "Verzögerung Raum (Sekunden)",
+          "room_sensor": "Raum-Fenstersensor",
+          "window_mode": "Fenstersteuerungs-Modus",
+          "zone_open_delay": "Verzögerung Zone (Sekunden)",
+          "zone_sensor": "Zonen-Fenstersensor"
+        },
+        "data_description": {
+          "close_delay": "Wartezeit nachdem alle Fenster geschlossen sind, bevor die Heizung wiederhergestellt wird.",
+          "room_open_delay": "Wartezeit nach Öffnen des Raumfensters, bevor die Heizung ausgeschaltet wird.",
+          "room_sensor": "Binärsensor für das Fenster/Tür im Raum. Löst die kürzere Verzögerung aus.",
+          "window_mode": "Aktiviert/Deaktiviert die Klimagruppe basierend auf Fenstersensoren. Wenn aktiv, wird der HVAC-Modus auf 'off' gesetzt, wenn Fenster offen sind.",
+          "zone_open_delay": "Wartezeit nach Öffnen des Zonenfensters, bevor die Heizung ausgeschaltet wird.",
+          "zone_sensor": "Binärsensor für andere Fenster/Türen in der Zone/Etage. Löst die längere Verzögerung aus."
+        },
+        "description": "Konfiguriere automatische Abschaltung beim Öffnen von Fenstern. Beide Sensoren sind optional - leer lassen zum Deaktivieren.",
+        "title": "Fenstersteuerung"
       }
     }
   },
@@ -269,6 +301,12 @@
         "half": "Halbes Grad (0.5°)",
         "integer": "Ganze Zahl (1°)",
         "none": "Keine Rundung (Exakt)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Aus – Fenstersteuerung ist deaktiviert",
+        "on": "Ein – Fenstersteuerung ist aktiviert"
       }
     }
   },

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from functools import reduce
 import logging
+import time
 from statistics import mean, median
 from typing import Any
 
@@ -92,8 +93,8 @@ from .const import (
     AverageOption,
     RoundOption,
     SyncMode,
-    WindowControlMode,
 )
+from .schedule import ScheduleHandler
 from .service_call import ServiceCallHandler
 from .state import TargetState, ChangeState
 from .sync_mode import SyncModeHandler
@@ -137,15 +138,6 @@ async def async_setup_entry(
     """Initialize Climate Group config entry."""
 
     config = {**config_entry.options}
-    
-    # This is a temporary shortcuts to convert old config keys to new format
-    # without changing the config version
-    #
-    # 1. Remove 
-    for key in list(config.keys()):
-        if key.endswith("_option"):
-            config[key[:-7]] = config[key]
-            del config[key]
 
     registry = er.async_get(hass)
     entities = er.async_validate_entity_ids(registry, config[CONF_ENTITIES])
@@ -263,8 +255,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Centralized service call handler
         self.service_call_handler = ServiceCallHandler(self)
-        # Track the time of the last service call for sync block logic
-        self.last_service_call_time: float = 0.0
+
+        # Startup time tracking for sync mode blocking
+        self.startup_time: float | None = None
 
         # Sync mode must be set before SyncModeHandler initialization
         self.sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
@@ -272,7 +265,36 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Window control handler (optional, based on config)
         self.window_control_handler = WindowControlHandler(self)
+
+        # Schedule handler (optional, based on config)
+        self.schedule_handler = ScheduleHandler(self)
+        self._schedule_init_done = False
+
+    @property
+    def blocking_mode(self) -> bool:
+        """Return True if any module is blocking hvac_mode changes (e.g. Window Control)."""
+        return self.window_control_handler.force_off
+
+    def update_target_state(self, source: str, **kwargs) -> bool:
+        """Update target_state with source-based access control.
         
+        Args:
+            source: Origin of the update ("user", "schedule", "sync_mode", "restore")
+            **kwargs: Attributes to update (hvac_mode, temperature, etc.)
+            
+        Returns:
+            True if update was allowed, False if blocked
+        """
+        allowed_sources = ("schedule", "restore")
+        
+        if self.blocking_mode and source not in allowed_sources:
+            _LOGGER.debug("[%s] TargetState update blocked (source=%s, blocking_mode=True)", self.entity_id, source)
+            return False
+        
+        self.target_state = self.target_state.update(**kwargs)
+        _LOGGER.debug("[%s] TargetState updated (source=%s): %s", self.entity_id, source, kwargs)
+        return True
+
     @property
     def device_info(self) -> dict[str, Any]:
         """Return the device info."""
@@ -299,9 +321,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 elif (value := last_attrs.get(key)) is not None:
                      restored_data[key] = value
 
-            self.target_state = self.target_state.update(**restored_data)
+            self.update_target_state("restore", **restored_data)
             
-            _LOGGER.debug("Restored Persistent Target State for '%s': %s", self.entity_id, self.target_state)
+            _LOGGER.debug("[%s] Restored Persistent Target State: %s", self.entity_id, self.target_state)
 
             if ATTR_HVAC_MODES in last_attrs:
                 self._attr_hvac_modes = self._sort_hvac_modes(last_attrs[ATTR_HVAC_MODES])
@@ -326,6 +348,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Setup window control (subscribes to sensor events)
         await self.window_control_handler.async_setup()
 
+        # Setup schedule handler (subscribes to schedule entity events)
+        await self.schedule_handler.async_setup()
+
         # Update initial state
         self.async_defer_or_update_ha_state()
 
@@ -334,6 +359,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         await super().async_will_remove_from_hass()
         await self.service_call_handler.async_cancel_all()
         self.window_control_handler.async_teardown()
+        self.schedule_handler.async_teardown()
 
     def _reduce_attributes(self, attributes: list[Any], default: Any = None) -> list | int:
         """Reduce a list of attributes (modes or features) based on the feature strategy."""
@@ -363,7 +389,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         return modes
 
-    def _sort_hvac_modes(self, modes: list[HVACMode | str]) -> list[HVACMode | str]:
+    def _sort_hvac_modes(self, modes: list[HVACMode | str]) -> list[HVACMode]:
         """Sort HVAC modes based on a predefined order."""
 
         # Make sure OFF is always included
@@ -372,7 +398,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Return modes sorted in the order of the HVACMode enum
         return [m for m in HVACMode if m in modes]
 
-    def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | None:
+    def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | str | None:
         """Determine the group's HVAC mode based on member modes and strategy."""
 
         active_hvac_modes = [mode for mode in current_hvac_modes if mode != HVACMode.OFF]
@@ -453,23 +479,30 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             return round(value)
         return value
 
-    def _get_valid_member_states(self, entity_ids: list[str]) -> list[State]:
-        """Get valid states for provided entities."""
+    def _get_valid_member_states(self, entity_ids: list[str]) -> tuple[list[State], bool]:
+        """Get valid states for provided entities.
+        
+        Returns:
+            Tuple of (valid_states, all_ready) where all_ready is True when 
+            all entity_ids have a valid (not unavailable/unknown) state.
+        """
         all_states = [
             state
             for entity_id in entity_ids
             if (state := self.hass.states.get(entity_id)) is not None
         ]
-        return [state for state in all_states if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)]
+        valid_states = [state for state in all_states if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)]
+        all_ready = len(valid_states) == len(entity_ids)
+        return valid_states, all_ready
 
     def _get_avg_sensor_value(self, sensor_ids: list[str], calc_func) -> float | None:
         """Calculate average value from multiple sensors."""
         if not sensor_ids:
             return None
             
-        states = self._get_valid_member_states(sensor_ids)
+        valid_states, _ = self._get_valid_member_states(sensor_ids)
         values = []
-        for state in states:
+        for state in valid_states:
             try:
                 values.append(float(state.state))
             except (ValueError, TypeError):
@@ -484,14 +517,14 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if not entity_ids:
             return
 
-        valid_states = self._get_valid_member_states(entity_ids)
+        valid_states, _ = self._get_valid_member_states(entity_ids)
 
         for state in valid_states:
             try:
                 current_value = float(state.state)
                 # Compare with a small tolerance to avoid unnecessary updates
                 if abs(current_value - value) > tolerance:
-                    _LOGGER.debug("Updating %s with new value %.1f", state.entity_id, value)
+                    _LOGGER.debug("[%s] Updating %s with new value %.1f", self.entity_id, state.entity_id, value)
                     self.hass.async_create_task(
                         self.hass.services.async_call(
                             NUMBER_DOMAIN,
@@ -503,25 +536,25 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 continue
 
     @callback
-    def async_update_and_write_state(self) -> None:
-        """Helper to update group state and write to HA."""
-        self.async_update_group_state()
-        self.async_write_ha_state()
-
-    @callback
     def _state_change_listener(self, event: Event | None = None) -> None:
         """Handle state changes."""
         
         self.event = event
-        self.async_update_group_state()
-        self.async_write_ha_state()
+        self.async_defer_or_update_ha_state()
 
     @callback
     def async_update_group_state(self) -> None:
         """Query all members and determine the climate group state."""
 
         # Check if there are any valid states
-        self.states = self._get_valid_member_states(self.climate_entity_ids)
+        self.states, all_members_ready = self._get_valid_member_states(self.climate_entity_ids)
+
+        # Schedule init: apply schedule slot when all members are ready for the first time
+        if all_members_ready and not self._schedule_init_done:
+            self._schedule_init_done = True
+            self.startup_time = time.time()
+            self.hass.async_create_task(self.schedule_handler.apply_initial_slot())
+            _LOGGER.debug("[%s] All members ready, calling schedule initial slot", self.entity_id)
 
         # No states available
         if not self.states:
@@ -570,9 +603,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             # Use ONLY external sensors if configured
             self._attr_current_temperature = self._get_avg_sensor_value(self._temp_sensor_entity_ids, self._temp_current_avg_calc)
             if self._attr_current_temperature is not None:
-                self._update_target_entities(self._temp_update_target_entity_ids, self._attr_current_temperature, 0.05)
+                self._update_target_entities(self._temp_update_target_entity_ids, self._attr_current_temperature, 0.1)
             else:
-                _LOGGER.debug("External sensors %s configured but unavailable. Current temperature will be None.", self._temp_sensor_entity_ids)
+                _LOGGER.debug("[%s] External sensors %s configured but unavailable. Current temperature will be None", self.entity_id, self._temp_sensor_entity_ids)
         else:
             # Use member average if NO external sensors configured
             self._attr_current_temperature = reduce_attribute(self.states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._temp_current_avg_calc(data))
@@ -609,9 +642,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             # Use ONLY external sensors if configured
             self._attr_current_humidity = self._get_avg_sensor_value(self._humidity_sensor_entity_ids, self._humidity_current_avg_calc)
             if self._attr_current_humidity is not None:
-                self._update_target_entities(self._humidity_update_target_entity_ids, self._attr_current_humidity, 0.05)
+                self._update_target_entities(self._humidity_update_target_entity_ids, self._attr_current_humidity, 0.1)
             else:
-                _LOGGER.debug("External sensors %s configured but unavailable. Current humidity will be None.", self._humidity_sensor_entity_ids)
+                _LOGGER.debug("[%s] External sensors %s configured but unavailable. Current humidity will be None", self.entity_id, self._humidity_sensor_entity_ids)
         else:
             # Use member average if NO external sensors configured
             self._attr_current_humidity = reduce_attribute(self.states, ATTR_CURRENT_HUMIDITY, reduce=lambda *data: self._humidity_current_avg_calc(data))
@@ -685,47 +718,42 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             self.target_state = TargetState(**initial_data)
 
             if self.target_state != TargetState():
-                _LOGGER.debug("Initialized Persistent Target State from current group values: %s", self.target_state)
+                _LOGGER.debug("[%s] Initialized Persistent Target State from current group values: %s", self.entity_id, self.target_state)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
-        # Check if window control is forcing OFF - block user commands
-        if self.window_control_handler.force_off and hvac_mode != HVACMode.OFF:
-            _LOGGER.info("[%s] Window control active, ignoring HVAC mode change to %s", self.entity_id, hvac_mode)
-            return
-  
-        self.target_state = self.target_state.update(hvac_mode=hvac_mode)
+        self.update_target_state("user", hvac_mode=hvac_mode)
         await self.service_call_handler.call_debounced()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Forward the set_temperature command to all climate in the climate group."""
         # Update target store with provided arguments
-        self.target_state = self.target_state.update(**kwargs)
+        self.update_target_state("user", **kwargs)
         await self.service_call_handler.call_debounced()
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
-        self.target_state = self.target_state.update(humidity=humidity)
+        self.update_target_state("user", humidity=humidity)
         await self.service_call_handler.call_debounced()
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Forward the set_fan_mode to all climate in the climate group."""
-        self.target_state = self.target_state.update(fan_mode=fan_mode)
+        self.update_target_state("user", fan_mode=fan_mode)
         await self.service_call_handler.call_debounced()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Forward the set_preset_mode to all climate in the climate group."""
-        self.target_state = self.target_state.update(preset_mode=preset_mode)
+        self.update_target_state("user", preset_mode=preset_mode)
         await self.service_call_handler.call_debounced()
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Forward the set_swing_mode to all climate in the climate group."""
-        self.target_state = self.target_state.update(swing_mode=swing_mode)
+        self.update_target_state("user", swing_mode=swing_mode)
         await self.service_call_handler.call_debounced()
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""
-        self.target_state = self.target_state.update(swing_horizontal_mode=swing_horizontal_mode)
+        self.update_target_state("user", swing_horizontal_mode=swing_horizontal_mode)
         await self.service_call_handler.call_debounced()
 
     async def async_turn_on(self) -> None:
@@ -733,32 +761,32 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Set to the last active HVAC mode if available
         if self._last_active_hvac_mode is not None:
-            _LOGGER.debug("Turn on with the last active HVAC mode: %s", self._last_active_hvac_mode)
+            _LOGGER.debug("[%s] Turn on with the last active HVAC mode: %s", self.entity_id, self._last_active_hvac_mode)
             await self.async_set_hvac_mode(self._last_active_hvac_mode)
 
         # Try to set the first available HVAC mode
         elif self._attr_hvac_modes:
             for mode in self._attr_hvac_modes:
                 if mode != HVACMode.OFF:
-                    _LOGGER.debug("Turn on with first available HVAC mode: %s", mode)
+                    _LOGGER.debug("[%s] Turn on with first available HVAC mode: %s", self.entity_id, mode)
                     await self.async_set_hvac_mode(mode)
                     break
 
         # No HVAC modes available
         else:
-            _LOGGER.debug("Can't turn on: No HVAC modes available")
+            _LOGGER.debug("[%s] Can't turn on: No HVAC modes available", self.entity_id)
 
     async def async_turn_off(self) -> None:
         """Forward the turn_off command to all climate in the climate group."""
 
         # Only turn off if HVACMode.OFF is supported
         if HVACMode.OFF in self._attr_hvac_modes:
-            _LOGGER.debug("Turn off with HVAC mode 'off'")
+            _LOGGER.debug("[%s] Turn off with HVAC mode 'off'", self.entity_id)
             await self.async_set_hvac_mode(HVACMode.OFF)
 
         # HVACMode.OFF not supported
         else:
-            _LOGGER.debug("Can't turn off: HVAC mode 'off' not available")
+            _LOGGER.debug("[%s] Can't turn off: HVAC mode 'off' not available", self.entity_id)
 
     async def async_toggle(self) -> None:
         """Toggle the entity."""
