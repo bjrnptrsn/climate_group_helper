@@ -53,11 +53,9 @@
         "name": "Grupo Climático",
         "state_attributes": {
           "last_active_hvac_mode": {
-            "description": "El último modo usado (Calor/Frío) antes de apagar.",
             "name": "Último Modo Activo"
           },
           "target_hvac_mode": {
-            "description": "El modo que el grupo está intentando establecer en todos los miembros.",
             "name": "Modo HVAC Objetivo"
           }
         }
@@ -66,20 +64,19 @@
   },
   "issues": {
     "conflicting_features": {
-      "description": "El grupo '{group_name}' tiene miembros con diferentes funciones. La funcionalidad podría limitarse a lo que todos soportan.\n\nConflictos: {conflicting_entities}",
+      "description": "El grupo {group_name} tiene miembros con diferentes funciones. La funcionalidad podría limitarse a lo que todos soportan.\n\nConflictos: {conflicting_entities}",
       "title": "Conflictos de Funciones"
     },
     "member_unavailable": {
-      "description": "Uno o más dispositivos en '{group_name}' están desconectados. El grupo seguirá funcionando con lo que tiene.\n\nNo disponible: {unavailable_entities}",
+      "description": "Uno o más dispositivos en {group_name} están desconectados. El grupo seguirá funcionando con lo que tiene.\n\nNo disponible: {unavailable_entities}",
       "title": "Dispositivo Miembro No Disponible"
     },
     "no_members_available": {
-      "description": "El grupo '{group_name}' no tiene miembros activos y está efectivamente desconectado.\n\nRevisar: {member_entities}",
+      "description": "El grupo {group_name} no tiene miembros activos y está efectivamente desconectado.\n\nRevisar: {member_entities}",
       "title": "Sin Miembros Disponibles"
     }
   },
   "options": {
-    "flow_title": "Configurar grupo",
     "abort": {
       "no_changes": "No se detectaron cambios."
     },
@@ -88,6 +85,7 @@
       "invalid_entity": "Dispositivo seleccionado inválido.",
       "no_entities": "Al menos un dispositivo climático debe permanecer en el grupo."
     },
+    "flow_title": "Configurar grupo",
     "step": {
       "humidity": {
         "data": {
@@ -113,9 +111,11 @@
           "humidity": "Humedad",
           "members": "Miembros & Modos",
           "other": "Otros Ajustes",
+          "schedule": "Programación",
           "sync": "Modo Sync",
           "temperature": "Temperatura",
-          "timings": "Tiempos"
+          "timings": "Tiempos",
+          "window_control": "Control de Ventanas"
         },
         "title": "Configurar Grupo Climático"
       },
@@ -144,6 +144,16 @@
         },
         "description": "Características adicionales y exposición de entidades.",
         "title": "Otros Ajustes"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Entidad de Programación"
+        },
+        "data_description": {
+          "schedule_entity": "Seleccione una entidad de programación. El campo 'Datos adicionales' puede contener YAML con atributos como 'temperature: 20.5' o 'hvac_mode: heat'."
+        },
+        "description": "Vincule una entidad de programación de Home Assistant para automatizar cambios de temperatura y modo.",
+        "title": "Programación"
       },
       "sync": {
         "data": {
@@ -188,6 +198,26 @@
         },
         "description": "Configura cómo el 'Controlador Virtual' interactúa con tu red. Tiempos correctos previenen congestión Zigbee/Z-Wave y aumentan fiabilidad de comandos.",
         "title": "Tiempos de Comunicación"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Retardo Cierre (s)",
+          "room_open_delay": "Retardo Apertura Habitación (s)",
+          "room_sensor": "Sensor Ventana Habitación",
+          "window_mode": "Modo Control de Ventanas",
+          "zone_open_delay": "Retardo Apertura Zona (s)",
+          "zone_sensor": "Sensor Ventana Zona"
+        },
+        "data_description": {
+          "close_delay": "Tiempo a esperar tras cerrar todas las ventanas antes de restaurar.",
+          "room_open_delay": "Tiempo a esperar tras abrir ventana de habitación antes de apagar.",
+          "room_sensor": "Sensor binario para la ventana de la habitación. Activa el retardo más corto.",
+          "window_mode": "Habilitar/deshabilitar grupo según sensores de ventana. Si activo, HVAC se pone en 'off' al abrir ventanas.",
+          "zone_open_delay": "Tiempo a esperar tras abrir ventana de zona antes de apagar.",
+          "zone_sensor": "Sensor binario para otras ventanas en la zona/piso. Activa el retardo más largo."
+        },
+        "description": "Configure el apagado automático de calefacción/refrigeración al abrir ventanas. Ambos sensores son opcionales: dejar vacío para desactivar.",
+        "title": "Control de Ventanas"
       }
     }
   },
@@ -269,6 +299,12 @@
         "half": "Medio Grado (0.5°)",
         "integer": "Números Enteros (1°)",
         "none": "Sin Redondeo (Exacto)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Apagado – El control de ventanas está desactivado",
+        "on": "Encendido – El control de ventanas está activado"
       }
     }
   },

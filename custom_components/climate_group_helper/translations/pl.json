@@ -53,11 +53,9 @@
         "name": "Grupa Klimatyczna",
         "state_attributes": {
           "last_active_hvac_mode": {
-            "description": "Ostatni używany tryb (Grzanie/Chłodzenie) przed wyłączeniem.",
             "name": "Ostatni Aktywny Tryb"
           },
           "target_hvac_mode": {
-            "description": "Tryb, który grupa próbuje ustawić na wszystkich członkach.",
             "name": "Docelowy Tryb HVAC"
           }
         }
@@ -66,20 +64,19 @@
   },
   "issues": {
     "conflicting_features": {
-      "description": "Grupa '{group_name}' ma członków z różnymi funkcjami. Funkcjonalność może być ograniczona do tego, co obsługują wszyscy.\n\nKonflikty: {conflicting_entities}",
+      "description": "Grupa {group_name} ma członków z różnymi funkcjami. Funkcjonalność może być ograniczona do tego, co obsługują wszyscy.\n\nKonflikty: {conflicting_entities}",
       "title": "Konflikt Funkcji"
     },
     "member_unavailable": {
-      "description": "Jeden lub więcej urządzeń w '{group_name}' jest offline. Grupa będzie nadal działać z tym, co ma.\n\nNiedostępne: {unavailable_entities}",
+      "description": "Jeden lub więcej urządzeń w {group_name} jest offline. Grupa będzie nadal działać z tym, co ma.\n\nNiedostępne: {unavailable_entities}",
       "title": "Urządzenie Członkowskie Niedostępne"
     },
     "no_members_available": {
-      "description": "Grupa '{group_name}' nie ma aktywnych członków i jest faktycznie offline.\n\nSprawdź: {member_entities}",
+      "description": "Grupa {group_name} nie ma aktywnych członków i jest faktycznie offline.\n\nSprawdź: {member_entities}",
       "title": "Brak Dostępnych Członków"
     }
   },
   "options": {
-    "flow_title": "Konfiguruj grupę",
     "abort": {
       "no_changes": "Nie wykryto zmian."
     },
@@ -88,6 +85,7 @@
       "invalid_entity": "Wybrano nieprawidłowe urządzenie.",
       "no_entities": "Co najmniej jedno urządzenie klimatyczne musi pozostać w grupie."
     },
+    "flow_title": "Konfiguruj grupę",
     "step": {
       "humidity": {
         "data": {
@@ -113,9 +111,11 @@
           "humidity": "Wilgotność",
           "members": "Członkowie i Tryby",
           "other": "Inne Ustawienia",
-          "sync": "Tryb Synchronizacji",
+          "schedule": "Harmonogram",
+          "sync": "Tryb Sync",
           "temperature": "Temperatura",
-          "timings": "Czasy"
+          "timings": "Czasy",
+          "window_control": "Sterowanie Oknami"
         },
         "title": "Konfiguruj Grupę Klimatyczną"
       },
@@ -144,6 +144,16 @@
         },
         "description": "Dodatkowe funkcje i eksponowanie encji.",
         "title": "Inne Ustawienia"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Encja Harmonogramu"
+        },
+        "data_description": {
+          "schedule_entity": "Wybierz encję harmonogramu. Pole 'Dodatkowe dane' może zawierać YAML z atrybutami takimi jak 'temperature: 20.5' lub 'hvac_mode: heat'."
+        },
+        "description": "Połącz encję harmonogramu Home Assistant, aby zautomatyzować zmiany temperatury i trybu.",
+        "title": "Harmonogram"
       },
       "sync": {
         "data": {
@@ -188,6 +198,26 @@
         },
         "description": "Skonfiguruj, jak 'Wirtualny Kontroler' interakuje z Twoją siecią. Prawidłowe czasy zapobiegają zatorom Zigbee/Z-Wave i zwiększają niezawodność poleceń.",
         "title": "Czasy Komunikacji"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Opóźnienie Zamknięcia (s)",
+          "room_open_delay": "Opóźnienie Pokoju (s)",
+          "room_sensor": "Czujnik Okna Pokojowego",
+          "window_mode": "Tryb Sterowania Oknami",
+          "zone_open_delay": "Opóźnienie Strefy (s)",
+          "zone_sensor": "Czujnik Okna Strefowego"
+        },
+        "data_description": {
+          "close_delay": "Czas oczekiwania po zamknięciu okien.",
+          "room_open_delay": "Czas oczekiwania po otwarciu okna w pokoju.",
+          "room_sensor": "Czujnik binarny dla okna w pokoju. Krótsze opóźnienie.",
+          "window_mode": "Włącz grupę na podstawie czujników. HVAC ustawia się na 'off', gdy okna są otwarte.",
+          "zone_open_delay": "Czas oczekiwania po otwarciu okna w strefie.",
+          "zone_sensor": "Czujnik binarny dla innych okien w strefie. Dłuższe opóźnienie."
+        },
+        "description": "Skonfiguruj automatyczne wyłączanie ogrzewania/chłodzenia po otwarciu okien.",
+        "title": "Sterowanie Oknami"
       }
     }
   },
@@ -269,6 +299,12 @@
         "half": "Pół Stopnia (0.5°)",
         "integer": "Liczby Całkowite (1°)",
         "none": "Bez Zaokrąglania (Dokładne)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Wył. – Sterowanie oknami jest wyłączone",
+        "on": "Wł. – Sterowanie oknami jest włączone"
       }
     }
   },

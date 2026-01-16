@@ -53,11 +53,9 @@
         "name": "Klimaatgroep",
         "state_attributes": {
           "last_active_hvac_mode": {
-            "description": "De laatst gebruikte modus (Verwarmen/Koelen) voor uitschakelen.",
             "name": "Laatst Actieve Modus"
           },
           "target_hvac_mode": {
-            "description": "De modus die de groep probeert in te stellen op alle leden.",
             "name": "Doel HVAC-modus"
           }
         }
@@ -66,20 +64,19 @@
   },
   "issues": {
     "conflicting_features": {
-      "description": "Groep '{group_name}' heeft leden met verschillende functies. Functionaliteit kan beperkt zijn tot wat iedereen ondersteunt.\n\nConflicten: {conflicting_entities}",
+      "description": "Groep {group_name} heeft leden met verschillende functies. Functionaliteit kan beperkt zijn tot wat iedereen ondersteunt.\n\nConflicten: {conflicting_entities}",
       "title": "Functieconflicten"
     },
     "member_unavailable": {
-      "description": "Eén of meer apparaten in '{group_name}' zijn offline. De groep blijft werken met wat hij heeft.\n\nNiet beschikbaar: {unavailable_entities}",
+      "description": "Eén of meer apparaten in {group_name} zijn offline. De groep blijft werken met wat hij heeft.\n\nNiet beschikbaar: {unavailable_entities}",
       "title": "Lidapparaat Niet Beschikbaar"
     },
     "no_members_available": {
-      "description": "Groep '{group_name}' heeft geen actieve leden en is effectief offline.\n\nControleer: {member_entities}",
+      "description": "Groep {group_name} heeft geen actieve leden en is effectief offline.\n\nControleer: {member_entities}",
       "title": "Geen Leden Beschikbaar"
     }
   },
   "options": {
-    "flow_title": "Groep configureren",
     "abort": {
       "no_changes": "Geen wijzigingen gedetecteerd."
     },
@@ -88,6 +85,7 @@
       "invalid_entity": "Ongeldig apparaat geselecteerd.",
       "no_entities": "Ten minste één klimaatapparaat moet in de groep blijven."
     },
+    "flow_title": "Groep configureren",
     "step": {
       "humidity": {
         "data": {
@@ -110,12 +108,14 @@
       "init": {
         "description": "Verfijn het gedrag van uw groep. Wijzigingen worden onmiddellijk van kracht.",
         "menu_options": {
-          "humidity": "Luchtvochtigheid",
+          "humidity": "Vochtigheid",
           "members": "Leden & Modi",
           "other": "Andere Instellingen",
+          "schedule": "Schema",
           "sync": "Sync Modus",
           "temperature": "Temperatuur",
-          "timings": "Timings"
+          "timings": "Timings",
+          "window_control": "Raambediening"
         },
         "title": "Klimaatgroep Configureren"
       },
@@ -144,6 +144,16 @@
         },
         "description": "Extra functies en entiteit-blootstelling.",
         "title": "Andere Instellingen"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Schema Entiteit"
+        },
+        "data_description": {
+          "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'."
+        },
+        "description": "Koppel een Home Assistant schema-entiteit om temperatuur- en moduswijzigingen te automatiseren.",
+        "title": "Schema"
       },
       "sync": {
         "data": {
@@ -188,6 +198,26 @@
         },
         "description": "Configureer hoe de 'Virtuele Controller' met uw netwerk communiceert. Correcte timings voorkomen Zigbee/Z-Wave congestie en verhogen de betrouwbaarheid van commando's.",
         "title": "Communicatie Timings"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Vertraging Sluiten (s)",
+          "room_open_delay": "Vertraging Kamer (s)",
+          "room_sensor": "Kamer Raamsensor",
+          "window_mode": "Raambedieningsmodus",
+          "zone_open_delay": "Vertraging Zone (s)",
+          "zone_sensor": "Zone Raamsensor"
+        },
+        "data_description": {
+          "close_delay": "Wachttijd na sluiten ramen voor herstel.",
+          "room_open_delay": "Wachttijd na openen kamerraam.",
+          "room_sensor": "Binaire sensor voor raam in de kamer. Korte vertraging.",
+          "window_mode": "Schakel groep in/uit op basis van sensoren. HVAC gaat naar 'off' als ramen open zijn.",
+          "zone_open_delay": "Wachttijd na openen zoneraam.",
+          "zone_sensor": "Binaire sensor voor ramen in de zone. Lange vertraging."
+        },
+        "description": "Configureer automatisch uitschakelen van verwarming/koeling bij openen van ramen.",
+        "title": "Raambediening"
       }
     }
   },
@@ -269,6 +299,12 @@
         "half": "Half Graad (0.5°)",
         "integer": "Gehele Getallen (1°)",
         "none": "Geen Afronding (Exact)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Uit – Raambediening is uitgeschakeld",
+        "on": "Aan – Raambediening is ingeschakeld"
       }
     }
   },

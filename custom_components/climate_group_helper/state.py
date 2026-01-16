@@ -25,6 +25,7 @@ class TargetState:
     def update(self, **kwargs: Any) -> TargetState:
         """Returns new state with updated values (immutable update pattern)."""
         # Filter kwargs to only include valid fields to prevent TypeErrors
+        
         valid_keys = self.__class__.__annotations__.keys()
         filtered_kwargs = {key: value for key, value in kwargs.items() if key in valid_keys}
 
@@ -56,8 +57,8 @@ class TargetState:
 class FilterState(TargetState):
     """State that is used as a filter for masking.
     
-    True: attribute is allowed to update the target state.
-    False: attribute is masked and not allowed to update the target state.
+    True: attribute is allowed.
+    False: attribute is not allowed.
     """
 
     hvac_mode: bool = True

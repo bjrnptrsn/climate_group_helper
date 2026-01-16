@@ -53,11 +53,9 @@
         "name": "Klimatická Skupina",
         "state_attributes": {
           "last_active_hvac_mode": {
-            "description": "Naposledy použitý režim (Topení/Chlazení) před vypnutím.",
             "name": "Poslední Aktivní Režim"
           },
           "target_hvac_mode": {
-            "description": "Režim, který se skupina snaží nastavit na všech členech.",
             "name": "Cílový Režim HVAC"
           }
         }
@@ -66,20 +64,19 @@
   },
   "issues": {
     "conflicting_features": {
-      "description": "Skupina '{group_name}' má členy s různými funkcemi. Funkčnost může být omezena na to, co podporují všichni.\n\nKonflikty: {conflicting_entities}",
+      "description": "Skupina {group_name} má členy s různými funkcemi. Funkčnost může být omezena na to, co podporují všichni.\n\nKonflikty: {conflicting_entities}",
       "title": "Konflikt Funkcí"
     },
     "member_unavailable": {
-      "description": "Jedno nebo více zařízení v '{group_name}' je offline. Skupina bude nadále fungovat s tím, co má.\n\nNedostupné: {unavailable_entities}",
+      "description": "Jedno nebo více zařízení v {group_name} je offline. Skupina bude nadále fungovat s tím, co má.\n\nNedostupné: {unavailable_entities}",
       "title": "Členské Zařízení Nedostupné"
     },
     "no_members_available": {
-      "description": "Skupina '{group_name}' nemá žádné aktivní členy a je fakticky offline.\n\nZkontrolujte: {member_entities}",
+      "description": "Skupina {group_name} nemá žádné aktivní členy a je fakticky offline.\n\nZkontrolujte: {member_entities}",
       "title": "Žádní Členové Dostupní"
     }
   },
   "options": {
-    "flow_title": "Konfigurovat skupinu",
     "abort": {
       "no_changes": "Nebyly zjištěny žádné změny."
     },
@@ -88,6 +85,7 @@
       "invalid_entity": "Vybráno neplatné zařízení.",
       "no_entities": "Alespoň jedno klimatické zařízení musí ve skupině zůstat."
     },
+    "flow_title": "Konfigurovat skupinu",
     "step": {
       "humidity": {
         "data": {
@@ -111,11 +109,13 @@
         "description": "Vylaďte chování vaší skupiny. Změny se projeví okamžitě.",
         "menu_options": {
           "humidity": "Vlhkost",
-          "members": "Členové a Režimy",
-          "other": "Další Nastavení",
-          "sync": "Režim Sync",
+          "members": "Členové a režimy",
+          "other": "Další nastavení",
+          "schedule": "Rozvrh",
+          "sync": "Režim synchronizace",
           "temperature": "Teplota",
-          "timings": "Časování"
+          "timings": "Časování",
+          "window_control": "Ovládání oken"
         },
         "title": "Konfigurovat Klimatickou Skupinu"
       },
@@ -144,6 +144,16 @@
         },
         "description": "Další funkce a zobrazení entit.",
         "title": "Další Nastavení"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Entita rozvrhu"
+        },
+        "data_description": {
+          "schedule_entity": "Vyberte entitu rozvrhu. Pole 'Další data' může obsahovat YAML s atributy jako 'temperature: 20.5' nebo 'hvac_mode: heat'."
+        },
+        "description": "Propojte entitu rozvrhu Home Assistant pro automatizaci změn teploty a režimu.",
+        "title": "Rozvrh"
       },
       "sync": {
         "data": {
@@ -188,6 +198,26 @@
         },
         "description": "Nakonfigurujte, jak 'Virtuální Ovladač' interaguje s vaší sítí. Správné časování zabraňuje zahlcení Zigbee/Z-Wave a zvyšuje spolehlivost příkazů.",
         "title": "Časování Komunikace"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Zpoždění zavření (s)",
+          "room_open_delay": "Zpoždění otevření pokoje (s)",
+          "room_sensor": "Pokojový okenní senzor",
+          "window_mode": "Režim ovládání oken",
+          "zone_open_delay": "Zpoždění otevření zóny (s)",
+          "zone_sensor": "Zónový okenní senzor"
+        },
+        "data_description": {
+          "close_delay": "Doba čekání po zavření všech oken před obnovením vytápění.",
+          "room_open_delay": "Doba čekání po otevření okna v místnosti před vypnutím.",
+          "room_sensor": "Binární senzor pro okno v místnosti. Spouští kratší zpoždění.",
+          "window_mode": "Povolit nebo zakázat skupinu podle senzorů oken. Pokud je aktivní, režim HVAC se nastaví na 'off', když jsou okna otevřená.",
+          "zone_open_delay": "Doba čekání po otevření okna v zóně před vypnutím.",
+          "zone_sensor": "Binární senzor pro ostatní okna v zóně/patře. Spouští delší zpoždění."
+        },
+        "description": "Nakonfigurujte automatické vypnutí vytápění/chlazení při otevření oken. Oba senzory jsou volitelné - pro deaktivaci nechte prázdné.",
+        "title": "Ovládání oken"
       }
     }
   },
@@ -269,6 +299,12 @@
         "half": "Půl Stupně (0.5°)",
         "integer": "Celá Čísla (1°)",
         "none": "Žádné Zaokrouhlování (Přesné)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Vypnuto – Ovládání oken je deaktivováno",
+        "on": "Zapnuto – Ovládání oken je povoleno"
       }
     }
   },

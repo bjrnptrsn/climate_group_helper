@@ -53,11 +53,9 @@
         "name": "Groupe Climatique",
         "state_attributes": {
           "last_active_hvac_mode": {
-            "description": "Le dernier mode utilisé (Chauffage/Refroidissement) avant l'arrêt.",
             "name": "Dernier Mode Actif"
           },
           "target_hvac_mode": {
-            "description": "Le mode que le groupe essaie de définir sur tous les membres.",
             "name": "Mode HVAC Cible"
           }
         }
@@ -66,20 +64,19 @@
   },
   "issues": {
     "conflicting_features": {
-      "description": "Le groupe '{group_name}' a des membres avec différentes fonctionnalités. La fonctionnalité pourrait être limitée à ce que tous supportent.\n\nConflits : {conflicting_entities}",
+      "description": "Le groupe {group_name} a des membres avec différentes fonctionnalités. La fonctionnalité pourrait être limitée à ce que tous supportent.\n\nConflits : {conflicting_entities}",
       "title": "Conflits de Fonctionnalités"
     },
     "member_unavailable": {
-      "description": "Un ou plusieurs appareils dans '{group_name}' sont hors ligne. Le groupe continuera de fonctionner avec ce qu'il a.\n\nIndisponible : {unavailable_entities}",
+      "description": "Un ou plusieurs appareils dans {group_name} sont hors ligne. Le groupe continuera de fonctionner avec ce qu'il a.\n\nIndisponible : {unavailable_entities}",
       "title": "Appareil Membre Indisponible"
     },
     "no_members_available": {
-      "description": "Le groupe '{group_name}' n'a aucun membre actif et est effectivement hors ligne.\n\nVérifier : {member_entities}",
+      "description": "Le groupe {group_name} n'a aucun membre actif et est effectivement hors ligne.\n\nVérifier : {member_entities}",
       "title": "Aucun Membre Disponible"
     }
   },
   "options": {
-    "flow_title": "Configurer le groupe",
     "abort": {
       "no_changes": "Aucun changement détecté."
     },
@@ -88,6 +85,7 @@
       "invalid_entity": "Appareil sélectionné invalide.",
       "no_entities": "Au moins un appareil climatique doit rester dans le groupe."
     },
+    "flow_title": "Configurer le groupe",
     "step": {
       "humidity": {
         "data": {
@@ -113,9 +111,11 @@
           "humidity": "Humidité",
           "members": "Membres & Modes",
           "other": "Autres Paramètres",
+          "schedule": "Programmation",
           "sync": "Mode Sync",
           "temperature": "Température",
-          "timings": "Timings"
+          "timings": "Timings",
+          "window_control": "Contrôle des Fenêtres"
         },
         "title": "Configurer le Groupe Climatique"
       },
@@ -144,6 +144,16 @@
         },
         "description": "Fonctionnalités supplémentaires et exposition des entités.",
         "title": "Autres Paramètres"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Entité de Programmation"
+        },
+        "data_description": {
+          "schedule_entity": "Sélectionnez une entité de programmation. Le champ 'Données supplémentaires' peut contenir du YAML avec des attributs comme 'temperature: 20.5' ou 'hvac_mode: heat'."
+        },
+        "description": "Liez une entité de programmation Home Assistant pour automatiser les changements de température et de mode.",
+        "title": "Programmation"
       },
       "sync": {
         "data": {
@@ -188,6 +198,26 @@
         },
         "description": "Configurer comment le 'Contrôleur Virtuel' interagit avec votre réseau. Des timings corrects empêchent la congestion Zigbee/Z-Wave et augmentent la fiabilité des commandes.",
         "title": "Timings de Communication"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Délai Fermeture (s)",
+          "room_open_delay": "Délai Ouverture Pièce (s)",
+          "room_sensor": "Capteur Fenêtre Pièce",
+          "window_mode": "Mode Contrôle Fenêtre",
+          "zone_open_delay": "Délai Ouverture Zone (s)",
+          "zone_sensor": "Capteur Fenêtre Zone"
+        },
+        "data_description": {
+          "close_delay": "Temps d'attente après fermeture fenêtres avant restauration.",
+          "room_open_delay": "Temps d'attente après ouverture fenêtre pièce avant coupure.",
+          "room_sensor": "Capteur binaire pour la fenêtre de la pièce. Déclenche le délai court.",
+          "window_mode": "Activer/désactiver le groupe selon les capteurs. HVAC passe à 'off' si des fenêtres sont ouvertes.",
+          "zone_open_delay": "Temps d'attente après ouverture fenêtre zone avant coupure.",
+          "zone_sensor": "Capteur binaire pour les autres fenêtres de la zone. Déclenche le délai long."
+        },
+        "description": "Configurez l'arrêt automatique du chauffage/refroidissement à l'ouverture des fenêtres. Les deux capteurs sont optionnels.",
+        "title": "Contrôle des Fenêtres"
       }
     }
   },
@@ -269,6 +299,12 @@
         "half": "Demi Degré (0.5°)",
         "integer": "Nombres Entiers (1°)",
         "none": "Pas d'Arrondi (Exact)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Désactivé – Le contrôle des fenêtres est désactivé",
+        "on": "Activé – Le contrôle des fenêtres est activé"
       }
     }
   },

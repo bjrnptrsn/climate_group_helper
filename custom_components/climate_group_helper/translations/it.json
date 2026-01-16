@@ -53,11 +53,9 @@
         "name": "Gruppo Climatico",
         "state_attributes": {
           "last_active_hvac_mode": {
-            "description": "L'ultima modalità utilizzata (Riscaldamento/Raffreddamento) prima dello spegnimento.",
             "name": "Ultima Modalità Attiva"
           },
           "target_hvac_mode": {
-            "description": "La modalità che il gruppo sta cercando di impostare su tutti i membri.",
             "name": "Modalità HVAC Target"
           }
         }
@@ -66,20 +64,19 @@
   },
   "issues": {
     "conflicting_features": {
-      "description": "Il gruppo '{group_name}' ha membri con funzionalità diverse. La funzionalità potrebbe essere limitata a ciò che tutti supportano.\n\nConflitti: {conflicting_entities}",
+      "description": "Il gruppo {group_name} ha membri con funzionalità diverse. La funzionalità potrebbe essere limitata a ciò che tutti supportano.\n\nConflitti: {conflicting_entities}",
       "title": "Conflitti Funzionalità"
     },
     "member_unavailable": {
-      "description": "Uno o più dispositivi in '{group_name}' sono offline. Il gruppo continuerà a funzionare con ciò che ha.\n\nNon disponibili: {unavailable_entities}",
+      "description": "Uno o più dispositivi in {group_name} sono offline. Il gruppo continuerà a funzionare con ciò che ha.\n\nNon disponibili: {unavailable_entities}",
       "title": "Dispositivo Membro Non Disponibile"
     },
     "no_members_available": {
-      "description": "Il gruppo '{group_name}' non ha membri attivi ed è effettivamente offline.\n\nControlla: {member_entities}",
+      "description": "Il gruppo {group_name} non ha membri attivi ed è effettivamente offline.\n\nControlla: {member_entities}",
       "title": "Nessun Membro Disponibile"
     }
   },
   "options": {
-    "flow_title": "Configura gruppo",
     "abort": {
       "no_changes": "Nessuna modifica rilevata."
     },
@@ -88,6 +85,7 @@
       "invalid_entity": "Dispositivo selezionato non valido.",
       "no_entities": "Almeno un dispositivo climatico deve rimanere nel gruppo."
     },
+    "flow_title": "Configura gruppo",
     "step": {
       "humidity": {
         "data": {
@@ -113,9 +111,11 @@
           "humidity": "Umidità",
           "members": "Membri & Modalità",
           "other": "Altre Impostazioni",
+          "schedule": "Programmazione",
           "sync": "Modalità Sync",
           "temperature": "Temperatura",
-          "timings": "Timings"
+          "timings": "Tempistiche",
+          "window_control": "Controllo Finestre"
         },
         "title": "Configura Gruppo Climatico"
       },
@@ -144,6 +144,16 @@
         },
         "description": "Funzionalità aggiuntive ed esposizione delle entità.",
         "title": "Altre Impostazioni"
+      },
+      "schedule": {
+        "data": {
+          "schedule_entity": "Entità Programmazione"
+        },
+        "data_description": {
+          "schedule_entity": "Seleziona un'entità di programmazione. Il campo 'Dati aggiuntivi' può contenere YAML con attributi come 'temperature: 20.5' o 'hvac_mode: heat'."
+        },
+        "description": "Collega un'entità di programmazione Home Assistant per automatizzare i cambiamenti di temperatura e modalità.",
+        "title": "Programmazione"
       },
       "sync": {
         "data": {
@@ -188,6 +198,26 @@
         },
         "description": "Configura come il 'Controller Virtuale' interagisce con la tua rete. Timings corretti prevengono la congestione Zigbee/Z-Wave e aumentano l'affidabilità dei comandi.",
         "title": "Timings Comunicazione"
+      },
+      "window_control": {
+        "data": {
+          "close_delay": "Ritardo Chiusura (s)",
+          "room_open_delay": "Ritardo Apertura Stanza (s)",
+          "room_sensor": "Sensore Finestra Stanza",
+          "window_mode": "Mod. Controllo Finestre",
+          "zone_open_delay": "Ritardo Apertura Zona (s)",
+          "zone_sensor": "Sensore Finestra Zona"
+        },
+        "data_description": {
+          "close_delay": "Tempo di attesa dopo chiusura finestre prima del ripristino.",
+          "room_open_delay": "Tempo di attesa dopo apertura finestra stanza.",
+          "room_sensor": "Sensore binario per la finestra della stanza. Attiva il ritardo breve.",
+          "window_mode": "Abilita il gruppo in base ai sensori. HVAC va su 'off' quando le finestre sono aperte.",
+          "zone_open_delay": "Tempo di attesa dopo apertura finestra zona.",
+          "zone_sensor": "Sensore binario per altre finestre nella zona. Attiva il ritardo lungo."
+        },
+        "description": "Configura lo spegnimento automatico di riscaldamento/raffreddamento all'apertura delle finestre.",
+        "title": "Controllo Finestre"
       }
     }
   },
@@ -269,6 +299,12 @@
         "half": "Mezzo Grado (0.5°)",
         "integer": "Numeri Interi (1°)",
         "none": "Nessun Arrotondamento (Esatto)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Spento – Il controllo finestre è disattivato",
+        "on": "Acceso – Il controllo finestre è attivato"
       }
     }
   },

@@ -1,7 +1,7 @@
 # 🌡️ Climate Group Helper
 
 <p align="center">
-  <img src="assets/icon@2x.png" alt="Climate Group Helper Icon" width="128"/>
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/icon@2x.png" alt="Climate Group Helper Icon" width="128"/>
 </p>
 
 <p align="center">
@@ -35,13 +35,42 @@ Use **multiple external sensors** for temperature and humidity. The group calcul
 *New in v0.13!* Choose **exactly** which attributes to sync in Lock/Mirror modes. Example: Sync temperature but allow individual fan control.
 
 ### 🪟 Window Control
-*New in v0.15!* Automatically turn off heating when windows open and restore it when they close.
+*Redesigned in v0.16!* Automatically turn off heating when windows open and restore it when they close.
 
-*   **Room Sensor:** Fast reaction (default 15s). Use for sensors **directly in the room** (e.g. window contact sensor on the living room window).
-*   **Zone Sensor:** Slow reaction (default 5min). Use for **whole-house sensors** (e.g. grouped "window" binary sensor). This prevents heating shutdown in rooms with closed windows when only a distant window is open.
-*   **Snapshot Restoration:** When windows open, the current state is saved as a snapshot. When all windows close, the snapshot is restored. You can configure **which attributes** to restore (similar to Selective Attribute Sync).
-*   **User Blocking:** Manual HVAC mode changes are blocked while windows are open.
-*   **Sync Blocking:** Sync Mode (Lock/Mirror) ignores all state changes caused by Window Control to prevent conflicts.
+*   **Logic:** Opening a window forces all members to `off`. Closing the window restores the group's target state (e.g. `heat`).
+*   **Room Sensor:** Fast reaction (default: 15s). For sensors directly in the room. E.g. `binary_sensor.living_room_window`.
+*   **Zone Sensor:** Slow reaction (default: 5min). For whole-house sensors. Prevents heating shutdown in closed rooms when a distant window opens. E.g. `binary_sensor.all_windows_open`.
+*   **User Blocking:** Manual changes are blocked while windows are open.
+*   **Sync Blocking:** Background sync ignores changes during window control.
+
+### 📅 Schedule Integration
+*New in v0.16!* Native support for Home Assistant `schedule` entities.
+
+*   **Direct Control:** Link a schedule helper to your climate group.
+*   **Intelligent Sync:** The schedule updates the group's target state.
+*   **Window Aware:** If a schedule changes while windows are open, the new target is saved and applied immediately when windows close.
+*   **Format:** Supports `hvac_mode`, `temperature`, `fan_mode`, etc. via schedule variables.
+
+#### Schedule Configuration Example
+
+1. Create a **Schedule Helper** in Home Assistant (Settings > Devices & Services > Helpers).
+2. Open the schedule and add your time slots.
+3. **Crucial:** You must add **variables** (data) to your schedule slots to tell the group what to do.
+
+**Example (Edit Schedule as YAML):**
+```yaml
+monday:
+  - from: "06:00:00"
+    to: "08:30:00"
+    data:
+      hvac_mode: "heat"
+      temperature: 21.5
+  - from: "08:30:00"
+    to: "16:00:00"
+    data:
+      hvac_mode: "heat"
+      temperature: 19.0
+```
 
 ---
 
@@ -88,8 +117,12 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Zone Sensor** | Binary sensor for slow reaction (e.g. whole-house "any window open"). |
 | **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
 | **Close Delay** | Time before restoring heating after windows close (default: 30s). |
-| **Restore Attributes** | Select which attributes to restore (temperature, HVAC mode, etc.). |
-| **Default HVAC Mode** | Fallback mode for restoration after restart (when no snapshot exists). |
+
+### Schedule
+
+| Option | Description |
+|--------|-------------|
+| **Schedule Entity** | A Home Assistant `schedule` entity to control the group. |
 
 ### Availability & Timings
 

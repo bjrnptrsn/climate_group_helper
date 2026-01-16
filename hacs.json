@@ -1,6 +1,6 @@
 {
   "homeassistant": "2025.9.0",
-  "iot_class": "calculated",
+
   "name": "Climate Group Helper",
   "render_readme": true
 }
