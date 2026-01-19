@@ -76,6 +76,7 @@ from .const import (
     CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_IGNORE_OFF_MEMBERS,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_SYNC_MODE,
@@ -275,11 +276,12 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         """Return True if any module is blocking hvac_mode changes (e.g. Window Control)."""
         return self.window_control_handler.force_off
 
-    def update_target_state(self, source: str, **kwargs) -> bool:
+    def update_target_state(self, source: str, source_entity_id: str | None = None, **kwargs) -> bool:
         """Update target_state with source-based access control.
         
         Args:
             source: Origin of the update ("user", "schedule", "sync_mode", "restore")
+            source_entity_id: The specific entity that caused the update (optional)
             **kwargs: Attributes to update (hvac_mode, temperature, etc.)
             
         Returns:
@@ -290,7 +292,41 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if self.blocking_mode and source not in allowed_sources:
             _LOGGER.debug("[%s] TargetState update blocked (source=%s, blocking_mode=True)", self.entity_id, source)
             return False
+
+        # Input Filter: Partial Sync
+        # If enabled, block updates from sync_mode (Mirror) that try to set HVAC_MODE to OFF.
+        # This solves Scenario 1: Turning off a member should NOT turn off the group.
+        if (
+            source == "sync_mode"
+            and self.config.get(CONF_IGNORE_OFF_MEMBERS)
+            and HVACMode.OFF in kwargs.get("hvac_mode", "")
+        ):
+             # "Last Man Standing" Logic:
+             # Normally we block this to keep the group ON.
+             # BUT, if all OTHER members are already OFF, then this is the last one turning off.
+             # In that case, we should ALLOW the update so the Group goes OFF naturally.
+             
+             # Check if there is at least one other member that is NOT OFF
+             other_active_members = [
+                 e_id for e_id in self.climate_entity_ids
+                 if e_id != source_entity_id 
+                 and (state := self.hass.states.get(e_id)) 
+                 and state.state != HVACMode.OFF 
+                 and state.state != STATE_UNAVAILABLE
+             ]
+
+             if other_active_members:
+                 _LOGGER.debug("[%s] Blocking sync_mode OFF update due to partial sync (Active members: %s)", self.entity_id, other_active_members)
+                 return False
+             
+             _LOGGER.debug("[%s] Allowing sync_mode OFF update (Last Man Standing logic)", self.entity_id)
+
         
+        # Add Metadata
+        kwargs["last_updated_by_entity"] = source_entity_id
+        kwargs["last_updated_by_source"] = source
+        kwargs["last_updated_timestamp"] = time.time()
+
         self.target_state = self.target_state.update(**kwargs)
         _LOGGER.debug("[%s] TargetState updated (source=%s): %s", self.entity_id, source, kwargs)
         return True

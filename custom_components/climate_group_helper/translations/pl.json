@@ -136,11 +136,13 @@
       "other": {
         "data": {
           "expose_member_entities": "Pokaż Listę Członków",
-          "expose_smart_sensors": "Pokaż Inteligentne Czujniki"
+          "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
+          "ignore_off_members": "Respektuj stan WYŁ członków"
         },
         "data_description": {
           "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
-          "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów)."
+          "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
+          "ignore_off_members": "Jeśli włączone, grupa NIE włączy członków, którzy są obecnie WYŁĄCZENI. (Częściowa synchronizacja)"
         },
         "description": "Dodatkowe funkcje i eksponowanie encji.",
         "title": "Inne Ustawienia"

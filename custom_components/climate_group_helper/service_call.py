@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import (
@@ -16,13 +17,14 @@ from homeassistant.components.climate import (
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
 from homeassistant.core import Context
 from homeassistant.helpers.debounce import Debouncer
 
 from .const import (
     MODE_MODES_MAP,
     ATTR_SERVICE_MAP,
+    CONF_IGNORE_OFF_MEMBERS,
 )
 from .state import FilterState
 
@@ -124,7 +126,9 @@ class ServiceCallHandler:
         """
         attempts = self._group.retry_attempts + 1
         delay = self._group.retry_delay
-        context = Context(id=context_id) if context_id else None
+
+        if not context_id:
+            context_id = "service_call"
 
         for attempt in range(attempts):
             try:
@@ -134,20 +138,27 @@ class ServiceCallHandler:
                     _LOGGER.debug("[%s] No pending calls, stopping retry loop", self._group.entity_id)
                     return
 
+                # Generate a unique batch ID (Parent ID) for this set of calls
+                # Format: "Timestamp|MasterEntityID"
+                # This allows SyncModeHandler to identify the "Master" of this change sequence.
+                timestamp = str(time.time())
+                master_entity = self._group.target_state.last_updated_by_entity or ""
+                parent_id = f"{timestamp}|{master_entity}"
+
                 for call in calls:
                     service=call["service"]
                     data={ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
-
-                    _LOGGER.debug("[%s] Call (%d/%d) '%s' with data: %s", self._group.entity_id, attempt + 1, attempts, service, data)    
-
+                    
                     # Generic handling for all services
                     await self._group.hass.services.async_call(
-                        domain=CLIMATE_DOMAIN,
+                        domain="climate",
                         service=service,
                         service_data=data,
                         blocking=True,
-                        context=context,
+                        context=Context(id=context_id, parent_id=parent_id),
                     )
+
+                    _LOGGER.debug("[%s] Call (%d/%d) '%s' with data: %s, Parent ID: %s", self._group.entity_id, attempt + 1, attempts, service, data, parent_id)
 
             except Exception as e:
                 _LOGGER.warning("[%s] Call attempt (%d/%d) failed: %s", self._group.entity_id, attempt + 1, attempts, e)
@@ -175,7 +186,6 @@ class ServiceCallHandler:
             return calls
 
         target_state_dict = self._group.target_state.to_dict()
-
         filter_attrs = filter_state.to_dict() if filter_state else FilterState().to_dict()
 
 
@@ -256,6 +266,29 @@ class ServiceCallHandler:
                 continue
 
             current_value = state.state if attr == ATTR_HVAC_MODE else state.attributes.get(attr)
+
+            # Output Filter: Partial Sync
+            # If enabled, do not send commands to members that are OFF when the group is active (ON).
+            # This solves Scenario 2: Changing Group Mode/Temp should not wake up OFF members.
+            if (
+                self._group.config.get(CONF_IGNORE_OFF_MEMBERS)
+                and self._group.target_state.hvac_mode != HVACMode.OFF
+                # Only filter if the member IS OFF
+                and state.state == HVACMode.OFF
+                # And we are trying to set something other than OFF
+                # (implied by group.target_state != OFF, but explicit check for safety)
+                and target_value != HVACMode.OFF
+            ):
+                # Deadlock Prevention:
+                # If ALL members are OFF, we MUST NOT ignore them, otherwise we can never turn the group ON.
+                # Check if there is at least one other member that is NOT OFF.
+                if any(
+                    self._group.hass.states.get(m_id).state != HVACMode.OFF 
+                    for m_id in self._group.climate_entity_ids 
+                    if (s := self._group.hass.states.get(m_id)) and s.state != STATE_UNAVAILABLE
+                ):
+                     _LOGGER.debug("[%s] Partial Sync: Ignoring update for OFF member %s", self._group.entity_id, entity_id)
+                     continue
 
             # Float values: Check if current_value is within tolerance of target_value
             if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH, ATTR_HUMIDITY):

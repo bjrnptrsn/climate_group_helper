@@ -135,12 +135,14 @@
       },
       "other": {
         "data": {
-          "expose_member_entities": "Vis Medlemsliste",
-          "expose_smart_sensors": "Vis Smarte Sensorer"
+          "expose_member_entities": "Udstil medlemsliste",
+          "expose_smart_sensors": "Udstil smarte sensorer",
+          "ignore_off_members": "Respekter medlemmers OFF-tilstand"
         },
         "data_description": {
-          "expose_member_entities": "Opretter en attribut, der viser alle medlemsentitets-ID'er.",
-          "expose_smart_sensors": "Opretter ekstra sensorentiteter for gruppens temperatur og fugtighed (nyttigt til grafer)."
+          "expose_member_entities": "Opretter en attribut, der viser alle medlemsenheds-id'er.",
+          "expose_smart_sensors": "Opretter ekstra sensorenheder for gruppens temperatur og fugtighed (nyttigt til grafer).",
+          "ignore_off_members": "Hvis aktiveret, vil gruppen IKKE tænde medlemmer, der i øjeblikket er OFF. (Delvis synkronisering)"
         },
         "description": "Yderligere funktioner og entitetseksponering.",
         "title": "Andre Indstillinger"

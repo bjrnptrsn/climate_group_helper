@@ -1,7 +1,7 @@
 """Immutable state representation for Climate Group."""
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass, fields, replace
 from typing import Any
 
 from homeassistant.core import Event
@@ -10,26 +10,42 @@ from .const import FLOAT_TOLERANCE
 
 @dataclass(frozen=True)
 class TargetState:
-    """Immutable state representation for Climate Group."""
+    """Current target state of the group.
+    
+    This state serves as the single source of truth for all group operations.
+    It is persistent and represents the intended state, regardless of temporary
+    deviations (like window open) or latency.
 
+    Metadata fields allow tracking the provenance of the state (Optimistic Concurrency Control).
+    """
+    # Core Attributes
     hvac_mode: str | None = None
     temperature: float | None = None
     target_temp_low: float | None = None
     target_temp_high: float | None = None
     humidity: float | None = None
-    fan_mode: str | None = None
     preset_mode: str | None = None
+    fan_mode: str | None = None
     swing_mode: str | None = None
     swing_horizontal_mode: str | None = None
+    
+
+    # Provenance Metadata (Not synced to devices)
+    last_updated_by_entity: str | None = None
+    last_updated_by_source: str | None = None
+    last_updated_timestamp: float = 0.0
 
     def update(self, **kwargs: Any) -> TargetState:
-        """Returns new state with updated values (immutable update pattern)."""
-        # Filter kwargs to only include valid fields to prevent TypeErrors
+        """Return a new TargetState with updated values.
         
-        valid_keys = self.__class__.__annotations__.keys()
-        filtered_kwargs = {key: value for key, value in kwargs.items() if key in valid_keys}
-
-        return TargetState(**{**asdict(self), **filtered_kwargs})
+        Args:
+            **kwargs: Attributes to update. Can include metadata fields.
+        """
+        # Filter out fields that are not in the dataclass to prevent errors
+        valid_fields = {f.name for f in fields(self)}
+        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
+        
+        return replace(self, **filtered_kwargs)
 
     def to_dict(self, attributes: list[str] | None = None) -> dict[str, Any]:
         """Convert state to dictionary.
@@ -80,6 +96,12 @@ class FilterState(TargetState):
             if attr in TargetState.__annotations__:
                 data[attr] = True
         return cls(**data)
+
+    def to_dict(self, attributes: list[str] | None = None) -> dict[str, Any]:
+        """Convert filter state to dictionary, excluding metadata."""
+        data = super().to_dict(attributes)
+        # Exclude metadata fields that leak from TargetState inheritance
+        return {k: v for k, v in data.items() if not k.startswith("last_updated_")}
 
 
 @dataclass(frozen=True)

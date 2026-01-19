@@ -1,11 +1,25 @@
 # Changelog
 
+## 0.16.1 - 2026-01-19
+
+### 🔧 Robustness & Sync Stability (Major Fixes)
+This patch release focuses on fixing race conditions and sync-loops.
+
+- **Sender Wins Strategy:** Now correctly identifies the "Master" entity for every command to prevent passive members from overwriting the group state with old data.
+- **Dirty Echo Protection:** Strictly ignores values from members that don't match the valid order, preventing feedback loops.
+- **Split-Brain Fix:** Fixed an edge case where Side Effects (like a thermostat acting on its own logic) broke the enforcement loop.
+
+### ✨ New Features
+- **Partial Sync:**
+  - **Ignore Off Members**: Allows turning off individual rooms without the Group forcing them back ON.
+  - **Last Man Standing:** If you turn off the *last* active room, the Group switch to `OFF`.
+
 ## 0.16.0 - 2026-01-16
 
 ### 🚀 New Features
 - **Schedule Helper Integration**: Native support for Home Assistant `schedule` entities. Automate your climate group's temperature and mode directly via a schedule helper.
 
-- **Smart Window Control (Redesigned)**: Simplified and more robust logic. Opening a window now directly forces members off while maintaining the group's target state. Closing the window instantly restores the group's intended state.
+- **Window Control (Redesigned)**: Simplified and more robust logic. Opening a window now directly forces members off while maintaining the group's target state. Closing the window instantly restores the group's intended state.
 
 - **Source-Aware State Management**: The group now distinguishes between changes from users, schedules, window control and sync mode to prevent conflicts and loops.
 

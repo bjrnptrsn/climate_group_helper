@@ -135,12 +135,14 @@
       },
       "other": {
         "data": {
-          "expose_member_entities": "Esponi Lista Membri",
-          "expose_smart_sensors": "Esponi Sensori Smart"
+          "expose_member_entities": "Esponi elenco dei membri",
+          "expose_smart_sensors": "Esponi sensori intelligenti",
+          "ignore_off_members": "Rispetta lo stato OFF dei membri"
         },
         "data_description": {
           "expose_member_entities": "Crea un attributo che elenca tutti gli ID delle entità membro.",
-          "expose_smart_sensors": "Crea entità sensore extra per la temperatura e l'umidità del gruppo (utile per i grafici)."
+          "expose_smart_sensors": "Crea entità sensore aggiuntive per temperatura e umidità del gruppo (utile per i grafici).",
+          "ignore_off_members": "Se abilitato, il gruppo NON accenderà i membri che sono attualmente SPENTI. (Sincronizzazione parziale)"
         },
         "description": "Funzionalità aggiuntive ed esposizione delle entità.",
         "title": "Altre Impostazioni"
