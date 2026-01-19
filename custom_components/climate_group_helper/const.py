@@ -76,6 +76,7 @@ DEFAULT_CLOSE_DELAY = 30
 CONF_SCHEDULE_ENTITY = "schedule_entity"
 
 # Other options
+CONF_IGNORE_OFF_MEMBERS = "ignore_off_members"
 CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 

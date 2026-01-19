@@ -154,11 +154,13 @@
         "description": "Additional features and entity exposure.",
         "data": {
           "expose_smart_sensors": "Expose Smart Sensors",
-          "expose_member_entities": "Expose Member List"
+          "expose_member_entities": "Expose Member List",
+          "ignore_off_members": "Respect Member OFF State"
         },
         "data_description": {
           "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
-          "expose_member_entities": "Creates an attribute listing all member entity IDs."
+          "expose_member_entities": "Creates an attribute listing all member entity IDs.",
+          "ignore_off_members": "If enabled, the group will NOT turn on members that are currently OFF. (Partial Sync)"
         }
       }
     },

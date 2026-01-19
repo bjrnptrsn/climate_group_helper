@@ -135,12 +135,14 @@
       },
       "other": {
         "data": {
-          "expose_member_entities": "Zobrazit Seznam Členů",
-          "expose_smart_sensors": "Zobrazit Chytré Senzory"
+          "expose_member_entities": "Zvolte zda zobrazit seznam členů",
+          "expose_smart_sensors": "Zvolte zda vytvořit senzorové entity",
+          "ignore_off_members": "Respektovat stav Vypnuto členů"
         },
         "data_description": {
-          "expose_member_entities": "Vytvoří atribut se seznamem všech ID členských entit.",
-          "expose_smart_sensors": "Vytvoří extra senzory pro teplotu a vlhkost skupiny (užitečné pro grafy)."
+          "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
+          "expose_smart_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
+          "ignore_off_members": "Je-li povoleno, skupina NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ. (Částečná synchronizace)"
         },
         "description": "Další funkce a zobrazení entit.",
         "title": "Další Nastavení"

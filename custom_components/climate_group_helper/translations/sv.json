@@ -135,12 +135,14 @@
       },
       "other": {
         "data": {
-          "expose_member_entities": "Visa Medlemslista",
-          "expose_smart_sensors": "Visa Smarta Sensorer"
+          "expose_member_entities": "Visa medlemslista",
+          "expose_smart_sensors": "Visa smarta sensorer",
+          "ignore_off_members": "Respektera medlemmars AV-status"
         },
         "data_description": {
-          "expose_member_entities": "Skapar ett attribut som listar alla medlemsentitets-ID:n.",
-          "expose_smart_sensors": "Skapar extra sensorentiteter för gruppens temperatur och luftfuktighet (användbart för grafer)."
+          "expose_member_entities": "Skapar ett attribut som listar alla medlemsenhets-ID:n.",
+          "expose_smart_sensors": "Skapar extra sensorenheter för gruppens temperatur och luftfuktighet (användbart för grafer).",
+          "ignore_off_members": "Om aktiverat kommer gruppen INTE att slå på medlemmar som för närvarande är AVSTÄNGDA. (Partiell synkronisering)"
         },
         "description": "Ytterligare funktioner och entitetsexponering.",
         "title": "Andra Inställningar"

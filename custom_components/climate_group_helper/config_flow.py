@@ -27,6 +27,7 @@ from .const import (
     CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_IGNORE_OFF_MEMBERS,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
@@ -606,6 +607,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_EXPOSE_MEMBER_ENTITIES,
                     default=current_config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
+                ): bool,
+                vol.Optional(
+                    CONF_IGNORE_OFF_MEMBERS,
+                    default=current_config.get(CONF_IGNORE_OFF_MEMBERS, False),
                 ): bool,
             }
         )

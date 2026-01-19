@@ -136,11 +136,13 @@
       "other": {
         "data": {
           "expose_member_entities": "Mitgliederliste bereitstellen",
-          "expose_smart_sensors": "Smarte Sensoren bereitstellen"
+          "expose_smart_sensors": "Smarte Sensoren bereitstellen",
+          "ignore_off_members": "Respektiere 'Aus'-Status der Mitglieder"
         },
         "data_description": {
           "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
-          "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme)."
+          "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
+          "ignore_off_members": "Wenn aktiviert, schaltet die Gruppe keine Mitglieder ein, die aktuell ausgeschaltet sind. (Partial Sync)"
         },
         "description": "Zusätzliche Funktionen und Entitäten-Bereitstellung.",
         "title": "Andere Einstellungen"

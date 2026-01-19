@@ -135,12 +135,14 @@
       },
       "other": {
         "data": {
-          "expose_member_entities": "Expor Lista de Membros",
-          "expose_smart_sensors": "Expor Sensores Inteligentes"
+          "expose_member_entities": "Expor lista de membros",
+          "expose_smart_sensors": "Expor sensores inteligentes",
+          "ignore_off_members": "Respeitar estado OFF dos membros"
         },
         "data_description": {
-          "expose_member_entities": "Cria um atributo listando todos os IDs de entidades membro.",
-          "expose_smart_sensors": "Cria entidades sensor extra para a temperatura e humidade do grupo (útil para gráficos)."
+          "expose_member_entities": "Cria um atributo listando todos os IDs das entidades membro.",
+          "expose_smart_sensors": "Cria entidades de sensor adicionais para a temperatura e humidade do grupo (útil para gráficos).",
+          "ignore_off_members": "Se ativado, o grupo NÃO ligará os membros que estão atualmente DESLIGADOS. (Sincronização Parcial)"
         },
         "description": "Funcionalidades adicionais e exposição de entidades.",
         "title": "Outras Definições"

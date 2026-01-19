@@ -177,7 +177,7 @@ class WindowControlHandler:
             await self._group.service_call_handler.call_immediate(context_id="window_control")
 
     def _window_control_logic(self) -> tuple[str, float] | None:
-        """This method implements the core logic from the Smart Window Heating Control blueprint.
+        """This method implements the core logic from the Window Heating Control blueprint.
 
         Return the control mode and the timer delay.
         Return None if no sensors are configured.

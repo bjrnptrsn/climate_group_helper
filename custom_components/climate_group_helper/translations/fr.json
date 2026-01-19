@@ -135,12 +135,14 @@
       },
       "other": {
         "data": {
-          "expose_member_entities": "Exposer la Liste des Membres",
-          "expose_smart_sensors": "Exposer les Capteurs Intelligents"
+          "expose_member_entities": "Exposer la liste des membres",
+          "expose_smart_sensors": "Exposer des capteurs intelligents",
+          "ignore_off_members": "Respecter l'état OFF des membres"
         },
         "data_description": {
-          "expose_member_entities": "Crée un attribut listant toutes les ID d'entités membres.",
-          "expose_smart_sensors": "Crée des entités capteurs supplémentaires pour la température et l'humidité du groupe (utile pour les graphiques)."
+          "expose_member_entities": "Crée un attribut listant tous les ID d'entité des membres.",
+          "expose_smart_sensors": "Crée des entités de capteur supplémentaires pour la température et l'humidité du groupe (utile pour les graphiques).",
+          "ignore_off_members": "Si activé, le groupe n'allumera PAS les membres qui sont actuellement ÉTEINTS. (Synchronisation partielle)"
         },
         "description": "Fonctionnalités supplémentaires et exposition des entités.",
         "title": "Autres Paramètres"
