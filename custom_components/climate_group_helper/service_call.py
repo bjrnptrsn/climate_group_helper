@@ -82,9 +82,20 @@ class ServiceCallHandler:
             context=Context(id=context_id) if context_id else None,
         )
 
-    async def call_immediate(self, filter_state: FilterState | None = None, context_id: str | None = None):
-        """Execute a service call immediately."""
-        await self._execute_calls(filter_state=filter_state, context_id=context_id)
+    async def call_immediate(
+        self, 
+        filter_state: FilterState | None = None, 
+        context_id: str | None = None,
+        entity_ids: list[str] | None = None
+    ):
+        """Execute a service call immediately.
+        
+        Args:
+            filter_state: Optional FilterState to filter calls.
+            context_id: Optional context ID to tag service calls.
+            entity_ids: Optional list of specific entity IDs to target (for area-based control).
+        """
+        await self._execute_calls(filter_state=filter_state, context_id=context_id, entity_ids=entity_ids)
 
     async def call_debounced(self, filter_state: FilterState | None = None, context_id: str | None = None):
         """Debounce and execute a service call."""
@@ -114,7 +125,12 @@ class ServiceCallHandler:
 
         await self._debouncer.async_call()
 
-    async def _execute_calls(self, filter_state: FilterState | None = None, context_id: str | None = None):
+    async def _execute_calls(
+        self, 
+        filter_state: FilterState | None = None, 
+        context_id: str | None = None,
+        entity_ids: list[str] | None = None
+    ):
         """Execute service calls to sync members, with retry logic.
         
         Generates sync calls from target_state and executes them.
@@ -123,6 +139,7 @@ class ServiceCallHandler:
         Args:
             filter_state: Optional FilterState to filter calls. If None, uses group.target_state.
             context_id: Optional context ID to tag service calls (for echo detection).
+            entity_ids: Optional list of specific entity IDs to target (for area-based control).
         """
         attempts = self._group.retry_attempts + 1
         delay = self._group.retry_delay
@@ -132,7 +149,7 @@ class ServiceCallHandler:
 
         for attempt in range(attempts):
             try:
-                calls = self._generate_calls(filter_state=filter_state, context_id=context_id)
+                calls = self._generate_calls(filter_state=filter_state, context_id=context_id, entity_ids=entity_ids)
 
                 if not calls:
                     _LOGGER.debug("[%s] No pending calls, stopping retry loop", self._group.entity_id)
@@ -166,13 +183,23 @@ class ServiceCallHandler:
             if attempts > 1 and attempt < (attempts - 1):
                 await asyncio.sleep(delay)
 
-    def _generate_calls(self, filter_state: FilterState | None = None, context_id: str | None = None) -> list[dict[str, Any]]:
+    def _generate_calls(
+        self, 
+        filter_state: FilterState | None = None, 
+        context_id: str | None = None,
+        entity_ids: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Generate all service calls needed to sync members to target_state.
         
         Handles special cases:
         - Temperature range (target_temp_low/high): Sent together in one call
         - Single temperature: Sent separately to devices without range support
         - Other attributes: Mapped via ATTR_SERVICE_MAP
+        
+        Args:
+            filter_state: Optional FilterState to filter calls.
+            context_id: Optional context ID.
+            entity_ids: Optional list of specific entity IDs to target (for area-based control).
         
         Returns:
             List of call dicts with 'service', 'kwargs', and 'entity_ids'.
@@ -188,6 +215,8 @@ class ServiceCallHandler:
         target_state_dict = self._group.target_state.to_dict()
         filter_attrs = filter_state.to_dict() if filter_state else FilterState().to_dict()
 
+        # Use specific entity_ids if provided, otherwise use all members
+        target_entities = entity_ids if entity_ids else self._group.config.get("entities", [])
 
         temp_range_processed = False
 
@@ -208,7 +237,7 @@ class ServiceCallHandler:
                     for temp_attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
                         # Ensure we have both values before trying to sync range
                         if low is not None and high is not None:
-                            if (entity := self._get_unsynced_entities(temp_attr)):
+                            if (entity := self._get_unsynced_entities(temp_attr, target_entities)):
                                 calls.append({
                                     "service": SERVICE_SET_TEMPERATURE,
                                     "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
@@ -222,7 +251,7 @@ class ServiceCallHandler:
             if not service:
                 continue
 
-            if (entity := self._get_unsynced_entities(attr)):
+            if (entity := self._get_unsynced_entities(attr, target_entities)):
                 calls.append({
                     "service": service,
                     "kwargs": {attr: target},
@@ -231,7 +260,7 @@ class ServiceCallHandler:
 
         return calls
 
-    def _get_unsynced_entities(self, attr: str) -> list[str]:
+    def _get_unsynced_entities(self, attr: str, target_entities: list[str] | None = None) -> list[str]:
         """Get members that support this attribute AND are not yet at target.
         
         Filters entities by:
@@ -241,18 +270,22 @@ class ServiceCallHandler:
         
         Args:
             attr: The attribute to check (e.g., 'temperature', 'hvac_mode')
+            target_entities: Optional list of specific entities to check (for area-based control)
             
         Returns:
             List of entity IDs that need to be synced.
         """
         entity_ids = []
         
+        # Use specific entities if provided, otherwise use all members
+        entities_to_check = target_entities if target_entities else self._group.config.get("entities", [])
+        
         target_value = getattr(self._group.target_state, attr, None)
 
         if target_value is None:
             return []
 
-        for entity_id in self._group.climate_entity_ids:
+        for entity_id in entities_to_check:
             state = self._group.hass.states.get(entity_id)
             if not state:
                 continue
@@ -284,7 +317,7 @@ class ServiceCallHandler:
                 # Check if there is at least one other member that is NOT OFF.
                 if any(
                     self._group.hass.states.get(m_id).state != HVACMode.OFF 
-                    for m_id in self._group.climate_entity_ids 
+                    for m_id in entities_to_check 
                     if (s := self._group.hass.states.get(m_id)) and s.state != STATE_UNAVAILABLE
                 ):
                      _LOGGER.debug("[%s] Partial Sync: Ignoring update for OFF member %s", self._group.entity_id, entity_id)

@@ -68,9 +68,12 @@ CONF_ZONE_SENSOR = "zone_sensor"
 CONF_ROOM_OPEN_DELAY = "room_open_delay"
 CONF_ZONE_OPEN_DELAY = "zone_open_delay"
 CONF_CLOSE_DELAY = "close_delay"
+CONF_WINDOW_SENSORS = "window_sensors"  # New: list of window sensors
+CONF_WINDOW_OPEN_DELAY = "window_open_delay"  # New: delay before turning off
 DEFAULT_ROOM_OPEN_DELAY = 15
 DEFAULT_ZONE_OPEN_DELAY = 300
 DEFAULT_CLOSE_DELAY = 30
+DEFAULT_WINDOW_OPEN_DELAY = 15
 
 # Schedule options
 CONF_SCHEDULE_ENTITY = "schedule_entity"
@@ -111,6 +114,7 @@ class WindowControlMode(StrEnum):
 
     OFF = "off"
     ON = "on"
+    AREA_BASED = "area_based"  # New: area-based control
 
 
 # Extra attribute keys
