@@ -137,12 +137,14 @@
         "data": {
           "expose_member_entities": "Ledenlijst weergeven",
           "expose_smart_sensors": "Slimme sensoren weergeven",
-          "ignore_off_members": "Respecteer de UIT-status van leden"
+          "ignore_off_members": "Respecteer de UIT-status van leden",
+          "min_temp_off": "Minimumtemperatuur bij uit"
         },
         "data_description": {
           "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
           "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
-          "ignore_off_members": "Indien ingeschakeld, zal de groep GEEN leden inschakelen die momenteel UIT staan. (Gedeeltelijke synchronisatie)"
+          "ignore_off_members": "Indien ingeschakeld, zal de groep GEEN leden inschakelen die momenteel UIT staan. (Gedeeltelijke synchronisatie)",
+          "min_temp_off": "Indien ingeschakeld, stuurt de minimumtemperatuur van het apparaat (bijv. 5°C) bij het uitschakelen van de groep. (Forceert sluiten ventiel)"
         },
         "description": "Extra functies en entiteit-blootstelling.",
         "title": "Andere Instellingen"

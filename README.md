@@ -34,6 +34,10 @@ Use **multiple external sensors** for temperature and humidity. The group calcul
 ### 🎚️ Selective Attribute Sync
 *New in v0.13!* Choose **exactly** which attributes to sync in Lock/Mirror modes. Example: Sync temperature but allow individual fan control.
 
+### ☯ Partial Sync (Respect Off)
+*New in v0.16!* Better handling for "Off" states:
+*   **Ignore Off Members:** Allows turning off individual rooms without the Group forcing them back On (avoids "fighting").
+
 ### 🪟 Window Control
 *Redesigned in v0.16!* Automatically turn off heating when windows open and restore it when they close.
 
@@ -86,6 +90,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Calibration Targets** | Write calculated temperature to number entities. |
 | **Averaging Method** | Mean, Median, Min, or Max—separately for Current and Target values. |
 | **Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
+| **Min Temp Off** | *New in v0.17!* Send minimum temperature (e.g. 5°C) additional to `OFF` command. Essential for TRVs that don't close valves fully on `OFF`. |
 
 ### HVAC Mode Strategy
 

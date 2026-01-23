@@ -137,12 +137,14 @@
         "data": {
           "expose_member_entities": "Esponi elenco dei membri",
           "expose_smart_sensors": "Esponi sensori intelligenti",
-          "ignore_off_members": "Rispetta lo stato OFF dei membri"
+          "ignore_off_members": "Rispetta lo stato Off dei membri",
+          "min_temp_off": "Temperatura minima quando spento"
         },
         "data_description": {
           "expose_member_entities": "Crea un attributo che elenca tutti gli ID delle entità membro.",
           "expose_smart_sensors": "Crea entità sensore aggiuntive per temperatura e umidità del gruppo (utile per i grafici).",
-          "ignore_off_members": "Se abilitato, il gruppo NON accenderà i membri che sono attualmente SPENTI. (Sincronizzazione parziale)"
+          "ignore_off_members": "Se abilitato, il gruppo NON accenderà i membri che sono attualmente SPENTI. (Sincronizzazione parziale)",
+          "min_temp_off": "Se abilitato, invia la temperatura minima del dispositivo (es. 5°C) quando si spegne il gruppo. (Assicura chiusura valvola)"
         },
         "description": "Funzionalità aggiuntive ed esposizione delle entità.",
         "title": "Altre Impostazioni"

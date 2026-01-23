@@ -22,10 +22,34 @@ class ScheduleHandler:
     def __init__(self, group: ClimateGroup) -> None:
         """Initialize the schedule handler."""
         self._group = group
+        self._hass = group.hass
         self._unsub_listener = None
         self._schedule_entity = group.config.get(CONF_SCHEDULE_ENTITY)
 
         _LOGGER.debug("[%s] Schedule initialized: '%s'", self._group.entity_id, self._schedule_entity)
+
+    # =========================================================================
+    # Properties - Access to specialized managers
+    # =========================================================================
+
+    @property
+    def state_manager(self):
+        """Return the specialized state manager for schedule updates."""
+        return self._group.schedule_state_manager
+    
+    @property
+    def call_handler(self):
+        """Return the specialized call handler for schedule operations."""
+        return self._group.schedule_call_handler
+    
+    @property
+    def target_state(self):
+        """Return the current target state (from central source)."""
+        return self.state_manager.target_state
+
+    # =========================================================================
+    # Public API
+    # =========================================================================
 
     async def async_setup(self) -> None:
         """Subscribe to schedule entity state changes."""
@@ -35,7 +59,7 @@ class ScheduleHandler:
 
         # Subscribe to schedule entity state changes
         self._unsub_listener = async_track_state_change_event(
-            self._group.hass, [self._schedule_entity], self._state_change_listener
+            self._hass, [self._schedule_entity], self._state_change_listener
         )
 
         _LOGGER.debug("[%s] Schedule handler subscribed to: '%s'", self._group.entity_id, self._schedule_entity)
@@ -46,7 +70,7 @@ class ScheduleHandler:
         if not self._schedule_entity:
             return
             
-        if state := self._group.hass.states.get(self._schedule_entity):
+        if state := self._hass.states.get(self._schedule_entity):
             if state.state == "on":
                 _LOGGER.debug("[%s] Applying initial schedule slot", self._group.entity_id)
                 await self._apply_slot(state.attributes)
@@ -56,6 +80,10 @@ class ScheduleHandler:
         if self._unsub_listener:
             self._unsub_listener()
             self._unsub_listener = None
+
+    # =========================================================================
+    # Internal Implementation
+    # =========================================================================
 
     @callback
     def _state_change_listener(self, event: Event[EventStateChangedData]) -> None:
@@ -67,7 +95,7 @@ class ScheduleHandler:
 
         # Apply slot data if schedule is active (slot data is in direct attributes)
         if new_state.state == "on":
-            self._group.hass.async_create_task(self._apply_slot(new_state.attributes))
+            self._hass.async_create_task(self._apply_slot(new_state.attributes))
 
     async def _apply_slot(self, slot_data: dict[str, Any]) -> None:
         """Apply schedule slot data to target_state."""
@@ -87,13 +115,13 @@ class ScheduleHandler:
             return
 
         # Skip if slot data matches current target_state (no change needed)
-        current_target = self._group.target_state.to_dict(attributes=list(filtered_data.keys()))
+        current_target = self.target_state.to_dict(attributes=list(filtered_data.keys()))
         if filtered_data == current_target:
             _LOGGER.debug("[%s] Slot data matches target_state, skipping", self._group.entity_id)
             return
 
         _LOGGER.info("[%s] Applying schedule slot: %s", self._group.entity_id, filtered_data)
 
-        # Update target state and call service
-        self._group.update_target_state("schedule", **filtered_data)
-        await self._group.service_call_handler.call_immediate(context_id="schedule")
+        # Update target state via state_manager and call via call_handler
+        self.state_manager.update(**filtered_data)
+        await self.call_handler.call_immediate()

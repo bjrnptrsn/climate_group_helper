@@ -137,12 +137,14 @@
         "data": {
           "expose_member_entities": "Mitgliederliste bereitstellen",
           "expose_smart_sensors": "Smarte Sensoren bereitstellen",
-          "ignore_off_members": "Respektiere 'Aus'-Status der Mitglieder"
+          "ignore_off_members": "Respektiere 'Aus'-Status der Mitglieder",
+          "min_temp_off": "Min. Temp bei 'Aus'"
         },
         "data_description": {
           "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
           "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
-          "ignore_off_members": "Wenn aktiviert, schaltet die Gruppe keine Mitglieder ein, die aktuell ausgeschaltet sind. (Partial Sync)"
+          "ignore_off_members": "Wenn aktiviert, schaltet die Gruppe keine Mitglieder ein, die aktuell ausgeschaltet sind. (Partial Sync)",
+          "min_temp_off": "Wenn aktiviert, wird die Minimaltemperatur des Geräts (z.B. 5°C) beim Ausschalten der Gruppe gesendet. (Erzwingt Ventil-Schließung)"
         },
         "description": "Zusätzliche Funktionen und Entitäten-Bereitstellung.",
         "title": "Andere Einstellungen"

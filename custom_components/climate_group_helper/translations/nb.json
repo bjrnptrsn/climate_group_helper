@@ -137,12 +137,14 @@
         "data": {
           "expose_member_entities": "Vis medlemsliste",
           "expose_smart_sensors": "Vis smarte sensorer",
-          "ignore_off_members": "Respekter medlemmers AV-tilstand"
+          "ignore_off_members": "Respekter medlemmers AV-tilstand",
+          "min_temp_off": "Minimumstemperatur når av"
         },
         "data_description": {
           "expose_member_entities": "Oppretter en attributt som lister alle medlemsenhets-ID-er.",
-          "expose_smart_sensors": "Oppretter ekstra sensorenheter for temperaturen og fuktigheten til gruppen (nyttig for grafer).",
-          "ignore_off_members": "Hvis aktivert, vil gruppen IKKE slå på medlemmer som for tiden er AV. (Delvis synkronisering)"
+          "expose_smart_sensors": "Oppretter ekstra sensorentiteter for gruppens temperatur og luftfuktighet (nyttig for grafer).",
+          "ignore_off_members": "Hvis aktivert, vil gruppen IKKE slå på medlemmer som for tiden er AV. (Delvis synkronisering)",
+          "min_temp_off": "Hvis aktivert, sender enhetens minimumstemperatur (f.eks. 5°C) når gruppen slås av. (Sikrer at ventilen lukkes)"
         },
         "description": "Tilleggsfunksjoner og entitetseksponering.",
         "title": "Andre innstillinger"

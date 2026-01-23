@@ -137,12 +137,14 @@
         "data": {
           "expose_member_entities": "Pokaż Listę Członków",
           "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
-          "ignore_off_members": "Respektuj stan WYŁ członków"
+          "ignore_off_members": "Respektuj stan WYŁ członków",
+          "min_temp_off": "Minimalna temperatura po wyłączeniu"
         },
         "data_description": {
           "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
           "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
-          "ignore_off_members": "Jeśli włączone, grupa NIE włączy członków, którzy są obecnie WYŁĄCZENI. (Częściowa synchronizacja)"
+          "ignore_off_members": "Jeśli włączone, grupa NIE włączy członków, którzy są obecnie WYŁĄCZENI. (Częściowa synchronizacja)",
+          "min_temp_off": "Jeśli włączone, wysyła minimalną temperaturę urządzenia (np. 5°C) po wyłączeniu grupy. (Zapewnia zamknięcie zaworu)"
         },
         "description": "Dodatkowe funkcje i eksponowanie encji.",
         "title": "Inne Ustawienia"

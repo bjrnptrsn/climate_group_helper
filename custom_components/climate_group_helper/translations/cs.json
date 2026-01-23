@@ -137,12 +137,14 @@
         "data": {
           "expose_member_entities": "Zvolte zda zobrazit seznam členů",
           "expose_smart_sensors": "Zvolte zda vytvořit senzorové entity",
-          "ignore_off_members": "Respektovat stav Vypnuto členů"
+          "ignore_off_members": "Respektovat stav Vypnuto členů",
+          "min_temp_off": "Minimální teplota při vypnutí"
         },
         "data_description": {
           "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
           "expose_smart_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
-          "ignore_off_members": "Je-li povoleno, skupina NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ. (Částečná synchronizace)"
+          "ignore_off_members": "Je-li povoleno, skupina NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ. (Částečná synchronizace)",
+          "min_temp_off": "Pokud je povoleno, odešle minimální teplotu zařízení (např. 5°C) při vypnutí skupiny. (Zajistí uzavření ventilu)"
         },
         "description": "Další funkce a zobrazení entit.",
         "title": "Další Nastavení"
