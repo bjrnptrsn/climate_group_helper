@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.17.0 - 2026-01-23
+
+### ✨ New Feature
+
+*   **Better TRV Support**: New option to send the minimum temperature (e.g. 5°C) when turning the group off. This ensures valves (like Aqara) close completely.
+
+### 🛡️ Improvements
+
+*   **Stability and Reliability**: Comprehensive internal redesign to make integration more reliable and easier to maintain.
+*   **Conflict Prevention**: Logic overhaul to prevent conflicts between Schedules, Window Control, and User Commands.
+*   **Startup State**: Restored values are now correctly displayed immediately after a restart.
+
 ## 0.16.1 - 2026-01-19
 
 ### 🔧 Robustness & Sync Stability (Major Fixes)
@@ -11,8 +23,8 @@ This patch release focuses on fixing race conditions and sync-loops.
 
 ### ✨ New Features
 - **Partial Sync:**
-  - **Ignore Off Members**: Allows turning off individual rooms without the Group forcing them back ON.
-  - **Last Man Standing:** If you turn off the *last* active room, the Group switch to `OFF`.
+  - **Ignore Off Members**: Allows turning off individual rooms without the Group forcing them back on.
+  - **Last Man Standing:** If you turn off the *last* active room, the Group switch to off.
 
 ## 0.16.0 - 2026-01-16
 

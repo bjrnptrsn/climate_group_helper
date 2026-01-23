@@ -137,12 +137,14 @@
         "data": {
           "expose_member_entities": "Visa medlemslista",
           "expose_smart_sensors": "Visa smarta sensorer",
-          "ignore_off_members": "Respektera medlemmars AV-status"
+          "ignore_off_members": "Respektera medlemmars AV-status",
+          "min_temp_off": "Lägsta temperatur vid avstängning"
         },
         "data_description": {
           "expose_member_entities": "Skapar ett attribut som listar alla medlemsenhets-ID:n.",
           "expose_smart_sensors": "Skapar extra sensorenheter för gruppens temperatur och luftfuktighet (användbart för grafer).",
-          "ignore_off_members": "Om aktiverat kommer gruppen INTE att slå på medlemmar som för närvarande är AVSTÄNGDA. (Partiell synkronisering)"
+          "ignore_off_members": "Om aktiverat kommer gruppen INTE att slå på medlemmar som för närvarande är AVSTÄNGDA. (Partiell synkronisering)",
+          "min_temp_off": "Om aktiverat, skickar enhetens lägsta temperatur (t.ex. 5°C) när gruppen stängs av. (Säkerställer att ventilen stängs)"
         },
         "description": "Ytterligare funktioner och entitetsexponering.",
         "title": "Andra Inställningar"

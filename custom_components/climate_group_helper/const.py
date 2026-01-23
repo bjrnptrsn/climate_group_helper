@@ -79,6 +79,7 @@ CONF_SCHEDULE_ENTITY = "schedule_entity"
 CONF_IGNORE_OFF_MEMBERS = "ignore_off_members"
 CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
+CONF_MIN_TEMP_OFF = "min_temp_off"
 
 
 class AverageOption(StrEnum):

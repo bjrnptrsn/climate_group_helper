@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from abc import ABC
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import (
@@ -13,11 +14,10 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_LOW,
     ATTR_TEMPERATURE,
     DOMAIN as CLIMATE_DOMAIN,
-    SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
+from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Context
 from homeassistant.helpers.debounce import Debouncer
 
@@ -25,6 +25,8 @@ from .const import (
     MODE_MODES_MAP,
     ATTR_SERVICE_MAP,
     CONF_IGNORE_OFF_MEMBERS,
+    CONF_SYNC_ATTRS,
+    SYNC_TARGET_ATTRS,
 )
 from .state import FilterState
 
@@ -34,59 +36,52 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-class ServiceCallHandler:
-    """Executes climate service calls with debouncing and retry logic.
-
-    This handler coordinates the execution of service calls to all climate member entities.
+class BaseServiceCallHandler(ABC):
+    """Base class for service call execution with debouncing and retry logic.
     
-    It ensures that service calls are efficiently executed by:
-    - Debouncing multiple rapid changes into a single execution.
-    - Filtering out devices that are already in the desired state.
-    - Retrying failed operations to strictly enforce state consistency.
+    This abstract base class provides the common infrastructure for:
+    - Debouncing multiple rapid changes into a single execution
+    - Retry logic for failed operations
+    - Context-based call tagging for echo detection
+    
+    Derived classes must implement `_generate_calls()` to define how calls are generated.
+    They can override CONTEXT_ID to set their own context identifier.
     """
 
+    CONTEXT_ID: str = "service_call"  # Default context ID, override in derived classes
+
     def __init__(self, group: ClimateGroup):
-        """Initialize the service call handler."""
+        """Initialize the service call handler.
+        
+        Args:
+            group: Reference to the parent ClimateGroup entity.
+        """
         self._group = group
+        self._hass = group.hass
         self._debouncer: Debouncer | None = None
         self._active_tasks: set[asyncio.Task] = set()
 
-    async def async_cancel_all(self):
+    @property
+    def target_state(self):
+        """Return the shared target state."""
+        return self._group.shared_target_state
+
+    async def async_cancel_all(self) -> None:
         """Cancel all active debouncers and running retry tasks."""
-        # Cancel debouncer (pending calls)
         if self._debouncer:
             self._debouncer.async_cancel()
 
-        # Cancel running retry loops
         for task in self._active_tasks:
             task.cancel()
 
-        # Wait for them to finish cancelling
         if self._active_tasks:
             await asyncio.gather(*self._active_tasks, return_exceptions=True)
 
-    async def call_hvac_off(self, context_id: str | None = None):
-        """Execute a service call to turn off HVAC on all member entities.
-        
-        This bypasses target_state entirely - used by Window Control to force OFF
-        while preserving target_state for later restoration.
-        """
-        await self._group.hass.services.async_call(
-            domain=CLIMATE_DOMAIN,
-            service=SERVICE_SET_HVAC_MODE,
-            service_data={
-                ATTR_ENTITY_ID: self._group.climate_entity_ids,
-                ATTR_HVAC_MODE: HVACMode.OFF
-            },
-            blocking=True,
-            context=Context(id=context_id) if context_id else None,
-        )
+    async def call_immediate(self, data: dict[str, Any] | None = None) -> None:
+        """Execute a service call immediately without debouncing."""
+        await self._execute_calls(data)
 
-    async def call_immediate(self, filter_state: FilterState | None = None, context_id: str | None = None):
-        """Execute a service call immediately."""
-        await self._execute_calls(filter_state=filter_state, context_id=context_id)
-
-    async def call_debounced(self, filter_state: FilterState | None = None, context_id: str | None = None):
+    async def call_debounced(self, data: dict[str, Any] | None = None) -> None:
         """Debounce and execute a service call."""
 
         async def debounce_func():
@@ -95,14 +90,14 @@ class ServiceCallHandler:
             if task:
                 self._active_tasks.add(task)
             try:
-                await self._execute_calls(filter_state=filter_state, context_id=context_id)
+                await self._execute_calls(data)
             finally:
                 if task:
                     self._active_tasks.discard(task)
 
         if not self._debouncer:
             self._debouncer = Debouncer(
-                self._group.hass,
+                self._hass,
                 _LOGGER,
                 cooldown=self._group.debounce_delay,
                 immediate=False,
@@ -114,44 +109,33 @@ class ServiceCallHandler:
 
         await self._debouncer.async_call()
 
-    async def _execute_calls(self, filter_state: FilterState | None = None, context_id: str | None = None):
-        """Execute service calls to sync members, with retry logic.
-        
-        Generates sync calls from target_state and executes them.
-        Retries failed calls up to retry_attempts times with retry_delay between.
-        
-        Args:
-            filter_state: Optional FilterState to filter calls. If None, uses group.target_state.
-            context_id: Optional context ID to tag service calls (for echo detection).
-        """
-        attempts = self._group.retry_attempts + 1
+    async def _execute_calls(self, data: dict[str, Any] | None = None) -> None:
+        """Execute service calls with retry logic."""
+        attempts = (1 + self._group.retry_attempts)
         delay = self._group.retry_delay
+        context_id = self.CONTEXT_ID
 
-        if not context_id:
-            context_id = "service_call"
+        # Check blocking BEFORE retry loop (state doesn't change between retries)
+        if self._block_all_calls(data):
+            _LOGGER.debug("[%s] Calls blocked (source=%s)", self._group.entity_id, context_id)
+            return
 
         for attempt in range(attempts):
             try:
-                calls = self._generate_calls(filter_state=filter_state, context_id=context_id)
+                calls = self._generate_calls(data)
 
                 if not calls:
                     _LOGGER.debug("[%s] No pending calls, stopping retry loop", self._group.entity_id)
                     return
 
-                # Generate a unique batch ID (Parent ID) for this set of calls
-                # Format: "Timestamp|MasterEntityID"
-                # This allows SyncModeHandler to identify the "Master" of this change sequence.
-                timestamp = str(time.time())
-                master_entity = self._group.target_state.last_updated_by_entity or ""
-                parent_id = f"{timestamp}|{master_entity}"
+                parent_id = self._get_parent_id()
 
                 for call in calls:
-                    service=call["service"]
-                    data={ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
-                    
-                    # Generic handling for all services
-                    await self._group.hass.services.async_call(
-                        domain="climate",
+                    service = call["service"]
+                    data = {ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
+
+                    await self._hass.services.async_call(
+                        domain=CLIMATE_DOMAIN,
                         service=service,
                         service_data=data,
                         blocking=True,
@@ -166,137 +150,281 @@ class ServiceCallHandler:
             if attempts > 1 and attempt < (attempts - 1):
                 await asyncio.sleep(delay)
 
-    def _generate_calls(self, filter_state: FilterState | None = None, context_id: str | None = None) -> list[dict[str, Any]]:
-        """Generate all service calls needed to sync members to target_state.
+    def _generate_calls(self, data: dict[str, Any] | None = None, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
+        """Generate service calls. Must be implemented by derived classes."""
+        return self._generate_calls_from_dict(data, filter_state)
+
+    def _generate_calls_from_dict(self, data: dict[str, Any] | None = None, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
+        """Generate service calls from a dict of target attributes.
         
-        Handles special cases:
-        - Temperature range (target_temp_low/high): Sent together in one call
-        - Single temperature: Sent separately to devices without range support
-        - Other attributes: Mapped via ATTR_SERVICE_MAP
+        This is the central template method for call generation:
+        - Filters attributes based on filter_state
+        - Applies wake-up bug prevention (skip setpoints when target is OFF)
+        - Handles temperature range specially (must be sent in one call)
+        - Uses _get_call_entity_ids() for entity selection
         
-        Returns:
-            List of call dicts with 'service', 'kwargs', and 'entity_ids'.
+        Args:
+            data: Dict of attribute values to sync
+            filter_state: Optional FilterState for attribute filtering.
+                          Attributes with False are skipped.
         """
-
         calls = []
-
-        # Block calls when blocking mode is active
-        if self._group.blocking_mode and context_id != "window_control":
-            _LOGGER.debug("[%s] Blocking mode active (context_id=%s), skipping calls", self._group.entity_id, context_id)
-            return calls
-
-        target_state_dict = self._group.target_state.to_dict()
-        filter_attrs = filter_state.to_dict() if filter_state else FilterState().to_dict()
-
-
         temp_range_processed = False
+        data = data or self.target_state.to_dict()
+        filter_attrs = (filter_state or FilterState()).to_dict()
 
-        for attr, target in target_state_dict.items():
-            if not filter_attrs.get(attr):
+        # Inject kwargs
+        data = self._inject_call_kwargs(data)
+
+        for attr, value in data.items():
+            # Skip None values
+            if value is None:
                 continue
 
-            # Prevent "Wake Up" bug: If target is OFF, only process HVAC_MODE (to turn off).
-            # Skip all other attributes (temp, fan, etc.) which might perform implicit wakeups.
-            if target_state_dict.get(ATTR_HVAC_MODE) == HVACMode.OFF and attr != ATTR_HVAC_MODE:
+            # Skip if attribute is filtered out
+            if not filter_attrs.get(attr, True):
                 continue
 
+            # Skip if blocked
+            if self._block_call_attr(data, attr):
+                continue
+            
+            # Handle temperature range specially - must be sent in one call
             if attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
                 if not temp_range_processed:
-                    low = target_state_dict.get(ATTR_TARGET_TEMP_LOW)
-                    high = target_state_dict.get(ATTR_TARGET_TEMP_HIGH)
-
-                    for temp_attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
-                        # Ensure we have both values before trying to sync range
-                        if low is not None and high is not None:
-                            if (entity := self._get_unsynced_entities(temp_attr)):
-                                calls.append({
-                                    "service": SERVICE_SET_TEMPERATURE,
-                                    "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
-                                    "entity_ids": entity
-                                })
-                                temp_range_processed = True
-                                break
+                    low = data.get(ATTR_TARGET_TEMP_LOW)
+                    high = data.get(ATTR_TARGET_TEMP_HIGH)
+                    if low is not None and high is not None:
+                        if (entity_ids := self._get_call_entity_ids(attr)):
+                            calls.append({
+                                "service": SERVICE_SET_TEMPERATURE,
+                                "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
+                                "entity_ids": entity_ids
+                            })
+                            temp_range_processed = True
                 continue
 
             service = ATTR_SERVICE_MAP.get(attr)
             if not service:
                 continue
 
-            if (entity := self._get_unsynced_entities(attr)):
-                calls.append({
-                    "service": service,
-                    "kwargs": {attr: target},
-                    "entity_ids": entity
-                })
-
+            if (entity_ids := self._get_call_entity_ids(attr)):
+                    calls.append({
+                        "service": service,
+                        "kwargs": {attr: value},
+                        "entity_ids": entity_ids
+                    })
         return calls
 
-    def _get_unsynced_entities(self, attr: str) -> list[str]:
-        """Get members that support this attribute AND are not yet at target.
+    def _get_call_entity_ids(self, attr: str) -> list[str]:
+        """Get entity IDs for a given attribute.
         
-        Filters entities by:
-        1. Mode attributes: Member must support the target mode value
-        2. Temperature/humidity: Value must be outside tolerance range
-        3. Other attributes: Must exist in state and not match target
+        Default: returns all member entity IDs.
+        Override in derived classes for diffing behavior.
+        """
+        return self._group.climate_entity_ids
+
+    def _get_unsynced_entities(self, attr: str) -> list[str]:
+        """Get members that need to be synced for this attribute.
+        
+        Compares current member state against target_state and returns
+        only entities that differ from the target.
         
         Args:
-            attr: The attribute to check (e.g., 'temperature', 'hvac_mode')
-            
-        Returns:
-            List of entity IDs that need to be synced.
+            attr: The attribute to check
         """
         entity_ids = []
-        
-        target_value = getattr(self._group.target_state, attr, None)
 
+        target_value = getattr(self.target_state, attr, None)
         if target_value is None:
             return []
 
         for entity_id in self._group.climate_entity_ids:
-            state = self._group.hass.states.get(entity_id)
+            state = self._hass.states.get(entity_id)
             if not state:
                 continue
 
-            # Modes: Check if attr is in its modes list
+            # Check mode support
             if attr in MODE_MODES_MAP:
                 if target_value not in state.attributes.get(MODE_MODES_MAP[attr], []):
                     continue
-            # Temperature/Humidity: Check if attr exists in state
             elif attr not in state.attributes:
-                continue
+                    continue
 
             current_value = state.state if attr == ATTR_HVAC_MODE else state.attributes.get(attr)
 
-            # Output Filter: Partial Sync
-            # If enabled, do not send commands to members that are OFF when the group is active (ON).
-            # This solves Scenario 2: Changing Group Mode/Temp should not wake up OFF members.
-            if (
-                self._group.config.get(CONF_IGNORE_OFF_MEMBERS)
-                and self._group.target_state.hvac_mode != HVACMode.OFF
-                # Only filter if the member IS OFF
-                and state.state == HVACMode.OFF
-                # And we are trying to set something other than OFF
-                # (implied by group.target_state != OFF, but explicit check for safety)
-                and target_value != HVACMode.OFF
-            ):
-                # Deadlock Prevention:
-                # If ALL members are OFF, we MUST NOT ignore them, otherwise we can never turn the group ON.
-                # Check if there is at least one other member that is NOT OFF.
-                if any(
-                    self._group.hass.states.get(m_id).state != HVACMode.OFF 
-                    for m_id in self._group.climate_entity_ids 
-                    if (s := self._group.hass.states.get(m_id)) and s.state != STATE_UNAVAILABLE
-                ):
-                     _LOGGER.debug("[%s] Partial Sync: Ignoring update for OFF member %s", self._group.entity_id, entity_id)
-                     continue
+            # Partial Sync Output Filter
+            if self._skip_off_members(state, target_value):
+                _LOGGER.debug("[%s] Partial Sync: Skipping OFF member %s", self._group.entity_id, entity_id)
+                continue
 
-            # Float values: Check if current_value is within tolerance of target_value
+            # Float tolerance check
             if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH, ATTR_HUMIDITY):
                 if self._group.within_tolerance(current_value, target_value):
                     continue
 
-            # If current/target values differ, add to list
             if current_value != target_value:
                 entity_ids.append(entity_id)
 
         return entity_ids
+
+    def _get_parent_id(self) -> str:
+        """Create a unique Parent ID for echo tracking.
+        
+        Format: "Timestamp|MasterEntityID"
+        """
+        timestamp = str(time.time())
+        master_entity = self.target_state.last_entity or ""
+        return f"{timestamp}|{master_entity}"
+
+    def _inject_call_kwargs(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Inject kwargs into the data dict."""
+        return self._min_temp_when_off(data)
+
+    def _min_temp_when_off(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Inject Min Temp if turning OFF and configured."""
+        if not self._group.min_temp_off:
+            return data
+        if data.get(ATTR_HVAC_MODE) == HVACMode.OFF:
+            return {**data, ATTR_TEMPERATURE: self._group._attr_min_temp}
+        return data
+
+    def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
+        """Hook for derived classes to implement custom call blocking logic.
+        Returns:
+            bool: True if calls should be blocked, False otherwise.
+        """
+        return False
+
+    def _block_call_attr(self, data: dict[str, Any], attr: str) -> bool:
+        """Block calls for specific attributes."""
+        return self._block_wakeup_calls(data, attr)
+
+    def _block_wakeup_calls(self, data: dict[str, Any], attr: str) -> bool:
+        """Block calls that would wake up devices.
+        
+        Prevent setpoint changes if target HVAC mode is OFF
+        Exception: Allow Min Temp Injection
+        """
+        if data.get(ATTR_HVAC_MODE) == HVACMode.OFF and attr != ATTR_HVAC_MODE:
+            if attr == ATTR_TEMPERATURE and self._group.min_temp_off:
+                return False
+            return True
+
+        return False
+
+    def _skip_off_members(self, state, target_value) -> bool:
+        """Check if this OFF member should be skipped (Partial Sync).
+        
+        Used by handlers that support CONF_IGNORE_OFF_MEMBERS to prevent
+        waking up members that were manually turned OFF.
+        """
+        if not self._group.config.get(CONF_IGNORE_OFF_MEMBERS):
+            return False
+        if self.target_state.hvac_mode == HVACMode.OFF:
+            return False
+        if state.state != HVACMode.OFF:
+            return False
+        if target_value == HVACMode.OFF:
+            return False
+        
+        # Deadlock Prevention: Don't skip if ALL members are OFF
+        return any(
+            self._hass.states.get(member_id).state != HVACMode.OFF 
+            for member_id in self._group.climate_entity_ids 
+            if (member_state := self._hass.states.get(member_id)) and member_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+        )
+
+
+class ClimateCallHandler(BaseServiceCallHandler):
+    """Handler for ClimateGroup's own service calls (user commands).
+    
+    This handler is used for direct user interactions:
+    - set_temperature, set_hvac_mode, set_fan_mode, etc.
+    
+    Generates calls based on target_state diff (only sends to unsynced members).
+    No blocking mode check - user commands always proceed.
+    """
+
+    CONTEXT_ID = "group"
+
+    def __init__(self, group: ClimateGroup):
+        """Initialize the climate call handler."""
+        super().__init__(group)
+
+    def _generate_calls(self, data: dict[str, Any] | None = None, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
+        """Generate calls for user operations."""
+        if not data:
+            return []
+        return super()._generate_calls(data=data, filter_state=filter_state)
+
+    def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
+        """Block calls if blocking mode is active, UNLESS hvac_mode is being changed."""
+        if data and ATTR_HVAC_MODE in data:
+            _LOGGER.debug("[%s] Allow blocking bypass (HVAC mode change)", self._group.entity_id)
+            return False
+        return self._group.blocking_mode
+
+    def _block_call_attr(self, data: dict[str, Any], attr: str) -> bool:
+        """Do not block any attributes."""
+        return False
+
+
+class SyncCallHandler(BaseServiceCallHandler):
+    """Generates calls based on target_state diff.
+    
+    Used when Sync Mode (Lock/Mirror) is active. Compares current member states
+    against target_state and generates calls to sync deviations.
+    
+    Includes:
+    - Blocking mode check
+    - Partial sync output filter (don't wake OFF members)
+    - Wake-up bug prevention
+    """
+
+    CONTEXT_ID = "sync_mode"
+
+    def __init__(self, group: ClimateGroup):
+        """Initialize the sync call handler."""
+        super().__init__(group)
+        self._filter_state = FilterState.from_keys(group.config.get(CONF_SYNC_ATTRS, SYNC_TARGET_ATTRS))
+
+    def _generate_calls(self, data: dict[str, Any] | None = None, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
+        """Generate calls based on target_state diff."""
+        return super()._generate_calls(data=data, filter_state=self._filter_state)
+
+    def _get_call_entity_ids(self, attr: str) -> list[str]:
+        """Override to use diffing - only return entities that need sync."""
+        return self._get_unsynced_entities(attr)
+
+    def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
+        """Block calls if blocking mode is active."""
+        return self._group.blocking_mode
+
+
+class WindowControlCallHandler(BaseServiceCallHandler):
+    """Call handler for Window Control operations."""
+
+    CONTEXT_ID = "window_control"
+
+    def __init__(self, group: ClimateGroup):
+        """Initialize the window control call handler."""
+        super().__init__(group)
+
+
+class ScheduleCallHandler(BaseServiceCallHandler):
+    """Call handler for Schedule operations.
+    
+    Schedule always uses call_immediate() with CONTEXT_ID="schedule".
+    This handler ensures consistent behavior for all schedule calls.
+    """
+
+    CONTEXT_ID = "schedule"
+
+    def __init__(self, group: ClimateGroup):
+        """Initialize the schedule call handler."""
+        super().__init__(group)
+
+    def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
+        """Block schedule calls if blocking mode is active."""
+        return self._group.blocking_mode

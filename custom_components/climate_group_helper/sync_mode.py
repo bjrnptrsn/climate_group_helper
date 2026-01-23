@@ -44,6 +44,21 @@ class SyncModeHandler:
         _LOGGER.debug("[%s] Initialize sync mode: %s with FilterState: %s", self._group.entity_id, self._group.sync_mode, self._filter_state)
         self._active_sync_tasks: set[asyncio.Task] = set()
 
+    @property
+    def state_manager(self):
+        """Return the state manager for sync mode operations."""
+        return self._group.sync_mode_state_manager
+    
+    @property
+    def call_handler(self):
+        """Return the call handler for sync mode operations."""
+        return self._group.sync_mode_call_handler
+    
+    @property
+    def target_state(self):
+        """Return the current target state (from central source)."""
+        return self.state_manager.target_state
+
     def resync(self) -> None:
         """Handle changes based on sync mode."""
 
@@ -71,17 +86,6 @@ class SyncModeHandler:
         if event.context and hasattr(event.context, "origin_event"):
              origin_event = event.context.origin_event
 
-
-        # Block sync during startup phase
-        if self._group.startup_time and (time.time() - self._group.startup_time) < STARTUP_BLOCK_DELAY:
-            _LOGGER.debug("[%s] Startup phase, sync blocked", self._group.entity_id)
-            return
-
-        # Block sync during blocking mode
-        if self._group.blocking_mode:
-            _LOGGER.debug("[%s] Blocking mode active, sync blocked", self._group.entity_id)
-            return
-
         change_entity_id = self._group.change_state.entity_id or None
         change_dict = self._group.change_state.attributes()
 
@@ -89,10 +93,12 @@ class SyncModeHandler:
             _LOGGER.debug("[%s] No changes detected", self._group.entity_id)
             return
 
-        _LOGGER.debug("[%s] Change detected: %s. Entity ID: %s, Context Parent ID: %s, Origin Parent ID: %s", self._group.entity_id, change_dict, change_entity_id, event.context.parent_id, origin_event.context.parent_id)
+        _LOGGER.debug(
+            "[%s] Change detected: %s. Entity ID: %s, Context Parent ID: %s, Origin Parent ID: %s",
+            self._group.entity_id, change_dict, change_entity_id, event.context.parent_id, origin_event.context.parent_id
+        )
 
-        # Suppress echoes from window_control and schedule service calls
-        # (These use specific context IDs, so we can trust them)
+        # Suppress echoes from window_control
         if self._group.event and self._group.event.context.id == "window_control":
             _LOGGER.debug("[%s] Ignoring '%s' echo: %s", self._group.entity_id, self._group.event.context.id, change_dict)
             return
@@ -103,7 +109,7 @@ class SyncModeHandler:
             # Verify that WE originated this call.
             # External automations or user actions causing service calls should NOT be treated as our echoes.
             # We filter by the context IDs we assign in service_call.py.
-            trusted_context_ids = {"service_call", "sync_mode", "schedule"}
+            trusted_context_ids = {"service_call", "group", "sync_mode", "schedule"}
             
             if origin_event.context.id in trusted_context_ids:
                 service_data = origin_event.data.get("service_data", {})
@@ -165,7 +171,7 @@ class SyncModeHandler:
                 if accepted_changes:
                     # Side Effects are implicitly trusted. Adopt them consistently.
                     _LOGGER.debug("[%s] Processing Side Effect -> Updating TargetState (implicit) with %s", self._group.entity_id, accepted_changes)
-                    self._group.update_target_state("implicit", source_entity_id=change_entity_id, **accepted_changes)
+                    self.state_manager.update(entity_id=change_entity_id, **accepted_changes)
 
     
                 return
@@ -176,11 +182,10 @@ class SyncModeHandler:
         _LOGGER.debug("[%s] Change detected: %s (Source: %s)", self._group.entity_id, change_dict, change_entity_id)
 
         # Filter out setpoint values when HVACMode is off (meaningless values like frost protection)
-        # Filter out setpoint values when HVACMode is off (meaningless values like frost protection)
-        # BUT: Allow them if we are currently switching OUT of OFF mode.
+        # Allow them if we are currently switching out of off mode.
         is_switching_on = "hvac_mode" in change_dict and change_dict["hvac_mode"] != HVACMode.OFF
         
-        if self._group.target_state.hvac_mode == HVACMode.OFF and not is_switching_on:
+        if self.target_state.hvac_mode == HVACMode.OFF and not is_switching_on:
             setpoint_attrs = {"temperature", "target_temp_low", "target_temp_high", "humidity"}
             change_dict = {key: value for key, value in change_dict.items() if key not in setpoint_attrs}
             if not change_dict:
@@ -193,8 +198,8 @@ class SyncModeHandler:
                 key: value for key, value in change_dict.items() 
                 if self._filter_state.to_dict().get(key)
             }:
-                self._group.update_target_state("sync_mode", source_entity_id=change_entity_id, **filtered_dict)
-                _LOGGER.debug("[%s] Updated TargetState: %s", self._group.entity_id, self._group.target_state)
+                self.state_manager.update(entity_id=change_entity_id, **filtered_dict)
+                _LOGGER.debug("[%s] Updated TargetState: %s", self._group.entity_id, self.target_state)
             else:
                 _LOGGER.debug("[%s] Changes filtered out. TargetState not updated", self._group.entity_id)
 
@@ -208,12 +213,12 @@ class SyncModeHandler:
         ):
             # Attempt to update target state (will strictly return False if other members are ON)
             # If this returns True, it means we ARE the last man standing, and the group goes OFF.
-            if self._group.update_target_state("sync_mode", source_entity_id=change_entity_id, hvac_mode=HVACMode.OFF):
+            if self.state_manager.update(entity_id=change_entity_id, hvac_mode=HVACMode.OFF):
                  _LOGGER.debug("[%s] LOCK Mode: Accepted 'Last Man Standing' OFF command from %s", self._group.entity_id, change_entity_id)
 
-        # Mirror/lock mode: enforce group target
+        # Mirror/lock mode: enforce group target via self.call_handler
         sync_task = self._group.hass.async_create_background_task(
-            self._group.service_call_handler.call_debounced(filter_state=self._filter_state, context_id="sync_mode"),
+            self.call_handler.call_debounced(),
             name="climate_group_sync_enforcement"
         )
         self._active_sync_tasks.add(sync_task)

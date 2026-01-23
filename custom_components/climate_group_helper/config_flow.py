@@ -40,6 +40,7 @@ from .const import (
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
+    CONF_MIN_TEMP_OFF,
     CONF_WINDOW_MODE,
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
@@ -611,6 +612,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_IGNORE_OFF_MEMBERS,
                     default=current_config.get(CONF_IGNORE_OFF_MEMBERS, False),
+                ): bool,
+                vol.Optional(
+                    CONF_MIN_TEMP_OFF,
+                    default=current_config.get(CONF_MIN_TEMP_OFF, False),
                 ): bool,
             }
         )

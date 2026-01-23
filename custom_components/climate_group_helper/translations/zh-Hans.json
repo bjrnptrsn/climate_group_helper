@@ -137,12 +137,14 @@
         "data": {
           "expose_member_entities": "公开成员列表",
           "expose_smart_sensors": "公开智能传感器",
-          "ignore_off_members": "尊重成员关闭状态"
+          "ignore_off_members": "尊重成员关闭状态",
+          "min_temp_off": "关闭时的最低温度"
         },
         "data_description": {
           "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
           "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
-          "ignore_off_members": "如果启用，群组将不会打开当前处于关闭状态的成员。（部分同步）"
+          "ignore_off_members": "如果启用，群组将不会打开当前处于关闭状态的成员。（部分同步）",
+          "min_temp_off": "如果启用，将在关闭组时发送设备的最低温度（例如 5°C）。（强制关闭阀门）"
         },
         "description": "其他功能和实体公开。",
         "title": "其他设置"

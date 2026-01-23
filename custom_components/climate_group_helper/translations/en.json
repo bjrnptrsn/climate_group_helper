@@ -155,12 +155,14 @@
         "data": {
           "expose_smart_sensors": "Expose Smart Sensors",
           "expose_member_entities": "Expose Member List",
-          "ignore_off_members": "Respect Member OFF State"
+          "ignore_off_members": "Respect Member Off State",
+          "min_temp_off": "Minimum Temperature when Off"
         },
         "data_description": {
           "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
           "expose_member_entities": "Creates an attribute listing all member entity IDs.",
-          "ignore_off_members": "If enabled, the group will NOT turn on members that are currently OFF. (Partial Sync)"
+          "ignore_off_members": "If enabled, the group will NOT turn on members that are currently Off. (Partial Sync)",
+          "min_temp_off": "If enabled, sends the device's minimum temperature (e.g. 5°C) when turning the group off. (Force Valve Close)"
         }
       }
     },

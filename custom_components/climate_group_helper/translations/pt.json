@@ -137,12 +137,14 @@
         "data": {
           "expose_member_entities": "Expor lista de membros",
           "expose_smart_sensors": "Expor sensores inteligentes",
-          "ignore_off_members": "Respeitar estado OFF dos membros"
+          "ignore_off_members": "Respeitar estado Off dos membros",
+          "min_temp_off": "Temperatura mínima ao desligar"
         },
         "data_description": {
           "expose_member_entities": "Cria um atributo listando todos os IDs das entidades membro.",
           "expose_smart_sensors": "Cria entidades de sensor adicionais para a temperatura e humidade do grupo (útil para gráficos).",
-          "ignore_off_members": "Se ativado, o grupo NÃO ligará os membros que estão atualmente DESLIGADOS. (Sincronização Parcial)"
+          "ignore_off_members": "Se ativado, o grupo NÃO ligará os membros que estão atualmente DESLIGADOS. (Sincronização Parcial)",
+          "min_temp_off": "Se ativado, envia a temperatura mínima do dispositivo (ex. 5°C) ao desligar o grupo. (Assegura fecho da válvula)"
         },
         "description": "Funcionalidades adicionais e exposição de entidades.",
         "title": "Outras Definições"
