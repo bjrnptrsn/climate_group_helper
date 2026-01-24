@@ -1,11 +1,11 @@
 # 🌡️ Climate Group Helper
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/icon@2x.png" alt="Climate Group Helper Icon" width="128"/>
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/icon@2x.png" alt="Climate Group Helper Icon" width="192"/>
 </p>
 
 <p align="center">
-  <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-orange.svg" alt="HACS"/></a>
+  <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Default-orange.svg" alt="HACS"/></a>
   <a href="https://github.com/bjrnptrsn/climate_group_helper/releases"><img src="https://img.shields.io/github/v/release/bjrnptrsn/climate_group_helper" alt="Release"/></a>
 </p>
 
@@ -36,7 +36,7 @@ Use **multiple external sensors** for temperature and humidity. The group calcul
 
 ### ☯ Partial Sync (Respect Off)
 *New in v0.16!* Better handling for "Off" states:
-*   **Ignore Off Members:** Allows turning off individual rooms without the Group forcing them back On (avoids "fighting").
+*   **Ignore Off Members:** Allows turning off individual rooms without the Group forcing them back on (avoids "fighting").
 
 ### 🪟 Window Control
 *Redesigned in v0.16!* Automatically turn off heating when windows open and restore it when they close.
@@ -143,12 +143,10 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 ### Via HACS (Recommended)
 
-1. Open **HACS** > **Integrations**
-2. Click the **three dots** in the top right corner > **Custom repositories**
-3. Add the URL: `https://github.com/bjrnptrsn/climate_group_helper`
-4. Select **Integration** as the category and click **Add**
-5. Search for **Climate Group Helper** and install it
-6. **Restart Home Assistant**
+1. Open **HACS**
+2. Search for **Climate Group Helper**
+3. Click **Download**
+4. **Restart Home Assistant**
 
 ### Manual
 
