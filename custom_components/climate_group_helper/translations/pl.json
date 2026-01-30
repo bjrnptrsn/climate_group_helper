@@ -111,7 +111,7 @@
           "humidity": "Wilgotność",
           "members": "Członkowie i Tryby",
           "other": "Inne Ustawienia",
-          "schedule": "Harmonogram",
+          "schedule": "Harmonogram i Timery",
           "sync": "Tryb Sync",
           "temperature": "Temperatura",
           "timings": "Czasy",
@@ -150,14 +150,20 @@
         "title": "Inne Ustawienia"
       },
       "schedule": {
+        "title": "Harmonogram i Timery",
+        "description": "Skonfiguruj automatyzację dla grupy. Połącz encję harmonogramu, aby zautomatyzować zmiany i włączyć okresową synchronizację.",
         "data": {
-          "schedule_entity": "Encja Harmonogramu"
+          "schedule_entity": "Encja Harmonogramu",
+          "resync_interval": "Interwał Resync (minuty)",
+          "override_duration": "Czas trwania Override (minuty)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Wybierz encję harmonogramu. Pole 'Dodatkowe dane' może zawierać YAML z atrybutami takimi jak 'temperature: 20.5' lub 'hvac_mode: heat'."
-        },
-        "description": "Połącz encję harmonogramu Home Assistant, aby zautomatyzować zmiany temperatury i trybu.",
-        "title": "Harmonogram"
+          "schedule_entity": "Wybierz encję harmonogramu. Pole 'Dodatkowe dane' może zawierać YAML z atrybutami takimi jak 'temperature: 20.5' lub 'hvac_mode: heat'.",
+          "resync_interval": "Wymuś synchronizację członków do stanu docelowego co X minut. Zapobiega dryfowaniu, jeśli urządzenia przegapią polecenie lub zostaną ręcznie dostosowane. Ustaw na 0, aby wyłączyć.",
+          "override_duration": "Czas trwania ręcznych override. Po tym czasie grupa automatycznie powraca do aktualnego harmonogramu. Ustaw na 0, aby pominąć okres override.",
+          "persist_changes": "Jeśli włączone, zmiany w samym harmonogramie będą ignorowane, dopóki aktywny jest ręczny override. Ponownie stosuje aktualny harmonogram dopiero po wygaśnięciu override."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Zewnętrzne Czujniki Temperatury",
           "temp_target_avg": "Docelowa Temperatura (Sterowanie)",
           "temp_target_round": "Precyzja Docelowej Temperatury",
-          "temp_update_targets": "Zapisz Zewnętrzną Temp do Encji"
+          "temp_update_targets": "Zapisz Zewnętrzną Temp do Encji",
+          "temp_calibration_mode": "Tryb Kalibracji",
+          "calibration_heartbeat": "Puls Kalibracji (min)"
         },
         "data_description": {
           "temp_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
           "temp_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla temperatury grupy.",
           "temp_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
           "temp_target_round": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
-          "temp_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych (np. offsety kalibracji TRV). Przydatne, aby termostaty znały rzeczywistą temperaturę w pomieszczeniu."
+          "temp_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych (np. offsety kalibracji TRV). Przydatne, aby termostaty znały rzeczywistą temperaturę w pomieszczeniu.",
+          "temp_calibration_mode": "Absolutny: Wyślij wartość bezpośrednio. Offset: Wyślij różnicę (Zewnętrzna - TRV Wewnętrzna). Skalowany: Wyślij jako liczbę całkowitą x100 (np. 21.5 -> 2150).",
+          "calibration_heartbeat": "Okresowo wymuszaj synchronizację kalibracji do encji, nawet jeśli temperatura się nie zmieniła. Ustaw na 0, aby wyłączyć."
         },
         "description": "Skonfiguruj, jak grupa obsługuje agregację temperatury i punkty nastawy. Czujniki zewnętrzne nadpiszą odczyty członków, jeśli zostaną wybrane.",
         "title": "Ustawienia Temperatury"
@@ -303,6 +313,13 @@
         "half": "Pół Stopnia (0.5°)",
         "integer": "Liczby Całkowite (1°)",
         "none": "Bez Zaokrąglania (Dokładne)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolutny – Wyślij wartość bezpośrednio (Standard)",
+        "offset": "Offset – Wyślij różnicę (Zewnętrzna - TRV Wewnętrzna)",
+        "scaled": "Skalowany – Całkowita x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

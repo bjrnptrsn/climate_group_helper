@@ -111,7 +111,7 @@
           "humidity": "Feuchtigkeit",
           "members": "Mitglieder & Modi",
           "other": "Andere Einstellungen",
-          "schedule": "Zeitplan",
+          "schedule": "Zeitplan & Timer",
           "sync": "Sync-Modus",
           "temperature": "Temperatur",
           "timings": "Zeiten (Timings)",
@@ -150,14 +150,20 @@
         "title": "Andere Einstellungen"
       },
       "schedule": {
+        "title": "Zeitplan & Timer",
+        "description": "Konfiguriere die Automatisierung für die Gruppe. Verknüpfe eine Zeitplan-Entität, um Änderungen zu automatisieren und die periodische Synchronisierung zu aktivieren.",
         "data": {
-          "schedule_entity": "Zeitplan-Entität"
+          "schedule_entity": "Zeitplan-Entität",
+          "resync_interval": "Resync-Intervall (Minuten)",
+          "override_duration": "Override-Dauer (Minuten)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Wähle eine Zeitplan-Entität. Das Feld 'Zusätzliche Daten' des Zeitplans kann YAML mit Attributen wie 'temperature: 20.5' oder 'hvac_mode: heat' enthalten."
-        },
-        "description": "Verknüpfe eine Home Assistant Zeitplan-Entität, um Temperatur- und Modusänderungen zu bestimmten Zeiten zu automatisieren.",
-        "title": "Zeitplan"
+          "schedule_entity": "Wähle eine Zeitplan-Entität. Das Feld 'Zusätzliche Daten' des Zeitplans kann YAML mit Attributen wie 'temperature: 20.5' oder 'hvac_mode: heat' enthalten.",
+          "resync_interval": "Erzwinge alle X Minuten den Zielzustand der Gruppe. Stellt sicher, dass alle Geräte dem Zeitplan folgen. Auf 0 setzen zum Deaktivieren.",
+          "override_duration": "Die Dauer für manuelle Änderungen. Nach dieser Zeit kehrt die Gruppe automatisch zum Zeitplan zurück. Auf 0 setzen, um die Schonfrist zu überspringen.",
+          "persist_changes": "Wenn aktiviert, werden Änderungen am Zeitplan selbst ignoriert, solange ein manueller Override aktiv ist. Wendet den aktuellen Zeitplan erst nach Ablauf des Overrides wieder an."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Externer Temperatursensor",
           "temp_target_avg": "Zieltemperatur (Steuerung)",
           "temp_target_round": "Zieltemperatur Präzision",
-          "temp_update_targets": "Schreibe externe Temp. in Entitäten"
+          "temp_update_targets": "Schreibe externe Temp. in Entitäten",
+          "temp_calibration_mode": "Kalibrierungs-Modus",
+          "calibration_heartbeat": "Kalibrierungs-Heartbeat (min)"
         },
         "data_description": {
           "temp_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
           "temp_sensors": "Verwende externe Sensoren anstelle der Mitgliederwerte. Diese werden zur einzigen Wahrheitsquelle für die Temperatur der Gruppe.",
           "temp_target_avg": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
           "temp_target_round": "Gilt nur für Werte, die an Geräte gesendet werden, nicht für aktuelle/angezeigte Werte.",
-          "temp_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten (z.B. TRV-Kalibrierung). Nützlich, um Thermostate über die tatsächliche Raumtemperatur zu informieren."
+          "temp_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten (z.B. TRV-Kalibrierung). Nützlich, um Thermostate über die tatsächliche Raumtemperatur zu informieren.",
+          "temp_calibration_mode": "Absolut: Wert direkt senden. Offset: Differenz senden (Extern - TRV Intern). Skaliert: Sende als Integer x100 (z.B. 21,5 -> 2150).",
+          "calibration_heartbeat": "Erzwinge periodisch die Synchronisierung der Kalibrierung, auch wenn sich die Temperatur nicht geändert hat. Setze auf 0, um zu deaktivieren."
         },
         "description": "Konfiguriere, wie die Gruppe Temperatur-Aggregation und Sollwerte handhabt. Externe Sensoren überschreiben Mitglieder-Messwerte, falls ausgewählt.",
         "title": "Temperatureinstellungen"
@@ -303,6 +313,13 @@
         "half": "Halbes Grad (0.5°)",
         "integer": "Ganze Zahl (1°)",
         "none": "Keine Rundung (Exakt)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolut – Wert direkt senden (Standard)",
+        "offset": "Offset – Differenz senden (Extern - TRVs Intern)",
+        "scaled": "Skaliert – Integer x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

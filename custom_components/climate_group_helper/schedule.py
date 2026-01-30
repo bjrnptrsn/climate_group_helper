@@ -2,12 +2,18 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from homeassistant.core import Event, EventStateChangedData, callback
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.core import callback
+from homeassistant.helpers.event import async_track_state_change_event, async_call_later
 
-from .const import ATTR_SERVICE_MAP, CONF_SCHEDULE_ENTITY
+from .const import (
+    ATTR_SERVICE_MAP,
+    CONF_SCHEDULE_ENTITY,
+    CONF_RESYNC_INTERVAL,
+    CONF_OVERRIDE_DURATION,
+    CONF_PERSIST_CHANGES,
+)
 
 if TYPE_CHECKING:
     from .climate import ClimateGroup
@@ -17,7 +23,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class ScheduleHandler:
-    """Handles schedule-based state changes using HA Schedule entities."""
+    """Handles schedule-based state changes using HA Schedule entities.
+    
+    Architecture (Event-Driven):
+    - Observes Schedule Transitions (via HA Entity)
+    - Receives Service Call Triggers (User/Sync Hooks)
+    - Manages Automatic Resync & Override Timers
+    """
 
     def __init__(self, group: ClimateGroup) -> None:
         """Initialize the schedule handler."""
@@ -25,31 +37,38 @@ class ScheduleHandler:
         self._hass = group.hass
         self._unsub_listener = None
         self._schedule_entity = group.config.get(CONF_SCHEDULE_ENTITY)
+        
+        # New Feature Options
+        self._resync_interval = group.config.get(CONF_RESYNC_INTERVAL, 0)
+        self._override_duration = group.config.get(CONF_OVERRIDE_DURATION, 0)
+        self._persist_changes = group.config.get(CONF_PERSIST_CHANGES, False)
 
-        _LOGGER.debug("[%s] Schedule initialized: '%s'", self._group.entity_id, self._schedule_entity)
+        # Timer
+        self._timer = None
 
-    # =========================================================================
-    # Properties - Access to specialized managers
-    # =========================================================================
+        _LOGGER.debug("[%s] Schedule initialized: '%s' (Resync: %sm, Override: %sm, Sticky: %s)", 
+                      self._group.entity_id, self._schedule_entity, 
+                      self._resync_interval, self._override_duration, self._persist_changes)
 
     @property
     def state_manager(self):
         """Return the specialized state manager for schedule updates."""
         return self._group.schedule_state_manager
-    
+
     @property
     def call_handler(self):
         """Return the specialized call handler for schedule operations."""
         return self._group.schedule_call_handler
-    
+
+    @property
+    def group_state(self):
+        """Return the current group state (from central source)."""
+        return self._group.current_group_state
+
     @property
     def target_state(self):
         """Return the current target state (from central source)."""
         return self.state_manager.target_state
-
-    # =========================================================================
-    # Public API
-    # =========================================================================
 
     async def async_setup(self) -> None:
         """Subscribe to schedule entity state changes."""
@@ -57,71 +76,104 @@ class ScheduleHandler:
             _LOGGER.debug("[%s] Schedule control disabled (no entity configured)", self._group.entity_id)
             return
 
-        # Subscribe to schedule entity state changes
+        @callback
+        def handle_state_change(_event):
+            _LOGGER.debug("[%s] Schedule entity changed", self._group.entity_id)
+            self._hass.async_create_task(self.schedule_listener(caller="slot"))
+
         self._unsub_listener = async_track_state_change_event(
-            self._hass, [self._schedule_entity], self._state_change_listener
+            self._hass, [self._schedule_entity], handle_state_change
         )
 
-        _LOGGER.debug("[%s] Schedule handler subscribed to: '%s'", self._group.entity_id, self._schedule_entity)
-        # Note: Initial slot is applied by climate.py when all members are ready
+        # Register service call trigger
+        self._group.climate_call_handler.register_call_trigger(self.service_call_trigger)
+        self._group.sync_mode_call_handler.register_call_trigger(self.service_call_trigger)
 
-    async def apply_initial_slot(self) -> None:
-        """Apply the current schedule slot if active. Called by climate.py when all members ready."""
-        if not self._schedule_entity:
-            return
-            
-        if state := self._hass.states.get(self._schedule_entity):
-            if state.state == "on":
-                _LOGGER.debug("[%s] Applying initial schedule slot", self._group.entity_id)
-                await self._apply_slot(state.attributes)
+        _LOGGER.debug("[%s] Schedule handler setup complete (subscribed to: %s)", self._group.entity_id, self._schedule_entity)
+
+    @callback
+    def service_call_trigger(self) -> None:
+        """Hook called when a service call (e.g. user command) was executed."""
+        _LOGGER.debug("[%s] Call trigger hook triggered by service handler", self._group.entity_id)
+        self._hass.async_create_task(self.schedule_listener(caller="service_call"))
 
     def async_teardown(self) -> None:
         """Unsubscribe from schedule entity."""
         if self._unsub_listener:
             self._unsub_listener()
             self._unsub_listener = None
+        self._cancel_timer()
 
-    # =========================================================================
-    # Internal Implementation
-    # =========================================================================
+    def _cancel_timer(self) -> None:
+        """Cancel the active timer (if any)."""
+        if self._timer:
+            self._timer()
+            self._timer = None
 
-    @callback
-    def _state_change_listener(self, event: Event[EventStateChangedData]) -> None:
-        """Handle schedule entity state changes."""
-        if (new_state := event.data.get("new_state")) is None:
+    def _start_timer(self, timer_type: str | None = None) -> None:
+        """Start an Automation Timer (Override or Resync)."""
+        self._cancel_timer()
+
+        if timer_type == "resync":
+            duration = self._resync_interval
+        elif timer_type == "override":
+            duration = self._override_duration
+        else:
+            _LOGGER.error("[%s] Invalid timer type: %s", self._group.entity_id, timer_type)
             return
 
-        _LOGGER.debug("[%s] Schedule changed: %s -> attributes=%s", self._group.entity_id, new_state.state, new_state.attributes)
-
-        # Apply slot data if schedule is active (slot data is in direct attributes)
-        if new_state.state == "on":
-            self._hass.async_create_task(self._apply_slot(new_state.attributes))
-
-    async def _apply_slot(self, slot_data: dict[str, Any]) -> None:
-        """Apply schedule slot data to target_state."""
-        if not slot_data:
-            _LOGGER.debug("[%s] Empty slot data, skipping", self._group.entity_id)
+        if duration <= 0:
             return
 
-        # Filter to only valid attributes
-        filtered_data = {
+        @callback
+        def handle_timer_timeout(_now):
+            _LOGGER.debug("[%s] %s timer expired", self._group.entity_id, timer_type.capitalize())
+            self._hass.async_create_task(self.schedule_listener(caller=timer_type))
+
+        self._timer = async_call_later(
+            self._hass, duration * 60, handle_timer_timeout
+        )
+        _LOGGER.debug("[%s] %s timer started: %s minutes", self._group.entity_id, timer_type.capitalize(), duration)
+
+    async def schedule_listener(self, caller: str):
+        """Apply schedule logic to target_state."""
+        if not self._schedule_entity:
+            return
+
+        _LOGGER.debug("[%s] Schedule listener triggered by: %s", self._group.entity_id, caller)
+
+        # Sticky Override Check (Persist Changes)
+        # If user is in control and a slot transition happens, ignore the slot transition.
+        if (
+            caller == "slot" 
+            and self._persist_changes 
+            and self.target_state.last_source not in ("schedule", None)
+        ):
+            _LOGGER.debug("[%s] Sticky Override active: Ignoring schedule transition.", self._group.entity_id)
+            return
+
+        # Read current slot data
+        slot_data = {}
+        if state := self._hass.states.get(self._schedule_entity):
+            if state.state == "on":
+                slot_data = state.attributes
+
+        filtered_slot = {
             key: value for key, value in slot_data.items()
             if key in list(ATTR_SERVICE_MAP.keys())
         }
 
-        # Skip if no valid attributes
-        if not filtered_data:
-            _LOGGER.debug("[%s] No valid attributes in slot data: %s", self._group.entity_id, slot_data)
+        if not filtered_slot:
             return
 
-        # Skip if slot data matches current target_state (no change needed)
-        current_target = self.target_state.to_dict(attributes=list(filtered_data.keys()))
-        if filtered_data == current_target:
-            _LOGGER.debug("[%s] Slot data matches target_state, skipping", self._group.entity_id)
-            return
+        if caller != "service_call":
+            current_target = self.target_state.to_dict(attributes=list(filtered_slot.keys()))
+            if current_target != filtered_slot:
+                self.state_manager.update(**filtered_slot)
+            await self.call_handler.call_immediate()
 
-        _LOGGER.info("[%s] Applying schedule slot: %s", self._group.entity_id, filtered_data)
-
-        # Update target state via state_manager and call via call_handler
-        self.state_manager.update(**filtered_data)
-        await self.call_handler.call_immediate()
+        self._start_timer(
+            "override"
+            if caller == "service_call" and self._override_duration > 0
+            else "resync"
+        )

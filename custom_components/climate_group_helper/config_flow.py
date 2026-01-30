@@ -28,6 +28,9 @@ from .const import (
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
     CONF_IGNORE_OFF_MEMBERS,
+    CONF_OVERRIDE_DURATION,
+    CONF_PERSIST_CHANGES,
+    CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
@@ -40,6 +43,8 @@ from .const import (
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
+    CONF_TEMP_CALIBRATION_MODE,
+    CONF_CALIBRATION_HEARTBEAT,
     CONF_MIN_TEMP_OFF,
     CONF_WINDOW_MODE,
     CONF_ZONE_OPEN_DELAY,
@@ -57,6 +62,7 @@ from .const import (
     SYNC_TARGET_ATTRS,
     AverageOption,
     RoundOption,
+    CalibrationMode,
     SyncMode,
     WindowControlMode,
 )
@@ -283,6 +289,30 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     selector.EntitySelectorConfig(
                         domain=NUMBER_DOMAIN,
                         multiple=True,
+                    )
+                ),
+                vol.Required(
+                    CONF_TEMP_CALIBRATION_MODE,
+                    default=current_config.get(
+                        CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE
+                    ),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[opt.value for opt in CalibrationMode],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="temp_calibration_mode",
+                    )
+                ),
+                vol.Optional(
+                    CONF_CALIBRATION_HEARTBEAT,
+                    default=current_config.get(CONF_CALIBRATION_HEARTBEAT, 0),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=120,
+                        step=1,
+                        unit_of_measurement="min",
+                        mode=selector.NumberSelectorMode.SLIDER,
                     )
                 ),
             }
@@ -582,6 +612,34 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         domain="schedule",
                     )
                 ),
+                vol.Optional(
+                    CONF_RESYNC_INTERVAL,
+                    default=current_config.get(CONF_RESYNC_INTERVAL, 0),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=120,
+                        step=1,
+                        unit_of_measurement="min",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(
+                    CONF_OVERRIDE_DURATION,
+                    default=current_config.get(CONF_OVERRIDE_DURATION, 0),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=120,
+                        step=1,
+                        unit_of_measurement="min",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(
+                    CONF_PERSIST_CHANGES,
+                    default=current_config.get(CONF_PERSIST_CHANGES, False),
+                ): bool,
             }
         )
 

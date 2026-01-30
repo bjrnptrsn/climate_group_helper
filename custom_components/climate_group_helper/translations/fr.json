@@ -111,7 +111,7 @@
           "humidity": "Humidité",
           "members": "Membres & Modes",
           "other": "Autres Paramètres",
-          "schedule": "Programmation",
+          "schedule": "Programmation & Timers",
           "sync": "Mode Sync",
           "temperature": "Température",
           "timings": "Timings",
@@ -150,14 +150,20 @@
         "title": "Autres Paramètres"
       },
       "schedule": {
+        "title": "Programmation & Timers",
+        "description": "Configurez l'automatisation du groupe. Liez une entité de programmation pour automatiser les changements et activer la synchronisation périodique.",
         "data": {
-          "schedule_entity": "Entité de Programmation"
+          "schedule_entity": "Entité de Programmation",
+          "resync_interval": "Intervalle de Resync (minutes)",
+          "override_duration": "Durée d'Override (minutes)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Sélectionnez une entité de programmation. Le champ 'Données supplémentaires' peut contenir du YAML avec des attributs comme 'temperature: 20.5' ou 'hvac_mode: heat'."
-        },
-        "description": "Liez une entité de programmation Home Assistant pour automatiser les changements de température et de mode.",
-        "title": "Programmation"
+          "schedule_entity": "Sélectionnez une entité de programmation. Le champ 'Données supplémentaires' peut contenir du YAML avec des attributs comme 'temperature: 20.5' ou 'hvac_mode: heat'.",
+          "resync_interval": "Forcer la synchronisation des membres vers l'état cible toutes les X minutes. Évite les dérives si les appareils manquent une commande ou sont ajustés manuellement. Mettre à 0 pour désactiver.",
+          "override_duration": "La durée des overrides manuels. Après ce temps, le groupe revient automatiquement à la programmation actuelle. Mettre à 0 pour ignorer la période d'override.",
+          "persist_changes": "Si activé, les changements de programmation seront ignorés tant qu'un override manuel est actif. Réapplique la programmation actuelle seulement après l'expiration de l'override."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Capteurs de Température Externes",
           "temp_target_avg": "Température Cible (Contrôle)",
           "temp_target_round": "Précision de la Température Cible",
-          "temp_update_targets": "Écrire la Temp Externe vers les Entités"
+          "temp_update_targets": "Écrire la Temp Externe vers les Entités",
+          "temp_calibration_mode": "Mode de Calibration",
+          "calibration_heartbeat": "Heartbeat de Calibration (min)"
         },
         "data_description": {
           "temp_current_avg": "Comment le groupe résume les relevés des capteurs de ses membres.",
           "temp_sensors": "Utiliser des capteurs externes au lieu des relevés des membres. Ils deviennent la seule source de vérité pour la température du groupe.",
           "temp_target_avg": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
           "temp_target_round": "S'applique uniquement aux valeurs envoyées aux appareils, pas aux valeurs actuelles/affichées.",
-          "temp_update_targets": "Écrire la valeur du capteur externe vers des entités numériques (ex. offsets de calibration TRV). Utile pour garder les thermostats informés de la température réelle de la pièce."
+          "temp_update_targets": "Écrire la valeur du capteur externe vers des entités numériques (ex. offsets de calibration TRV). Utile pour garder les thermostats informés de la température réelle de la pièce.",
+          "temp_calibration_mode": "Absolu: Envoyer valeur directe. Offset: Envoyer delta (Externe - TRV Interne). Échelonné: Envoyer comme entier x100 (ex. 21.5 -> 2150).",
+          "calibration_heartbeat": "Forcer périodiquement la synchronisation de la calibration vers les entités même si la température n'a pas changé. Régler sur 0 pour désactiver."
         },
         "description": "Configurer comment le groupe gère l'agrégation de la température et les consignes. Les capteurs externes remplaceront les relevés des membres si sélectionnés.",
         "title": "Paramètres de Température"
@@ -303,6 +313,13 @@
         "half": "Demi Degré (0.5°)",
         "integer": "Nombres Entiers (1°)",
         "none": "Pas d'Arrondi (Exact)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolu – Envoyer valeur directe (Standard)",
+        "offset": "Offset – Envoyer delta (Externe - TRV Interne)",
+        "scaled": "Échelonné – Entier x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

@@ -111,7 +111,7 @@
           "humidity": "Fuktighet",
           "members": "Medlemmar & Lägen",
           "other": "Andra Inställningar",
-          "schedule": "Schema",
+          "schedule": "Schema & Timers",
           "sync": "Synkroniseringsläge",
           "temperature": "Temperatur",
           "timings": "Tider",
@@ -150,14 +150,20 @@
         "title": "Andra Inställningar"
       },
       "schedule": {
+        "title": "Schema & Timers",
+        "description": "Konfigurera automatisering för gruppen. Länka en schema-enhet för att automatisera ändringar och aktivera periodisk synkronisering.",
         "data": {
-          "schedule_entity": "Schema Enhet"
+          "schedule_entity": "Schema Enhet",
+          "resync_interval": "Resync Intervall (minuter)",
+          "override_duration": "Override Varaktighet (minuter)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Välj en schema-enhet. Fältet 'Ytterligare data' kan innehålla YAML med attribut som 'temperature: 20.5' eller 'hvac_mode: heat'."
-        },
-        "description": "Länka en Home Assistant schema-enhet för att automatisera temperatur- och lägesändringar.",
-        "title": "Schema"
+          "schedule_entity": "Välj en schema-enhet. Fältet 'Ytterligare data' kann innehålla YAML med attribut som 'temperature: 20.5' eller 'hvac_mode: heat'.",
+          "resync_interval": "Tvinga synkronisering av medlemmar till måltillståndet var X minut. Förhindrar avvikelser om enheter missar ett kommando eller justeras manuellt. Sätt till 0 för att inaktivera.",
+          "override_duration": "Varaktigheten för manuella overrides. Efter denna tid återgår gruppen automatiskt till det aktuella schemat. Sätt till 0 för att hoppa över override-perioden.",
+          "persist_changes": "Om aktiverat kommer ändringar i schemat att ignoreras så länge en manuell override är aktiv. Återaktiverar det aktuella schemat först efter att overriden har gått ut."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Externa Temperatursensorer",
           "temp_target_avg": "Mål Temperatur (Kontroll)",
           "temp_target_round": "Mål Temperatur Precision",
-          "temp_update_targets": "Skriv Extern Temp till Entiteter"
+          "temp_update_targets": "Skriv Extern Temp till Entiteter",
+          "temp_calibration_mode": "Kalibreringsläge",
+          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
         },
         "data_description": {
           "temp_current_avg": "Hur gruppen sammanfattar sensoravläsningar från sina medlemmar.",
           "temp_sensors": "Använd externa sensorer istället för medlemsavläsningar. Dessa blir den enda sanningen för gruppens temperatur.",
           "temp_target_avg": "Hur gruppen beräknar målvärdet att skicka till sina medlemmar.",
           "temp_target_round": "Gäller endast värden som skickas till enheter, inte aktuella/visade värden.",
-          "temp_update_targets": "Skriv det externa sensorvärdet till nummerentiteter (t.ex. TRV kalibrering offset). Användbart för att hålla termostater medvetna om faktisk rumstemperatur."
+          "temp_update_targets": "Skriv det externa sensorvärdet till nummerentiteter (t.ex. TRV kalibrering offset). Användbart för att hålla termostater medvetna om faktisk rumstemperatur.",
+          "temp_calibration_mode": "Absolut: Skicka värde direkt. Offset: Skicka skillnad (Extern - TRV Intern). Skalad: Skicka som heltal x100 (t.ex. 21.5 -> 2150).",
+          "calibration_heartbeat": "Tvinga periodiskt kalibreringssynkronisering till entiteter även om temperaturen inte har ändrats. Ställ in på 0 för att inaktivera."
         },
         "description": "Konfigurera hur gruppen hanterar temperaturaggregering och målvärden. Externa sensorer kommer att åsidosätta medlemsavläsningar om de väljs.",
         "title": "Temperaturinställningar"
@@ -303,6 +313,13 @@
         "half": "Halv Grad (0.5°)",
         "integer": "Heltal (1°)",
         "none": "Ingen Avrundning (Exakt)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolut – Skicka värde direkt (Standard)",
+        "offset": "Offset – Skicka skillnad (Extern - TRV Intern)",
+        "scaled": "Skalad – Heltal x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

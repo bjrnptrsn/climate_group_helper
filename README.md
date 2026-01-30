@@ -23,39 +23,40 @@ Use **multiple external sensors** for temperature and humidity. The group calcul
 *   **Averaging:** Mean, Median, Min, or Max.
 *   **Precision:** Round values to match your device (e.g. 0.5°).
 
-### 🔄 Calibration Sync (Write Targets)
-*New in v0.13!* Write the calculated sensor value **back to physical devices** (e.g. `number.thermostat_external_input`). Perfect for TRVs that support external temperature calibration.
+### 🎚️ Device Calibration
+*Improved in v0.18!* Write the external sensor value back to your TRVs to fix their internal temperature reading.
+*   **Modes:** Absolute (Standard), Offset (Delta calculation), and Scaled (x100 for Danfoss Ally).
+*   **Heartbeat:** Periodically re-sends the calibration value to prevent sensor timeouts on Zigbee devices.
 
-### 🔒 Advanced Sync Modes
+### 🔄 Advanced Sync Modes
 *   **Standard:** Classic one-way control (Group → Members).
 *   **Mirror:** Two-way sync. Change one device, all others follow.
-*   **Lock:** Enforce group state. Reverts manual changes on members.
+*   **Lock:** Enforce group settings. Reverts manual changes on members.
 
-### 🎚️ Selective Attribute Sync
-*New in v0.13!* Choose **exactly** which attributes to sync in Lock/Mirror modes. Example: Sync temperature but allow individual fan control.
-
-### ☯ Partial Sync (Respect Off)
-*New in v0.16!* Better handling for "Off" states:
-*   **Ignore Off Members:** Allows turning off individual rooms without the Group forcing them back on (avoids "fighting").
+*   **Selective Attribute Sync:** Choose **exactly** which attributes to sync in Lock/Mirror modes. Example: Sync temperature but allow individual fan control.
+*   **Partial Sync (Respect Off):** Prevents the group from waking up members that are manually turned `off`.
+    *   **Ignore Off Members:** If a member is turned `off`, the group will not force it back on during synchronization (allows "Soft Off" for individual devices).
+    *   **Last Man Standing:** Only when the *last* active member is turned `off`, the Group accepts this change and updates its internal **Target State** to `off`.
 
 ### 🪟 Window Control
-*Redesigned in v0.16!* Automatically turn off heating when windows open and restore it when they close.
+Automatically turn off heating when windows open and restore it when they close.
 
-*   **Logic:** Opening a window forces all members to `off`. Closing the window restores the group's target state (e.g. `heat`).
+*   **Logic:** Opening a window forces all members to `off`. Closing the window restores the group's previous settings (e.g. `heat`).
 *   **Room Sensor:** Fast reaction (default: 15s). For sensors directly in the room. E.g. `binary_sensor.living_room_window`.
 *   **Zone Sensor:** Slow reaction (default: 5min). For whole-house sensors. Prevents heating shutdown in closed rooms when a distant window opens. E.g. `binary_sensor.all_windows_open`.
 *   **User Blocking:** Manual changes are blocked while windows are open.
 *   **Sync Blocking:** Background sync ignores changes during window control.
 
-### 📅 Schedule Integration
-*New in v0.16!* Native support for Home Assistant `schedule` entities.
+### 📅 Advanced Schedule & Automation
+*New in v0.18!* Native support for Home Assistant `schedule` entities with advanced override logic.
 
-*   **Direct Control:** Link a schedule helper to your climate group.
-*   **Intelligent Sync:** The schedule updates the group's target state.
+*   **Intelligent Sync:** The schedule updates the group's desired settings.
+*   **Periodic Resync:** Ensure all devices stay on track. Forces the current schedule state every X minutes—perfect for "stubborn" devices or physical tampering.
+*   **Manual Overrides:** Stay in control. Set an **Override Duration** to automatically return to the schedule after X minutes of manual adjustment.
+*   **Sticky Override (Persist Changes):** If enabled, manual changes persist until the override expires, even if the schedule changes slots in the background.
 *   **Window Aware:** If a schedule changes while windows are open, the new target is saved and applied immediately when windows close.
-*   **Format:** Supports `hvac_mode`, `temperature`, `fan_mode`, etc. via schedule variables.
 
-#### Schedule Configuration Example
+### Schedule Configuration Example
 
 1. Create a **Schedule Helper** in Home Assistant (Settings > Devices & Services > Helpers).
 2. Open the schedule and add your time slots.
@@ -87,10 +88,12 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | Option | Description |
 |--------|-------------|
 | **External Sensors** | Select one or more sensors to override member readings. |
-| **Calibration Targets** | Write calculated temperature to number entities. |
+| **Calibration Targets** | Write calculated temperature to number entities. Supports **Absolute** (Standard), **Offset** (Delta), and **Scaled** (x100) modes. |
+| **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
+| **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
 | **Averaging Method** | Mean, Median, Min, or Max—separately for Current and Target values. |
 | **Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
-| **Min Temp Off** | *New in v0.17!* Send minimum temperature (e.g. 5°C) additional to `OFF` command. Essential for TRVs that don't close valves fully on `OFF`. |
+| **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. Essential for TRVs that don't close valves fully or provide frost protection in `off` mode. |
 
 ### HVAC Mode Strategy
 
@@ -123,11 +126,14 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
 | **Close Delay** | Time before restoring heating after windows close (default: 30s). |
 
-### Schedule
+### Schedule & Timers
 
 | Option | Description |
 |--------|-------------|
 | **Schedule Entity** | A Home Assistant `schedule` entity to control the group. |
+| **Resync Interval** | Force-sync members to the desired group setting every X minutes (0 = disabled). |
+| **Override Duration** | Delay before returning to schedule after manual changes (0 = disabled). |
+| **Sticky Override** | Ignore schedule changes while a manual override is active. |
 
 ### Availability & Timings
 
