@@ -39,7 +39,7 @@
           "timings": "Timings",
           "sync": "Sync Mode",
           "window_control": "Window Control",
-          "schedule": "Schedule",
+          "schedule": "Schedule & Timers",
           "other": "Other Settings"
         }
       },
@@ -65,14 +65,18 @@
           "temp_target_avg": "Target Temperature (Control)",
           "temp_target_round": "Target Temperature Precision",
           "temp_sensors": "External Temperature Sensors",
-          "temp_update_targets": "Write External Temp to Entities"
+          "temp_update_targets": "Write External Temp to Entities",
+          "temp_calibration_mode": "Calibration Mode",
+          "calibration_heartbeat": "Calibration Heartbeat (min)"
         },
         "data_description": {
           "temp_current_avg": "How the group summarizes sensor readings from its members.",
           "temp_target_avg": "How the group calculates the target setpoint to send to its members.",
           "temp_target_round": "Only applies to values sent to devices, not to current/displayed values.",
           "temp_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's temperature.",
-          "temp_update_targets": "Write the external sensor value to number entities (e.g. TRV calibration offsets). Useful for keeping thermostats aware of actual room temperature."
+          "temp_update_targets": "Write the external sensor value to number entities (e.g. TRV calibration offsets). Useful for keeping thermostats aware of actual room temperature.",
+          "temp_calibration_mode": "Absolute: Send value directly. Offset: Send delta (External - TRV Internal). Scaled: Send as Integer x100 (e.g. 21.5 -> 2150).",
+          "calibration_heartbeat": "Periodically force-sync calibration to entities even if temperature hasn't changed. Set to 0 to disable."
         }
       },
       "humidity": {
@@ -140,13 +144,19 @@
         }
       },
       "schedule": {
-        "title": "Schedule",
-        "description": "Link a Home Assistant Schedule entity to automate temperature and mode changes at specific times.",
+        "title": "Schedule & Timers",
+        "description": "Configure automation for the group. Link a schedule entity to automate changes and enable periodic synchronization.",
         "data": {
-          "schedule_entity": "Schedule Entity"
+          "schedule_entity": "Schedule Entity",
+          "resync_interval": "Resync Interval (minutes)",
+          "override_duration": "Override Duration (minutes)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Select a schedule entity. The schedule's 'Additional data' field can contain YAML with attributes like 'temperature: 20.5' or 'hvac_mode: heat'."
+          "schedule_entity": "Select a schedule entity. The schedule's 'Additional data' field can contain YAML with attributes like 'temperature: 20.5' or 'hvac_mode: heat'.",
+          "resync_interval": "Force-sync members to the target state every X minutes. Ensures devices stay on schedule even if adjusted manually or commands are missed. Set to 0 to disable.",
+          "override_duration": "The duration for manual overrides. After this time, the group automatically reverts to the current schedule. Set to 0 to skip the override period.",
+          "persist_changes": "If enabled, changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires."
         }
       },
       "other": {
@@ -197,6 +207,13 @@
         "none": "No Rounding (Exact)",
         "half": "Half Degree (0.5°)",
         "integer": "Whole Numbers (1°)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolute – Send value directly (Standard)",
+        "offset": "Offset – Send difference (External - TRV Internal)",
+        "scaled": "Scaled – Integer x100 (Danfoss Ally)"
       }
     },
     "humidity_current_avg": {

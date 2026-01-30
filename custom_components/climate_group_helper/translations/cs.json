@@ -111,7 +111,7 @@
           "humidity": "Vlhkost",
           "members": "Členové a režimy",
           "other": "Další nastavení",
-          "schedule": "Rozvrh",
+          "schedule": "Rozvrh a Časovače",
           "sync": "Režim synchronizace",
           "temperature": "Teplota",
           "timings": "Časování",
@@ -150,14 +150,20 @@
         "title": "Další Nastavení"
       },
       "schedule": {
+        "title": "Rozvrh a Časovače",
+        "description": "Nakonfigurujte automatizaci pro skupinu. Propojte entitu rozvrhu pro automatizaci změn a povolení periodické synchronizace.",
         "data": {
-          "schedule_entity": "Entita rozvrhu"
+          "schedule_entity": "Entita rozvrhu",
+          "resync_interval": "Interval znovu-synchronizace (minuty)",
+          "override_duration": "Doba trvání přepsání (minuty)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Vyberte entitu rozvrhu. Pole 'Další data' může obsahovat YAML s atributy jako 'temperature: 20.5' nebo 'hvac_mode: heat'."
-        },
-        "description": "Propojte entitu rozvrhu Home Assistant pro automatizaci změn teploty a režimu.",
-        "title": "Rozvrh"
+          "schedule_entity": "Vyberte entitu rozvrhu. Pole 'Další data' může obsahovat YAML s atributy jako 'temperature: 20.5' nebo 'hvac_mode: heat'.",
+          "resync_interval": "Vynutit synchronizaci členů na cílový stav skupiny každých X minut. Zabraňuje odchylkám, pokud zařízení zmeškají příkaz nebo jsou ručně upravena. Nastavte na 0 pro deaktivaci.",
+          "override_duration": "Doba trvání manuálních přepsání. Po této době se skupina automaticky vrátí k aktuálnímu rozvrhu. Nastavte na 0 pro přeskočení doby přepsání.",
+          "persist_changes": "Je-li povoleno, změny v samotném rozvrhu budou ignorovány, dokud je aktivní manuální přepsání. Znovu použije aktuální rozvrh až po vypršení přepsání."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Externí Senzory Teploty",
           "temp_target_avg": "Cílová Teplota (Ovládání)",
           "temp_target_round": "Přesnost Cílové Teploty",
-          "temp_update_targets": "Zapsat Externí Teplotu do Entit"
+          "temp_update_targets": "Zapsat Externí Teplotu do Entit",
+          "temp_calibration_mode": "Režim Kalibrace",
+          "calibration_heartbeat": "Kalibrace Heartbeat (min)"
         },
         "data_description": {
           "temp_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
           "temp_sensors": "Použít externí senzory místo údajů od členů. Ty se stanou jediným zdrojem pravdy pro teplotu skupiny.",
           "temp_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
           "temp_target_round": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
-          "temp_update_targets": "Zapsat hodnotu externího senzoru do číselných entit (např. offsety kalibrace TRV). Užitečné pro udržení termostatů v obraze o skutečné pokojové teplotě."
+          "temp_update_targets": "Zapsat hodnotu externího senzoru do číselných entit (např. offsety kalibrace TRV). Užitečné pro udržení termostatů v obraze o skutečné pokojové teplotě.",
+          "temp_calibration_mode": "Absolutní: Odeslat hodnotu přímo. Offset: Odeslat rozdíl (Externí - TRV Interní). Škálované: Odeslat jako celé číslo x100 (např. 21.5 -> 2150).",
+          "calibration_heartbeat": "Pravidelně vynutit synchronizaci kalibrace do entit, i když se teplota nezměnila. Nastavte na 0 pro vypnutí."
         },
         "description": "Nakonfigurujte, jak skupina zvládá agregaci teploty a nastavené hodnoty. Externí senzory přepíší údaje členů, pokud jsou vybrány.",
         "title": "Nastavení Teploty"
@@ -303,6 +313,13 @@
         "half": "Půl Stupně (0.5°)",
         "integer": "Celá Čísla (1°)",
         "none": "Žádné Zaokrouhlování (Přesné)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolutní – Odeslat hodnotu přímo (Standard)",
+        "offset": "Offset – Odeslat rozdíl (Externí - TRV Interní)",
+        "scaled": "Škálované – Celé číslo x100 (Danfoss Ally)"
       }
     },
     "window_mode": {
