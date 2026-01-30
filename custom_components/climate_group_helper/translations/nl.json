@@ -111,7 +111,7 @@
           "humidity": "Vochtigheid",
           "members": "Leden & Modi",
           "other": "Andere Instellingen",
-          "schedule": "Schema",
+          "schedule": "Schema & Timers",
           "sync": "Sync Modus",
           "temperature": "Temperatuur",
           "timings": "Timings",
@@ -150,14 +150,20 @@
         "title": "Andere Instellingen"
       },
       "schedule": {
+        "title": "Schema & Timers",
+        "description": "Configureer automatisering voor de groep. Koppel een schema-entiteit om wijzigingen te automatiseren en periodieke synchronisatie in te schakelen.",
         "data": {
-          "schedule_entity": "Schema Entiteit"
+          "schedule_entity": "Schema Entiteit",
+          "resync_interval": "Resync Interval (minuten)",
+          "override_duration": "Override Duur (minuten)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'."
-        },
-        "description": "Koppel een Home Assistant schema-entiteit om temperatuur- en moduswijzigingen te automatiseren.",
-        "title": "Schema"
+          "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'.",
+          "resync_interval": "Dwing leden elke X minuten naar de doelstatus van de groep. Voorkomt verloop als apparaten een commando missen of handmatig worden aangepast. Stel in op 0 om uit te schakelen.",
+          "override_duration": "De duur van handmatige overrides. Na deze tijd keert de groep automatisch terug naar het schema. Stel in op 0 om de override-periode over te slaan.",
+          "persist_changes": "Indien ingeschakeld, worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Externe Temperatuursensoren",
           "temp_target_avg": "Doeltemperatuur (Regeling)",
           "temp_target_round": "Precisie Doeltemperatuur",
-          "temp_update_targets": "Schrijf Externe Temp naar Entiteiten"
+          "temp_update_targets": "Schrijf Externe Temp naar Entiteiten",
+          "temp_calibration_mode": "Kalibratiemodus",
+          "calibration_heartbeat": "Kalibratie Hartslag (min)"
         },
         "data_description": {
           "temp_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
           "temp_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de temperatuur van de groep.",
           "temp_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
           "temp_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
-          "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur."
+          "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur.",
+          "temp_calibration_mode": "Absoluut: Verzend waarde direct. Offset: Verzend verschil (Extern - TRV Intern). Geschaald: Verzend als geheel getal x100 (bijv. 21.5 -> 2150).",
+          "calibration_heartbeat": "Forceer periodiek kalibratiesynchronisatie naar entiteiten, zelfs als de temperatuur niet is gewijzigd. Stel in op 0 om uit te schakelen."
         },
         "description": "Configureer hoe de groep temperatuuraggregatie en instelpunten beheert. Externe sensoren overschrijven metingen van leden indien geselecteerd.",
         "title": "Temperatuurinstellingen"
@@ -303,6 +313,13 @@
         "half": "Half Graad (0.5°)",
         "integer": "Gehele Getallen (1°)",
         "none": "Geen Afronding (Exact)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absoluut – Verzend waarde direct (Standaard)",
+        "offset": "Offset – Verzend verschil (Extern - TRV Intern)",
+        "scaled": "Geschaald – Geheel getal x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

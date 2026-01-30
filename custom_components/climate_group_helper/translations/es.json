@@ -111,7 +111,7 @@
           "humidity": "Humedad",
           "members": "Miembros & Modos",
           "other": "Otros Ajustes",
-          "schedule": "Programación",
+          "schedule": "Programación & Temporizadores",
           "sync": "Modo Sync",
           "temperature": "Temperatura",
           "timings": "Tiempos",
@@ -150,14 +150,20 @@
         "title": "Otros Ajustes"
       },
       "schedule": {
+        "title": "Programación & Temporizadores",
+        "description": "Configura la automatización del grupo. Vincula una entidad de programación para automatizar cambios y habilitar la sincronización periódica.",
         "data": {
-          "schedule_entity": "Entidad de Programación"
+          "schedule_entity": "Entidad de Programación",
+          "resync_interval": "Intervalo de Resincronización (minutos)",
+          "override_duration": "Duración de Anulación (minutos)",
+          "persist_changes": "Anulación Persistente (Sticky)"
         },
         "data_description": {
-          "schedule_entity": "Seleccione una entidad de programación. El campo 'Datos adicionales' puede contener YAML con atributos como 'temperature: 20.5' o 'hvac_mode: heat'."
-        },
-        "description": "Vincule una entidad de programación de Home Assistant para automatizar cambios de temperatura y modo.",
-        "title": "Programación"
+          "schedule_entity": "Seleccione una entidad de programación. El campo 'Datos adicionales' puede contener YAML con atributos como 'temperature: 20.5' o 'hvac_mode: heat'.",
+          "resync_interval": "Fuerza la sincronización de los miembros al estado objetivo cada X minutes. Evita desviaciones si los dispositivos pierden un comando o se ajustan manualmente. Establece en 0 para desactivar.",
+          "override_duration": "La duración de las anulaciones manuales. Después de este tiempo, el grupo vuelve automáticamente a la programación actual. Establece en 0 para omitir el periodo de anulación.",
+          "persist_changes": "Si está habilitado, los cambios en la programación se ignorarán mientras haya una anulación manual activa. Vuelve a aplicar la programación actual solo tras caducar la anulación."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Sensores de Temperatura Externos",
           "temp_target_avg": "Temperatura Objetivo (Control)",
           "temp_target_round": "Precisión de Temperatura Objetivo",
-          "temp_update_targets": "Escribir Temp Externa en Entidades"
+          "temp_update_targets": "Escribir Temp Externa en Entidades",
+          "temp_calibration_mode": "Modo de Calibración",
+          "calibration_heartbeat": "Heartbeat de Calibración (min)"
         },
         "data_description": {
           "temp_current_avg": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
           "temp_sensors": "Usar sensores externos en lugar de lecturas de miembros. Se convierten en la única fuente de verdad para la temperatura del grupo.",
           "temp_target_avg": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
           "temp_target_round": "Solo se aplica a valores enviados a dispositivos, no a valores actuales/visualizados.",
-          "temp_update_targets": "Escribir el valor del sensor externo en entidades numéricas (ej. offsets calibración TRV). Útil para mantener termostatos conscientes de la temperatura real."
+          "temp_update_targets": "Escribir el valor del sensor externo en entidades numéricas (ej. offsets calibración TRV). Útil para mantener termostatos conscientes de la temperatura real.",
+          "temp_calibration_mode": "Absoluto: Enviar valor directamente. Offset: Enviar diferencia (Externo - TRV Interno). Escalado: Enviar como entero x100 (ej. 21.5 -> 2150).",
+          "calibration_heartbeat": "Forzar periódicamente la sincronización de calibración a entidades aunque la temperatura no haya cambiado. Poner a 0 para desactivar."
         },
         "description": "Configura cómo el grupo maneja la agregación de temperatura y puntos de ajuste. Los sensores externos anularán lecturas de miembros si se seleccionan.",
         "title": "Ajustes de Temperatura"
@@ -303,6 +313,13 @@
         "half": "Medio Grado (0.5°)",
         "integer": "Números Enteros (1°)",
         "none": "Sin Redondeo (Exacto)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absoluto – Enviar valor directamente (Estándar)",
+        "offset": "Offset – Enviar diferencia (Externo - TRV Interno)",
+        "scaled": "Escalado – Entero x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

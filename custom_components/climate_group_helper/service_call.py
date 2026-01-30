@@ -5,7 +5,7 @@ import asyncio
 import logging
 import time
 from abc import ABC
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
@@ -18,7 +18,7 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
-from homeassistant.core import Context
+from homeassistant.core import Context, State
 from homeassistant.helpers.debounce import Debouncer
 
 from .const import (
@@ -60,6 +60,7 @@ class BaseServiceCallHandler(ABC):
         self._hass = group.hass
         self._debouncer: Debouncer | None = None
         self._active_tasks: set[asyncio.Task] = set()
+        self._call_triggers: list[Callable[[], Any]] = []
 
     @property
     def target_state(self):
@@ -80,6 +81,19 @@ class BaseServiceCallHandler(ABC):
     async def call_immediate(self, data: dict[str, Any] | None = None) -> None:
         """Execute a service call immediately without debouncing."""
         await self._execute_calls(data)
+
+    def register_call_trigger(self, callback: Callable[[], Any]) -> None:
+        """Register a callback to be called after successful execution."""
+        if callback not in self._call_triggers:
+            self._call_triggers.append(callback)
+
+    def _call_trigger(self) -> None:
+        """Trigger all registered execution callbacks."""
+        for callback_func in self._call_triggers:
+            try:
+                callback_func()
+            except Exception as e:
+                _LOGGER.error("[%s] Error in execution callback: %s", self._group.entity_id, e)
 
     async def call_debounced(self, data: dict[str, Any] | None = None) -> None:
         """Debounce and execute a service call."""
@@ -117,8 +131,11 @@ class BaseServiceCallHandler(ABC):
 
         # Check blocking BEFORE retry loop (state doesn't change between retries)
         if self._block_all_calls(data):
-            _LOGGER.debug("[%s] Calls blocked (source=%s)", self._group.entity_id, context_id)
+            _LOGGER.debug("[%s] Calls suppressed (source=%s): Blocking mode active (e.g. Window open)", self._group.entity_id, context_id)
             return
+
+        # Trigger hook for calls
+        self._call_trigger()
 
         for attempt in range(attempts):
             try:
@@ -253,9 +270,9 @@ class BaseServiceCallHandler(ABC):
 
             current_value = state.state if attr == ATTR_HVAC_MODE else state.attributes.get(attr)
 
-            # Partial Sync Output Filter
-            if self._skip_off_members(state, target_value):
-                _LOGGER.debug("[%s] Partial Sync: Skipping OFF member %s", self._group.entity_id, entity_id)
+            # Output Filter
+            if self._block_unsynced_entity(attr, target_value, state):
+                _LOGGER.debug("[%s] Skipping member %s", self._group.entity_id, entity_id)
                 continue
 
             # Float tolerance check
@@ -277,6 +294,7 @@ class BaseServiceCallHandler(ABC):
         master_entity = self.target_state.last_entity or ""
         return f"{timestamp}|{master_entity}"
 
+    # Filter hook to inject kwargs into service calls
     def _inject_call_kwargs(self, data: dict[str, Any]) -> dict[str, Any]:
         """Inject kwargs into the data dict."""
         return self._min_temp_when_off(data)
@@ -289,6 +307,7 @@ class BaseServiceCallHandler(ABC):
             return {**data, ATTR_TEMPERATURE: self._group._attr_min_temp}
         return data
 
+    # Block hook to prevent all service calls
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Hook for derived classes to implement custom call blocking logic.
         Returns:
@@ -296,6 +315,7 @@ class BaseServiceCallHandler(ABC):
         """
         return False
 
+    # Block hook to prevent service calls to specific attributes
     def _block_call_attr(self, data: dict[str, Any], attr: str) -> bool:
         """Block calls for specific attributes."""
         return self._block_wakeup_calls(data, attr)
@@ -313,7 +333,12 @@ class BaseServiceCallHandler(ABC):
 
         return False
 
-    def _skip_off_members(self, state, target_value) -> bool:
+    # Block hook for unsynced entities
+    def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:
+        """Check if this entity should be skipped."""
+        return self._skip_off_member(state=state, target_value=target_value)
+
+    def _skip_off_member(self, state: State, target_value: Any) -> bool:
         """Check if this OFF member should be skipped (Partial Sync).
         
         Used by handlers that support CONF_IGNORE_OFF_MEMBERS to prevent
@@ -343,7 +368,10 @@ class ClimateCallHandler(BaseServiceCallHandler):
     - set_temperature, set_hvac_mode, set_fan_mode, etc.
     
     Generates calls based on target_state diff (only sends to unsynced members).
-    No blocking mode check - user commands always proceed.
+    
+    Blocking:
+    - Blocked by Window Control/force_off for setpoint changes.
+    - HVAC Mode changes ALWAYS bypass the block (allows turning group OFF while window is open).
     """
 
     CONTEXT_ID = "group"
@@ -361,7 +389,7 @@ class ClimateCallHandler(BaseServiceCallHandler):
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block calls if blocking mode is active, UNLESS hvac_mode is being changed."""
         if data and ATTR_HVAC_MODE in data:
-            _LOGGER.debug("[%s] Allow blocking bypass (HVAC mode change)", self._group.entity_id)
+            _LOGGER.debug("[%s] Bypass blocking mode (HVAC mode change)", self._group.entity_id)
             return False
         return self._group.blocking_mode
 
@@ -411,13 +439,8 @@ class WindowControlCallHandler(BaseServiceCallHandler):
         """Initialize the window control call handler."""
         super().__init__(group)
 
-
 class ScheduleCallHandler(BaseServiceCallHandler):
-    """Call handler for Schedule operations.
-    
-    Schedule always uses call_immediate() with CONTEXT_ID="schedule".
-    This handler ensures consistent behavior for all schedule calls.
-    """
+    """Call handler for Schedule operations."""
 
     CONTEXT_ID = "schedule"
 
@@ -428,3 +451,7 @@ class ScheduleCallHandler(BaseServiceCallHandler):
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block schedule calls if blocking mode is active."""
         return self._group.blocking_mode
+
+    def _get_call_entity_ids(self, attr: str) -> list[str]:
+        """Override to use diffing - only return entities that need sync."""
+        return self._get_unsynced_entities(attr)

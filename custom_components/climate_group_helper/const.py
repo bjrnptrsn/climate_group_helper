@@ -44,6 +44,8 @@ CONF_TEMP_TARGET_ROUND = "temp_target_round"
 CONF_TEMP_CURRENT_AVG = "temp_current_avg"
 CONF_TEMP_SENSORS = "temp_sensors"
 CONF_TEMP_UPDATE_TARGETS = "temp_update_targets"
+CONF_TEMP_CALIBRATION_MODE = "temp_calibration_mode"
+CONF_CALIBRATION_HEARTBEAT = "calibration_heartbeat"
 
 # Humidity options
 CONF_HUMIDITY_TARGET_AVG = "humidity_target_avg"
@@ -81,6 +83,10 @@ CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_MIN_TEMP_OFF = "min_temp_off"
 
+CONF_RESYNC_INTERVAL = "resync_interval"
+CONF_OVERRIDE_DURATION = "override_duration"
+CONF_PERSIST_CHANGES = "persist_changes"
+
 
 class AverageOption(StrEnum):
     """Averaging options for temperature."""
@@ -97,6 +103,14 @@ class RoundOption(StrEnum):
     NONE = "none"
     HALF = "half"
     INTEGER = "integer"
+
+
+class CalibrationMode(StrEnum):
+    """Calibration modes for external sensors."""
+
+    ABSOLUTE = "absolute"
+    OFFSET = "offset"
+    SCALED = "scaled"
 
 
 class SyncMode(StrEnum):

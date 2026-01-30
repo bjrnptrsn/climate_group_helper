@@ -111,7 +111,7 @@
           "humidity": "Umidade",
           "members": "Membros & Modos",
           "other": "Outros Ajustes",
-          "schedule": "Agenda",
+          "schedule": "Agenda & Temporizadores",
           "sync": "Modo Sync",
           "temperature": "Temperatura",
           "timings": "Tempos",
@@ -150,14 +150,20 @@
         "title": "Outras Definições"
       },
       "schedule": {
+        "title": "Agenda & Temporizadores",
+        "description": "Configure a automação para o grupo. Vincule uma entidade de agenda para automatizar alterações e ativar a sincronização periódica.",
         "data": {
-          "schedule_entity": "Entidade de Agenda"
+          "schedule_entity": "Entidade de Agenda",
+          "resync_interval": "Intervalo de Resync (minutos)",
+          "override_duration": "Duração do Override (minutos)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Selecione uma entidade de agenda. O campo 'Dados adicionais' pode conter YAML com atributos como 'temperature: 20.5' ou 'hvac_mode: heat'."
-        },
-        "description": "Vincule uma entidade de agenda do Home Assistant para automatizar mudanças de temperatura e modo.",
-        "title": "Agenda"
+          "schedule_entity": "Selecione uma entidade de agenda. O campo 'Dados adicionais' pode conter YAML com atributos como 'temperature: 20.5' ou 'hvac_mode: heat'.",
+          "resync_interval": "Sincroniza forçadamente os membros com o estado alvo a cada X minutos. Evita desvios se os dispositivos perderem um comando ou forem ajustados manualmente. Definir como 0 para desativar.",
+          "override_duration": "A duração dos overrides manuais. Após este tempo, o grupo regressa automaticamente à agenda atual. Definir como 0 para saltar o período de override.",
+          "persist_changes": "Se ativado, as alterações na agenda serão ignoradas enquanto um override manual estiver ativo. Reaplica a agenda atual apenas após a expiração do override."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Sensores de Temperatura Externos",
           "temp_target_avg": "Temperatura Alvo (Controlo)",
           "temp_target_round": "Precisão de Temperatura Alvo",
-          "temp_update_targets": "Escrever Temp Externa em Entidades"
+          "temp_update_targets": "Escrever Temp Externa em Entidades",
+          "temp_calibration_mode": "Modo de Calibração",
+          "calibration_heartbeat": "Heartbeat de Calibração (min)"
         },
         "data_description": {
           "temp_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
           "temp_sensors": "Usar sensores externos em vez de leituras de membros. Estes tornam-se a única fonte de verdade para a temperatura do grupo.",
           "temp_target_avg": "Como o grupo calcula o ponto de ajuste para enviar aos seus membros.",
           "temp_target_round": "Aplica-se apenas a valores enviados a dispositivos, não a valores atuais/visualizados.",
-          "temp_update_targets": "Escrever o valor do sensor externo em entidades numéricas (ex. offsets calibração TRV). Útil para manter termostatos cientes da temperatura real."
+          "temp_update_targets": "Escrever o valor do sensor externo em entidades numéricas (ex. offsets calibração TRV). Útil para manter termostatos cientes da temperatura real.",
+          "temp_calibration_mode": "Absoluto: Enviar valor diretamente. Offset: Enviar diferença (Externo - TRV Interno). Escalado: Enviar como inteiro x100 (ex. 21.5 -> 2150).",
+          "calibration_heartbeat": "Forçar periodicamente a sincronização da calibração para entidades, mesmo que a temperatura não tenha mudado. Defina como 0 para desativar."
         },
         "description": "Configurar como o grupo gere a agregação de temperatura e pontos de ajuste. Os sensores externos irão sobrepor leituras de membros se selecionados.",
         "title": "Definições de Temperatura"
@@ -303,6 +313,13 @@
         "half": "Meio Grau (0.5°)",
         "integer": "Números Inteiros (1°)",
         "none": "Sem Arredondamento (Exato)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absoluto – Enviar valor diretamente (Padrão)",
+        "offset": "Offset – Enviar diferença (Externo - TRV Interno)",
+        "scaled": "Escalado – Inteiro x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

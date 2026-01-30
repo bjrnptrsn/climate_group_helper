@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.18.0 - 2026-01-31
+
+### 🚀 Scheduler & Timers
+*   **Resync Interval:** Periodically enforce the scheduled state to fix drifting devices.
+*   **Override Duration:** Manual changes are temporary. The group automatically returns to the schedule after a configured duration (e.g. 60 min).
+*   **Sticky Override:** Manual changes persist until the override expires, ignoring background schedule updates.
+
+### 🌡️ Advanced Calibration
+*   **New Modes:** Added `Offset` and `Scaled` (x100) support for better TRV compatibility.
+*   **Heartbeat:** Periodically re-syncs calibration values to prevent timeouts (e.g. Aqara/Sonoff).
+
 ## 0.17.0 - 2026-01-23
 
 ### ✨ New Feature

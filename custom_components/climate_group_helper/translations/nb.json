@@ -111,7 +111,7 @@
           "humidity": "Fuktighet",
           "members": "Medlemmer & Moduser",
           "other": "Andre Innstillinger",
-          "schedule": "Tidsplan",
+          "schedule": "Tidsplan og Timere",
           "sync": "Sync Modus",
           "temperature": "Temperatur",
           "timings": "Tidspunkter",
@@ -150,14 +150,20 @@
         "title": "Andre innstillinger"
       },
       "schedule": {
+        "title": "Tidsplan og Timere",
+        "description": "Konfigurer automatisering for gruppen. Koble til en tidsplan-enhet for å automatisere endringer og aktivere periodisk synkronisering.",
         "data": {
-          "schedule_entity": "Tidsplan Enhet"
+          "schedule_entity": "Tidsplan Enhet",
+          "resync_interval": "Resync-intervall (minutter)",
+          "override_duration": "Varighet for overstyring (minutter)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Velg en tidsplan-enhet. Feltet 'Tilleggsdata' kan inneholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'."
-        },
-        "description": "Koble til en Home Assistant tidsplan-enhet for å automatisere endringer i temperatur og modus.",
-        "title": "Tidsplan"
+          "schedule_entity": "Velg en tidsplan-enhet. Feltet 'Tilleggsdata' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
+          "resync_interval": "Tvinge synkronisering av medlemmer til gruppens måltilstand hvert X minutt. Forhindrer avvik hvis enheter går glipp av en kommando eller justeres manuelt. Sett til 0 for å deaktivere.",
+          "override_duration": "Varigheten av manuelle overstyringer. Etter denne tiden går gruppen automatisk tilbake til gjeldende tidsplan. Sett til 0 for å hoppe over overstyringsperioden.",
+          "persist_changes": "Hvis aktivert, vil endringer i selve tidsplanen bli ignorert så lenge en manuell overstyring er aktiv. Bruker gjeldende tidsplan på nytt først etter at overstyringen er utløpt."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Eksterne temperatursensorer",
           "temp_target_avg": "Måltemperatur (kontroll)",
           "temp_target_round": "Presisjon måltemperatur",
-          "temp_update_targets": "Skriv ekstern temp til entiteter"
+          "temp_update_targets": "Skriv ekstern temp til entiteter",
+          "temp_calibration_mode": "Kalibreringsmodus",
+          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
         },
         "data_description": {
           "temp_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
           "temp_sensors": "Bruk eksterne sensorer i stedet for medlemsavlesninger. Disse blir den eneste sannhetskilden for gruppens temperatur.",
           "temp_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
           "temp_target_round": "Gjelder kun verdier sendt til enheter, ikke nåværende/visningsverdier.",
-          "temp_update_targets": "Skriv verdien fra ekstern sensor til nummerentiteter (f.eks. TRV kalibreringsoffset). Nyttig for å holde termostater oppdatert om faktisk romtemperatur."
+          "temp_update_targets": "Skriv verdien fra ekstern sensor til nummerentiteter (f.eks. TRV kalibreringsoffset). Nyttig for å holde termostater oppdatert om faktisk romtemperatur.",
+          "temp_calibration_mode": "Absolutt: Send verdi direkte. Offset: Send differanse (Ekstern - TRV Intern). Skalert: Send som heltall x100 (f.eks. 21.5 -> 2150).",
+          "calibration_heartbeat": "Tving periodisk kalibreringssynkronisering til entiteter selv om temperaturen ikke er endret. Sett til 0 for å deaktivere."
         },
         "description": "Konfigurer hvordan gruppen håndterer temperaturaggregering og målverdier. Eksterne sensorer vil overstyre medlemsavlesninger hvis valgt.",
         "title": "Temperaturinnstillinger"
@@ -303,6 +313,13 @@
         "half": "Halv grad (0.5°)",
         "integer": "Hele tall (1°)",
         "none": "Ingen avrunding (Nøyaktig)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolutt – Send verdi direkte (Standard)",
+        "offset": "Offset – Send differanse (Ekstern - TRV Intern)",
+        "scaled": "Skalert – Heltall x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

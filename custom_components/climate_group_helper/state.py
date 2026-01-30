@@ -19,15 +19,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class TargetState:
-    """Current target state of the group.
-    
-    This state serves as the single source of truth for all group operations.
-    It is persistent and represents the intended state, regardless of temporary
-    deviations (like window open) or latency.
-
-    Metadata fields allow tracking the provenance of the state (Optimistic Concurrency Control).
-    """
+class ClimateState:
+    """Base class for climate state representations."""
     # Core Attributes
     hvac_mode: str | None = None
     temperature: float | None = None
@@ -39,39 +32,21 @@ class TargetState:
     swing_mode: str | None = None
     swing_horizontal_mode: str | None = None
 
-    # Provenance Metadata (Not synced to devices)
-    last_source: str | None = None
-    last_entity: str | None = None
-    last_timestamp: float | None = None
-
-    def update(self, **kwargs: Any) -> TargetState:
-        """Return a new TargetState with updated values.
-        
-        Args:
-            **kwargs: Attributes to update. Can include metadata fields.
-        """
-        # Filter out fields that are not in the dataclass to prevent errors
+    def update(self, **kwargs: Any) -> ClimateState:
+        """Return a new state with updated values."""
         valid_fields = {f.name for f in fields(self)}
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
-        
         return replace(self, **filtered_kwargs)
 
     def to_dict(self, attributes: list[str] | None = None) -> dict[str, Any]:
-        """Convert state to dictionary.
-        Args:
-            attributes: provide only given attributes. None for all.
-        Returns:
-            Dictionary with attribute names as keys. None values are excluded.
-        """
+        """Convert state to dictionary. Excludes None values."""
         full = asdict(self)
-
         if attributes is None:
             return {k: v for k, v in full.items() if v is not None}
-        else:
-            return {k: v for k, v in full.items() if k in attributes and v is not None}
+        return {k: v for k, v in full.items() if k in attributes and v is not None}
 
     def __repr__(self) -> str:
-        """Only show attributes that are present (not None or empty string)."""
+        """Only show attributes that are present."""
         data = asdict(self)
         filtered = {key: value for key, value in data.items() if value is not None and value != ""}
         attrs = ", ".join(f"{key}={repr(value)}" for key, value in filtered.items())
@@ -79,13 +54,22 @@ class TargetState:
 
 
 @dataclass(frozen=True)
-class FilterState(TargetState):
-    """State that is used as a filter for masking.
-    
-    True: attribute is allowed.
-    False: attribute is not allowed.
-    """
+class TargetState(ClimateState):
+    """Current target state of the group with provenance metadata."""
+    last_source: str | None = None
+    last_entity: str | None = None
+    last_timestamp: float | None = None
 
+
+@dataclass(frozen=True)
+class CurrentState(ClimateState):
+    """Actual current state of the group (aggregated)."""
+    pass
+
+
+@dataclass(frozen=True)
+class FilterState(ClimateState):
+    """Masking state for attribute access control."""
     hvac_mode: bool = True
     temperature: bool = True
     target_temp_low: bool = True
@@ -99,79 +83,54 @@ class FilterState(TargetState):
     @classmethod
     def from_keys(cls, attributes: list[str]) -> FilterState:
         """Create a FilterState with values set to True for the given attributes."""
-        # Start with all False (overriding default True)
-        data = {key: False for key in cls.__annotations__}
+        data = {f.name: False for f in fields(cls)}
         for attr in attributes:
-            if attr in TargetState.__annotations__:
+            if attr in data:
                 data[attr] = True
         return cls(**data)
 
-    def to_dict(self, attributes: list[str] | None = None) -> dict[str, Any]:
-        """Convert filter state to dictionary, excluding metadata."""
-        data = super().to_dict(attributes)
-        # Exclude metadata fields that leak from TargetState inheritance
-        return {k: v for k, v in data.items() if not k.startswith("last_")}
-
 
 @dataclass(frozen=True)
-class ChangeState(TargetState):
+class ChangeState(ClimateState):
     """Represents a state deviation delta from a TargetState."""
-
     entity_id: str | None = None
 
     @classmethod
-    def from_event(cls, event: Event, target_state: TargetState) -> ChangeState:
-        """
-        Calculates the difference between the Event's new state and the TargetState.
-        Returns a ChangeState containing only the attributes that differ including entity_id.
-        Unchanged or unrelated attributes are not included.
-        """
+    def from_event(cls, event: Event, target_state: ClimateState) -> ChangeState:
+        """Calculates difference between Event and TargetState."""
         new_state = event.data.get("new_state")
         if new_state is None:
             return cls(entity_id=event.data.get("entity_id"))
 
         def within_tolerance(val1: float, val2: float, tolerance: float = FLOAT_TOLERANCE) -> bool:
-            """Check if two values are within a given tolerance."""
             try:
                 return abs(float(val1) - float(val2)) < tolerance
             except (ValueError, TypeError):
                 return False
 
         deviations: dict[str, Any] = {}
-
-        # Iterate over all fields defined in TargetState
-        for key in TargetState.__annotations__:
-
-            # Get target value
+        # We iterate over the fields of the base ClimateState to ignore metadata
+        for field in fields(ClimateState):
+            key = field.name
             target_val = getattr(target_state, key, None)
-
-            # Get member value from new_state
-            # Handle hvac_mode vs attributes
+            
             if key == "hvac_mode":
                 member_val = new_state.state
             else:
                 member_val = new_state.attributes.get(key, None)
 
-            # Skip if target or member not set
-            if target_val is None or member_val is None:
+            if target_val is None or member_val is None or member_val == target_val:
                 continue
-            # Skip if values match
-            if member_val == target_val:
-                continue
-            # Float comparison tolerance for temperature and humidity
+                
             if (key == "temperature" or key == "humidity") and within_tolerance(target_val, member_val):
                 continue
                 
-            # Found deviation
             deviations[key] = member_val
 
-        return cls(
-            entity_id=event.data.get("entity_id"), 
-            **deviations
-        )
+        return cls(entity_id=event.data.get("entity_id"), **deviations)
 
     def attributes(self) -> dict[str, Any]:
-        """Returns the state attributes excluding metadata like entity_id."""
+        """Returns the state attributes excluding metadata."""
         data = self.to_dict()
         data.pop("entity_id", None)
         return data
@@ -299,8 +258,12 @@ class ClimateStateManager(BaseStateManager):
         super().__init__(group)
 
     def _pre_update_filter(self, entity_id: str | None, kwargs: dict) -> bool:
-        """Accept all updates from ClimateGroup."""
-        return self._check_blocking_mode()
+        """Accept all user updates.
+        
+        Note: The actual execution of these changes might still be blocked by 
+        Window Control in the CallHandler, but we accept the intent in TargetState.
+        """
+        return True
 
 
 class SyncModeStateManager(BaseStateManager):

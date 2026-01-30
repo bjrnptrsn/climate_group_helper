@@ -111,7 +111,7 @@
           "humidity": "湿度",
           "members": "成员 & 模式",
           "other": "其他设置",
-          "schedule": "日程表",
+          "schedule": "日程表与定时器",
           "sync": "同步模式",
           "temperature": "温度",
           "timings": "时序",
@@ -150,14 +150,20 @@
         "title": "其他设置"
       },
       "schedule": {
+        "title": "日程表与定时器",
+        "description": "配置群组的自动化。链接日程表实体以实现自动化更改，并启用定期同步。",
         "data": {
-          "schedule_entity": "日程表实体"
+          "schedule_entity": "日程表实体",
+          "resync_interval": "重新同步间隔 (分钟)",
+          "override_duration": "手动覆盖时长 (分钟)",
+          "persist_changes": "持久覆盖 (Sticky)"
         },
         "data_description": {
-          "schedule_entity": "选择一个日程表实体。日程表的“附加数据”字段可以包含 YAML 属性，如 'temperature: 20.5' 或 'hvac_mode: heat'。"
-        },
-        "description": "链接 Home Assistant 日程表实体以自动更改温度和模式。",
-        "title": "日程表"
+          "schedule_entity": "选择一个日程表实体。日程表的“附加数据”字段可以包含 YAML 属性，如 'temperature: 20.5' 或 'hvac_mode: heat'。",
+          "resync_interval": "每 X 分钟强制将成员同步到群组的目标状态。防止设备错过命令或由于手动调整而导致的偏离。设置为 0 以禁用。",
+          "override_duration": "手动覆盖的持续时间。在此时间过后，群组将自动恢复到当前日程表。设置为 0 以跳过覆盖期。",
+          "persist_changes": "如果启用，只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。"
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "外部温度传感器",
           "temp_target_avg": "目标温度 (控制)",
           "temp_target_round": "目标温度精度",
-          "temp_update_targets": "将外部温度写入实体"
+          "temp_update_targets": "将外部温度写入实体",
+          "temp_calibration_mode": "校准模式",
+          "calibration_heartbeat": "校准心跳 (分钟)"
         },
         "data_description": {
           "temp_current_avg": "组如何汇总成员的传感器读数。",
           "temp_sensors": "使用外部传感器代替成员读数。这将成为组温度的唯一真实来源。",
           "temp_target_avg": "组如何计算要发送给成员的目标设定值。",
           "temp_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
-          "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。"
+          "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。",
+          "temp_calibration_mode": "绝对: 直接发送值。偏移: 发送差值 (外部 - TRV 内部)。 缩放: 发送为整数 x100 (例如 21.5 -> 2150)。",
+          "calibration_heartbeat": "定期强制将校准同步到实体，即使温度未更改。设置为 0 以禁用。"
         },
         "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
         "title": "温度设置"
@@ -303,6 +313,13 @@
         "half": "半度 (0.5°)",
         "integer": "整数 (1°)",
         "none": "不四舍五入 (精确)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "绝对 – 直接发送值 (标准)",
+        "offset": "偏移 – 发送差值 (外部 - TRV 内部)",
+        "scaled": "缩放 – 整数 x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

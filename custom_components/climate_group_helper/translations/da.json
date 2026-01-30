@@ -111,7 +111,7 @@
           "humidity": "Fugtighed",
           "members": "Medlemmer & Tilstande",
           "other": "Andre indstillinger",
-          "schedule": "Tidsplan",
+          "schedule": "Tidsplan & Timere",
           "sync": "Synkroniseringstilstand",
           "temperature": "Temperatur",
           "timings": "Tider",
@@ -150,14 +150,20 @@
         "title": "Andre Indstillinger"
       },
       "schedule": {
+        "title": "Tidsplan & Timere",
+        "description": "Konfigurer automatisering for gruppen. Tilknyt en tidsplan-enhed for at automatisere ændringer og aktivere periodisk synkronisering.",
         "data": {
-          "schedule_entity": "Tidsplan Enhed"
+          "schedule_entity": "Tidsplan Enhed",
+          "resync_interval": "Resync Interval (minutter)",
+          "override_duration": "Override Varighed (minutter)",
+          "persist_changes": "Sticky Override"
         },
         "data_description": {
-          "schedule_entity": "Vælg en tidsplan-enhed. Feltet 'Yderligere data' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'."
-        },
-        "description": "Tilknyt en Home Assistant tidsplan-enhed for at automatisere temperatur- og tilstandsændringer.",
-        "title": "Tidsplan"
+          "schedule_entity": "Vælg en tidsplan-enhed. Feltet 'Yderligere data' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
+          "resync_interval": "Gennemtving synkronisering af medlemmer til måltilstanden for gruppen hvert X minut. Forhindrer afvigelser, hvis enheder misser en kommando eller justeres manuelt. Sæt til 0 for at deaktivere.",
+          "override_duration": "Varigheden af manuelle overrides. Efter denne tid vender gruppen automatisk tilbage til den nuværende tidsplan. Sæt til 0 for at springe override-perioden over.",
+          "persist_changes": "Hvis aktiveret, vil ændringer i selve tidsplanen blive ignoreret, så længe en manuel override er aktiv. Genanvender kun den nuværende tidsplan, når overriden er udløbet."
+        }
       },
       "sync": {
         "data": {
@@ -177,14 +183,18 @@
           "temp_sensors": "Eksterne Temperatursensorer",
           "temp_target_avg": "Mål Temperatur (Kontrol)",
           "temp_target_round": "Mål Temperatur Præcision",
-          "temp_update_targets": "Skriv Ekstern Temp til Entiteter"
+          "temp_update_targets": "Skriv Ekstern Temp til Entiteter",
+          "temp_calibration_mode": "Kalibreringstilstand",
+          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
         },
         "data_description": {
           "temp_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
           "temp_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens temperatur.",
           "temp_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
           "temp_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
-          "temp_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter (f.eks. TRV kalibrering forskydninger). Nyttigt for at holde termostater opmærksomme på den faktiske stuetemperatur."
+          "temp_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter (f.eks. TRV kalibrering forskydninger). Nyttigt for at holde termostater opmærksomme på den faktiske stuetemperatur.",
+          "temp_calibration_mode": "Absolut: Send værdi direkte. Offset: Send difference (Ekstern - TRV Intern). Skaleret: Send som heltal x100 (f.eks. 21.5 -> 2150).",
+          "calibration_heartbeat": "Tving periodisk kalibreringssynkronisering til enheder, selvom temperaturen ikke er ændret. Sæt til 0 for at deaktivere."
         },
         "description": "Konfigurer, hvordan gruppen håndterer temperaturaggregering og sætpunkter. Eksterne sensorer vil tilsidesætte medlemsmålinger, hvis de vælges.",
         "title": "Temperaturindstillinger"
@@ -303,6 +313,13 @@
         "half": "Halv Grad (0.5°)",
         "integer": "Hele Tal (1°)",
         "none": "Ingen Afrunding (Præcis)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolut – Send værdi direkte (Standard)",
+        "offset": "Offset – Send difference (Ekstern - TRV Intern)",
+        "scaled": "Skaleret – Heltal x100 (Danfoss Ally)"
       }
     },
     "window_mode": {

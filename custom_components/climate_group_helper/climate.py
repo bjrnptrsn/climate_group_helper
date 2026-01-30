@@ -1,6 +1,7 @@
 """This platform allows several climate devices to be grouped into one climate device."""
 from __future__ import annotations
 
+from dataclasses import fields
 from functools import reduce
 import logging
 import time
@@ -55,11 +56,11 @@ from homeassistant.const import (
     CONF_NAME,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
-    UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant, State, callback, Event
+from datetime import timedelta, datetime
 
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -85,6 +86,8 @@ from .const import (
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
+    CONF_TEMP_CALIBRATION_MODE,
+    CONF_CALIBRATION_HEARTBEAT,
     CONF_MIN_TEMP_OFF,
     DOMAIN,
     FEATURE_STRATEGY_INTERSECTION,
@@ -94,11 +97,12 @@ from .const import (
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
     AverageOption,
     RoundOption,
+    CalibrationMode,
     SyncMode,
 )
 from .schedule import ScheduleHandler
 from .service_call import SyncCallHandler, ScheduleCallHandler, WindowControlCallHandler, ClimateCallHandler
-from .state import TargetState, ChangeState, SyncModeStateManager, ScheduleStateManager, WindowControlStateManager, ClimateStateManager
+from .state import ClimateState, TargetState, CurrentState, ChangeState, SyncModeStateManager, ScheduleStateManager, WindowControlStateManager, ClimateStateManager
 from .sync_mode import SyncModeHandler
 from .window_control import WindowControlHandler
 
@@ -203,7 +207,14 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
         # Sync mode
         self.sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
-        self.min_temp_off = config.get(CONF_MIN_TEMP_OFF)
+        self.min_temp_off = config.get(CONF_MIN_TEMP_OFF, False)
+
+        # Calibration options
+        self._temp_calibration_mode = config.get(CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE)
+        self._calibration_heartbeat = int(config.get(CONF_CALIBRATION_HEARTBEAT, 0))
+        self._calibration_heartbeat_unsub = None
+        self._member_temp_avg = None
+        self._target_member_map: dict[str, str] = {}
 
         # The list of entities to be tracked by GroupEntity
         self._entity_ids = entity_ids.copy()
@@ -215,6 +226,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # State variables
         self.states: list[State] | None = None
         self.shared_target_state = TargetState()
+        self.current_group_state = CurrentState()
         self.change_state: ChangeState | None = None
 
         # State managers
@@ -233,14 +245,13 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.sync_mode_handler = SyncModeHandler(self)
         self.window_control_handler = WindowControlHandler(self)
         self.schedule_handler = ScheduleHandler(self)
-        self._schedule_init_done = False
 
         self.startup_time: float | None = None
         self._last_active_hvac_mode = None
 
         # Attributes
         self._attr_supported_features = DEFAULT_SUPPORTED_FEATURES
-        self._attr_temperature_unit = UnitOfTemperature.CELSIUS
+        self._attr_temperature_unit = hass.config.units.temperature_unit
 
         self._attr_available = False
         self._attr_assumed_state = True
@@ -305,10 +316,35 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             )
         )
 
+        # Build mapping between calibration targets and climate members in the same device
+        registry = er.async_get(self.hass)
+        self._target_member_map = {}
+        for target_id in self._temp_update_target_entity_ids:
+            if (entry := registry.async_get(target_id)) and entry.device_id:
+                # Look for a climate member in the same device
+                for climate_id in self.climate_entity_ids:
+                    if (c_entry := registry.async_get(climate_id)) and c_entry.device_id == entry.device_id:
+                        self._target_member_map[target_id] = climate_id
+                        _LOGGER.debug("[%s] Mapped calibration target %s to member %s via device %s", self.entity_id, target_id, climate_id, entry.device_id)
+                        break
+
+        # Start calibration heartbeat if configured (requires external sensors as reference)
+        if (
+            self._calibration_heartbeat > 0
+            and self._temp_update_target_entity_ids
+            and self._temp_sensor_entity_ids
+        ):
+            _LOGGER.debug("[%s] Starting calibration heartbeat: %s min", self.entity_id, self._calibration_heartbeat)
+            self._calibration_heartbeat_unsub = async_track_time_interval(
+                self.hass,
+                self._calibration_heartbeat_callback,
+                timedelta(minutes=self._calibration_heartbeat)
+            )
+
         # Setup window control (subscribes to sensor events)
         await self.window_control_handler.async_setup()
 
-        # Setup schedule handler (subscribes to schedule entity events)
+        # Setup schedule handler (subscribes to schedule entity and execution hooks)
         await self.schedule_handler.async_setup()
 
         # Update initial state
@@ -316,6 +352,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
+        if self._calibration_heartbeat_unsub:
+            self._calibration_heartbeat_unsub()
+            self._calibration_heartbeat_unsub = None
         await super().async_will_remove_from_hass()
         await self.climate_call_handler.async_cancel_all()
         self.window_control_handler.async_teardown()
@@ -325,9 +364,10 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         """Restore state from last known state."""
         last_attrs = last_state.attributes
 
-        # We filter for TargetState fields to ensure we only store relevant state
+        # We filter for ClimateState fields to ensure we only store relevant climate attributes
         restored_data = {}
-        for key in TargetState.__annotations__:
+        for field in fields(ClimateState):
+            key = field.name
             if key == "hvac_mode" and last_state.state:
                 restored_data[key] = last_state.state
             elif (value := last_attrs.get(key)) is not None:
@@ -521,27 +561,79 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             return calc_func(values)
         return None
 
-    def _update_target_entities(self, entity_ids: list[str], value: float, tolerance: float) -> None:
-        """Update replacement entities with the new value."""
-        if not entity_ids:
+    @callback
+    def _calibration_heartbeat_callback(self, _now: datetime) -> None:
+        """Force update calibration targets (heartbeat)."""
+        _LOGGER.debug("[%s] Calibration heartbeat triggered", self.entity_id)
+        self._sync_calibration(domain="temperature", force=True)
+
+    def _sync_calibration(self, domain: str = "temperature", force: bool = False) -> None:
+        """Sync external sensor values to target entities using the configured mode."""
+        if domain == "temperature":
+            entity_ids = self._temp_update_target_entity_ids
+            value = self._attr_current_temperature
+            mode = self._temp_calibration_mode
+        else:
+            entity_ids = self._humidity_update_target_entity_ids
+            value = self._attr_current_humidity
+            mode = CalibrationMode.ABSOLUTE
+
+        if not entity_ids or value is None:
             return
 
         valid_states, _ = self._get_valid_member_states(entity_ids)
 
         for state in valid_states:
             try:
-                current_value = float(state.state)
-                # Compare with a small tolerance to avoid unnecessary updates
-                if abs(current_value - value) > tolerance:
-                    _LOGGER.debug("[%s] Updating %s with new value %.1f", self.entity_id, state.entity_id, value)
-                    self.hass.async_create_task(
-                        self.hass.services.async_call(
-                            NUMBER_DOMAIN,
-                            "set_value",
-                            {ATTR_ENTITY_ID: state.entity_id, "value": value},
-                        )
+                # 1. Determine Target Value
+                target_val = value
+                if domain == "temperature":
+                    if mode == CalibrationMode.OFFSET:
+                        ref_temp = self._member_temp_avg
+                        if state.entity_id in self._target_member_map:
+                            m_id = self._target_member_map[state.entity_id]
+                            if (m_s := self.hass.states.get(m_id)) and (m_t := m_s.attributes.get(ATTR_CURRENT_TEMPERATURE)) is not None:
+                                ref_temp = float(m_t)
+                        
+                        if ref_temp is None:
+                            continue
+
+                        try:
+                            curr_offset = float(state.state)
+                        except (ValueError, TypeError):
+                            curr_offset = 0.0
+                        target_val = value - (ref_temp - curr_offset)
+
+                    elif mode == CalibrationMode.SCALED:
+                        # Scaled values (e.g. for Danfoss Ally) must be integers
+                        target_val = int(round(value * 100))
+
+                # 2. Determine if Sync is required
+                try:
+                    current_val = float(state.state)
+                    # Comparison: exact for int (scaled), tolerance for float
+                    out_of_sync = current_val != target_val if isinstance(target_val, int) else \
+                                 abs(current_val - target_val) > FLOAT_TOLERANCE
+                except (ValueError, TypeError):
+                    out_of_sync = True # Force sync if current state is not a number
+
+                if not (force or out_of_sync):
+                    continue
+
+                # 3. Dispatch Update (Validation via HA Core Exception)
+                _LOGGER.debug(
+                    "[%s] Updating %s to %s (domain=%s, mode=%s, force=%s)", 
+                    self.entity_id, state.entity_id, target_val, domain, mode if domain == "temperature" else "absolute", force
+                )
+                self.hass.async_create_task(
+                    self.hass.services.async_call(
+                        NUMBER_DOMAIN,
+                        "set_value",
+                        {ATTR_ENTITY_ID: state.entity_id, "value": target_val},
                     )
-            except (ValueError, TypeError):
+                )
+            except Exception as error:
+                _LOGGER.error("[%s] Error updating target entity %s: %s", self.entity_id, state.entity_id, error)
                 continue
 
     @callback
@@ -557,12 +649,11 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Check if there are any valid states
         self.states, all_members_ready = self._get_valid_member_states(self.climate_entity_ids)
 
-        # Schedule init: apply schedule slot when all members are ready for the first time
-        if all_members_ready and not self._schedule_init_done:
-            self._schedule_init_done = True
+        # Set startup time if all members are ready
+        if not self.startup_time and all_members_ready:
             self.startup_time = time.time()
-            self.hass.async_create_task(self.schedule_handler.apply_initial_slot())
-            _LOGGER.debug("[%s] All members ready, calling schedule initial slot", self.entity_id)
+            self.hass.async_create_task(self.schedule_handler.schedule_listener(caller="group"))
+            _LOGGER.debug("[%s] All members ready the first time.", self.entity_id)
 
         # No states available
         if not self.states:
@@ -607,16 +698,19 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_temperature_unit = self.hass.config.units.temperature_unit
 
         # Calculate Current Temperature
+        self._member_temp_avg = reduce_attribute(self.states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._temp_current_avg_calc(data))
+
         if self._temp_sensor_entity_ids:
             # Use ONLY external sensors if configured
             self._attr_current_temperature = self._get_avg_sensor_value(self._temp_sensor_entity_ids, self._temp_current_avg_calc)
+            # Write calibration targets
             if self._attr_current_temperature is not None:
-                self._update_target_entities(self._temp_update_target_entity_ids, self._attr_current_temperature, 0.1)
+                self._sync_calibration("temperature")
             else:
                 _LOGGER.debug("[%s] External sensors %s configured but unavailable. Current temperature will be None", self.entity_id, self._temp_sensor_entity_ids)
         else:
             # Use member average if NO external sensors configured
-            self._attr_current_temperature = reduce_attribute(self.states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._temp_current_avg_calc(data))
+            self._attr_current_temperature = self._member_temp_avg
 
         # Target temperature is calculated using the 'average_option' method from all ATTR_TEMPERATURE values.
         self._attr_target_temperature = reduce_attribute(self.states, ATTR_TEMPERATURE, reduce=lambda *data: self._temp_target_avg_calc(data))
@@ -650,7 +744,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             # Use ONLY external sensors if configured
             self._attr_current_humidity = self._get_avg_sensor_value(self._humidity_sensor_entity_ids, self._humidity_current_avg_calc)
             if self._attr_current_humidity is not None:
-                self._update_target_entities(self._humidity_update_target_entity_ids, self._attr_current_humidity, 0.1)
+                self._sync_calibration("humidity")
             else:
                 _LOGGER.debug("[%s] External sensors %s configured but unavailable. Current humidity will be None", self.entity_id, self._humidity_sensor_entity_ids)
         else:
@@ -694,6 +788,19 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Remove unsupported features
         self._attr_supported_features &= SUPPORTED_FEATURES
 
+        # Populate current_group_state
+        self.current_group_state = CurrentState(
+            hvac_mode=self._attr_hvac_mode,
+            temperature=self._attr_target_temperature,
+            target_temp_low=self._attr_target_temperature_low,
+            target_temp_high=self._attr_target_temperature_high,
+            humidity=self._attr_target_humidity,
+            preset_mode=self._attr_preset_mode,
+            fan_mode=self._attr_fan_mode,
+            swing_mode=self._attr_swing_mode,
+            swing_horizontal_mode=self._attr_swing_horizontal_mode
+        )
+
         # Update extra state attributes
         self._attr_extra_state_attributes = {
             CONF_TEMP_SENSORS: self._temp_sensor_entity_ids,
@@ -709,23 +816,12 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self.climate_entity_ids
 
         # Cold Start: Populate target store from current group state if empty.
-        # Dynamically map available group attributes to TargetState fields.
         if self.shared_target_state == TargetState():
-            initial_data = {}
-            for key in TargetState.__annotations__:
-                # Special handling: hvac_mode might need mapping if strictly filtering
-                value = (
-                    self.hvac_mode if key == "hvac_mode"
-                    else self.target_temperature if key == "temperature"
-                    else self.target_humidity if key == "humidity"
-                    else getattr(self, key, None)
-                )
-                if value is not None:
-                    initial_data[key] = value
-
+            initial_data = self.current_group_state.to_dict()
             if initial_data:
-                self.climate_state_manager.update(**initial_data)
-                _LOGGER.debug("[%s] Initialized Persistent Target State from current group values: %s", self.entity_id, self.shared_target_state)
+                # We use restore source to bypass blocking during startup
+                self.schedule_state_manager.update(last_source="restore", **initial_data)
+                _LOGGER.debug("[%s] Initialized Persistent Target State from current values: %s", self.entity_id, self.shared_target_state)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
