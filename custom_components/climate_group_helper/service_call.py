@@ -1,4 +1,5 @@
 """Service call execution logic for the climate group."""
+
 from __future__ import annotations
 
 import asyncio
@@ -38,12 +39,12 @@ _LOGGER = logging.getLogger(__name__)
 
 class BaseServiceCallHandler(ABC):
     """Base class for service call execution with debouncing and retry logic.
-    
+
     This abstract base class provides the common infrastructure for:
     - Debouncing multiple rapid changes into a single execution
     - Retry logic for failed operations
     - Context-based call tagging for echo detection
-    
+
     Derived classes must implement `_generate_calls()` to define how calls are generated.
     They can override CONTEXT_ID to set their own context identifier.
     """
@@ -52,7 +53,7 @@ class BaseServiceCallHandler(ABC):
 
     def __init__(self, group: ClimateGroup):
         """Initialize the service call handler.
-        
+
         Args:
             group: Reference to the parent ClimateGroup entity.
         """
@@ -125,7 +126,7 @@ class BaseServiceCallHandler(ABC):
 
     async def _execute_calls(self, data: dict[str, Any] | None = None) -> None:
         """Execute service calls with retry logic."""
-        attempts = (1 + self._group.retry_attempts)
+        attempts = 1 + self._group.retry_attempts
         delay = self._group.retry_delay
         context_id = self.CONTEXT_ID
 
@@ -173,13 +174,13 @@ class BaseServiceCallHandler(ABC):
 
     def _generate_calls_from_dict(self, data: dict[str, Any] | None = None, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
         """Generate service calls from a dict of target attributes.
-        
+
         This is the central template method for call generation:
         - Filters attributes based on filter_state
         - Applies wake-up bug prevention (skip setpoints when target is OFF)
         - Handles temperature range specially (must be sent in one call)
         - Uses _get_call_entity_ids() for entity selection
-        
+
         Args:
             data: Dict of attribute values to sync
             filter_state: Optional FilterState for attribute filtering.
@@ -205,7 +206,7 @@ class BaseServiceCallHandler(ABC):
             # Skip if blocked
             if self._block_call_attr(data, attr):
                 continue
-            
+
             # Handle temperature range specially - must be sent in one call
             if attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
                 if not temp_range_processed:
@@ -214,7 +215,7 @@ class BaseServiceCallHandler(ABC):
                     if low is not None and high is not None:
                         if (entity_ids := self._get_call_entity_ids(attr)):
                             calls.append({
-                                "service": SERVICE_SET_TEMPERATURE,
+                                    "service": SERVICE_SET_TEMPERATURE,
                                 "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
                                 "entity_ids": entity_ids
                             })
@@ -235,7 +236,7 @@ class BaseServiceCallHandler(ABC):
 
     def _get_call_entity_ids(self, attr: str) -> list[str]:
         """Get entity IDs for a given attribute.
-        
+
         Default: returns all member entity IDs.
         Override in derived classes for diffing behavior.
         """
@@ -243,10 +244,10 @@ class BaseServiceCallHandler(ABC):
 
     def _get_unsynced_entities(self, attr: str) -> list[str]:
         """Get members that need to be synced for this attribute.
-        
+
         Compares current member state against target_state and returns
         only entities that differ from the target.
-        
+
         Args:
             attr: The attribute to check
         """
@@ -266,7 +267,7 @@ class BaseServiceCallHandler(ABC):
                 if target_value not in state.attributes.get(MODE_MODES_MAP[attr], []):
                     continue
             elif attr not in state.attributes:
-                    continue
+                continue
 
             current_value = state.state if attr == ATTR_HVAC_MODE else state.attributes.get(attr)
 
@@ -287,12 +288,14 @@ class BaseServiceCallHandler(ABC):
 
     def _get_parent_id(self) -> str:
         """Create a unique Parent ID for echo tracking.
-        
-        Format: "Timestamp|MasterEntityID"
+
+        Format: "MasterEntityID|Timestamp"
+        - MasterEntityID: The entity that triggered the change (primary, for "Sender Wins" logic)
+        - Timestamp: When the command was sent (secondary, for stale echo detection)
         """
-        timestamp = str(time.time())
         master_entity = self.target_state.last_entity or ""
-        return f"{timestamp}|{master_entity}"
+        timestamp = str(time.time())
+        return f"{master_entity}|{timestamp}"
 
     # Filter hook to inject kwargs into service calls
     def _inject_call_kwargs(self, data: dict[str, Any]) -> dict[str, Any]:
@@ -322,7 +325,7 @@ class BaseServiceCallHandler(ABC):
 
     def _block_wakeup_calls(self, data: dict[str, Any], attr: str) -> bool:
         """Block calls that would wake up devices.
-        
+
         Prevent setpoint changes if target HVAC mode is OFF
         Exception: Allow Min Temp Injection
         """
@@ -340,7 +343,7 @@ class BaseServiceCallHandler(ABC):
 
     def _skip_off_member(self, state: State, target_value: Any) -> bool:
         """Check if this OFF member should be skipped (Partial Sync).
-        
+
         Used by handlers that support CONF_IGNORE_OFF_MEMBERS to prevent
         waking up members that were manually turned OFF.
         """
@@ -352,23 +355,23 @@ class BaseServiceCallHandler(ABC):
             return False
         if target_value == HVACMode.OFF:
             return False
-        
+
         # Deadlock Prevention: Don't skip if ALL members are OFF
         return any(
-            self._hass.states.get(member_id).state != HVACMode.OFF 
-            for member_id in self._group.climate_entity_ids 
+            self._hass.states.get(member_id).state != HVACMode.OFF
+            for member_id in self._group.climate_entity_ids
             if (member_state := self._hass.states.get(member_id)) and member_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         )
 
 
 class ClimateCallHandler(BaseServiceCallHandler):
     """Handler for ClimateGroup's own service calls (user commands).
-    
+
     This handler is used for direct user interactions:
     - set_temperature, set_hvac_mode, set_fan_mode, etc.
-    
+
     Generates calls based on target_state diff (only sends to unsynced members).
-    
+
     Blocking:
     - Blocked by Window Control/force_off for setpoint changes.
     - HVAC Mode changes ALWAYS bypass the block (allows turning group OFF while window is open).
@@ -400,10 +403,10 @@ class ClimateCallHandler(BaseServiceCallHandler):
 
 class SyncCallHandler(BaseServiceCallHandler):
     """Generates calls based on target_state diff.
-    
+
     Used when Sync Mode (Lock/Mirror) is active. Compares current member states
     against target_state and generates calls to sync deviations.
-    
+
     Includes:
     - Blocking mode check
     - Partial sync output filter (don't wake OFF members)
@@ -438,6 +441,7 @@ class WindowControlCallHandler(BaseServiceCallHandler):
     def __init__(self, group: ClimateGroup):
         """Initialize the window control call handler."""
         super().__init__(group)
+
 
 class ScheduleCallHandler(BaseServiceCallHandler):
     """Call handler for Schedule operations."""

@@ -94,7 +94,6 @@ class ScheduleHandler:
     @callback
     def service_call_trigger(self) -> None:
         """Hook called when a service call (e.g. user command) was executed."""
-        _LOGGER.debug("[%s] Call trigger hook triggered by service handler", self._group.entity_id)
         self._hass.async_create_task(self.schedule_listener(caller="service_call"))
 
     def async_teardown(self) -> None:
@@ -127,7 +126,6 @@ class ScheduleHandler:
 
         @callback
         def handle_timer_timeout(_now):
-            _LOGGER.debug("[%s] %s timer expired", self._group.entity_id, timer_type.capitalize())
             self._hass.async_create_task(self.schedule_listener(caller=timer_type))
 
         self._timer = async_call_later(
@@ -149,7 +147,7 @@ class ScheduleHandler:
             and self._persist_changes 
             and self.target_state.last_source not in ("schedule", None)
         ):
-            _LOGGER.debug("[%s] Sticky Override active: Ignoring schedule transition.", self._group.entity_id)
+            _LOGGER.debug("[%s] Sticky Override active: Ignoring schedule transition", self._group.entity_id)
             return
 
         # Read current slot data

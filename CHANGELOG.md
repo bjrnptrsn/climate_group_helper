@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.1 - 2026-02-04
+
+### ✨ Improvements
+*   **Window Control Visibility**: New `blocking_reason` state attribute shows `window_open` when window control is active.
+*   **Config Flow Validation**: Prevents setting calibration targets without external sensors.
+*   **Cleaner UI**: Shortened descriptions steps for better readability.
+
 ## 0.18.0 - 2026-01-31
 
 ### 🚀 Scheduler & Timers

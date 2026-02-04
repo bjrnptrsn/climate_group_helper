@@ -1,50 +1,283 @@
 {
   "config": {
-    "abort": {
-      "already_configured": "Denne gruppen er allerede konfigurert.",
-      "no_changes": "Ingen endringer ble gjort.",
-      "single_instance_allowed": "Bare én forekomst er tillatt."
-    },
-    "error": {
-      "duplicate_name": "En klimagruppe med dette navnet finnes allerede.",
-      "invalid_entity": "En eller flere valgte enheter er ikke gyldige klimaenheter.",
-      "no_entities": "Du må velge minst én klimaenhet.",
-      "unavailable_entities": "Noen valgte enheter er utilgjengelige. Gruppen vil bli opprettet, men fungerer kanskje ikke fullt ut før de adlyder."
-    },
     "step": {
       "user": {
+        "title": "Klimagruppehjelper",
+        "description": "Opprett en kraftig 'Virtuell Kontroller' for klimasnhetene dine. Denne gruppen vil samle målinger og synkronisere innstillinger på tvers av alle medlemmer, og fungere som en enkelt smart enhet.",
         "data": {
-          "entities": "Klimaenheter",
-          "name": "Gruppenavn"
+          "name": "Gruppenavn",
+          "entities": "Klimaenheter"
         },
         "data_description": {
-          "entities": "Velg klimaenhetene (termostater, varmepumper) som skal inkluderes i denne gruppen.",
-          "name": "Et vennlig navn for gruppen din (f.eks. 'Stue' eller 'Hele huset')."
-        },
-        "description": "Opprett en kraftig 'Virtuell Kontroller' for klimasnhetene dine. Denne gruppen vil samle målinger og synkronisere innstillinger på tvers av alle medlemmer, og fungere som en enkelt smart enhet.",
-        "title": "Klimagruppehjelper"
+          "name": "Et vennlig navn for gruppen din (f.eks. 'Stue' eller 'Hele huset').",
+          "entities": "Velg klimaenhetene (termostater, varmepumper) som skal inkluderes i denne gruppen."
+        }
       }
+    },
+    "error": {
+      "no_entities": "Du må velge minst én klimaenhet.",
+      "invalid_entity": "En eller flere valgte enheter er ikke gyldige klimaenheter.",
+      "duplicate_name": "En klimagruppe med dette navnet finnes allerede.",
+      "unavailable_entities": "Noen valgte enheter er utilgjengelige. Gruppen vil bli opprettet, men fungerer kanskje ikke fullt ut før de adlyder."
+    },
+    "abort": {
+      "already_configured": "Denne gruppen er allerede konfigurert.",
+      "single_instance_allowed": "Bare én forekomst er tillatt.",
+      "no_changes": "Ingen endringer ble gjort."
     }
   },
-  "device_automation": {
-    "action_type": {
-      "set_hvac_mode": "Angi HVAC-modus",
-      "set_temperature": "Angi temperatur",
-      "turn_off": "Slå av",
-      "turn_on": "Slå på"
+  "options": {
+    "flow_title": "Konfigurer gruppe",
+    "step": {
+      "init": {
+        "title": "Konfigurer Klimagruppe",
+        "description": "Finjuster gruppens oppførsel. Endringer trer i kraft umiddelbart.",
+        "menu_options": {
+          "members": "Medlemmer & Moduser",
+          "temperature": "Temperatur",
+          "humidity": "Fuktighet",
+          "timings": "Tidspunkter",
+          "sync": "Sync Modus",
+          "window_control": "Vinduskontroll",
+          "schedule": "Tidsplan og Timere",
+          "other": "Andre Innstillinger"
+        }
+      },
+      "members": {
+        "title": "Medlemmer og moduser",
+        "description": "Velg enhetene dine og hvordan gruppen kombinerer deres statuser og funksjoner. 'Strategi' definerer gruppens oppførsel når medlemmene er i forskjellige moduser.",
+        "data": {
+          "entities": "Klimaenheter",
+          "hvac_mode_strategy": "HVAC Modusstrategi",
+          "feature_strategy": "Funksjonskompatibilitet"
+        },
+        "data_description": {
+          "entities": "Legg til eller fjern enheter. Fjerning av enheter stopper kontrollen av dem fra gruppen.",
+          "hvac_mode_strategy": "Strategi for å beregne gruppens status fra medlemmene (f.eks. hvis en 'heat' og en annen er 'off').",
+          "feature_strategy": "Bestemmer hvilke funksjoner (f.eks. forhåndsinnstilte moduser, viftemoduser) som er tilgjengelige i gruppen når medlemmene har forskjellige evner."
+        }
+      },
+      "temperature": {
+        "title": "Temperaturinnstillinger",
+        "description": "Konfigurer hvordan gruppen håndterer temperaturaggregering og målverdier. Eksterne sensorer vil overstyre medlemsavlesninger hvis valgt.",
+        "data": {
+          "temp_current_avg": "Nåværende temperatur (visning)",
+          "temp_target_avg": "Måltemperatur (kontroll)",
+          "temp_target_round": "Presisjon måltemperatur",
+          "temp_sensors": "Eksterne temperatursensorer",
+          "temp_update_targets": "Skriv ekstern temp til entiteter",
+          "temp_calibration_mode": "Kalibreringsmodus",
+          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
+        },
+        "data_description": {
+          "temp_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
+          "temp_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
+          "temp_target_round": "Gjelder kun verdier sendt til enheter, ikke nåværende/visningsverdier.",
+          "temp_sensors": "Bruk eksterne sensorer i stedet for medlemsavlesninger. Disse blir den eneste sannhetskilden for gruppens temperatur.",
+          "temp_update_targets": "Skriv verdien fra ekstern sensor til nummerentiteter (f.eks. TRV kalibreringsoffset). Nyttig for å holde termostater oppdatert om faktisk romtemperatur.",
+          "temp_calibration_mode": "Absolutt: Send verdi direkte. Offset: Send differanse (Ekstern - TRV Intern). Skalert: Send som heltall x100 (f.eks. 21.5 -> 2150).",
+          "calibration_heartbeat": "Tving periodisk kalibreringssynkronisering til entiteter selv om temperaturen ikke er endret. Sett til 0 for å deaktivere."
+        }
+      },
+      "humidity": {
+        "title": "Fuktighetsinnstillinger",
+        "description": "Konfigurer fuktighetsaggregering og eksterne sensorer. Merk at mange termostater kun rapporterer fuktighet og ikke tillater kontroll.",
+        "data": {
+          "humidity_current_avg": "Nåværende fuktighet (visning)",
+          "humidity_target_avg": "Mål fuktighet (kontroll)",
+          "humidity_target_round": "Presisjon mål fuktighet",
+          "humidity_sensors": "Eksterne fuktighetssensorer",
+          "humidity_update_targets": "Skriv ekstern fuktighet til entiteter"
+        },
+        "data_description": {
+          "humidity_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
+          "humidity_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
+          "humidity_target_round": "Gjelder kun verdier sendt til enheter, ikke nåværende/visningsverdier.",
+          "humidity_sensors": "Bruk eksterne sensorer i stedet for medlemsavlesninger. Disse blir den eneste sannhetskilden for gruppens fuktighet.",
+          "humidity_update_targets": "Skriv verdien fra ekstern sensor til nummerentiteter. Nyttig for kalibrering av avfuktere."
+        }
+      },
+      "timings": {
+        "title": "Kommunikasjonstider",
+        "description": "Finjuster kommandotider og gjenta forsøk for å sikre pålitelig drift uten å overbelaste nettverket ditt.",
+        "data": {
+          "debounce_delay": "Debounce forsinkelse (sekunder)",
+          "retry_attempts": "Forsøk på nytt",
+          "retry_delay": "Forsinkelse ved nytt forsøk (sekunder)"
+        },
+        "data_description": {
+          "debounce_delay": "Tid å vente før kommandoer sendes. Høyere verdier forhindrer 'maskingevær'-kommandoer ved justering av kontroller, men føles tregere.",
+          "retry_attempts": "Hvor mange ganger en kommando skal sendes på nytt hvis en enhet ikke svarer. Sett til 0 for å deaktivere.",
+          "retry_delay": "Pause mellom forsøk. Å gi enheter et øyeblikk til å komme seg kan forbedre påliteligheten."
+        }
+      },
+      "sync": {
+        "title": "Synkroniseringsmodus og attributter",
+        "description": "Kontroller hva som skjer når noen fysisk justerer en enhet. ADVARSEL: For å unngå 'Klimakriger', sørg for at en enhet ikke er tildelt flere grupper med aktiv synkroniseringsmodus.",
+        "data": {
+          "sync_mode": "Synkroniseringsmodus",
+          "sync_attributes": "Synkroniserte attributter",
+          "ignore_off_members": "Respekter medlemmers AV-tilstand"
+        },
+        "data_description": {
+          "sync_mode": "Standard: Gruppen viser aggregert status, men håndhever den ikke. Mirror: Endringer på en enhet kopieres til alle andre. Lock: Manuelle endringer på enheter tilbakestilles for å matche gruppen.",
+          "sync_attributes": "Attributter valgt her vil bli håndhevet i Lock/Mirror-moduser. Ikke-valgte attributter tillater lokal kontroll (f.eks. synkroniser temperatur, men la brukere endre viftehastighet lokalt).",
+          "ignore_off_members": "Vil gruppen IKKE slå på medlemmer som for tiden er AV. (Delvis synkronisering)"
+        }
+      },
+      "window_control": {
+        "title": "Vinduskontroll",
+        "description": "Konfigurer automatisk avstenging av varme/kjøling når vinduer åpnes. Begge sensorene er valgfrie.",
+        "data": {
+          "window_mode": "Vinduskontrollmodus",
+          "room_sensor": "Romvindussensor",
+          "zone_sensor": "Sonevindussensor",
+          "room_open_delay": "Forsinkelse Rom (s)",
+          "zone_open_delay": "Forsinkelse Sone (s)",
+          "close_delay": "Forsinkelse Lukking (s)"
+        },
+        "data_description": {
+          "window_mode": "Aktiver gruppe basert på vindussensorer. HVAC settes til 'off' ved åpne vinduer.",
+          "room_sensor": "Binærsensor for rommets vindu. Kortere forsinkelse.",
+          "zone_sensor": "Binærsensor for andre vinduer i sonen. Lengre forsinkelse.",
+          "room_open_delay": "Ventetid etter åpning av romvindu.",
+          "zone_open_delay": "Ventetid etter åpning av sonevindu.",
+          "close_delay": "Ventetid etter lukking av vinduer."
+        }
+      },
+      "schedule": {
+        "title": "Tidsplan og Timere",
+        "description": "Konfigurer automatisering for gruppen. Koble til en tidsplan-enhet for å automatisere endringer og aktivere periodisk synkronisering.",
+        "data": {
+          "schedule_entity": "Tidsplan Enhet",
+          "resync_interval": "Resync-intervall (minutter)",
+          "override_duration": "Varighet for overstyring (minutter)",
+          "persist_changes": "Sticky Override"
+        },
+        "data_description": {
+          "schedule_entity": "Velg en tidsplan-enhet. Feltet 'Tilleggsdata' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
+          "resync_interval": "Tvinge synkronisering av medlemmer til gruppens måltilstand hvert X minutt. Forhindrer avvik hvis enheter går glipp av en kommando eller justeres manuelt. Sett til 0 for å deaktivere.",
+          "override_duration": "Varigheten av manuelle overstyringer. Etter denne tiden går gruppen automatisk tilbake til gjeldende tidsplan. Sett til 0 for å hoppe over overstyringsperioden.",
+          "persist_changes": "Vil endringer i selve tidsplanen bli ignorert så lenge en manuell overstyring er aktiv. Bruker gjeldende tidsplan på nytt først etter at overstyringen er utløpt."
+        }
+      },
+      "other": {
+        "title": "Andre innstillinger",
+        "description": "Tilleggsfunksjoner og entitetseksponering.",
+        "data": {
+          "expose_smart_sensors": "Vis smarte sensorer",
+          "expose_member_entities": "Vis medlemsliste",
+          "min_temp_off": "Minimumstemperatur når av"
+        },
+        "data_description": {
+          "expose_smart_sensors": "Oppretter ekstra sensorentiteter for gruppens temperatur og luftfuktighet (nyttig for grafer).",
+          "expose_member_entities": "Oppretter en attributt som lister alle medlemsenhets-ID-er.",
+          "min_temp_off": "Sender enhetens minimumstemperatur (f.eks. 5°C) når gruppen slås av. (Sikrer at ventilen lukkes)"
+        }
+      }
     },
-    "condition_type": {
-      "is_group_available": "Gruppen er tilgjengelig",
-      "is_hvac_mode": "HVAC-modus er",
-      "is_temperature_above": "Temperaturen er over",
-      "is_temperature_below": "Temperaturen er under"
+    "error": {
+      "no_entities": "Minst én klimaenhet må være igjen i gruppen.",
+      "invalid_entity": "Ugyldig enhet valgt.",
+      "configuration_error": "Kunne ikke oppdatere konfigurasjonen.",
+      "calibration_requires_sensors": "Kalibreringsmål krever minst én ekstern temperatursensor."
     },
-    "trigger_type": {
-      "current_temperature_changed": "Nåværende temperatur endret",
-      "group_turned_off": "Gruppe slått av",
-      "group_turned_on": "Gruppe slått på",
-      "hvac_mode_changed": "HVAC-modus endret",
-      "temperature_target_changed": "Måltemperatur endret"
+    "abort": {
+      "no_changes": "Ingen endringer oppdaget."
+    }
+  },
+  "selector": {
+    "temp_current_avg": {
+      "options": {
+        "mean": "Gjennomsnitt",
+        "median": "Median (Ignorer uteliggere)",
+        "min": "Minimum (Lavest)",
+        "max": "Maksimum (Høyest)"
+      }
+    },
+    "temp_target_avg": {
+      "options": {
+        "mean": "Gjennomsnitt",
+        "median": "Median (Midterste verdi)",
+        "min": "Minimum (Lavest)",
+        "max": "Maksimum (Høyest)"
+      }
+    },
+    "temp_target_round": {
+      "options": {
+        "none": "Ingen avrunding (Nøyaktig)",
+        "half": "Halv grad (0.5°)",
+        "integer": "Hele tall (1°)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolutt – Send verdi direkte (Standard)",
+        "offset": "Offset – Send differanse (Ekstern - TRV Intern)",
+        "scaled": "Skalert – Heltall x100 (Danfoss Ally)"
+      }
+    },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "Gjennomsnitt",
+        "median": "Median (Ignorer uteliggere)",
+        "min": "Minimum (Lavest)",
+        "max": "Maksimum (Høyest)"
+      }
+    },
+    "humidity_target_avg": {
+      "options": {
+        "mean": "Gjennomsnitt",
+        "median": "Median (Midterste verdi)",
+        "min": "Minimum (Lavest)",
+        "max": "Maksimum (Høyest)"
+      }
+    },
+    "humidity_target_round": {
+      "options": {
+        "none": "Ingen avrunding (Nøyaktig)",
+        "half": "Halv prosent (0.5%)",
+        "integer": "Hele tall (1%)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "standard": "Standard (Enveis)",
+        "mirror": "Mirror (Magic Sync - Toveis)",
+        "lock": "Lock (Sjefen - Tving gruppe)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Av – Vinduskontroll er deaktivert",
+        "on": "På – Vinduskontroll er aktivert"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal (Demokratisk)",
+        "off_priority": "Av-prioritet (Hovedbryter)",
+        "auto": "Auto (Smart)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Snitt (Sikker modus - Felles funksjoner)",
+        "union": "Union (Avansert bruker - Alle funksjoner)"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "HVAC-modus",
+        "preset_mode": "Forhåndsinnstilt modus",
+        "temperature": "Temperatur (Mål)",
+        "target_temp_high": "Måltemperatur Høy (Område)",
+        "target_temp_low": "Måltemperatur Lav (Område)",
+        "fan_mode": "Viftemodus",
+        "swing_mode": "Vertikal sving",
+        "swing_horizontal_mode": "Horisontal sving",
+        "humidity": "Fuktighet (Mål)"
+      }
     }
   },
   "entity": {
@@ -62,299 +295,67 @@
       }
     }
   },
-  "issues": {
-    "conflicting_features": {
-      "description": "Gruppen {group_name} har medlemmer med forskjellige funksjoner. Funksjonalitet kan være begrenset til det alle støtter.\n\nKonflikter: {conflicting_entities}",
-      "title": "Funksjonskonflikter"
-    },
-    "member_unavailable": {
-      "description": "En eller flere enheter i {group_name} er offline. Gruppen vil fortsette å fungere med det den har.\n\nUtilgjengelig: {unavailable_entities}",
-      "title": "Medlemsenhet utilgjengelig"
-    },
-    "no_members_available": {
-      "description": "Gruppen {group_name} har ingen aktive medlemmer og er effektivt offline.\n\nSjekk: {member_entities}",
-      "title": "Ingen medlemmer tilgjengelig"
-    }
-  },
-  "options": {
-    "abort": {
-      "no_changes": "Ingen endringer oppdaget."
-    },
-    "error": {
-      "configuration_error": "Kunne ikke oppdatere konfigurasjonen.",
-      "invalid_entity": "Ugyldig enhet valgt.",
-      "no_entities": "Minst én klimaenhet må være igjen i gruppen."
-    },
-    "flow_title": "Konfigurer gruppe",
-    "step": {
-      "humidity": {
-        "data": {
-          "humidity_current_avg": "Nåværende fuktighet (visning)",
-          "humidity_sensors": "Eksterne fuktighetssensorer",
-          "humidity_target_avg": "Mål fuktighet (kontroll)",
-          "humidity_target_round": "Presisjon mål fuktighet",
-          "humidity_update_targets": "Skriv ekstern fuktighet til entiteter"
-        },
-        "data_description": {
-          "humidity_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
-          "humidity_sensors": "Bruk eksterne sensorer i stedet for medlemsavlesninger. Disse blir den eneste sannhetskilden for gruppens fuktighet.",
-          "humidity_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
-          "humidity_target_round": "Gjelder kun verdier sendt til enheter, ikke nåværende/visningsverdier.",
-          "humidity_update_targets": "Skriv verdien fra ekstern sensor til nummerentiteter. Nyttig for kalibrering av avfuktere."
-        },
-        "description": "Konfigurer fuktighetsaggregering og eksterne sensorer. Merk at mange termostater kun rapporterer fuktighet og ikke tillater kontroll.",
-        "title": "Fuktighetsinnstillinger"
-      },
-      "init": {
-        "description": "Finjuster gruppens oppførsel. Endringer trer i kraft umiddelbart.",
-        "menu_options": {
-          "humidity": "Fuktighet",
-          "members": "Medlemmer & Moduser",
-          "other": "Andre Innstillinger",
-          "schedule": "Tidsplan og Timere",
-          "sync": "Sync Modus",
-          "temperature": "Temperatur",
-          "timings": "Tidspunkter",
-          "window_control": "Vinduskontroll"
-        },
-        "title": "Konfigurer Klimagruppe"
-      },
-      "members": {
-        "data": {
-          "entities": "Klimaenheter",
-          "feature_strategy": "Funksjonskompatibilitet",
-          "hvac_mode_strategy": "HVAC Modusstrategi"
-        },
-        "data_description": {
-          "entities": "Legg til eller fjern enheter. Fjerning av enheter stopper kontrollen av dem fra gruppen.",
-          "feature_strategy": "Bestemmer hvilke funksjoner (f.eks. forhåndsinnstilte moduser, viftemoduser) som er tilgjengelige i gruppen når medlemmene har forskjellige evner.",
-          "hvac_mode_strategy": "Strategi for å beregne gruppens status fra medlemmene (f.eks. hvis en 'heat' og en annen er 'off')."
-        },
-        "description": "Velg enhetene dine og hvordan gruppen kombinerer deres statuser og funksjoner. 'Strategi' definerer gruppens oppførsel når medlemmene er i forskjellige moduser.",
-        "title": "Medlemmer og moduser"
-      },
-      "other": {
-        "data": {
-          "expose_member_entities": "Vis medlemsliste",
-          "expose_smart_sensors": "Vis smarte sensorer",
-          "ignore_off_members": "Respekter medlemmers AV-tilstand",
-          "min_temp_off": "Minimumstemperatur når av"
-        },
-        "data_description": {
-          "expose_member_entities": "Oppretter en attributt som lister alle medlemsenhets-ID-er.",
-          "expose_smart_sensors": "Oppretter ekstra sensorentiteter for gruppens temperatur og luftfuktighet (nyttig for grafer).",
-          "ignore_off_members": "Hvis aktivert, vil gruppen IKKE slå på medlemmer som for tiden er AV. (Delvis synkronisering)",
-          "min_temp_off": "Hvis aktivert, sender enhetens minimumstemperatur (f.eks. 5°C) når gruppen slås av. (Sikrer at ventilen lukkes)"
-        },
-        "description": "Tilleggsfunksjoner og entitetseksponering.",
-        "title": "Andre innstillinger"
-      },
-      "schedule": {
-        "title": "Tidsplan og Timere",
-        "description": "Konfigurer automatisering for gruppen. Koble til en tidsplan-enhet for å automatisere endringer og aktivere periodisk synkronisering.",
-        "data": {
-          "schedule_entity": "Tidsplan Enhet",
-          "resync_interval": "Resync-intervall (minutter)",
-          "override_duration": "Varighet for overstyring (minutter)",
-          "persist_changes": "Sticky Override"
-        },
-        "data_description": {
-          "schedule_entity": "Velg en tidsplan-enhet. Feltet 'Tilleggsdata' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
-          "resync_interval": "Tvinge synkronisering av medlemmer til gruppens måltilstand hvert X minutt. Forhindrer avvik hvis enheter går glipp av en kommando eller justeres manuelt. Sett til 0 for å deaktivere.",
-          "override_duration": "Varigheten av manuelle overstyringer. Etter denne tiden går gruppen automatisk tilbake til gjeldende tidsplan. Sett til 0 for å hoppe over overstyringsperioden.",
-          "persist_changes": "Hvis aktivert, vil endringer i selve tidsplanen bli ignorert så lenge en manuell overstyring er aktiv. Bruker gjeldende tidsplan på nytt først etter at overstyringen er utløpt."
-        }
-      },
-      "sync": {
-        "data": {
-          "sync_attributes": "Synkroniserte attributter",
-          "sync_mode": "Synkroniseringsmodus"
-        },
-        "data_description": {
-          "sync_attributes": "Attributter valgt her vil bli håndhevet i Lock/Mirror-moduser. Ikke-valgte attributter tillater lokal kontroll (f.eks. synkroniser temperatur, men la brukere endre viftehastighet lokalt).",
-          "sync_mode": "Standard: Gruppen viser aggregert status, men håndhever den ikke. Mirror: Endringer på en enhet kopieres til alle andre. Lock: Manuelle endringer på enheter tilbakestilles for å matche gruppen."
-        },
-        "description": "Kontroller hva som skjer når noen fysisk justerer en enhet. ADVARSEL: For å unngå 'Klimakriger', sørg for at en enhet ikke er tildelt flere grupper med aktiv synkroniseringsmodus.",
-        "title": "Synkroniseringsmodus og attributter"
-      },
-      "temperature": {
-        "data": {
-          "temp_current_avg": "Nåværende temperatur (visning)",
-          "temp_sensors": "Eksterne temperatursensorer",
-          "temp_target_avg": "Måltemperatur (kontroll)",
-          "temp_target_round": "Presisjon måltemperatur",
-          "temp_update_targets": "Skriv ekstern temp til entiteter",
-          "temp_calibration_mode": "Kalibreringsmodus",
-          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
-        },
-        "data_description": {
-          "temp_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
-          "temp_sensors": "Bruk eksterne sensorer i stedet for medlemsavlesninger. Disse blir den eneste sannhetskilden for gruppens temperatur.",
-          "temp_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
-          "temp_target_round": "Gjelder kun verdier sendt til enheter, ikke nåværende/visningsverdier.",
-          "temp_update_targets": "Skriv verdien fra ekstern sensor til nummerentiteter (f.eks. TRV kalibreringsoffset). Nyttig for å holde termostater oppdatert om faktisk romtemperatur.",
-          "temp_calibration_mode": "Absolutt: Send verdi direkte. Offset: Send differanse (Ekstern - TRV Intern). Skalert: Send som heltall x100 (f.eks. 21.5 -> 2150).",
-          "calibration_heartbeat": "Tving periodisk kalibreringssynkronisering til entiteter selv om temperaturen ikke er endret. Sett til 0 for å deaktivere."
-        },
-        "description": "Konfigurer hvordan gruppen håndterer temperaturaggregering og målverdier. Eksterne sensorer vil overstyre medlemsavlesninger hvis valgt.",
-        "title": "Temperaturinnstillinger"
-      },
-      "timings": {
-        "data": {
-          "debounce_delay": "Debounce forsinkelse (sekunder)",
-          "retry_attempts": "Forsøk på nytt",
-          "retry_delay": "Forsinkelse ved nytt forsøk (sekunder)"
-        },
-        "data_description": {
-          "debounce_delay": "Tid å vente før kommandoer sendes. Høyere verdier forhindrer 'maskingevær'-kommandoer ved justering av kontroller, men føles tregere.",
-          "retry_attempts": "Hvor mange ganger en kommando skal sendes på nytt hvis en enhet ikke svarer. Sett til 0 for å deaktivere.",
-          "retry_delay": "Pause mellom forsøk. Å gi enheter et øyeblikk til å komme seg kan forbedre påliteligheten."
-        },
-        "description": "Konfigurer hvordan den 'Virtuelle Kontrolleren' samhandler med nettverket ditt. Riktige tidsinnstillinger forhindrer Zigbee/Z-Wave-tekst og øker kommandopåliteligheten.",
-        "title": "Kommunikasjonstider"
-      },
-      "window_control": {
-        "data": {
-          "close_delay": "Forsinkelse Lukking (s)",
-          "room_open_delay": "Forsinkelse Rom (s)",
-          "room_sensor": "Romvindussensor",
-          "window_mode": "Vinduskontrollmodus",
-          "zone_open_delay": "Forsinkelse Sone (s)",
-          "zone_sensor": "Sonevindussensor"
-        },
-        "data_description": {
-          "close_delay": "Ventetid etter lukking av vinduer.",
-          "room_open_delay": "Ventetid etter åpning av romvindu.",
-          "room_sensor": "Binærsensor for rommets vindu. Kortere forsinkelse.",
-          "window_mode": "Aktiver gruppe basert på vindussensorer. HVAC settes til 'off' ved åpne vinduer.",
-          "zone_open_delay": "Ventetid etter åpning av sonevindu.",
-          "zone_sensor": "Binærsensor for andre vinduer i sonen. Lengre forsinkelse."
-        },
-        "description": "Konfigurer automatisk avstenging av varme/kjøling når vinduer åpnes.",
-        "title": "Vinduskontroll"
-      }
-    }
-  },
-  "selector": {
-    "feature_strategy": {
-      "options": {
-        "intersection": "Snitt (Sikker modus - Felles funksjoner)",
-        "union": "Union (Avansert bruker - Alle funksjoner)"
-      }
-    },
-    "humidity_current_avg": {
-      "options": {
-        "max": "Maksimum (Høyest)",
-        "mean": "Gjennomsnitt",
-        "median": "Median (Ignorer uteliggere)",
-        "min": "Minimum (Lavest)"
-      }
-    },
-    "humidity_target_avg": {
-      "options": {
-        "max": "Maksimum (Høyest)",
-        "mean": "Gjennomsnitt",
-        "median": "Median (Midterste verdi)",
-        "min": "Minimum (Lavest)"
-      }
-    },
-    "humidity_target_round": {
-      "options": {
-        "half": "Halv prosent (0.5%)",
-        "integer": "Hele tall (1%)",
-        "none": "Ingen avrunding (Nøyaktig)"
-      }
-    },
-    "hvac_mode_strategy": {
-      "options": {
-        "auto": "Auto (Smart)",
-        "normal": "Normal (Demokratisk)",
-        "off_priority": "Av-prioritet (Hovedbryter)"
-      }
-    },
-    "sync_attributes": {
-      "options": {
-        "fan_mode": "Viftemodus",
-        "humidity": "Fuktighet (Mål)",
-        "hvac_mode": "HVAC-modus",
-        "preset_mode": "Forhåndsinnstilt modus",
-        "swing_horizontal_mode": "Horisontal sving",
-        "swing_mode": "Vertikal sving",
-        "target_temp_high": "Måltemperatur Høy (Område)",
-        "target_temp_low": "Måltemperatur Lav (Område)",
-        "temperature": "Temperatur (Mål)"
-      }
-    },
-    "sync_mode": {
-      "options": {
-        "lock": "Lock (Sjefen - Tving gruppe)",
-        "mirror": "Mirror (Magic Sync - Toveis)",
-        "standard": "Standard (Enveis)"
-      }
-    },
-    "temp_current_avg": {
-      "options": {
-        "max": "Maksimum (Høyest)",
-        "mean": "Gjennomsnitt",
-        "median": "Median (Ignorer uteliggere)",
-        "min": "Minimum (Lavest)"
-      }
-    },
-    "temp_target_avg": {
-      "options": {
-        "max": "Maksimum (Høyest)",
-        "mean": "Gjennomsnitt",
-        "median": "Median (Midterste verdi)",
-        "min": "Minimum (Lavest)"
-      }
-    },
-    "temp_target_round": {
-      "options": {
-        "half": "Halv grad (0.5°)",
-        "integer": "Hele tall (1°)",
-        "none": "Ingen avrunding (Nøyaktig)"
-      }
-    },
-    "temp_calibration_mode": {
-      "options": {
-        "absolute": "Absolutt – Send verdi direkte (Standard)",
-        "offset": "Offset – Send differanse (Ekstern - TRV Intern)",
-        "scaled": "Skalert – Heltall x100 (Danfoss Ally)"
-      }
-    },
-    "window_mode": {
-      "options": {
-        "off": "Av – Vinduskontroll er deaktivert",
-        "on": "På – Vinduskontroll er aktivert"
-      }
-    }
-  },
   "services": {
     "set_temperature": {
+      "name": "Angi temperatur",
       "description": "Angi måltemperaturen for hele gruppen.",
       "fields": {
         "entity_id": {
-          "description": "Gruppen som skal kontrolleres.",
-          "name": "Klimagruppe"
-        },
-        "hvac_mode": {
-          "description": "Endre modus valgfritt.",
-          "name": "HVAC-modus"
-        },
-        "target_temp_high": {
-          "description": "Øvre grense for varme/kjøle-modus.",
-          "name": "Mål Høy"
-        },
-        "target_temp_low": {
-          "description": "Nedre grense for varme/kjøle-modus.",
-          "name": "Mål Lav"
+          "name": "Klimagruppe",
+          "description": "Gruppen som skal kontrolleres."
         },
         "temperature": {
-          "description": "Ønsket temperatur.",
-          "name": "Måltemperatur"
+          "name": "Måltemperatur",
+          "description": "Ønsket temperatur."
+        },
+        "target_temp_high": {
+          "name": "Mål Høy",
+          "description": "Øvre grense for varme/kjøle-modus."
+        },
+        "target_temp_low": {
+          "name": "Mål Lav",
+          "description": "Nedre grense for varme/kjøle-modus."
+        },
+        "hvac_mode": {
+          "name": "HVAC-modus",
+          "description": "Endre modus valgfritt."
         }
-      },
-      "name": "Angi temperatur"
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Medlemsenhet utilgjengelig",
+      "description": "En eller flere enheter i {group_name} er offline. Gruppen vil fortsette å fungere med det den har.\n\nUtilgjengelig: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "Ingen medlemmer tilgjengelig",
+      "description": "Gruppen {group_name} har ingen aktive medlemmer og er effektivt offline.\n\nSjekk: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Funksjonskonflikter",
+      "description": "Gruppen {group_name} har medlemmer med forskjellige funksjoner. Funksjonalitet kan være begrenset til det alle støtter.\n\nKonflikter: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC-modus endret",
+      "temperature_target_changed": "Måltemperatur endret",
+      "current_temperature_changed": "Nåværende temperatur endret",
+      "group_turned_on": "Gruppe slått på",
+      "group_turned_off": "Gruppe slått av"
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC-modus er",
+      "is_temperature_above": "Temperaturen er over",
+      "is_temperature_below": "Temperaturen er under",
+      "is_group_available": "Gruppen er tilgjengelig"
+    },
+    "action_type": {
+      "set_hvac_mode": "Angi HVAC-modus",
+      "set_temperature": "Angi temperatur",
+      "turn_on": "Slå på",
+      "turn_off": "Slå av"
     }
   }
 }
