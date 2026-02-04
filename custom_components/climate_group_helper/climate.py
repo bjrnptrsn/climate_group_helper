@@ -337,7 +337,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             _LOGGER.debug("[%s] Starting calibration heartbeat: %s min", self.entity_id, self._calibration_heartbeat)
             self._calibration_heartbeat_unsub = async_track_time_interval(
                 self.hass,
-                self._calibration_heartbeat_callback,
+                self._device_calibration_heartbeat,
                 timedelta(minutes=self._calibration_heartbeat)
             )
 
@@ -562,12 +562,12 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         return None
 
     @callback
-    def _calibration_heartbeat_callback(self, _now: datetime) -> None:
+    def _device_calibration_heartbeat(self, _now: datetime) -> None:
         """Force update calibration targets (heartbeat)."""
         _LOGGER.debug("[%s] Calibration heartbeat triggered", self.entity_id)
-        self._sync_calibration(domain="temperature", force=True)
+        self._device_calibration(domain="temperature", force=True)
 
-    def _sync_calibration(self, domain: str = "temperature", force: bool = False) -> None:
+    def _device_calibration(self, domain: str = "temperature", force: bool = False) -> None:
         """Sync external sensor values to target entities using the configured mode."""
         if domain == "temperature":
             entity_ids = self._temp_update_target_entity_ids
@@ -583,57 +583,56 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         valid_states, _ = self._get_valid_member_states(entity_ids)
 
-        for state in valid_states:
+        for sensor_state in valid_states:
             try:
-                # 1. Determine Target Value
+                # Determine Target Value
                 target_val = value
                 if domain == "temperature":
                     if mode == CalibrationMode.OFFSET:
                         ref_temp = self._member_temp_avg
-                        if state.entity_id in self._target_member_map:
-                            m_id = self._target_member_map[state.entity_id]
-                            if (m_s := self.hass.states.get(m_id)) and (m_t := m_s.attributes.get(ATTR_CURRENT_TEMPERATURE)) is not None:
-                                ref_temp = float(m_t)
+                        if sensor_state.entity_id in self._target_member_map:
+                            member_id = self._target_member_map[sensor_state.entity_id]
+                            if (member_state := self.hass.states.get(member_id)) and (member_temp := member_state.attributes.get(ATTR_CURRENT_TEMPERATURE)) is not None:
+                                ref_temp = float(member_temp)
                         
                         if ref_temp is None:
                             continue
 
                         try:
-                            curr_offset = float(state.state)
+                            curr_offset = float(sensor_state.state)
                         except (ValueError, TypeError):
                             curr_offset = 0.0
                         target_val = value - (ref_temp - curr_offset)
 
                     elif mode == CalibrationMode.SCALED:
-                        # Scaled values (e.g. for Danfoss Ally) must be integers
                         target_val = int(round(value * 100))
 
-                # 2. Determine if Sync is required
+                # Determine if Sync is required
                 try:
-                    current_val = float(state.state)
-                    # Comparison: exact for int (scaled), tolerance for float
-                    out_of_sync = current_val != target_val if isinstance(target_val, int) else \
-                                 abs(current_val - target_val) > FLOAT_TOLERANCE
+                    current_val = float(sensor_state.state)
+                    if isinstance(target_val, int):
+                        out_of_sync = current_val != target_val
+                    else:
+                        out_of_sync = abs(current_val - target_val) > FLOAT_TOLERANCE
                 except (ValueError, TypeError):
                     out_of_sync = True # Force sync if current state is not a number
 
                 if not (force or out_of_sync):
                     continue
 
-                # 3. Dispatch Update (Validation via HA Core Exception)
                 _LOGGER.debug(
                     "[%s] Updating %s to %s (domain=%s, mode=%s, force=%s)", 
-                    self.entity_id, state.entity_id, target_val, domain, mode if domain == "temperature" else "absolute", force
+                    self.entity_id, sensor_state.entity_id, target_val, domain, mode, force
                 )
                 self.hass.async_create_task(
                     self.hass.services.async_call(
                         NUMBER_DOMAIN,
                         "set_value",
-                        {ATTR_ENTITY_ID: state.entity_id, "value": target_val},
+                        {ATTR_ENTITY_ID: sensor_state.entity_id, "value": target_val},
                     )
                 )
             except Exception as error:
-                _LOGGER.error("[%s] Error updating target entity %s: %s", self.entity_id, state.entity_id, error)
+                _LOGGER.error("[%s] Error updating target entity %s: %s", self.entity_id, sensor_state.entity_id, error)
                 continue
 
     @callback
@@ -705,7 +704,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             self._attr_current_temperature = self._get_avg_sensor_value(self._temp_sensor_entity_ids, self._temp_current_avg_calc)
             # Write calibration targets
             if self._attr_current_temperature is not None:
-                self._sync_calibration("temperature")
+                self._device_calibration("temperature")
             else:
                 _LOGGER.debug("[%s] External sensors %s configured but unavailable. Current temperature will be None", self.entity_id, self._temp_sensor_entity_ids)
         else:
@@ -744,7 +743,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             # Use ONLY external sensors if configured
             self._attr_current_humidity = self._get_avg_sensor_value(self._humidity_sensor_entity_ids, self._humidity_current_avg_calc)
             if self._attr_current_humidity is not None:
-                self._sync_calibration("humidity")
+                self._device_calibration("humidity")
             else:
                 _LOGGER.debug("[%s] External sensors %s configured but unavailable. Current humidity will be None", self.entity_id, self._humidity_sensor_entity_ids)
         else:
@@ -809,6 +808,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             ATTR_ASSUMED_STATE: self._attr_assumed_state,
             ATTR_LAST_ACTIVE_HVAC_MODE: self._last_active_hvac_mode,
             ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
+            "blocking_reason": "window_open" if self.window_control_handler.force_off else None,
         }
 
         # Expose member entities if configured

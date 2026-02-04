@@ -1,50 +1,283 @@
 {
   "config": {
-    "abort": {
-      "already_configured": "Denne gruppe er allerede konfigureret.",
-      "no_changes": "Ingen ændringer blev foretaget.",
-      "single_instance_allowed": "Kun én instans er tilladt."
-    },
-    "error": {
-      "duplicate_name": "En klimagruppe med dette navn findes allerede.",
-      "invalid_entity": "En eller flere valgte enheder er ikke gyldige klimaenheder.",
-      "no_entities": "Du skal vælge mindst én klimaenhed.",
-      "unavailable_entities": "Nogle valgte enheder er ikke tilgængelige. Gruppen oprettes, men fungerer muligvis ikke fuldt ud, før de adlyder."
-    },
     "step": {
       "user": {
+        "title": "Klima Gruppe Hjælper",
+        "description": "Opret en kraftfuld 'Virtuel Controller' til dine klimaenheder. Denne gruppe samler målinger og synkroniserer indstillinger på tværs af alle medlemmer og fungerer som en enkelt smart enhed.",
         "data": {
-          "entities": "Klimaenheder",
-          "name": "Gruppenavn"
+          "name": "Gruppenavn",
+          "entities": "Klimaenheder"
         },
         "data_description": {
-          "entities": "Vælg de klimaenheder (termostater, AC'er), der skal inkluderes i denne gruppe.",
-          "name": "Et venligt navn til din gruppe (f.eks. 'Stue' eller 'Hele Huset')."
-        },
-        "description": "Opret en kraftfuld 'Virtuel Controller' til dine klimaenheder. Denne gruppe samler målinger og synkroniserer indstillinger på tværs af alle medlemmer og fungerer som en enkelt smart enhed.",
-        "title": "Klima Gruppe Hjælper"
+          "name": "Et venligt navn til din gruppe (f.eks. 'Stue' eller 'Hele Huset').",
+          "entities": "Vælg de klimaenheder (termostater, AC'er), der skal inkluderes i denne gruppe."
+        }
       }
+    },
+    "error": {
+      "no_entities": "Du skal vælge mindst én klimaenhed.",
+      "invalid_entity": "En eller flere valgte enheder er ikke gyldige klimaenheder.",
+      "duplicate_name": "En klimagruppe med dette navn findes allerede.",
+      "unavailable_entities": "Nogle valgte enheder er ikke tilgængelige. Gruppen oprettes, men fungerer muligvis ikke fuldt ud, før de adlyder."
+    },
+    "abort": {
+      "already_configured": "Denne gruppe er allerede konfigureret.",
+      "single_instance_allowed": "Kun én instans er tilladt.",
+      "no_changes": "Ingen ændringer blev foretaget."
     }
   },
-  "device_automation": {
-    "action_type": {
-      "set_hvac_mode": "Indstil HVAC-tilstand",
-      "set_temperature": "Indstil temperatur",
-      "turn_off": "Sluk",
-      "turn_on": "Tænd"
+  "options": {
+    "flow_title": "Konfigurer gruppe",
+    "step": {
+      "init": {
+        "title": "Konfigurer Klimagruppe",
+        "description": "Finjuster din gruppes adfærd. Ændringer træder i kraft med det samme.",
+        "menu_options": {
+          "members": "Medlemmer & Tilstande",
+          "temperature": "Temperatur",
+          "humidity": "Fugtighed",
+          "timings": "Tider",
+          "sync": "Synkroniseringstilstand",
+          "window_control": "Vinduesstyring",
+          "schedule": "Tidsplan & Timere",
+          "other": "Andre indstillinger"
+        }
+      },
+      "members": {
+        "title": "Medlemmer & Tilstande",
+        "description": "Vælg dine enheder og vælg, hvordan gruppen kombinerer deres tilstande og funktioner. 'Strategi' definerer gruppens adfærd, når medlemmer er i forskellige tilstande.",
+        "data": {
+          "entities": "Klimaenheder",
+          "hvac_mode_strategy": "HVAC Tilstandsstrategi",
+          "feature_strategy": "Funktionskompatibilitet"
+        },
+        "data_description": {
+          "entities": "Tilføj eller fjern enheder. Fjernelse af enheder stopper dem fra at blive kontrolleret af gruppen.",
+          "hvac_mode_strategy": "Strategi for beregning af gruppens tilstand ud fra dens medlemmer (f.eks. hvis en 'heat' og en anden er 'off').",
+          "feature_strategy": "Bestemmer hvilke funktioner (f.eks. forudindstillede tilstande, blæsertilstande) der er tilgængelige på gruppen, når medlemmer har forskellige evner."
+        }
+      },
+      "temperature": {
+        "title": "Temperaturindstillinger",
+        "description": "Konfigurer, hvordan gruppen håndterer temperaturaggregering og sætpunkter. Eksterne sensorer vil tilsidesætte medlemsmålinger, hvis de vælges.",
+        "data": {
+          "temp_current_avg": "Nuværende Temperatur (Visning)",
+          "temp_target_avg": "Mål Temperatur (Kontrol)",
+          "temp_target_round": "Mål Temperatur Præcision",
+          "temp_sensors": "Eksterne Temperatursensorer",
+          "temp_update_targets": "Skriv Ekstern Temp til Entiteter",
+          "temp_calibration_mode": "Kalibreringstilstand",
+          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
+        },
+        "data_description": {
+          "temp_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
+          "temp_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
+          "temp_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
+          "temp_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens temperatur.",
+          "temp_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter (f.eks. TRV kalibrering forskydninger). Nyttigt for at holde termostater opmærksomme på den faktiske stuetemperatur.",
+          "temp_calibration_mode": "Absolut: Send værdi direkte. Offset: Send difference (Ekstern - TRV Intern). Skaleret: Send som heltal x100 (f.eks. 21.5 -> 2150).",
+          "calibration_heartbeat": "Tving periodisk kalibreringssynkronisering til enheder, selvom temperaturen ikke er ændret. Sæt til 0 for at deaktivere."
+        }
+      },
+      "humidity": {
+        "title": "Fugtighedsindstillinger",
+        "description": "Konfigurer fugtighedsaggregering og eksterne sensorer. Bemærk, at mange termostater kun rapporterer fugtighed og ikke tillader kontrol.",
+        "data": {
+          "humidity_current_avg": "Nuværende Fugtighed (Visning)",
+          "humidity_target_avg": "Mål Fugtighed (Kontrol)",
+          "humidity_target_round": "Mål Fugtighed Præcision",
+          "humidity_sensors": "Eksterne Fugtighedssensorer",
+          "humidity_update_targets": "Skriv Ekstern Fugtighed til Entiteter"
+        },
+        "data_description": {
+          "humidity_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
+          "humidity_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
+          "humidity_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
+          "humidity_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens fugtighed.",
+          "humidity_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter. Nyttigt til kalibrering af affugtere."
+        }
+      },
+      "timings": {
+        "title": "Kommunikation Timings",
+        "description": "Finjuster kommandotider og gentagelser for at sikre pålidelig drift uden at overbelaste dit netværk.",
+        "data": {
+          "debounce_delay": "Debounce Forsinkelse (sekunder)",
+          "retry_attempts": "Genforsøg Forsøg",
+          "retry_delay": "Genforsøg Forsinkelse (sekunder)"
+        },
+        "data_description": {
+          "debounce_delay": "Tid at vente før afsendelse af kommandoer. Højere værdier forhindrer 'maskingevær' kommandoer ved glidende kontrol, men føles langsommere.",
+          "retry_attempts": "Hvor mange gange en kommando skal gensendes, hvis en enhed ikke svarer. Sæt til 0 for at deaktivere.",
+          "retry_delay": "Pause mellem genforsøg. At give enheder et øjeblik til at komme sig kan forbedre pålideligheden."
+        }
+      },
+      "sync": {
+        "title": "Sync Tilstand & Attributter",
+        "description": "Kontroller, hvad der sker, når nogen fysisk justerer en enhed. ADVARSEL: For at undgå 'Klimakrige', sørg for, at en enhed ikke er tildelt flere grupper med aktiv Sync Tilstand.",
+        "data": {
+          "sync_mode": "Synkroniseringstilstand",
+          "sync_attributes": "Synkroniserede Attributter",
+          "ignore_off_members": "Respekter medlemmers Off-tilstand"
+        },
+        "data_description": {
+          "sync_mode": "Standard: Gruppe viser aggregeret tilstand, men håndhæver den ikke. Mirror: Ændringer på en enhed kopieres til alle andre. Lock: Manuelle ændringer på enheder tilbageføres for at matche gruppen.",
+          "sync_attributes": "Attributter valgt her vil blive håndhævet i Lock/Mirror tilstande. Ikke-valgte attributter tillader lokal kontrol (f.eks. synkroniser temperatur, men lad brugere ændre blæserhastighed lokalt).",
+          "ignore_off_members": "Vil gruppen IKKE tænde medlemmer, der i øjeblikket er Off. (Delvis synkronisering)"
+        }
+      },
+      "window_control": {
+        "title": "Vinduesstyring",
+        "description": "Konfigurer automatisk slukning af varme/køling når vinduer åbnes. Begge sensorer er valgfrie.",
+        "data": {
+          "window_mode": "Vinduesstyringstilstand",
+          "room_sensor": "Rum Vindue Sensor",
+          "zone_sensor": "Zone Vindue Sensor",
+          "room_open_delay": "Rum Åben Forsinkelse (s)",
+          "zone_open_delay": "Zone Åben Forsinkelse (s)",
+          "close_delay": "Lukke Forsinkelse (s)"
+        },
+        "data_description": {
+          "window_mode": "Aktiver/deaktiver gruppe baseret på vinduessensorer. HVAC-tilstand sættes til 'off' når vinduer er åbne.",
+          "room_sensor": "Binær sensor for rummets eget vindue. Udløser den kortere forsinkelse.",
+          "zone_sensor": "Binær sensor for andre vinduer i zonen. Udløser den længere forsinkelse.",
+          "room_open_delay": "Ventetid efter rumvindue åbnes før varme slukkes.",
+          "zone_open_delay": "Ventetid efter zonevindue åbnes før varme slukkes.",
+          "close_delay": "Ventetid efter alle vinduer lukkes før varme gendannes."
+        }
+      },
+      "schedule": {
+        "title": "Tidsplan & Timere",
+        "description": "Konfigurer automatisering for gruppen. Tilknyt en tidsplan-enhed for at automatisere ændringer og aktivere periodisk synkronisering.",
+        "data": {
+          "schedule_entity": "Tidsplan Enhed",
+          "resync_interval": "Resync Interval (minutter)",
+          "override_duration": "Override Varighed (minutter)",
+          "persist_changes": "Sticky Override"
+        },
+        "data_description": {
+          "schedule_entity": "Vælg en tidsplan-enhed. Feltet 'Yderligere data' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
+          "resync_interval": "Gennemtving synkronisering af medlemmer til måltilstanden for gruppen hvert X minut. Forhindrer afvigelser, hvis enheder misser en kommando eller justeres manuelt. Sæt til 0 for at deaktivere.",
+          "override_duration": "Varigheden af manuelle overrides. Efter denne tid vender gruppen automatisk tilbage til den nuværende tidsplan. Sæt til 0 for at springe override-perioden over.",
+          "persist_changes": "Vil ændringer i selve tidsplanen blive ignoreret, så længe en manuel override er aktiv. Genanvender kun den nuværende tidsplan, når overriden er udløbet."
+        }
+      },
+      "other": {
+        "title": "Andre Indstillinger",
+        "description": "Yderligere funktioner og entitetseksponering.",
+        "data": {
+          "expose_smart_sensors": "Udstil smarte sensorer",
+          "expose_member_entities": "Udstil medlemsliste",
+          "min_temp_off": "Minimumstemperatur ved sluk"
+        },
+        "data_description": {
+          "expose_smart_sensors": "Opretter ekstra sensorenheder for gruppens temperatur og fugtighed (nyttigt til grafer).",
+          "expose_member_entities": "Opretter en attribut, der viser alle medlemsenheds-id'er.",
+          "min_temp_off": "Sendes enhedens minimumstemperatur (f.eks. 5°C), når gruppen slukkes. (Sikrer at ventilen lukker)"
+        }
+      }
     },
-    "condition_type": {
-      "is_group_available": "Gruppen er tilgængelig",
-      "is_hvac_mode": "HVAC-tilstand er",
-      "is_temperature_above": "Temperaturen er over",
-      "is_temperature_below": "Temperaturen er under"
+    "error": {
+      "no_entities": "Mindst én klimaenhed skal forblive i gruppen.",
+      "invalid_entity": "Ugyldig enhed valgt.",
+      "configuration_error": "Kunne ikke opdatere konfigurationen.",
+      "calibration_requires_sensors": "Kalibreringsmål kræver mindst én ekstern temperatursensor."
     },
-    "trigger_type": {
-      "current_temperature_changed": "Aktuel temperatur ændret",
-      "group_turned_off": "Gruppe slukket",
-      "group_turned_on": "Gruppe tændt",
-      "hvac_mode_changed": "HVAC-tilstand ændret",
-      "temperature_target_changed": "Måltemperatur ændret"
+    "abort": {
+      "no_changes": "Ingen ændringer registreret."
+    }
+  },
+  "selector": {
+    "temp_current_avg": {
+      "options": {
+        "mean": "Gennemsnit",
+        "median": "Median (Ignorer Afvigere)",
+        "min": "Minimum (Lavest)",
+        "max": "Maksimum (Højest)"
+      }
+    },
+    "temp_target_avg": {
+      "options": {
+        "mean": "Gennemsnit",
+        "median": "Median (Midterste Værdi)",
+        "min": "Minimum (Lavest)",
+        "max": "Maksimum (Højest)"
+      }
+    },
+    "temp_target_round": {
+      "options": {
+        "none": "Ingen Afrunding (Præcis)",
+        "half": "Halv Grad (0.5°)",
+        "integer": "Hele Tal (1°)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolut – Send værdi direkte (Standard)",
+        "offset": "Offset – Send difference (Ekstern - TRV Intern)",
+        "scaled": "Skaleret – Heltal x100 (Danfoss Ally)"
+      }
+    },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "Gennemsnit",
+        "median": "Median (Ignorer Afvigere)",
+        "min": "Minimum (Lavest)",
+        "max": "Maksimum (Højest)"
+      }
+    },
+    "humidity_target_avg": {
+      "options": {
+        "mean": "Gennemsnit",
+        "median": "Median (Midterste Værdi)",
+        "min": "Minimum (Lavest)",
+        "max": "Maksimum (Højest)"
+      }
+    },
+    "humidity_target_round": {
+      "options": {
+        "none": "Ingen Afrunding (Præcis)",
+        "half": "Halv Procent (0.5%)",
+        "integer": "Hele Tal (1%)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "standard": "Standard (En-vejs)",
+        "mirror": "Mirror (Magic Sync - To-vejs)",
+        "lock": "Lock (Chefen - Gennemtving Gruppe)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Fra – Vinduesstyring er deaktiveret",
+        "on": "Til – Vinduesstyring er aktiveret"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal (Demokratisk)",
+        "off_priority": "Sluk Prioritet (Hovedafbryder)",
+        "auto": "Auto (Smart)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Fællesmængde (Sikker Tilstand - Fælles Funktioner)",
+        "union": "Forening (Avanceret Bruger - Alle Funktioner)"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "HVAC-tilstand",
+        "preset_mode": "Forudindstillet Tilstand",
+        "temperature": "Temperatur (Mål)",
+        "target_temp_high": "Mål Temperatur Høj (Område)",
+        "target_temp_low": "Mål Temperatur Lav (Område)",
+        "fan_mode": "Blæsertilstand",
+        "swing_mode": "Vertikal Sving",
+        "swing_horizontal_mode": "Horisontal Sving",
+        "humidity": "Fugtighed (Mål)"
+      }
     }
   },
   "entity": {
@@ -62,299 +295,67 @@
       }
     }
   },
-  "issues": {
-    "conflicting_features": {
-      "description": "Gruppe {group_name} har medlemmer med forskellige funktioner. Funktionalitet kan være begrænset til hvad alle understøtter.\n\nKonflikter: {conflicting_entities}",
-      "title": "Funktionskonflikter"
-    },
-    "member_unavailable": {
-      "description": "En eller flere enheder i {group_name} er offline. Gruppen fortsætter med at fungere med det, den har.\n\nIkke tilgængelig: {unavailable_entities}",
-      "title": "Medlemsenhed Ikke Tilgængelig"
-    },
-    "no_members_available": {
-      "description": "Gruppe {group_name} har ingen aktive medlemmer og er effektivt offline.\n\nTjek: {member_entities}",
-      "title": "Ingen Medlemmer Tilgængelige"
-    }
-  },
-  "options": {
-    "abort": {
-      "no_changes": "Ingen ændringer registreret."
-    },
-    "error": {
-      "configuration_error": "Kunne ikke opdatere konfigurationen.",
-      "invalid_entity": "Ugyldig enhed valgt.",
-      "no_entities": "Mindst én klimaenhed skal forblive i gruppen."
-    },
-    "flow_title": "Konfigurer gruppe",
-    "step": {
-      "humidity": {
-        "data": {
-          "humidity_current_avg": "Nuværende Fugtighed (Visning)",
-          "humidity_sensors": "Eksterne Fugtighedssensorer",
-          "humidity_target_avg": "Mål Fugtighed (Kontrol)",
-          "humidity_target_round": "Mål Fugtighed Præcision",
-          "humidity_update_targets": "Skriv Ekstern Fugtighed til Entiteter"
-        },
-        "data_description": {
-          "humidity_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
-          "humidity_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens fugtighed.",
-          "humidity_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
-          "humidity_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
-          "humidity_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter. Nyttigt til kalibrering af affugtere."
-        },
-        "description": "Konfigurer fugtighedsaggregering og eksterne sensorer. Bemærk, at mange termostater kun rapporterer fugtighed og ikke tillader kontrol.",
-        "title": "Fugtighedsindstillinger"
-      },
-      "init": {
-        "description": "Finjuster din gruppes adfærd. Ændringer træder i kraft med det samme.",
-        "menu_options": {
-          "humidity": "Fugtighed",
-          "members": "Medlemmer & Tilstande",
-          "other": "Andre indstillinger",
-          "schedule": "Tidsplan & Timere",
-          "sync": "Synkroniseringstilstand",
-          "temperature": "Temperatur",
-          "timings": "Tider",
-          "window_control": "Vinduesstyring"
-        },
-        "title": "Konfigurer Klimagruppe"
-      },
-      "members": {
-        "data": {
-          "entities": "Klimaenheder",
-          "feature_strategy": "Funktionskompatibilitet",
-          "hvac_mode_strategy": "HVAC Tilstandsstrategi"
-        },
-        "data_description": {
-          "entities": "Tilføj eller fjern enheder. Fjernelse af enheder stopper dem fra at blive kontrolleret af gruppen.",
-          "feature_strategy": "Bestemmer hvilke funktioner (f.eks. forudindstillede tilstande, blæsertilstande) der er tilgængelige på gruppen, når medlemmer har forskellige evner.",
-          "hvac_mode_strategy": "Strategi for beregning af gruppens tilstand ud fra dens medlemmer (f.eks. hvis en 'heat' og en anden er 'off')."
-        },
-        "description": "Vælg dine enheder og vælg, hvordan gruppen kombinerer deres tilstande og funktioner. 'Strategi' definerer gruppens adfærd, når medlemmer er i forskellige tilstande.",
-        "title": "Medlemmer & Tilstande"
-      },
-      "other": {
-        "data": {
-          "expose_member_entities": "Udstil medlemsliste",
-          "expose_smart_sensors": "Udstil smarte sensorer",
-          "ignore_off_members": "Respekter medlemmers Off-tilstand",
-          "min_temp_off": "Minimumstemperatur ved sluk"
-        },
-        "data_description": {
-          "expose_member_entities": "Opretter en attribut, der viser alle medlemsenheds-id'er.",
-          "expose_smart_sensors": "Opretter ekstra sensorenheder for gruppens temperatur og fugtighed (nyttigt til grafer).",
-          "ignore_off_members": "Hvis aktiveret, vil gruppen IKKE tænde medlemmer, der i øjeblikket er Off. (Delvis synkronisering)",
-          "min_temp_off": "Hvis aktiveret, sendes enhedens minimumstemperatur (f.eks. 5°C), når gruppen slukkes. (Sikrer at ventilen lukker)"
-        },
-        "description": "Yderligere funktioner og entitetseksponering.",
-        "title": "Andre Indstillinger"
-      },
-      "schedule": {
-        "title": "Tidsplan & Timere",
-        "description": "Konfigurer automatisering for gruppen. Tilknyt en tidsplan-enhed for at automatisere ændringer og aktivere periodisk synkronisering.",
-        "data": {
-          "schedule_entity": "Tidsplan Enhed",
-          "resync_interval": "Resync Interval (minutter)",
-          "override_duration": "Override Varighed (minutter)",
-          "persist_changes": "Sticky Override"
-        },
-        "data_description": {
-          "schedule_entity": "Vælg en tidsplan-enhed. Feltet 'Yderligere data' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
-          "resync_interval": "Gennemtving synkronisering af medlemmer til måltilstanden for gruppen hvert X minut. Forhindrer afvigelser, hvis enheder misser en kommando eller justeres manuelt. Sæt til 0 for at deaktivere.",
-          "override_duration": "Varigheden af manuelle overrides. Efter denne tid vender gruppen automatisk tilbage til den nuværende tidsplan. Sæt til 0 for at springe override-perioden over.",
-          "persist_changes": "Hvis aktiveret, vil ændringer i selve tidsplanen blive ignoreret, så længe en manuel override er aktiv. Genanvender kun den nuværende tidsplan, når overriden er udløbet."
-        }
-      },
-      "sync": {
-        "data": {
-          "sync_attributes": "Synkroniserede Attributter",
-          "sync_mode": "Synkroniseringstilstand"
-        },
-        "data_description": {
-          "sync_attributes": "Attributter valgt her vil blive håndhævet i Lock/Mirror tilstande. Ikke-valgte attributter tillader lokal kontrol (f.eks. synkroniser temperatur, men lad brugere ændre blæserhastighed lokalt).",
-          "sync_mode": "Standard: Gruppe viser aggregeret tilstand, men håndhæver den ikke. Mirror: Ændringer på en enhed kopieres til alle andre. Lock: Manuelle ændringer på enheder tilbageføres for at matche gruppen."
-        },
-        "description": "Kontroller, hvad der sker, når nogen fysisk justerer en enhed. ADVARSEL: For at undgå 'Klimakrige', sørg for, at en enhed ikke er tildelt flere grupper med aktiv Sync Tilstand.",
-        "title": "Sync Tilstand & Attributter"
-      },
-      "temperature": {
-        "data": {
-          "temp_current_avg": "Nuværende Temperatur (Visning)",
-          "temp_sensors": "Eksterne Temperatursensorer",
-          "temp_target_avg": "Mål Temperatur (Kontrol)",
-          "temp_target_round": "Mål Temperatur Præcision",
-          "temp_update_targets": "Skriv Ekstern Temp til Entiteter",
-          "temp_calibration_mode": "Kalibreringstilstand",
-          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
-        },
-        "data_description": {
-          "temp_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
-          "temp_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens temperatur.",
-          "temp_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
-          "temp_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
-          "temp_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter (f.eks. TRV kalibrering forskydninger). Nyttigt for at holde termostater opmærksomme på den faktiske stuetemperatur.",
-          "temp_calibration_mode": "Absolut: Send værdi direkte. Offset: Send difference (Ekstern - TRV Intern). Skaleret: Send som heltal x100 (f.eks. 21.5 -> 2150).",
-          "calibration_heartbeat": "Tving periodisk kalibreringssynkronisering til enheder, selvom temperaturen ikke er ændret. Sæt til 0 for at deaktivere."
-        },
-        "description": "Konfigurer, hvordan gruppen håndterer temperaturaggregering og sætpunkter. Eksterne sensorer vil tilsidesætte medlemsmålinger, hvis de vælges.",
-        "title": "Temperaturindstillinger"
-      },
-      "timings": {
-        "data": {
-          "debounce_delay": "Debounce Forsinkelse (sekunder)",
-          "retry_attempts": "Genforsøg Forsøg",
-          "retry_delay": "Genforsøg Forsinkelse (sekunder)"
-        },
-        "data_description": {
-          "debounce_delay": "Tid at vente før afsendelse af kommandoer. Højere værdier forhindrer 'maskingevær' kommandoer ved glidende kontrol, men føles langsommere.",
-          "retry_attempts": "Hvor mange gange en kommando skal gensendes, hvis en enhed ikke svarer. Sæt til 0 for at deaktivere.",
-          "retry_delay": "Pause mellem genforsøg. At give enheder et øjeblik til at komme sig kan forbedre pålideligheden."
-        },
-        "description": "Konfigurer, hvordan den 'Virtuelle Controller' interagerer med dit netværk. Korrekte timings forhindrer Zigbee/Z-Wave overbelastning og øger kommandopålidelighed.",
-        "title": "Kommunikation Timings"
-      },
-      "window_control": {
-        "data": {
-          "close_delay": "Lukke Forsinkelse (s)",
-          "room_open_delay": "Rum Åben Forsinkelse (s)",
-          "room_sensor": "Rum Vindue Sensor",
-          "window_mode": "Vinduesstyringstilstand",
-          "zone_open_delay": "Zone Åben Forsinkelse (s)",
-          "zone_sensor": "Zone Vindue Sensor"
-        },
-        "data_description": {
-          "close_delay": "Ventetid efter alle vinduer lukkes før varme gendannes.",
-          "room_open_delay": "Ventetid efter rumvindue åbnes før varme slukkes.",
-          "room_sensor": "Binær sensor for rummets eget vindue. Udløser den kortere forsinkelse.",
-          "window_mode": "Aktiver/deaktiver gruppe baseret på vinduessensorer. HVAC-tilstand sættes til 'off' når vinduer er åbne.",
-          "zone_open_delay": "Ventetid efter zonevindue åbnes før varme slukkes.",
-          "zone_sensor": "Binær sensor for andre vinduer i zonen. Udløser den længere forsinkelse."
-        },
-        "description": "Konfigurer automatisk slukning af varme/køling når vinduer åbnes. Begge sensorer er valgfrie - lad stå tomt for at deaktivere.",
-        "title": "Vinduesstyring"
-      }
-    }
-  },
-  "selector": {
-    "feature_strategy": {
-      "options": {
-        "intersection": "Fællesmængde (Sikker Tilstand - Fælles Funktioner)",
-        "union": "Forening (Avanceret Bruger - Alle Funktioner)"
-      }
-    },
-    "humidity_current_avg": {
-      "options": {
-        "max": "Maksimum (Højest)",
-        "mean": "Gennemsnit",
-        "median": "Median (Ignorer Afvigere)",
-        "min": "Minimum (Lavest)"
-      }
-    },
-    "humidity_target_avg": {
-      "options": {
-        "max": "Maksimum (Højest)",
-        "mean": "Gennemsnit",
-        "median": "Median (Midterste Værdi)",
-        "min": "Minimum (Lavest)"
-      }
-    },
-    "humidity_target_round": {
-      "options": {
-        "half": "Halv Procent (0.5%)",
-        "integer": "Hele Tal (1%)",
-        "none": "Ingen Afrunding (Præcis)"
-      }
-    },
-    "hvac_mode_strategy": {
-      "options": {
-        "auto": "Auto (Smart)",
-        "normal": "Normal (Demokratisk)",
-        "off_priority": "Sluk Prioritet (Hovedafbryder)"
-      }
-    },
-    "sync_attributes": {
-      "options": {
-        "fan_mode": "Blæsertilstand",
-        "humidity": "Fugtighed (Mål)",
-        "hvac_mode": "HVAC-tilstand",
-        "preset_mode": "Forudindstillet Tilstand",
-        "swing_horizontal_mode": "Horisontal Sving",
-        "swing_mode": "Vertikal Sving",
-        "target_temp_high": "Mål Temperatur Høj (Område)",
-        "target_temp_low": "Mål Temperatur Lav (Område)",
-        "temperature": "Temperatur (Mål)"
-      }
-    },
-    "sync_mode": {
-      "options": {
-        "lock": "Lock (Chefen - Gennemtving Gruppe)",
-        "mirror": "Mirror (Magic Sync - To-vejs)",
-        "standard": "Standard (En-vejs)"
-      }
-    },
-    "temp_current_avg": {
-      "options": {
-        "max": "Maksimum (Højest)",
-        "mean": "Gennemsnit",
-        "median": "Median (Ignorer Afvigere)",
-        "min": "Minimum (Lavest)"
-      }
-    },
-    "temp_target_avg": {
-      "options": {
-        "max": "Maksimum (Højest)",
-        "mean": "Gennemsnit",
-        "median": "Median (Midterste Værdi)",
-        "min": "Minimum (Lavest)"
-      }
-    },
-    "temp_target_round": {
-      "options": {
-        "half": "Halv Grad (0.5°)",
-        "integer": "Hele Tal (1°)",
-        "none": "Ingen Afrunding (Præcis)"
-      }
-    },
-    "temp_calibration_mode": {
-      "options": {
-        "absolute": "Absolut – Send værdi direkte (Standard)",
-        "offset": "Offset – Send difference (Ekstern - TRV Intern)",
-        "scaled": "Skaleret – Heltal x100 (Danfoss Ally)"
-      }
-    },
-    "window_mode": {
-      "options": {
-        "off": "Fra – Vinduesstyring er deaktiveret",
-        "on": "Til – Vinduesstyring er aktiveret"
-      }
-    }
-  },
   "services": {
     "set_temperature": {
+      "name": "Indstil Temperatur",
       "description": "Indstil måltemperaturen for hele gruppen.",
       "fields": {
         "entity_id": {
-          "description": "Gruppen der skal styres.",
-          "name": "Klimagruppe"
-        },
-        "hvac_mode": {
-          "description": "Skift eventuelt tilstanden.",
-          "name": "HVAC-tilstand"
-        },
-        "target_temp_high": {
-          "description": "Øvre grænse for varme/køle tilstand.",
-          "name": "Mål Høj"
-        },
-        "target_temp_low": {
-          "description": "Nedre grænse for varme/køle tilstand.",
-          "name": "Mål Lav"
+          "name": "Klimagruppe",
+          "description": "Gruppen der skal styres."
         },
         "temperature": {
-          "description": "Den ønskede temperatur.",
-          "name": "Måltemperatur"
+          "name": "Måltemperatur",
+          "description": "Den ønskede temperatur."
+        },
+        "target_temp_high": {
+          "name": "Mål Høj",
+          "description": "Øvre grænse for varme/køle tilstand."
+        },
+        "target_temp_low": {
+          "name": "Mål Lav",
+          "description": "Nedre grænse for varme/køle tilstand."
+        },
+        "hvac_mode": {
+          "name": "HVAC-tilstand",
+          "description": "Skift eventuelt tilstanden."
         }
-      },
-      "name": "Indstil Temperatur"
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Medlemsenhed Ikke Tilgængelig",
+      "description": "En eller flere enheder i {group_name} er offline. Gruppen fortsætter med at fungere med det, den har.\n\nIkke tilgængelig: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "Ingen Medlemmer Tilgængelige",
+      "description": "Gruppe {group_name} har ingen aktive medlemmer og er effektivt offline.\n\nTjek: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Funktionskonflikter",
+      "description": "Gruppe {group_name} har medlemmer med forskellige funktioner. Funktionalitet kan være begrænset til hvad alle understøtter.\n\nKonflikter: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC-tilstand ændret",
+      "temperature_target_changed": "Måltemperatur ændret",
+      "current_temperature_changed": "Aktuel temperatur ændret",
+      "group_turned_on": "Gruppe tændt",
+      "group_turned_off": "Gruppe slukket"
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC-tilstand er",
+      "is_temperature_above": "Temperaturen er over",
+      "is_temperature_below": "Temperaturen er under",
+      "is_group_available": "Gruppen er tilgængelig"
+    },
+    "action_type": {
+      "set_hvac_mode": "Indstil HVAC-tilstand",
+      "set_temperature": "Indstil temperatur",
+      "turn_on": "Tænd",
+      "turn_off": "Sluk"
     }
   }
 }

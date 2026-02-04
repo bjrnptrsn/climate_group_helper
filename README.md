@@ -51,7 +51,7 @@ Automatically turn off heating when windows open and restore it when they close.
 *New in v0.18!* Native support for Home Assistant `schedule` entities with advanced override logic.
 
 *   **Intelligent Sync:** The schedule updates the group's desired settings.
-*   **Periodic Resync:** Ensure all devices stay on track. Forces the current schedule state every X minutes—perfect for "stubborn" devices or physical tampering.
+*   **Periodic Resync:** Force-sync all members to the group's target state every X minutes. Works independently of Sync Mode.
 *   **Manual Overrides:** Stay in control. Set an **Override Duration** to automatically return to the schedule after X minutes of manual adjustment.
 *   **Sticky Override (Persist Changes):** If enabled, manual changes persist until the override expires, even if the schedule changes slots in the background.
 *   **Window Aware:** If a schedule changes while windows are open, the new target is saved and applied immediately when windows close.

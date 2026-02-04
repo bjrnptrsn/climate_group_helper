@@ -1,50 +1,283 @@
 {
   "config": {
-    "abort": {
-      "already_configured": "Este grupo já está configurado.",
-      "no_changes": "Nenhuma alteração foi feita.",
-      "single_instance_allowed": "Apenas uma instância é permitida."
-    },
-    "error": {
-      "duplicate_name": "Já existe um grupo climático com este nome.",
-      "invalid_entity": "Um ou mais dispositivos selecionados não são entidades climáticas válidas.",
-      "no_entities": "Você deve selecionar pelo menos um dispositivo climático.",
-      "unavailable_entities": "Alguns dispositivos selecionados estão indisponíveis. O grupo será criado, mas pode não funcionar totalmente até que obedeçam."
-    },
     "step": {
       "user": {
+        "title": "Assistente de Grupo Climático",
+        "description": "Crie um poderoso 'Controlador Virtual' para seus dispositivos climáticos. Este grupo agregará leituras e sincronizará configurações em todos os membros, agindo como uma única unidade inteligente.",
         "data": {
-          "entities": "Dispositivos Climáticos",
-          "name": "Nome do Grupo"
+          "name": "Nome do Grupo",
+          "entities": "Dispositivos Climáticos"
         },
         "data_description": {
-          "entities": "Selecione os dispositivos climáticos (termostatos, ACs) para incluir neste grupo.",
-          "name": "Um nome amigável para o seu grupo (ex. 'Sala de Estar' ou 'Casa Inteira')."
-        },
-        "description": "Crie um poderoso 'Controlador Virtual' para seus dispositivos climáticos. Este grupo agregará leituras e sincronizará configurações em todos os membros, agindo como uma única unidade inteligente.",
-        "title": "Assistente de Grupo Climático"
+          "name": "Um nome amigável para o seu grupo (ex. 'Sala de Estar' ou 'Casa Inteira').",
+          "entities": "Selecione os dispositivos climáticos (termostatos, ACs) para incluir neste grupo."
+        }
       }
+    },
+    "error": {
+      "no_entities": "Você deve selecionar pelo menos um dispositivo climático.",
+      "invalid_entity": "Um ou mais dispositivos selecionados não são entidades climáticas válidas.",
+      "duplicate_name": "Já existe um grupo climático com este nome.",
+      "unavailable_entities": "Alguns dispositivos selecionados estão indisponíveis. O grupo será criado, mas pode não funcionar totalmente até que obedeçam."
+    },
+    "abort": {
+      "already_configured": "Este grupo já está configurado.",
+      "single_instance_allowed": "Apenas uma instância é permitida.",
+      "no_changes": "Nenhuma alteração foi feita."
     }
   },
-  "device_automation": {
-    "action_type": {
-      "set_hvac_mode": "Definir modo HVAC",
-      "set_temperature": "Definir temperatura",
-      "turn_off": "Desligar",
-      "turn_on": "Ligar"
+  "options": {
+    "flow_title": "Configurar grupo",
+    "step": {
+      "init": {
+        "title": "Configurar Grupo Climático",
+        "description": "Ajuste o comportamento do seu grupo. As alterações entram em vigor imediatamente.",
+        "menu_options": {
+          "members": "Membros & Modos",
+          "temperature": "Temperatura",
+          "humidity": "Umidade",
+          "timings": "Tempos",
+          "sync": "Modo Sync",
+          "window_control": "Controle de Janela",
+          "schedule": "Agenda & Temporizadores",
+          "other": "Outros Ajustes"
+        }
+      },
+      "members": {
+        "title": "Membros & Modos",
+        "description": "Selecione os seus dispositivos e escolha como o grupo combina os seus estados e funcionalidades. A 'Estratégia' define o comportamento do grupo quando os membros estão em modos diferentes.",
+        "data": {
+          "entities": "Dispositivos Climáticos",
+          "hvac_mode_strategy": "Estratégia de Modo HVAC",
+          "feature_strategy": "Compatibilidade de Funcionalidades"
+        },
+        "data_description": {
+          "entities": "Adicionar ou remover dispositivos. A remoção de dispositivos para o seu controlo pelo grupo.",
+          "hvac_mode_strategy": "Estratégia para calcular o estado do grupo a partir dos seus membros (ex. se um está 'heat' e outro está 'off').",
+          "feature_strategy": "Determina quais funcionalidades (ex. modos predefinidos, modos ventoinha) estão disponíveis no grupo quando os membros têm capacidades diferentes."
+        }
+      },
+      "temperature": {
+        "title": "Definições de Temperatura",
+        "description": "Configurar como o grupo gere a agregação de temperatura e pontos de ajuste. Os sensores externos irão sobrepor leituras de membros se selecionados.",
+        "data": {
+          "temp_current_avg": "Temperatura Atual (Visualização)",
+          "temp_target_avg": "Temperatura Alvo (Controlo)",
+          "temp_target_round": "Precisão de Temperatura Alvo",
+          "temp_sensors": "Sensores de Temperatura Externos",
+          "temp_update_targets": "Escrever Temp Externa em Entidades",
+          "temp_calibration_mode": "Modo de Calibração",
+          "calibration_heartbeat": "Heartbeat de Calibração (min)"
+        },
+        "data_description": {
+          "temp_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
+          "temp_target_avg": "Como o grupo calcula o ponto de ajuste para enviar aos seus membros.",
+          "temp_target_round": "Aplica-se apenas a valores enviados a dispositivos, não a valores atuais/visualizados.",
+          "temp_sensors": "Usar sensores externos em vez de leituras de membros. Estes tornam-se a única fonte de verdade para a temperatura do grupo.",
+          "temp_update_targets": "Escrever o valor do sensor externo em entidades numéricas (ex. offsets calibração TRV). Útil para manter termostatos cientes da temperatura real.",
+          "temp_calibration_mode": "Absoluto: Enviar valor diretamente. Offset: Enviar diferença (Externo - TRV Interno). Escalado: Enviar como inteiro x100 (ex. 21.5 -> 2150).",
+          "calibration_heartbeat": "Forçar periodicamente a sincronização da calibração para entidades, mesmo que a temperatura não tenha mudado. Defina como 0 para desativar."
+        }
+      },
+      "humidity": {
+        "title": "Definições de Humidade",
+        "description": "Configurar agregação de humidade e sensores externos. Note que muitos termostatos apenas reportam humidade e não permitem controlo.",
+        "data": {
+          "humidity_current_avg": "Humidade Atual (Visualização)",
+          "humidity_target_avg": "Humidade Alvo (Controlo)",
+          "humidity_target_round": "Precisão de Humidade Alvo",
+          "humidity_sensors": "Sensores de Humidade Externos",
+          "humidity_update_targets": "Escrever Humidade Externa em Entidades"
+        },
+        "data_description": {
+          "humidity_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
+          "humidity_target_avg": "Como o grupo calcula o ponto de ajuste para enviar aos seus membros.",
+          "humidity_target_round": "Aplica-se apenas a valores enviados a dispositivos, não a valores atuais/visualizados.",
+          "humidity_sensors": "Usar sensores externos em vez de leituras de membros. Estes tornam-se a única fonte de verdade para a humidade do grupo.",
+          "humidity_update_targets": "Escrever o valor do sensor externo em entidades numéricas. Útil para calibração de desumidificadores."
+        }
+      },
+      "timings": {
+        "title": "Tempos de Comunicação",
+        "description": "Ajuste os tempos de comando e as tentativas de repetição para garantir uma operação confiável sem sobrecarregar sua rede.",
+        "data": {
+          "debounce_delay": "Atraso de Debounce (segundos)",
+          "retry_attempts": "Tentativas de Repetição",
+          "retry_delay": "Atraso de Repetição (segundos)"
+        },
+        "data_description": {
+          "debounce_delay": "Tempo de espera antes de enviar comandos. Valores mais altos previnem comandos 'metralhadora' ao deslizar controlos, mas parecem mais lentos.",
+          "retry_attempts": "Quantas vezes reenviar um comando se um dispositivo não responder. Definir como 0 para desativar.",
+          "retry_delay": "Pausa entre tentativas. Dar um momento aos dispositivos para recuperar pode melhorar a fiabilidade."
+        }
+      },
+      "sync": {
+        "title": "Modo Sync & Atributos",
+        "description": "Controla o que acontece quando alguém ajusta fisicamente um dispositivo. AVISO: Para evitar 'Guerras Climáticas', assegure que um dispositivo não está atribuído a múltiplos grupos com Modo Sync ativo.",
+        "data": {
+          "sync_mode": "Modo de Sincronização",
+          "sync_attributes": "Atributos Sincronizados",
+          "ignore_off_members": "Respeitar estado Off dos membros"
+        },
+        "data_description": {
+          "sync_mode": "Padrão: O grupo mostra estado agregado mas não o força. Mirror: Alterações num dispositivo são copiadas para todos os outros. Lock: Alterações manuais em dispositivos são revertidas para corresponder ao grupo.",
+          "sync_attributes": "Os atributos selecionados aqui serão forçados em modos Lock/Mirror. Os não selecionados permitem controlo local (ex. sincronizar temperatura mas deixar os utilizadores mudar a velocidade da ventoinha localmente).",
+          "ignore_off_members": "O grupo NÃO ligará os membros que estão atualmente DESLIGADOS. (Sincronização Parcial)"
+        }
+      },
+      "window_control": {
+        "title": "Controle de Janela",
+        "description": "Configure o desligamento automático do aquecimento/resfriamento ao abrir janelas. Ambos os sensores são opcionais.",
+        "data": {
+          "window_mode": "Modo Controle Janela",
+          "room_sensor": "Sensor Janela Quarto",
+          "zone_sensor": "Sensor Janela Zona",
+          "room_open_delay": "Atraso Abertura Quarto (s)",
+          "zone_open_delay": "Atraso Abertura Zona (s)",
+          "close_delay": "Atraso Fechamento (s)"
+        },
+        "data_description": {
+          "window_mode": "Habilitar grupo baseado em sensores. HVAC vai para 'off' quando janelas abertas.",
+          "room_sensor": "Sensor binário para janela do quarto. Atraso mais curto.",
+          "zone_sensor": "Sensor binário para outras janelas na zona. Atraso mais longo.",
+          "room_open_delay": "Tempo de espera após abrir janela do quarto.",
+          "zone_open_delay": "Tempo de espera após abrir janela da zona.",
+          "close_delay": "Tempo de espera após fechar janelas."
+        }
+      },
+      "schedule": {
+        "title": "Agenda & Temporizadores",
+        "description": "Configure a automação para o grupo. Vincule uma entidade de agenda para automatizar alterações e ativar a sincronização periódica.",
+        "data": {
+          "schedule_entity": "Entidade de Agenda",
+          "resync_interval": "Intervalo de Resync (minutos)",
+          "override_duration": "Duração do Override (minutos)",
+          "persist_changes": "Sticky Override"
+        },
+        "data_description": {
+          "schedule_entity": "Selecione uma entidade de agenda. O campo 'Dados adicionais' pode conter YAML com atributos como 'temperature: 20.5' ou 'hvac_mode: heat'.",
+          "resync_interval": "Sincroniza forçadamente os membros com o estado alvo a cada X minutos. Evita desvios se os dispositivos perderem um comando ou forem ajustados manualmente. Definir como 0 para desativar.",
+          "override_duration": "A duração dos overrides manuais. Após este tempo, o grupo regressa automaticamente à agenda atual. Definir como 0 para saltar o período de override.",
+          "persist_changes": "As alterações na agenda serão ignoradas enquanto um override manual estiver ativo. Reaplica a agenda atual apenas após a expiração do override."
+        }
+      },
+      "other": {
+        "title": "Outras Definições",
+        "description": "Funcionalidades adicionais e exposição de entidades.",
+        "data": {
+          "expose_smart_sensors": "Expor sensores inteligentes",
+          "expose_member_entities": "Expor lista de membros",
+          "min_temp_off": "Temperatura mínima ao desligar"
+        },
+        "data_description": {
+          "expose_smart_sensors": "Cria entidades de sensor adicionais para a temperatura e humidade do grupo (útil para gráficos).",
+          "expose_member_entities": "Cria um atributo listando todos os IDs das entidades membro.",
+          "min_temp_off": "Envia a temperatura mínima do dispositivo (ex. 5°C) ao desligar o grupo. (Assegura fecho da válvula)"
+        }
+      }
     },
-    "condition_type": {
-      "is_group_available": "Grupo está disponível",
-      "is_hvac_mode": "Modo HVAC é",
-      "is_temperature_above": "Temperatura está acima",
-      "is_temperature_below": "Temperatura está abaixo"
+    "error": {
+      "no_entities": "Pelo menos um dispositivo climático deve permanecer no grupo.",
+      "invalid_entity": "Dispositivo selecionado inválido.",
+      "configuration_error": "Não foi possível atualizar a configuração.",
+      "calibration_requires_sensors": "Os alvos de calibração requerem pelo menos um sensor de temperatura externo."
     },
-    "trigger_type": {
-      "current_temperature_changed": "Temperatura atual alterada",
-      "group_turned_off": "Grupo desligado",
-      "group_turned_on": "Grupo ligado",
-      "hvac_mode_changed": "Modo HVAC alterado",
-      "temperature_target_changed": "Temperatura alvo alterada"
+    "abort": {
+      "no_changes": "Nenhuma alteração detectada."
+    }
+  },
+  "selector": {
+    "temp_current_avg": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (Ignorar Outliers)",
+        "min": "Mínimo (Mais Baixo)",
+        "max": "Máximo (Mais Alto)"
+      }
+    },
+    "temp_target_avg": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (Valor Médio)",
+        "min": "Mínimo (Mais Baixo)",
+        "max": "Máximo (Mais Alto)"
+      }
+    },
+    "temp_target_round": {
+      "options": {
+        "none": "Sem Arredondamento (Exato)",
+        "half": "Meio Grau (0.5°)",
+        "integer": "Números Inteiros (1°)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absoluto – Enviar valor diretamente (Padrão)",
+        "offset": "Offset – Enviar diferença (Externo - TRV Interno)",
+        "scaled": "Escalado – Inteiro x100 (Danfoss Ally)"
+      }
+    },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (Ignorar Outliers)",
+        "min": "Mínimo (Mais Baixo)",
+        "max": "Máximo (Mais Alto)"
+      }
+    },
+    "humidity_target_avg": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (Valor Médio)",
+        "min": "Mínimo (Mais Baixo)",
+        "max": "Máximo (Mais Alto)"
+      }
+    },
+    "humidity_target_round": {
+      "options": {
+        "none": "Sem Arredondamento (Exato)",
+        "half": "Meio Porcento (0.5%)",
+        "integer": "Números Inteiros (1%)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "standard": "Padrão (Unidirecional)",
+        "mirror": "Mirror (Magic Sync - Bidirecional)",
+        "lock": "Lock (O Chefe - Forçar Grupo)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "off": "Desligado – O controle de janela está desativado",
+        "on": "Ligado – O controle de janela está ativado"
+      }
+    },
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal (Democrático)",
+        "off_priority": "Prioridade Desligado (Interruptor Mestre)",
+        "auto": "Auto (Inteligente)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Interseção (Modo Seguro - Funções Comuns)",
+        "union": "União (Utilizador Avançado - Todas as Funções)"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "Modo HVAC",
+        "preset_mode": "Modo Predefinido",
+        "temperature": "Temperatura (Alvo)",
+        "target_temp_high": "Temperatura Alvo Alta (Faixa)",
+        "target_temp_low": "Temperatura Alvo Baixa (Faixa)",
+        "fan_mode": "Modo Ventoinha",
+        "swing_mode": "Oscilação Vertical",
+        "swing_horizontal_mode": "Oscilação Horizontal",
+        "humidity": "Humidade (Alvo)"
+      }
     }
   },
   "entity": {
@@ -62,299 +295,67 @@
       }
     }
   },
-  "issues": {
-    "conflicting_features": {
-      "description": "O grupo {group_name} tem membros com diferentes funcionalidades. A funcionalidade pode ser limitada ao que todos suportam.\n\nConflitos: {conflicting_entities}",
-      "title": "Conflitos de Funcionalidades"
-    },
-    "member_unavailable": {
-      "description": "Um ou mais dispositivos em {group_name} estão offline. O grupo continuará funcionando com o que tem.\n\nIndisponível: {unavailable_entities}",
-      "title": "Dispositivo Membro Indisponível"
-    },
-    "no_members_available": {
-      "description": "O grupo {group_name} não tem membros ativos e está efetivamente offline.\n\nVerifique: {member_entities}",
-      "title": "Nenhum Membro Disponível"
-    }
-  },
-  "options": {
-    "abort": {
-      "no_changes": "Nenhuma alteração detectada."
-    },
-    "error": {
-      "configuration_error": "Não foi possível atualizar a configuração.",
-      "invalid_entity": "Dispositivo selecionado inválido.",
-      "no_entities": "Pelo menos um dispositivo climático deve permanecer no grupo."
-    },
-    "flow_title": "Configurar grupo",
-    "step": {
-      "humidity": {
-        "data": {
-          "humidity_current_avg": "Humidade Atual (Visualização)",
-          "humidity_sensors": "Sensores de Humidade Externos",
-          "humidity_target_avg": "Humidade Alvo (Controlo)",
-          "humidity_target_round": "Precisão de Humidade Alvo",
-          "humidity_update_targets": "Escrever Humidade Externa em Entidades"
-        },
-        "data_description": {
-          "humidity_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
-          "humidity_sensors": "Usar sensores externos em vez de leituras de membros. Estes tornam-se a única fonte de verdade para a humidade do grupo.",
-          "humidity_target_avg": "Como o grupo calcula o ponto de ajuste para enviar aos seus membros.",
-          "humidity_target_round": "Aplica-se apenas a valores enviados a dispositivos, não a valores atuais/visualizados.",
-          "humidity_update_targets": "Escrever o valor do sensor externo em entidades numéricas. Útil para calibração de desumidificadores."
-        },
-        "description": "Configurar agregação de humidade e sensores externos. Note que muitos termostatos apenas reportam humidade e não permitem controlo.",
-        "title": "Definições de Humidade"
-      },
-      "init": {
-        "description": "Ajuste o comportamento do seu grupo. As alterações entram em vigor imediatamente.",
-        "menu_options": {
-          "humidity": "Umidade",
-          "members": "Membros & Modos",
-          "other": "Outros Ajustes",
-          "schedule": "Agenda & Temporizadores",
-          "sync": "Modo Sync",
-          "temperature": "Temperatura",
-          "timings": "Tempos",
-          "window_control": "Controle de Janela"
-        },
-        "title": "Configurar Grupo Climático"
-      },
-      "members": {
-        "data": {
-          "entities": "Dispositivos Climáticos",
-          "feature_strategy": "Compatibilidade de Funcionalidades",
-          "hvac_mode_strategy": "Estratégia de Modo HVAC"
-        },
-        "data_description": {
-          "entities": "Adicionar ou remover dispositivos. A remoção de dispositivos para o seu controlo pelo grupo.",
-          "feature_strategy": "Determina quais funcionalidades (ex. modos predefinidos, modos ventoinha) estão disponíveis no grupo quando os membros têm capacidades diferentes.",
-          "hvac_mode_strategy": "Estratégia para calcular o estado do grupo a partir dos seus membros (ex. se um está 'heat' e outro está 'off')."
-        },
-        "description": "Selecione os seus dispositivos e escolha como o grupo combina os seus estados e funcionalidades. A 'Estratégia' define o comportamento do grupo quando os membros estão em modos diferentes.",
-        "title": "Membros & Modos"
-      },
-      "other": {
-        "data": {
-          "expose_member_entities": "Expor lista de membros",
-          "expose_smart_sensors": "Expor sensores inteligentes",
-          "ignore_off_members": "Respeitar estado Off dos membros",
-          "min_temp_off": "Temperatura mínima ao desligar"
-        },
-        "data_description": {
-          "expose_member_entities": "Cria um atributo listando todos os IDs das entidades membro.",
-          "expose_smart_sensors": "Cria entidades de sensor adicionais para a temperatura e humidade do grupo (útil para gráficos).",
-          "ignore_off_members": "Se ativado, o grupo NÃO ligará os membros que estão atualmente DESLIGADOS. (Sincronização Parcial)",
-          "min_temp_off": "Se ativado, envia a temperatura mínima do dispositivo (ex. 5°C) ao desligar o grupo. (Assegura fecho da válvula)"
-        },
-        "description": "Funcionalidades adicionais e exposição de entidades.",
-        "title": "Outras Definições"
-      },
-      "schedule": {
-        "title": "Agenda & Temporizadores",
-        "description": "Configure a automação para o grupo. Vincule uma entidade de agenda para automatizar alterações e ativar a sincronização periódica.",
-        "data": {
-          "schedule_entity": "Entidade de Agenda",
-          "resync_interval": "Intervalo de Resync (minutos)",
-          "override_duration": "Duração do Override (minutos)",
-          "persist_changes": "Sticky Override"
-        },
-        "data_description": {
-          "schedule_entity": "Selecione uma entidade de agenda. O campo 'Dados adicionais' pode conter YAML com atributos como 'temperature: 20.5' ou 'hvac_mode: heat'.",
-          "resync_interval": "Sincroniza forçadamente os membros com o estado alvo a cada X minutos. Evita desvios se os dispositivos perderem um comando ou forem ajustados manualmente. Definir como 0 para desativar.",
-          "override_duration": "A duração dos overrides manuais. Após este tempo, o grupo regressa automaticamente à agenda atual. Definir como 0 para saltar o período de override.",
-          "persist_changes": "Se ativado, as alterações na agenda serão ignoradas enquanto um override manual estiver ativo. Reaplica a agenda atual apenas após a expiração do override."
-        }
-      },
-      "sync": {
-        "data": {
-          "sync_attributes": "Atributos Sincronizados",
-          "sync_mode": "Modo de Sincronização"
-        },
-        "data_description": {
-          "sync_attributes": "Os atributos selecionados aqui serão forçados em modos Lock/Mirror. Os não selecionados permitem controlo local (ex. sincronizar temperatura mas deixar os utilizadores mudar a velocidade da ventoinha localmente).",
-          "sync_mode": "Padrão: O grupo mostra estado agregado mas não o força. Mirror: Alterações num dispositivo são copiadas para todos os outros. Lock: Alterações manuais em dispositivos são revertidas para corresponder ao grupo."
-        },
-        "description": "Controla o que acontece quando alguém ajusta fisicamente um dispositivo. AVISO: Para evitar 'Guerras Climáticas', assegure que um dispositivo não está atribuído a múltiplos grupos com Modo Sync ativo.",
-        "title": "Modo Sync & Atributos"
-      },
-      "temperature": {
-        "data": {
-          "temp_current_avg": "Temperatura Atual (Visualização)",
-          "temp_sensors": "Sensores de Temperatura Externos",
-          "temp_target_avg": "Temperatura Alvo (Controlo)",
-          "temp_target_round": "Precisão de Temperatura Alvo",
-          "temp_update_targets": "Escrever Temp Externa em Entidades",
-          "temp_calibration_mode": "Modo de Calibração",
-          "calibration_heartbeat": "Heartbeat de Calibração (min)"
-        },
-        "data_description": {
-          "temp_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
-          "temp_sensors": "Usar sensores externos em vez de leituras de membros. Estes tornam-se a única fonte de verdade para a temperatura do grupo.",
-          "temp_target_avg": "Como o grupo calcula o ponto de ajuste para enviar aos seus membros.",
-          "temp_target_round": "Aplica-se apenas a valores enviados a dispositivos, não a valores atuais/visualizados.",
-          "temp_update_targets": "Escrever o valor do sensor externo em entidades numéricas (ex. offsets calibração TRV). Útil para manter termostatos cientes da temperatura real.",
-          "temp_calibration_mode": "Absoluto: Enviar valor diretamente. Offset: Enviar diferença (Externo - TRV Interno). Escalado: Enviar como inteiro x100 (ex. 21.5 -> 2150).",
-          "calibration_heartbeat": "Forçar periodicamente a sincronização da calibração para entidades, mesmo que a temperatura não tenha mudado. Defina como 0 para desativar."
-        },
-        "description": "Configurar como o grupo gere a agregação de temperatura e pontos de ajuste. Os sensores externos irão sobrepor leituras de membros se selecionados.",
-        "title": "Definições de Temperatura"
-      },
-      "timings": {
-        "data": {
-          "debounce_delay": "Atraso de Debounce (segundos)",
-          "retry_attempts": "Tentativas de Repetição",
-          "retry_delay": "Atraso de Repetição (segundos)"
-        },
-        "data_description": {
-          "debounce_delay": "Tempo de espera antes de enviar comandos. Valores mais altos previnem comandos 'metralhadora' ao deslizar controlos, mas parecem mais lentos.",
-          "retry_attempts": "Quantas vezes reenviar um comando se um dispositivo não responder. Definir como 0 para desativar.",
-          "retry_delay": "Pausa entre tentativas. Dar um momento aos dispositivos para recuperar pode melhorar a fiabilidade."
-        },
-        "description": "Configurar como o 'Controlador Virtual' interage com a sua rede. Tempos corretos previnem congestionamento Zigbee/Z-Wave e aumentam fiabilidade de comandos.",
-        "title": "Tempos de Comunicação"
-      },
-      "window_control": {
-        "data": {
-          "close_delay": "Atraso Fechamento (s)",
-          "room_open_delay": "Atraso Abertura Quarto (s)",
-          "room_sensor": "Sensor Janela Quarto",
-          "window_mode": "Modo Controle Janela",
-          "zone_open_delay": "Atraso Abertura Zona (s)",
-          "zone_sensor": "Sensor Janela Zona"
-        },
-        "data_description": {
-          "close_delay": "Tempo de espera após fechar janelas.",
-          "room_open_delay": "Tempo de espera após abrir janela do quarto.",
-          "room_sensor": "Sensor binário para janela do quarto. Atraso mais curto.",
-          "window_mode": "Habilitar grupo baseado em sensores. HVAC vai para 'off' quando janelas abertas.",
-          "zone_open_delay": "Tempo de espera após abrir janela da zona.",
-          "zone_sensor": "Sensor binário para outras janelas na zona. Atraso mais longo."
-        },
-        "description": "Configure o desligamento automático do aquecimento/resfriamento ao abrir janelas.",
-        "title": "Controle de Janela"
-      }
-    }
-  },
-  "selector": {
-    "feature_strategy": {
-      "options": {
-        "intersection": "Interseção (Modo Seguro - Funções Comuns)",
-        "union": "União (Utilizador Avançado - Todas as Funções)"
-      }
-    },
-    "humidity_current_avg": {
-      "options": {
-        "max": "Máximo (Mais Alto)",
-        "mean": "Média",
-        "median": "Mediana (Ignorar Outliers)",
-        "min": "Mínimo (Mais Baixo)"
-      }
-    },
-    "humidity_target_avg": {
-      "options": {
-        "max": "Máximo (Mais Alto)",
-        "mean": "Média",
-        "median": "Mediana (Valor Médio)",
-        "min": "Mínimo (Mais Baixo)"
-      }
-    },
-    "humidity_target_round": {
-      "options": {
-        "half": "Meio Porcento (0.5%)",
-        "integer": "Números Inteiros (1%)",
-        "none": "Sem Arredondamento (Exato)"
-      }
-    },
-    "hvac_mode_strategy": {
-      "options": {
-        "auto": "Auto (Inteligente)",
-        "normal": "Normal (Democrático)",
-        "off_priority": "Prioridade Desligado (Interruptor Mestre)"
-      }
-    },
-    "sync_attributes": {
-      "options": {
-        "fan_mode": "Modo Ventoinha",
-        "humidity": "Humidade (Alvo)",
-        "hvac_mode": "Modo HVAC",
-        "preset_mode": "Modo Predefinido",
-        "swing_horizontal_mode": "Oscilação Horizontal",
-        "swing_mode": "Oscilação Vertical",
-        "target_temp_high": "Temperatura Alvo Alta (Faixa)",
-        "target_temp_low": "Temperatura Alvo Baixa (Faixa)",
-        "temperature": "Temperatura (Alvo)"
-      }
-    },
-    "sync_mode": {
-      "options": {
-        "lock": "Lock (O Chefe - Forçar Grupo)",
-        "mirror": "Mirror (Magic Sync - Bidirecional)",
-        "standard": "Padrão (Unidirecional)"
-      }
-    },
-    "temp_current_avg": {
-      "options": {
-        "max": "Máximo (Mais Alto)",
-        "mean": "Média",
-        "median": "Mediana (Ignorar Outliers)",
-        "min": "Mínimo (Mais Baixo)"
-      }
-    },
-    "temp_target_avg": {
-      "options": {
-        "max": "Máximo (Mais Alto)",
-        "mean": "Média",
-        "median": "Mediana (Valor Médio)",
-        "min": "Mínimo (Mais Baixo)"
-      }
-    },
-    "temp_target_round": {
-      "options": {
-        "half": "Meio Grau (0.5°)",
-        "integer": "Números Inteiros (1°)",
-        "none": "Sem Arredondamento (Exato)"
-      }
-    },
-    "temp_calibration_mode": {
-      "options": {
-        "absolute": "Absoluto – Enviar valor diretamente (Padrão)",
-        "offset": "Offset – Enviar diferença (Externo - TRV Interno)",
-        "scaled": "Escalado – Inteiro x100 (Danfoss Ally)"
-      }
-    },
-    "window_mode": {
-      "options": {
-        "off": "Desligado – O controle de janela está desativado",
-        "on": "Ligado – O controle de janela está ativado"
-      }
-    }
-  },
   "services": {
     "set_temperature": {
+      "name": "Definir Temperatura",
       "description": "Definir a temperatura alvo para todo o grupo.",
       "fields": {
         "entity_id": {
-          "description": "O grupo a controlar.",
-          "name": "Grupo Climático"
-        },
-        "hvac_mode": {
-          "description": "Opcionalmente alterar o modo.",
-          "name": "Modo HVAC"
-        },
-        "target_temp_high": {
-          "description": "Limite superior para modo calor/frio.",
-          "name": "Alvo Alto"
-        },
-        "target_temp_low": {
-          "description": "Limite inferior para modo calor/frio.",
-          "name": "Alvo Baixo"
+          "name": "Grupo Climático",
+          "description": "O grupo a controlar."
         },
         "temperature": {
-          "description": "A temperatura desejada.",
-          "name": "Temperatura Alvo"
+          "name": "Temperatura Alvo",
+          "description": "A temperatura desejada."
+        },
+        "target_temp_high": {
+          "name": "Alvo Alto",
+          "description": "Limite superior para modo calor/frio."
+        },
+        "target_temp_low": {
+          "name": "Alvo Baixo",
+          "description": "Limite inferior para modo calor/frio."
+        },
+        "hvac_mode": {
+          "name": "Modo HVAC",
+          "description": "Opcionalmente alterar o modo."
         }
-      },
-      "name": "Definir Temperatura"
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Dispositivo Membro Indisponível",
+      "description": "Um ou mais dispositivos em {group_name} estão offline. O grupo continuará funcionando com o que tem.\n\nIndisponível: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "Nenhum Membro Disponível",
+      "description": "O grupo {group_name} não tem membros ativos e está efetivamente offline.\n\nVerifique: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Conflitos de Funcionalidades",
+      "description": "O grupo {group_name} tem membros com diferentes funcionalidades. A funcionalidade pode ser limitada ao que todos suportam.\n\nConflitos: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "Modo HVAC alterado",
+      "temperature_target_changed": "Temperatura alvo alterada",
+      "current_temperature_changed": "Temperatura atual alterada",
+      "group_turned_on": "Grupo ligado",
+      "group_turned_off": "Grupo desligado"
+    },
+    "condition_type": {
+      "is_hvac_mode": "Modo HVAC é",
+      "is_temperature_above": "Temperatura está acima",
+      "is_temperature_below": "Temperatura está abaixo",
+      "is_group_available": "Grupo está disponível"
+    },
+    "action_type": {
+      "set_hvac_mode": "Definir modo HVAC",
+      "set_temperature": "Definir temperatura",
+      "turn_on": "Ligar",
+      "turn_off": "Desligar"
     }
   }
 }

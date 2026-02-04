@@ -45,7 +45,7 @@
       },
       "members": {
         "title": "Members & Modes",
-        "description": "Select your devices and choose how the group combines their states and features. 'Strategy' defines the group's behavior when members are in different modes.",
+        "description": "Select devices and define how the group combines their states.",
         "data": {
           "entities": "Climate Devices",
           "hvac_mode_strategy": "HVAC Mode Strategy",
@@ -59,7 +59,7 @@
       },
       "temperature": {
         "title": "Temperature Settings",
-        "description": "Configure how the group handles temperature aggregation and setpoints. External sensors will override member readings if selected.",
+        "description": "Configure temperature averaging and optional external sensors.",
         "data": {
           "temp_current_avg": "Current Temperature (Display)",
           "temp_target_avg": "Target Temperature (Control)",
@@ -81,7 +81,7 @@
       },
       "humidity": {
         "title": "Humidity Settings",
-        "description": "Configure humidity aggregation and external sensors. Note that many thermostats only report humidity and don't allow control.",
+        "description": "Configure humidity averaging and external sensors.",
         "data": {
           "humidity_current_avg": "Current Humidity (Display)",
           "humidity_target_avg": "Target Humidity (Control)",
@@ -99,7 +99,7 @@
       },
       "timings": {
         "title": "Communication Timings",
-        "description": "Configure how the 'Virtual Controller' interacts with your network. Correct timings prevent Zigbee/Z-Wave congestion and increase command reliability.",
+        "description": "Fine-tune command timings and retries to ensure reliable operation without overloading your network.",
         "data": {
           "debounce_delay": "Debounce Delay (seconds)",
           "retry_attempts": "Retry Attempts",
@@ -116,16 +116,18 @@
         "description": "Control what happens when someone physically adjusts a device. WARNING: To avoid 'Climate Wars', ensure a device is not assigned to multiple groups with active Sync Mode.",
         "data": {
           "sync_mode": "Synchronization Mode",
-          "sync_attributes": "Synced Attributes"
+          "sync_attributes": "Synced Attributes",
+          "ignore_off_members": "Respect Member Off State"
         },
         "data_description": {
           "sync_mode": "Standard: Group shows aggregated state but doesn't enforce it. Mirror: Changes on one device are copied to all others. Lock: Manual changes on devices are reverted to match the group.",
-          "sync_attributes": "Attributes selected here will be enforced in Lock/Mirror modes. Unselected attributes allow for local control (e.g. sync temperature but let users change fan speed locally)."
+          "sync_attributes": "Attributes selected here will be enforced in Lock/Mirror modes. Unselected attributes allow for local control (e.g. sync temperature but let users change fan speed locally).",
+          "ignore_off_members": "The group will NOT turn on members that are currently Off. (Partial Sync)"
         }
       },
       "window_control": {
         "title": "Window Control",
-        "description": "Configure automatic heating/cooling shutdown when windows are opened. Both sensors are optional - leave empty to disable.",
+        "description": "Configure automatic heating/cooling shutdown when windows are opened. Both sensors are optional.",
         "data": {
           "window_mode": "Window Control Mode",
           "room_sensor": "Room Window Sensor",
@@ -145,7 +147,7 @@
       },
       "schedule": {
         "title": "Schedule & Timers",
-        "description": "Configure automation for the group. Link a schedule entity to automate changes and enable periodic synchronization.",
+        "description": "Automate the group with a schedule entity and timers.",
         "data": {
           "schedule_entity": "Schedule Entity",
           "resync_interval": "Resync Interval (minutes)",
@@ -156,7 +158,7 @@
           "schedule_entity": "Select a schedule entity. The schedule's 'Additional data' field can contain YAML with attributes like 'temperature: 20.5' or 'hvac_mode: heat'.",
           "resync_interval": "Force-sync members to the target state every X minutes. Ensures devices stay on schedule even if adjusted manually or commands are missed. Set to 0 to disable.",
           "override_duration": "The duration for manual overrides. After this time, the group automatically reverts to the current schedule. Set to 0 to skip the override period.",
-          "persist_changes": "If enabled, changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires."
+          "persist_changes": "Changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires."
         }
       },
       "other": {
@@ -165,21 +167,20 @@
         "data": {
           "expose_smart_sensors": "Expose Smart Sensors",
           "expose_member_entities": "Expose Member List",
-          "ignore_off_members": "Respect Member Off State",
           "min_temp_off": "Minimum Temperature when Off"
         },
         "data_description": {
           "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
           "expose_member_entities": "Creates an attribute listing all member entity IDs.",
-          "ignore_off_members": "If enabled, the group will NOT turn on members that are currently Off. (Partial Sync)",
-          "min_temp_off": "If enabled, sends the device's minimum temperature (e.g. 5°C) when turning the group off. (Force Valve Close)"
+          "min_temp_off": "Sends the device's minimum temperature (e.g. 5°C) when turning the group off. (Force Valve Close)"
         }
       }
     },
     "error": {
       "no_entities": "At least one climate device must remain in the group.",
       "invalid_entity": "Invalid device selected.",
-      "configuration_error": "Could not update configuration."
+      "configuration_error": "Could not update configuration.",
+      "calibration_requires_sensors": "Calibration targets require at least one external temperature sensor."
     },
     "abort": {
       "no_changes": "No changes detected."
