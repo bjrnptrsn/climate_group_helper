@@ -137,18 +137,11 @@ class WindowControlHandler:
         mode, delay = result
         self._cancel_timer()
 
-        # Skip timer if no action needed (HVAC already in desired state)
-        current_hvac = self._group.hvac_mode
-        if mode == WINDOW_OPEN and current_hvac == HVACMode.OFF:
-            _LOGGER.debug("[%s] HVAC is already OFF, skipping timer", self._group.entity_id)
-            self._control_state = WINDOW_OPEN  # Clear blocking mode
+        # Skip timer if no action needed
+        if mode == self._control_state:
+            _LOGGER.debug("[%s] Control state is already '%s', skipping timer/action", self._group.entity_id, mode)
             return
 
-        elif mode == WINDOW_CLOSE and current_hvac != HVACMode.OFF:
-            _LOGGER.debug("[%s] HVAC is already ON, skipping timer", self._group.entity_id)
-            self._control_state = WINDOW_CLOSE  # Clear blocking mode
-            return
-        
         if delay > 0:
             _LOGGER.debug("[%s] Scheduling action in %.1fs", self._group.entity_id, delay)
             self._timer_cancel = async_call_later(self._hass, delay, self._timer_expired)
@@ -194,7 +187,7 @@ class WindowControlHandler:
             await self.call_handler.call_immediate()
 
     def _window_control_logic(self) -> tuple[str, float] | None:
-        """This method implements the core logic from the Window Heating Control blueprint.
+        """This method implements the core logic for window control.
         
         Return the control mode and the timer delay.
         Return None if no sensors are configured.
