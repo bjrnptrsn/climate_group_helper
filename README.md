@@ -13,15 +13,23 @@ Combine multiple climate devices into a single, powerful entity for Home Assista
 
 ---
 
-## ✨ Key Features
+## ✨ Core Features (Zero Config)
+The "Minimalist Mode": Add your entities, and it just works. No complex setup required.
 
 ### 🎛️ Unified Control
 Change settings on the group, and all member devices update to match. No more managing 5 thermostats individually.
 
-### 🌡️ Multi-Sensor Aggregation
-Use **multiple external sensors** for temperature and humidity. The group calculates the average (or min/max/median) to get the true room reading—not just what one device thinks.
-*   **Averaging:** Mean, Median, Min, or Max.
-*   **Precision:** Round values to match your device (e.g. 0.5°).
+### 🌡️ Smart Averaging
+The group calculates the **mean** of all member temperatures to represent the true room reading.
+*   **Averaging Method:** Choose between Mean (default), Median, Min, or Max.
+*   **Precision:** Round target temperatures to device-compatible steps (0.5° or 1°). *Default: No rounding.*
+
+## 🚀 Advanced Features (Optional)
+Everything below is **completely optional**. If you don't configure it, the logic remains inactive and efficient ("Pay for what you use").
+
+
+### 🌡️ External Sensors
+Use **multiple external sensors** for temperature and humidity to override the member readings.
 
 ### 🎚️ Device Calibration
 *Improved in v0.18!* Write the external sensor value back to your TRVs to fix their internal temperature reading.
@@ -178,10 +186,26 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 ## 🔍 Troubleshooting
 
-**Issues after updating?**
+### Issues after updating?
 If you experience strange behavior after an update (e.g. settings not saving), try re-creating the group. This resolves potential migration issues.
 
-To see more details, enable debug logging by adding the following to your `configuration.yaml` file:
+### Debug Logging
+
+To see more details, enable debug logging:
+
+#### Option 1: Via UI (Recommended)
+This method applies instantly and does not require a restart.
+
+1.  Go to **Settings > Devices & Services**.
+2.  Select the **Devices** tab (at the top).
+3.  Search for and select your configured **Climate Group Helper** device from the list.
+4.  In the **Device info** panel, click on the **Climate Group Helper** link.
+5.  On the integration page, click the menu (3 dots) on the left and select **Enable debug logging**.
+6.  Reproduce the issue.
+7.  Disable debug logging via the same menu. The log file will be downloaded automatically.
+
+#### Option 2: Via YAML (Manual)
+Add the following to your `configuration.yaml` file (requires restart):
 
 ```yaml
 logger:

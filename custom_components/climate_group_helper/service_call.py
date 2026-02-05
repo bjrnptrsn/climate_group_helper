@@ -162,8 +162,12 @@ class BaseServiceCallHandler(ABC):
 
                     _LOGGER.debug("[%s] Call (%d/%d) '%s' with data: %s, Parent ID: %s", self._group.entity_id, attempt + 1, attempts, service, data, parent_id)
 
-            except Exception as e:
-                _LOGGER.warning("[%s] Call attempt (%d/%d) failed: %s", self._group.entity_id, attempt + 1, attempts, e)
+            except Exception as error:
+                error_msg = str(error)
+                if "not_valid_hvac_mode" in error_msg:
+                    _LOGGER.debug("[%s] Call attempt (%d/%d) skipped (not supported): %s", self._group.entity_id, attempt + 1, attempts, error_msg)
+                else:
+                    _LOGGER.warning("[%s] Call attempt (%d/%d) failed: %s", self._group.entity_id, attempt + 1, attempts, error)
 
             if attempts > 1 and attempt < (attempts - 1):
                 await asyncio.sleep(delay)
@@ -307,7 +311,7 @@ class BaseServiceCallHandler(ABC):
         if not self._group.min_temp_off:
             return data
         if data.get(ATTR_HVAC_MODE) == HVACMode.OFF:
-            return {**data, ATTR_TEMPERATURE: self._group._attr_min_temp}
+            return {ATTR_TEMPERATURE: self._group._attr_min_temp, **data}
         return data
 
     # Block hook to prevent all service calls

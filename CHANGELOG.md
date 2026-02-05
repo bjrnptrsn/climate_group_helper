@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.2 - 2026-02-05
+
+### 🔧 Device Compatibility Fixes
+*   **Min Temp Off Option**: Fixed compatibility with devices that ignore temperature updates when off.
+*   **Window Control**: Fixed state restoration for devices that do not report `off` (e.g. Danfoss Ally).
+
 ## 0.18.1 - 2026-02-04
 
 ### ✨ Improvements
