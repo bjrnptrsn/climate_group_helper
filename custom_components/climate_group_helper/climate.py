@@ -78,6 +78,7 @@ from .const import (
     CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_MASTER_ENTITY,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_SYNC_MODE,
@@ -184,8 +185,10 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Temperature calculation options
         self._temp_current_avg_calc = CALC_TYPES[config.get(CONF_TEMP_CURRENT_AVG, AverageOption.MEAN)]
-        self._temp_target_avg_calc = CALC_TYPES[config.get(CONF_TEMP_TARGET_AVG, AverageOption.MEAN)]
+        self._temp_target_avg = config.get(CONF_TEMP_TARGET_AVG, AverageOption.MEAN)
+        self._temp_target_avg_calc = CALC_TYPES.get(self._temp_target_avg, mean) if self._temp_target_avg != AverageOption.MASTER else mean
         self._temp_round = config.get(CONF_TEMP_TARGET_ROUND, RoundOption.NONE)
+        self._master_entity_id = config.get(CONF_MASTER_ENTITY)
         # Humidity calculation options
         self._humidity_current_avg_calc = CALC_TYPES[config.get(CONF_HUMIDITY_CURRENT_AVG, AverageOption.MEAN)]
         self._humidity_target_avg_calc = CALC_TYPES[config.get(CONF_HUMIDITY_TARGET_AVG, AverageOption.MEAN)]
@@ -712,7 +715,23 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             self._attr_current_temperature = self._member_temp_avg
 
         # Target temperature is calculated using the 'average_option' method from all ATTR_TEMPERATURE values.
-        self._attr_target_temperature = reduce_attribute(self.states, ATTR_TEMPERATURE, reduce=lambda *data: self._temp_target_avg_calc(data))
+        # MASTER mode: Use the master entity's target temperature directly
+        if self._temp_target_avg == AverageOption.MASTER and self._master_entity_id:
+            master_state = self.hass.states.get(self._master_entity_id)
+            if master_state and master_state.attributes.get(ATTR_TEMPERATURE) is not None:
+                self._attr_target_temperature = float(master_state.attributes.get(ATTR_TEMPERATURE))
+            else:
+                # Fallback to MEAN if master entity not available or has no temperature
+                _LOGGER.debug(
+                    "[%s] Master entity %s not available or has no temperature, falling back to MEAN",
+                    self.entity_id,
+                    self._master_entity_id
+                )
+                self._attr_target_temperature = reduce_attribute(self.states, ATTR_TEMPERATURE, reduce=lambda *data: mean(data))
+        else:
+            # Use the configured aggregation method
+            self._attr_target_temperature = reduce_attribute(self.states, ATTR_TEMPERATURE, reduce=lambda *data: self._temp_target_avg_calc(data))
+        
         # The result is rounded according to the 'round' config
         if self._attr_target_temperature is not None:
             self._attr_target_temperature = self.mean_round(self._attr_target_temperature, self._temp_round)
