@@ -46,6 +46,7 @@ CONF_TEMP_SENSORS = "temp_sensors"
 CONF_TEMP_UPDATE_TARGETS = "temp_update_targets"
 CONF_TEMP_CALIBRATION_MODE = "temp_calibration_mode"
 CONF_CALIBRATION_HEARTBEAT = "calibration_heartbeat"
+CONF_MASTER_ENTITY = "master_entity"
 
 # Humidity options
 CONF_HUMIDITY_TARGET_AVG = "humidity_target_avg"
@@ -95,6 +96,7 @@ class AverageOption(StrEnum):
     MEDIAN = "median"
     MIN = "min"
     MAX = "max"
+    MASTER = "master"
 
 
 class RoundOption(StrEnum):
