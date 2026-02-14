@@ -29,6 +29,7 @@ from .const import (
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HVAC_MODE_STRATEGY,
     CONF_IGNORE_OFF_MEMBERS,
+    CONF_MASTER_ENTITY,
     CONF_OVERRIDE_DURATION,
     CONF_PERSIST_CHANGES,
     CONF_RESYNC_INTERVAL,
@@ -268,6 +269,14 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         options=[opt.value for opt in RoundOption],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="temp_target_round",
+                    )
+                ),
+                vol.Optional(
+                    CONF_MASTER_ENTITY,
+                    default=current_config.get(CONF_MASTER_ENTITY),
+                ): selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=CLIMATE_DOMAIN,
                     )
                 ),
                 vol.Required(
