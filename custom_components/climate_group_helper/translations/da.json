@@ -48,11 +48,13 @@
         "description": "Vælg dine enheder og vælg, hvordan gruppen kombinerer deres tilstande og funktioner. 'Strategi' definerer gruppens adfærd, når medlemmer er i forskellige tilstande.",
         "data": {
           "entities": "Klimaenheder",
+          "master_entity": "Masterenhed",
           "hvac_mode_strategy": "HVAC Tilstandsstrategi",
           "feature_strategy": "Funktionskompatibilitet"
         },
         "data_description": {
           "entities": "Tilføj eller fjern enheder. Fjernelse af enheder stopper dem fra at blive kontrolleret af gruppen.",
+          "master_entity": "Udpeg én enhed som den førende termostat. Dens værdier kan tilsidesætte gruppeberegninger.",
           "hvac_mode_strategy": "Strategi for beregning af gruppens tilstand ud fra dens medlemmer (f.eks. hvis en 'heat' og en anden er 'off').",
           "feature_strategy": "Bestemmer hvilke funktioner (f.eks. forudindstillede tilstande, blæsertilstande) der er tilgængelige på gruppen, når medlemmer har forskellige evner."
         }
@@ -61,18 +63,20 @@
         "title": "Temperaturindstillinger",
         "description": "Konfigurer, hvordan gruppen håndterer temperaturaggregering og sætpunkter. Eksterne sensorer vil tilsidesætte medlemsmålinger, hvis de vælges.",
         "data": {
-          "temp_current_avg": "Nuværende Temperatur (Visning)",
           "temp_target_avg": "Mål Temperatur (Kontrol)",
+          "temp_use_master": "Brug masterenhedens måltemperatur",
           "temp_target_round": "Mål Temperatur Præcision",
+          "temp_current_avg": "Nuværende Temperatur (Visning)",
           "temp_sensors": "Eksterne Temperatursensorer",
           "temp_update_targets": "Skriv Ekstern Temp til Entiteter",
           "temp_calibration_mode": "Kalibreringstilstand",
           "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
         },
         "data_description": {
-          "temp_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
           "temp_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
+          "temp_use_master": "Brug masterenhedens sætpunkt i stedet for at beregne et gennemsnit. Falder tilbage til gennemsnit, hvis utilgængelig.",
           "temp_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
+          "temp_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
           "temp_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens temperatur.",
           "temp_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter (f.eks. TRV kalibrering forskydninger). Nyttigt for at holde termostater opmærksomme på den faktiske stuetemperatur.",
           "temp_calibration_mode": "Absolut: Send værdi direkte. Offset: Send difference (Ekstern - TRV Intern). Skaleret: Send som heltal x100 (f.eks. 21.5 -> 2150).",
@@ -87,14 +91,16 @@
           "humidity_target_avg": "Mål Fugtighed (Kontrol)",
           "humidity_target_round": "Mål Fugtighed Præcision",
           "humidity_sensors": "Eksterne Fugtighedssensorer",
-          "humidity_update_targets": "Skriv Ekstern Fugtighed til Entiteter"
+          "humidity_update_targets": "Skriv Ekstern Fugtighed til Entiteter",
+          "humidity_use_master": "Brug masterenhedens målfugtighed"
         },
         "data_description": {
           "humidity_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
           "humidity_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
           "humidity_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
           "humidity_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens fugtighed.",
-          "humidity_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter. Nyttigt til kalibrering af affugtere."
+          "humidity_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter. Nyttigt til kalibrering af affugtere.",
+          "humidity_use_master": "Brug masterenhedens sætpunkt i stedet for at beregne et gennemsnit. Falder tilbage til gennemsnit, hvis utilgængelig."
         }
       },
       "timings": {
@@ -130,19 +136,25 @@
         "description": "Konfigurer automatisk slukning af varme/køling når vinduer åbnes. Begge sensorer er valgfrie.",
         "data": {
           "window_mode": "Vinduesstyringstilstand",
+          "window_adopt_manual_changes": "Adopter manuelle ændringer",
           "room_sensor": "Rum Vindue Sensor",
           "zone_sensor": "Zone Vindue Sensor",
           "room_open_delay": "Rum Åben Forsinkelse (s)",
           "zone_open_delay": "Zone Åben Forsinkelse (s)",
+          "window_action": "Handling ved åbent vindue",
+          "window_temperature": "Temperatur ved åbent vindue",
           "close_delay": "Lukke Forsinkelse (s)"
         },
         "data_description": {
           "window_mode": "Aktiver/deaktiver gruppe baseret på vinduessensorer. HVAC-tilstand sættes til 'off' når vinduer er åbne.",
+          "window_adopt_manual_changes": "Tillad ændringer af måltilstand, mens vinduer er åbne.",
           "room_sensor": "Binær sensor for rummets eget vindue. Udløser den kortere forsinkelse.",
           "zone_sensor": "Binær sensor for andre vinduer i zonen. Udløser den længere forsinkelse.",
           "room_open_delay": "Ventetid efter rumvindue åbnes før varme slukkes.",
           "zone_open_delay": "Ventetid efter zonevindue åbnes før varme slukkes.",
-          "close_delay": "Ventetid efter alle vinduer lukkes før varme gendannes."
+          "close_delay": "Ventetid efter alle vinduer lukkes før varme gendannes.",
+          "window_action": "Hvad der skal ske, når et vindue åbnes: Sluk helt eller indstil en bestemt temperatur (f.eks. frostbeskyttelse).",
+          "window_temperature": "Måltemperatur når 'Indstil temperatur' er valgt."
         }
       },
       "schedule": {
@@ -167,11 +179,13 @@
         "data": {
           "expose_smart_sensors": "Udstil smarte sensorer",
           "expose_member_entities": "Udstil medlemsliste",
+          "expose_config": "Vis konfiguration (Fejlfinding)",
           "min_temp_off": "Minimumstemperatur ved sluk"
         },
         "data_description": {
           "expose_smart_sensors": "Opretter ekstra sensorenheder for gruppens temperatur og fugtighed (nyttigt til grafer).",
           "expose_member_entities": "Opretter en attribut, der viser alle medlemsenheds-id'er.",
+          "expose_config": "Tilføjer alle konfigurationsværdier til entitetsattributterne. Nyttigt til fejlfinding.",
           "min_temp_off": "Sendes enhedens minimumstemperatur (f.eks. 5°C), når gruppen slukkes. (Sikrer at ventilen lukker)"
         }
       }
@@ -244,7 +258,8 @@
       "options": {
         "standard": "Standard (En-vejs)",
         "mirror": "Mirror (Magic Sync - To-vejs)",
-        "lock": "Lock (Chefen - Gennemtving Gruppe)"
+        "lock": "Lock (Chefen - Gennemtving Gruppe)",
+        "master_lock": "Master/Lock"
       }
     },
     "window_mode": {
@@ -277,6 +292,19 @@
         "swing_mode": "Vertikal Sving",
         "swing_horizontal_mode": "Horisontal Sving",
         "humidity": "Fugtighed (Mål)"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Sluk (Standard)",
+        "temperature": "Indstil temperatur"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Off",
+        "all": "All",
+        "master_only": "Master Only"
       }
     }
   },
@@ -319,6 +347,16 @@
         "hvac_mode": {
           "name": "HVAC-tilstand",
           "description": "Skift eventuelt tilstanden."
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "Indstil tidsplan-enhed",
+      "description": "Ændrer den aktive tidsplan-enhed, der bruges af Climate Group.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Tidsplan-enhed",
+          "description": "Den nye tidsplan-enhed der skal bruges (f.eks. schedule.holiday). Sæt til null eller tom for at gendanne standardplanen fra konfigurationen."
         }
       }
     }

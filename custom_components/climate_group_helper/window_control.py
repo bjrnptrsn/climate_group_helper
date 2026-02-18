@@ -14,12 +14,15 @@ from .const import (
     CONF_CLOSE_DELAY,
     CONF_ROOM_OPEN_DELAY,
     CONF_ROOM_SENSOR,
+    CONF_WINDOW_ACTION,
+    CONF_WINDOW_TEMPERATURE,
     CONF_WINDOW_MODE,
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
     DEFAULT_CLOSE_DELAY,
     DEFAULT_ROOM_OPEN_DELAY,
     DEFAULT_ZONE_OPEN_DELAY,
+    WindowControlAction,
     WindowControlMode,
 )
 
@@ -44,6 +47,8 @@ class WindowControlHandler:
         self._unsub_listener = None
 
         self._window_control_mode = self._group.config.get(CONF_WINDOW_MODE, WindowControlMode.OFF)
+        self._window_action = self._group.config.get(CONF_WINDOW_ACTION, WindowControlAction.OFF)
+        self._window_temperature = self._group.config.get(CONF_WINDOW_TEMPERATURE)
         self._control_state = WINDOW_CLOSE
 
         # Configuration
@@ -174,8 +179,10 @@ class WindowControlHandler:
         self._control_state = mode
 
         if mode == WINDOW_OPEN:
-            # Turn HVAC OFF via self.call_handler (WindowControlCallHandler)
-            if self._group.hvac_mode != HVACMode.OFF:
+            if self._window_action == WindowControlAction.TEMPERATURE and self._window_temperature is not None:
+                _LOGGER.debug("[%s] Window opened, setting temperature to %.1f", self._group.entity_id, self._window_temperature)
+                await self.call_handler.call_immediate({"temperature": self._window_temperature})
+            elif self._group.hvac_mode != HVACMode.OFF:
                 _LOGGER.debug("[%s] Window opened, turning HVAC OFF", self._group.entity_id)
                 await self.call_handler.call_immediate({"hvac_mode": HVACMode.OFF})
             else:

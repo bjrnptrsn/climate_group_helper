@@ -1,0 +1,15 @@
+set_schedule_entity:
+  name: Set Schedule Entity
+  description: Changes the active schedule entity used by the Climate Group.
+  target:
+    entity:
+      integration: climate_group_helper
+      domain: climate
+  fields:
+    schedule_entity:
+      name: Schedule Entity
+      description: The new schedule entity to use (e.g. schedule.holiday). Set to null or empty to restore the configured default schedule.
+      selector:
+        entity:
+          domain: schedule
+      required: false

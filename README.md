@@ -47,17 +47,29 @@ Use **multiple external sensors** for temperature and humidity to override the m
     *   **Last Man Standing:** Only when the *last* active member is turned `off`, the Group accepts this change and updates its internal **Target State** to `off`.
 
 ### 🪟 Window Control
+*New in v0.19: Enhanced with Temperature Targets!*
+
 Automatically turn off heating when windows open and restore it when they close.
 
 *   **Logic:** Opening a window forces all members to `off`. Closing the window restores the group's previous settings (e.g. `heat`).
 *   **Room Sensor:** Fast reaction (default: 15s). For sensors directly in the room. E.g. `binary_sensor.living_room_window`.
 *   **Zone Sensor:** Slow reaction (default: 5min). For whole-house sensors. Prevents heating shutdown in closed rooms when a distant window opens. E.g. `binary_sensor.all_windows_open`.
-*   **User Blocking:** Manual changes are blocked while windows are open.
-*   **Sync Blocking:** Background sync ignores changes during window control.
+*   **Blocking:** While windows are open, manual changes and background sync are blocked. Schedule changes are still accepted internally and applied when windows close.
+*   **Adopt Manual Changes:** Optionally allow manual changes to update the target state while windows are open (Passive Tracking). Changes are applied when windows close.
+
+### 👑 Master Entity
+*New in v0.19.0*
+
+Designate a single climate member as the **Reference Point** or **Leader** for the group. This centralizes control logic and establishes a hierarchy, allowing one device to act as the authoritative source for the room's desired state.
+
+*   **Centralized Target State:** Use the Master's target settings (temperature, humidity) as the group's goal, rather than calculated averages.
+*   **Hierarchical Sync (Master/Lock):** Enables a specialized "Follow the Leader" mode. Changes on the Master are adopted by the group, while manual changes on "Slave" members are automatically reverted.
+*   **Intelligent Window Control:** If enabled, manual adjustments on the Master are adopted as the new target state while windows are open. Changes on other devices remain ignored.
 
 ### 📅 Advanced Schedule & Automation
-*New in v0.18!* Native support for Home Assistant `schedule` entities with advanced override logic.
+*New in v0.19: Enhanced with Dynamic Service Control!*
 
+*   **Dynamic Control:** Change the active schedule entity on the fly via the `set_schedule_entity` service (e.g. switch to "Away Schedule" when no one is home).
 *   **Intelligent Sync:** The schedule updates the group's desired settings.
 *   **Periodic Resync:** Force-sync all members to the group's target state every X minutes. Works independently of Sync Mode.
 *   **Manual Overrides:** Stay in control. Set an **Override Duration** to automatically return to the schedule after X minutes of manual adjustment.
@@ -129,6 +141,9 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 | Option | Description |
 |--------|-------------|
+| **Window Action** | **Turn Off** (Default) or **Set Temperature**. Useful for frost protection. |
+| **Adopt Manual Changes** | If enabled, manual changes made while windows are open are saved as the new target state (Passive Tracking). |
+| **Window Temperature** | Target temperature to set when 'Set Temperature' action is selected. |
 | **Room Sensor** | Binary sensor for fast reaction (window in the same room). |
 | **Zone Sensor** | Binary sensor for slow reaction (e.g. whole-house "any window open"). |
 | **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
@@ -150,6 +165,26 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Debounce Delay** | Wait before sending commands to prevent network congestion (default: 0.5s). |
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
+
+---
+
+## 🛠️ Services
+
+### `climate.set_schedule_entity`
+Dynamically change the active schedule entity for a group.
+
+*   **Target:** The Climate Group entity.
+*   **Fields:**
+    *   `schedule_entity` (Optional): The entity ID of the new schedule (e.g. `schedule.vacation_mode`). If omitted or set to `None`, reverts to the configured default entity.
+
+**Example:**
+```yaml
+service: climate_group_helper.set_schedule_entity
+target:
+  entity_id: climate.my_group
+data:
+  schedule_entity: schedule.guest_mode
+```
 
 ---
 

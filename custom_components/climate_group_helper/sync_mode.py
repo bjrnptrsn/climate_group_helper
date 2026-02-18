@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 from homeassistant.components.climate import HVACMode
 
 from .const import (
-    CONF_SYNC_ATTRS,
     CONF_IGNORE_OFF_MEMBERS,
+    CONF_SYNC_ATTRS,
     STARTUP_BLOCK_DELAY,
     SYNC_TARGET_ATTRS,
     SyncMode,
@@ -71,10 +71,7 @@ class SyncModeHandler:
         if self._group.sync_mode == SyncMode.STANDARD:
             return
 
-        # Block sync during startup phase.
-        # This delay protects against the initial state flood when HA loads entities:
-        # - Many state_changed events fire rapidly before target_state is properly initialized.
-        # - Without this, member states would overwrite target_state with stale/initial values.
+        # Block during startup to prevent initial state flood from overwriting target_state.
         if (
             self._group.startup_time
             and (time.time() - self._group.startup_time) < STARTUP_BLOCK_DELAY
@@ -82,159 +79,118 @@ class SyncModeHandler:
             _LOGGER.debug("[%s] Startup phase, sync blocked", self._group.entity_id)
             return
 
-        # Block sync during blocking mode
-        if self._group.blocking_mode:
-            _LOGGER.debug(
-                "[%s] Blocking mode active, sync blocked", self._group.entity_id
-            )
-            return
-
-        # --- Origin Event Strategy ---
-        # Analyze why the change happened by inspecting causal history.
-
         event = self._group.event
-        # new_state = event.data.get("new_state")  <-- Not used directly, we use change_dict
-
-        # Safe access to origin event
-        origin_event = None
-        if event.context and hasattr(event.context, "origin_event"):
-            origin_event = event.context.origin_event
-
+        origin_event = getattr(event.context, "origin_event", None)
         change_entity_id = self._group.change_state.entity_id or None
         change_dict = self._group.change_state.attributes()
 
         if not change_dict:
-            _LOGGER.debug("[%s] No changes detected", self._group.entity_id)
             return
 
-        _LOGGER.debug(
-            "[%s] Change detected: %s. Entity ID: %s, Context Parent ID: %s, Origin Parent ID: %s",
-            self._group.entity_id, change_dict, change_entity_id, event.context.parent_id, origin_event.context.parent_id
-        )
-
-        # Suppress echoes from window_control
-        if self._group.event and self._group.event.context.id == "window_control":
-            _LOGGER.debug("[%s] Ignoring '%s' echo: %s", self._group.entity_id, self._group.event.context.id, change_dict)
+        # Suppress echoes from window_control context
+        if event.context.id == "window_control":
+            _LOGGER.debug("[%s] Ignoring window_control echo", self._group.entity_id)
             return
 
-        # --- Deep Origin Analysis ---
-        # Did we cause this change via a service call?
-        if origin_event and origin_event.event_type == "call_service" and origin_event.data.get("domain") == "climate":
-            # Verify that WE originated this call.
-            # External automations or user actions causing service calls should NOT be treated as our echoes.
-            # We filter by the context IDs we assign in service_call.py.
-            trusted_context_ids = {"service_call", "group", "sync_mode", "schedule"}
+        # Deep Origin Analysis: Did we cause this change?
+        if self._is_own_echo(origin_event):
+            accepted = self._filter_echo_changes(origin_event, change_dict, change_entity_id)
+            if accepted:
+                _LOGGER.debug("[%s] Adopting side effects: %s", self._group.entity_id, accepted)
+                self.state_manager.update(entity_id=change_entity_id, **accepted)
+            return
 
-            if origin_event.context.id in trusted_context_ids:
-                service_data = origin_event.data.get("service_data", {})
+        # --- Fresh Event (external change) ---
+        _LOGGER.debug("[%s] External change: %s from %s", self._group.entity_id, change_dict, change_entity_id)
 
-                accepted_changes = {}
-
-                # Parent ID format: "MasterEntityID|Timestamp"
-                parent_id = origin_event.context.parent_id or ""
-                master_entity_id = ""
-                if "|" in parent_id:
-                    try:
-                        master_entity_id, _ = parent_id.split("|", 1)
-                    except ValueError:
-                        pass
-
-                for attr, new_value in change_dict.items():
-                    # 1. Was this attribute part of the order?
-                    if attr not in service_data:
-                        # e.g. We ordered Preset "Eco", but device changed Temp.
-                        # This is a SIDE EFFECT. We basically trust the device's reaction.
-
-                        # --- ORIGIN SENDER PROTECTION ("Sender Wins") ---
-                        # We only accept side effects (implied state changes) from the entity that
-                        # triggered the original command sequence (the "Master").
-                        # Side effects from other entities (passive receivers) are likely old state echoes
-                        # or race conditions and should not overwrite the Master's intent.
-
-                        # If we have a known master, strictly enforce that only the master can dictate side effects.
-                        if master_entity_id and change_entity_id != master_entity_id:
-                            _LOGGER.debug(
-                                "[%s] Side Effect Ignored: Reporting Entity '%s' != Master Entity '%s' (Attr: %s=%s)",
-                                self._group.entity_id, change_entity_id, master_entity_id, attr, new_value
-                            )
-                            continue
-
-                        _LOGGER.debug(
-                            "[%s] Side Effect Accepted: '%s'=%s (Reporter: %s, Master: %s)",
-                            self._group.entity_id, attr, new_value, change_entity_id, master_entity_id or "Unknown"
-                        )
-                        accepted_changes[attr] = new_value
-
-                    else:
-                        # 2. It was ordered. Does it match?
-                        ordered_val = service_data[attr]
-                        # Basic equality check (can be improved with tolerance for floats if needed)
-                        if ordered_val != new_value:
-                            # e.g. We ordered 19.5, but got 22.0.
-                            # Since this is a reaction to OUR command (context match),
-                            # a mismatch implies an intermediate state or glitch.
-                            # We trust our Order over the Device's immediate incorrect reaction.
-                            _LOGGER.debug(
-                                "[%s] Dirty Echo Ignored: '%s' (val=%s) != Ordered (val=%s). Waiting for settling.",
-                                self._group.entity_id, attr, new_value, ordered_val
-                            )
-                            continue
-
-                        # If values match (Clean Echo), we do nothing (already in sync).
-
-                if accepted_changes:
-                    # Side Effects are implicitly trusted. Adopt them consistently.
-                    _LOGGER.debug("[%s] Processing Side Effect -> Updating TargetState (implicit) with %s", self._group.entity_id, accepted_changes)
-                    self.state_manager.update(entity_id=change_entity_id, **accepted_changes)
-
-
-                return
-
-        # Fallback for "Fresh" Events (No useful origin context)
-        # Proceed with standard sync logic below...
-
-        _LOGGER.debug("[%s] Change detected: %s (Source: %s)", self._group.entity_id, change_dict, change_entity_id)
-
-        # Filter out setpoint values when HVACMode is off (meaningless values like frost protection)
-        # Allow them if we are currently switching out of off mode.
+        # Filter out setpoint values when HVAC is OFF (meaningless frost protection values)
         is_switching_on = "hvac_mode" in change_dict and change_dict["hvac_mode"] != HVACMode.OFF
-
         if self.target_state.hvac_mode == HVACMode.OFF and not is_switching_on:
             setpoint_attrs = {"temperature", "target_temp_low", "target_temp_high", "humidity"}
             change_dict = {key: value for key, value in change_dict.items() if key not in setpoint_attrs}
             if not change_dict:
-                _LOGGER.debug("[%s] HVACMode is off, ignoring setpoint changes", self._group.entity_id)
+                _LOGGER.debug("[%s] Ignoring setpoint changes while OFF", self._group.entity_id)
                 return
 
-        # Mirror mode: update target_state with filtered changes
+        # Mirror mode: adopt filtered changes into target_state
         if self._group.sync_mode == SyncMode.MIRROR:
-            if filtered_dict := {
-                key: value for key, value in change_dict.items() 
-                if self._filter_state.to_dict().get(key)
-            }:
-                self.state_manager.update(entity_id=change_entity_id, **filtered_dict)
-                _LOGGER.debug("[%s] Updated TargetState: %s", self._group.entity_id, self.target_state)
-            else:
-                _LOGGER.debug("[%s] Changes filtered out. TargetState not updated", self._group.entity_id)
+            if filtered := {key: value for key, value in change_dict.items() if self._filter_state.to_dict().get(key)}:
+                self.state_manager.update(entity_id=change_entity_id, **filtered)
+                _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
 
-        # Lock mode: Normally ignores member changes.
-        # EXCEPTION: "Last Man Standing" logic (Partial Sync enabled + OFF command).
-        # Should we allow an "OFF" command to update the Group target even in Lock mode?
+        # Lock mode: only accept "Last Man Standing" OFF (Partial Sync)
         elif (
             self._group.sync_mode == SyncMode.LOCK
             and self._group.config.get(CONF_IGNORE_OFF_MEMBERS)
             and change_dict.get("hvac_mode") == HVACMode.OFF
         ):
-            # Attempt to update target state (will strictly return False if other members are ON)
-            # If this returns True, it means we ARE the last man standing, and the group goes OFF.
             if self.state_manager.update(entity_id=change_entity_id, hvac_mode=HVACMode.OFF):
-                 _LOGGER.debug("[%s] LOCK Mode: Accepted 'Last Man Standing' OFF command from %s", self._group.entity_id, change_entity_id)
+                _LOGGER.debug("[%s] Last Man Standing: accepted OFF from %s", self._group.entity_id, change_entity_id)
 
-        # Mirror/lock mode: enforce group target via self.call_handler
-        sync_task = self._group.hass.async_create_background_task(
-            self.call_handler.call_debounced(), name="climate_group_sync_enforcement"
-        )
-        self._active_sync_tasks.add(sync_task)
-        sync_task.add_done_callback(self._active_sync_tasks.discard)
+        # Master/Lock mode: master adopts (MIRROR), non-master reverts (LOCK)
+        elif self._group.sync_mode == SyncMode.MASTER_LOCK:
+            master_id = self._group._master_entity_id
+            if master_id and change_entity_id == master_id:
+                if filtered := {key: value for key, value in change_dict.items() if self._filter_state.to_dict().get(key)}:
+                    self.state_manager.update(entity_id=change_entity_id, **filtered)
+                    _LOGGER.debug("[%s] Master entity change adopted: %s", self._group.entity_id, filtered)
+            # Non-master changes are enforced (reverted) via call_debounced below
 
-        _LOGGER.debug("[%s] Starting enforcement loop", self._group.entity_id)
+        # Enforce target state on all members (skip during blocking mode)
+        if not self._group.blocking_mode:
+            sync_task = self._group.hass.async_create_background_task(
+                self.call_handler.call_debounced(), name="climate_group_sync_enforcement"
+            )
+            self._active_sync_tasks.add(sync_task)
+            sync_task.add_done_callback(self._active_sync_tasks.discard)
+        else:
+            _LOGGER.debug("[%s] Enforcement skipped (blocking mode)", self._group.entity_id)
+
+    # --- Echo Detection Helpers ---
+
+    def _is_own_echo(self, origin_event) -> bool:
+        """Check if the state change was caused by one of our own service calls."""
+        if not origin_event:
+            return False
+        if origin_event.event_type != "call_service" or origin_event.data.get("domain") != "climate":
+            return False
+        trusted_ids = {"service_call", "group", "sync_mode", "schedule"}
+        return origin_event.context.id in trusted_ids
+
+    @staticmethod
+    def _extract_origin_entity(origin_event) -> str:
+        """Extract origin entity from parent_id (format: 'entity_id|timestamp')."""
+        parent_id = origin_event.context.parent_id or ""
+        if "|" in parent_id:
+            try:
+                origin, _ = parent_id.split("|", 1)
+                return origin
+            except ValueError:
+                pass
+        return ""
+
+    def _filter_echo_changes(self, origin_event, change_dict: dict, change_entity_id: str | None) -> dict:
+        """Filter echo changes, returning only accepted side effects.
+
+        - Ordered attrs that match: Clean Echo -> ignored (already in sync)
+        - Ordered attrs that differ: Dirty Echo -> ignored ("Order Wins")
+        - Unordered attrs (side effects): Accepted only from origin entity ("Sender Wins")
+        """
+        service_data = origin_event.data.get("service_data", {})
+        origin = self._extract_origin_entity(origin_event)
+        accepted = {}
+
+        for attr, new_value in change_dict.items():
+            if attr not in service_data:
+                # Side effect: only accept from origin entity ("Sender Wins")
+                if origin and change_entity_id != origin:
+                    _LOGGER.debug("[%s] Side effect rejected: %s != origin %s", self._group.entity_id, change_entity_id, origin)
+                    continue
+                accepted[attr] = new_value
+            else:
+                # Ordered attr: ignore if value doesn't match ("Order Wins" / Dirty Echo)
+                if service_data[attr] != new_value:
+                    _LOGGER.debug("[%s] Dirty echo ignored: %s=%s (ordered %s)", self._group.entity_id, attr, new_value, service_data[attr])
+
+        return accepted
+

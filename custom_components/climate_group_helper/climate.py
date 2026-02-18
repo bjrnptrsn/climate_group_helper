@@ -7,6 +7,7 @@ import logging
 import time
 from statistics import mean, median
 from typing import Any
+import voluptuous as vol
 
 from homeassistant.components.climate import (
     ATTR_CURRENT_HUMIDITY,
@@ -57,6 +58,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
+from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, State, callback, Event
 from datetime import timedelta, datetime
 
@@ -70,6 +72,7 @@ from .const import (
     ATTR_CURRENT_HVAC_MODES,
     ATTR_LAST_ACTIVE_HVAC_MODE,
     CONF_DEBOUNCE_DELAY,
+    CONF_EXPOSE_CONFIG,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_HUMIDITY_CURRENT_AVG,
@@ -77,24 +80,31 @@ from .const import (
     CONF_HUMIDITY_TARGET_AVG,
     CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_UPDATE_TARGETS,
+    CONF_HUMIDITY_USE_MASTER,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_MASTER_ENTITY,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
+    CONF_WINDOW_ADOPT_MANUAL_CHANGES,
     CONF_SYNC_MODE,
     CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_SENSORS,
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
+    CONF_TEMP_USE_MASTER,
     CONF_TEMP_CALIBRATION_MODE,
     CONF_CALIBRATION_HEARTBEAT,
     CONF_MIN_TEMP_OFF,
+    ATTR_SCHEDULE_ENTITY,
+    SERVICE_SET_SCHEDULE_ENTITY,
     DOMAIN,
     FEATURE_STRATEGY_INTERSECTION,
     FLOAT_TOLERANCE,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
+    AdoptManualChanges,
     AverageOption,
     RoundOption,
     CalibrationMode,
@@ -181,7 +191,14 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.climate_entity_ids = entity_ids
         self.config = config
         self.event: Event = None
+        self._event_entity_id: str | None = None
 
+        # Master entity
+        self._master_entity_id = config.get(CONF_MASTER_ENTITY)
+        self._temp_use_master = config.get(CONF_TEMP_USE_MASTER, False)
+        self._humidity_use_master = config.get(CONF_HUMIDITY_USE_MASTER, False)
+        self.master_state: State | None = None
+        self.current_master_state = CurrentState()
         # Temperature calculation options
         self._temp_current_avg_calc = CALC_TYPES[config.get(CONF_TEMP_CURRENT_AVG, AverageOption.MEAN)]
         self._temp_target_avg_calc = CALC_TYPES[config.get(CONF_TEMP_TARGET_AVG, AverageOption.MEAN)]
@@ -205,9 +222,12 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._humidity_update_target_entity_ids = config.get(CONF_HUMIDITY_UPDATE_TARGETS, [])
         # Expose member entities
         self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
+        self._expose_config = config.get(CONF_EXPOSE_CONFIG, False)
         # Sync mode
         self.sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
         self.min_temp_off = config.get(CONF_MIN_TEMP_OFF, False)
+        # Window control
+        self._window_adopt_manual_changes = config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES, AdoptManualChanges.OFF)
 
         # Calibration options
         self._temp_calibration_mode = config.get(CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE)
@@ -349,6 +369,18 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Update initial state
         self.async_defer_or_update_ha_state()
+
+        # Register services
+        if self.platform:
+            self.platform.async_register_entity_service(
+                SERVICE_SET_SCHEDULE_ENTITY,
+                {vol.Optional(ATTR_SCHEDULE_ENTITY): vol.Any(cv.entity_id, None)},
+                "async_service_set_schedule_entity",
+            )
+
+    async def async_service_set_schedule_entity(self, schedule_entity: str | None = None) -> None:
+        """Handle set_schedule_entity service."""
+        await self.schedule_handler.update_schedule_entity(schedule_entity)
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
@@ -507,6 +539,32 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # 4. Fallback
         return None
 
+    def _build_extra_state_attributes(self, current_hvac_modes: list[str]) -> dict[str, Any]:
+        """Build the extra state attributes dict."""
+        # Minimal attributes by default
+        attrs = {
+            ATTR_ASSUMED_STATE: self._attr_assumed_state,
+            ATTR_LAST_ACTIVE_HVAC_MODE: self._last_active_hvac_mode,
+            ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
+        }
+
+        # Blocking Reason (Window Control)
+        if self.window_control_handler.force_off:
+            attrs["blocking_reason"] = "window_open"
+
+        # Expose member entities if configured
+        if self._expose_member_entities:
+            attrs[ATTR_ENTITY_ID] = self.climate_entity_ids
+
+        # Expose full config if enabled
+        if self._expose_config:
+            attrs.update(self.config)
+            # Add dynamic runtime values that might differ from config
+            if hasattr(self, "schedule_handler") and self.schedule_handler.schedule_entity_id != self.config.get(ATTR_SCHEDULE_ENTITY):
+                attrs[ATTR_SCHEDULE_ENTITY] = self.schedule_handler.schedule_entity_id
+
+        return attrs
+
     @staticmethod
     def within_tolerance(val1: float, val2: float, tolerance: float = FLOAT_TOLERANCE) -> bool:
         """Check if two values are within a given tolerance."""
@@ -581,17 +639,39 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if not entity_ids or value is None:
             return
 
+        if self._event_entity_id and not force:
+            if mode in (CalibrationMode.ABSOLUTE, CalibrationMode.SCALED):
+                if domain == "temperature":
+                    if self._event_entity_id not in self._temp_sensor_entity_ids:
+                        return
+                elif domain == "humidity":
+                    if self._event_entity_id not in self._humidity_sensor_entity_ids:
+                        return
+
+            elif mode == CalibrationMode.OFFSET and domain == "temperature":
+                # If trigger is a member, filter the entity_ids list to only include the mapped target
+                if self._event_entity_id not in self._temp_sensor_entity_ids:
+                    # Check if trigger is a mapped member
+                    if self._event_entity_id not in self._target_member_map.values():
+                        return
+                    
+                    # Filter targets for this member
+                    entity_ids = [
+                        target for target, member in self._target_member_map.items() 
+                        if member == self._event_entity_id
+                    ]
+
         valid_states, _ = self._get_valid_member_states(entity_ids)
 
-        for sensor_state in valid_states:
+        for target_state in valid_states:
             try:
                 # Determine Target Value
                 target_val = value
                 if domain == "temperature":
                     if mode == CalibrationMode.OFFSET:
                         ref_temp = self._member_temp_avg
-                        if sensor_state.entity_id in self._target_member_map:
-                            member_id = self._target_member_map[sensor_state.entity_id]
+                        if target_state.entity_id in self._target_member_map:
+                            member_id = self._target_member_map[target_state.entity_id]
                             if (member_state := self.hass.states.get(member_id)) and (member_temp := member_state.attributes.get(ATTR_CURRENT_TEMPERATURE)) is not None:
                                 ref_temp = float(member_temp)
                         
@@ -599,17 +679,21 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                             continue
 
                         try:
-                            curr_offset = float(sensor_state.state)
+                            curr_offset = float(target_state.state)
                         except (ValueError, TypeError):
                             curr_offset = 0.0
+                        # Round to nearest 0.1
                         target_val = value - (ref_temp - curr_offset)
 
                     elif mode == CalibrationMode.SCALED:
                         target_val = int(round(value * 100))
 
+                if isinstance(target_val, float):
+                    target_val = round(target_val, 1)
+
                 # Determine if Sync is required
                 try:
-                    current_val = float(sensor_state.state)
+                    current_val = float(target_state.state)
                     if isinstance(target_val, int):
                         out_of_sync = current_val != target_val
                     else:
@@ -622,17 +706,17 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
                 _LOGGER.debug(
                     "[%s] Updating %s to %s (domain=%s, mode=%s, force=%s)", 
-                    self.entity_id, sensor_state.entity_id, target_val, domain, mode, force
+                    self.entity_id, target_state.entity_id, target_val, domain, mode, force
                 )
                 self.hass.async_create_task(
                     self.hass.services.async_call(
                         NUMBER_DOMAIN,
                         "set_value",
-                        {ATTR_ENTITY_ID: sensor_state.entity_id, "value": target_val},
+                        {ATTR_ENTITY_ID: target_state.entity_id, "value": target_val},
                     )
                 )
             except Exception as error:
-                _LOGGER.error("[%s] Error updating target entity %s: %s", self.entity_id, sensor_state.entity_id, error)
+                _LOGGER.error("[%s] Error updating target entity %s: %s", self.entity_id, target_state.entity_id, error)
                 continue
 
     @callback
@@ -652,6 +736,8 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if not self.startup_time and all_members_ready:
             self.startup_time = time.time()
             self.hass.async_create_task(self.schedule_handler.schedule_listener(caller="group"))
+            self._device_calibration("temperature", force=True)
+            self._device_calibration("humidity", force=True)
             _LOGGER.debug("[%s] All members ready the first time.", self.entity_id)
 
         # No states available
@@ -660,9 +746,26 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             self._attr_available = False
             return
 
+        # Load master entity state
+        if self._master_entity_id:
+            raw = self.hass.states.get(self._master_entity_id)
+            if raw and raw.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                self.master_state = raw
+                self.current_master_state = CurrentState(
+                    hvac_mode=raw.state,
+                    temperature=raw.attributes.get(ATTR_TEMPERATURE),
+                    target_temp_low=raw.attributes.get(ATTR_TARGET_TEMP_LOW),
+                    target_temp_high=raw.attributes.get(ATTR_TARGET_TEMP_HIGH),
+                    humidity=raw.attributes.get(ATTR_HUMIDITY),
+                )
+            else:
+                self.master_state = None
+                self.current_master_state = CurrentState()
+
         # Calculate and store ChangeState
         if self.event:
             self.change_state = ChangeState.from_event(self.event, self.shared_target_state)
+            self._event_entity_id = self.event.data.get(ATTR_ENTITY_ID)
 
         # Check if the change state is from a member entity
         if self.change_state and self.change_state.entity_id in self.climate_entity_ids:
@@ -696,96 +799,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Get temperature unit from system settings
         self._attr_temperature_unit = self.hass.config.units.temperature_unit
 
-        # Calculate Current Temperature
-        self._member_temp_avg = reduce_attribute(self.states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._temp_current_avg_calc(data))
-
-        if self._temp_sensor_entity_ids:
-            # Use ONLY external sensors if configured
-            self._attr_current_temperature = self._get_avg_sensor_value(self._temp_sensor_entity_ids, self._temp_current_avg_calc)
-            # Write calibration targets
-            if self._attr_current_temperature is not None:
-                self._device_calibration("temperature")
-            else:
-                _LOGGER.debug("[%s] External sensors %s configured but unavailable. Current temperature will be None", self.entity_id, self._temp_sensor_entity_ids)
-        else:
-            # Use member average if NO external sensors configured
-            self._attr_current_temperature = self._member_temp_avg
-
-        # Target temperature is calculated using the 'average_option' method from all ATTR_TEMPERATURE values.
-        self._attr_target_temperature = reduce_attribute(self.states, ATTR_TEMPERATURE, reduce=lambda *data: self._temp_target_avg_calc(data))
-        # The result is rounded according to the 'round' config
-        if self._attr_target_temperature is not None:
-            self._attr_target_temperature = self.mean_round(self._attr_target_temperature, self._temp_round)
-
-        # Target temperature low is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_LOW values
-        self._attr_target_temperature_low = reduce_attribute(self.states, ATTR_TARGET_TEMP_LOW, reduce=lambda *data: self._temp_target_avg_calc(data))
-        # The result is rounded according to the 'round' config
-        if self._attr_target_temperature_low is not None:
-            self._attr_target_temperature_low = self.mean_round(self._attr_target_temperature_low, self._temp_round)
-
-        # Target temperature high is calculated using the 'average_option' method from all ATTR_TARGET_TEMP_HIGH values
-        self._attr_target_temperature_high = reduce_attribute(self.states, ATTR_TARGET_TEMP_HIGH, reduce=lambda *data: self._temp_target_avg_calc(data))
-        # The result is rounded according to the 'round' config
-        if self._attr_target_temperature_high is not None:
-            self._attr_target_temperature_high = self.mean_round(self._attr_target_temperature_high, self._temp_round)
-
-        # Target temperature step is the highest of all ATTR_TARGET_TEMP_STEP values
-        self._attr_target_temperature_step = reduce_attribute(self.states, ATTR_TARGET_TEMP_STEP, reduce=max)
-
-        # Min temperature is the highest of all ATTR_MIN_TEMP values
-        self._attr_min_temp = reduce_attribute(self.states, ATTR_MIN_TEMP, reduce=max, default=DEFAULT_MIN_TEMP)
-
-        # Max temperature is the lowest of all ATTR_MAX_TEMP values
-        self._attr_max_temp = reduce_attribute(self.states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
-
-        # Calculate Current Humidity
-        if self._humidity_sensor_entity_ids:
-            # Use ONLY external sensors if configured
-            self._attr_current_humidity = self._get_avg_sensor_value(self._humidity_sensor_entity_ids, self._humidity_current_avg_calc)
-            if self._attr_current_humidity is not None:
-                self._device_calibration("humidity")
-            else:
-                _LOGGER.debug("[%s] External sensors %s configured but unavailable. Current humidity will be None", self.entity_id, self._humidity_sensor_entity_ids)
-        else:
-            # Use member average if NO external sensors configured
-            self._attr_current_humidity = reduce_attribute(self.states, ATTR_CURRENT_HUMIDITY, reduce=lambda *data: self._humidity_current_avg_calc(data))
-
-        # Target humidity is calculated using the 'average_option' method from all ATTR_HUMIDITY values.
-        self._attr_target_humidity = reduce_attribute(self.states, ATTR_HUMIDITY, reduce=lambda *data: self._humidity_target_avg_calc(data))
-        # The result is rounded according to the 'round' config
-        if self._attr_target_humidity is not None:
-            self._attr_target_humidity = self.mean_round(self._attr_target_humidity, self._humidity_round)
-
-        # Min humidity is the highest of all ATTR_MIN_HUMIDITY values
-        self._attr_min_humidity = reduce_attribute(self.states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY)
-
-        # Max humidity is the lowest of all ATTR_MAX_HUMIDITY values
-        self._attr_max_humidity = reduce_attribute(self.states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
-
-        # Available fan modes --> list of list of strings, e.g. [['auto', 'low', 'medium', 'high'], ['auto', 'silent', 'turbo'], ...]
-        self._attr_fan_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_FAN_MODES))))
-        self._attr_fan_mode = most_frequent_attribute(self.states, ATTR_FAN_MODE)
-
-        # Available preset modes --> list of list of strings, e.g. [['home', 'away', 'eco'], ['home', 'sleep', 'away', 'boost'], ...]
-        self._attr_preset_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_PRESET_MODES))))
-        self._attr_preset_mode = most_frequent_attribute(self.states, ATTR_PRESET_MODE)
-
-        # Available swing modes --> list of list of strings, e.g. [['off', 'left', 'right', 'center', 'swing'], ['off', 'swing'], ...]
-        self._attr_swing_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_MODES))))
-        self._attr_swing_mode = most_frequent_attribute(self.states, ATTR_SWING_MODE)
-
-        # Available horizontal swing modes --> list of list of strings, e.g. [['off', 'left', 'right', 'center', 'swing'], ['off', 'swing'], ...]
-        self._attr_swing_horizontal_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_HORIZONTAL_MODES))))
-        self._attr_swing_horizontal_mode = most_frequent_attribute(self.states, ATTR_SWING_HORIZONTAL_MODE)
-
-        # Supported features --> list of unionized ClimateEntityFeature (int), e.g. [<ClimateEntityFeature.TARGET_TEMPERATURE_RANGE|FAN_MODE|PRESET_MODE|SWING_MODE|TURN_OFF|TURN_ON: 442>, <ClimateEntityFeature...: 941>, ...]
-        attr_supported_features = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SUPPORTED_FEATURES)), default=0)
-
-        # Add default supported features
-        self._attr_supported_features = attr_supported_features | DEFAULT_SUPPORTED_FEATURES
-
-        # Remove unsupported features
-        self._attr_supported_features &= SUPPORTED_FEATURES
+        self._update_temperature_attributes()
+        self._update_humidity_attributes()
+        self._update_mode_attributes()
 
         # Populate current_group_state
         self.current_group_state = CurrentState(
@@ -801,19 +817,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         )
 
         # Update extra state attributes
-        self._attr_extra_state_attributes = {
-            CONF_TEMP_SENSORS: self._temp_sensor_entity_ids,
-            CONF_HUMIDITY_SENSORS: self._humidity_sensor_entity_ids,
-            CONF_SYNC_MODE: self.sync_mode,
-            ATTR_ASSUMED_STATE: self._attr_assumed_state,
-            ATTR_LAST_ACTIVE_HVAC_MODE: self._last_active_hvac_mode,
-            ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
-            "blocking_reason": "window_open" if self.window_control_handler.force_off else None,
-        }
-
-        # Expose member entities if configured
-        if self._expose_member_entities:
-            self._attr_extra_state_attributes[ATTR_ENTITY_ID] = self.climate_entity_ids
+        self._attr_extra_state_attributes = self._build_extra_state_attributes(current_hvac_modes)
 
         # Cold Start: Populate target store from current group state if empty.
         if self.shared_target_state == TargetState():
@@ -822,6 +826,100 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 # We use restore source to bypass blocking during startup
                 self.schedule_state_manager.update(last_source="restore", **initial_data)
                 _LOGGER.debug("[%s] Initialized Persistent Target State from current values: %s", self.entity_id, self.shared_target_state)
+
+    def _resolve_master_or_avg(self, use_master: bool, master_value, attr: str, avg_calc) -> float | None:
+        """Return master value if available, otherwise calculate average from members."""
+        if use_master and self._master_entity_id and master_value is not None:
+            return master_value
+        return reduce_attribute(self.states, attr, reduce=lambda *data: avg_calc(data))
+
+    def _update_temperature_attributes(self) -> None:
+        """Calculate and set all temperature-related attributes."""
+        # Current temperature
+        self._member_temp_avg = reduce_attribute(
+            self.states, ATTR_CURRENT_TEMPERATURE,
+            reduce=lambda *data: self._temp_current_avg_calc(data)
+        )
+        if self._temp_sensor_entity_ids:
+            self._attr_current_temperature = self._get_avg_sensor_value(
+                self._temp_sensor_entity_ids, self._temp_current_avg_calc
+            )
+            if self._attr_current_temperature is not None:
+                self._device_calibration("temperature")
+            else:
+                _LOGGER.debug("[%s] External temp sensors unavailable.", self.entity_id)
+        else:
+            self._attr_current_temperature = self._member_temp_avg
+
+        # Target temperatures (master override or member average)
+        master = self.current_master_state
+        self._attr_target_temperature = self._resolve_master_or_avg(
+            self._temp_use_master, master.temperature, ATTR_TEMPERATURE, self._temp_target_avg_calc
+        )
+        self._attr_target_temperature_low = self._resolve_master_or_avg(
+            self._temp_use_master, master.target_temp_low, ATTR_TARGET_TEMP_LOW, self._temp_target_avg_calc
+        )
+        self._attr_target_temperature_high = self._resolve_master_or_avg(
+            self._temp_use_master, master.target_temp_high, ATTR_TARGET_TEMP_HIGH, self._temp_target_avg_calc
+        )
+
+        # Round target values
+        for attr in ("_attr_target_temperature", "_attr_target_temperature_low", "_attr_target_temperature_high"):
+            val = getattr(self, attr)
+            if val is not None:
+                setattr(self, attr, self.mean_round(val, self._temp_round))
+
+        # Temperature limits and step
+        self._attr_target_temperature_step = reduce_attribute(self.states, ATTR_TARGET_TEMP_STEP, reduce=max)
+        self._attr_min_temp = reduce_attribute(self.states, ATTR_MIN_TEMP, reduce=max, default=DEFAULT_MIN_TEMP)
+        self._attr_max_temp = reduce_attribute(self.states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
+
+    def _update_humidity_attributes(self) -> None:
+        """Calculate and set all humidity-related attributes."""
+        # Current humidity
+        if self._humidity_sensor_entity_ids:
+            self._attr_current_humidity = self._get_avg_sensor_value(
+                self._humidity_sensor_entity_ids, self._humidity_current_avg_calc
+            )
+            if self._attr_current_humidity is not None:
+                self._device_calibration("humidity")
+            else:
+                _LOGGER.debug("[%s] External humidity sensors unavailable.", self.entity_id)
+        else:
+            self._attr_current_humidity = reduce_attribute(
+                self.states, ATTR_CURRENT_HUMIDITY,
+                reduce=lambda *data: self._humidity_current_avg_calc(data)
+            )
+
+        # Target humidity (master override or member average)
+        self._attr_target_humidity = self._resolve_master_or_avg(
+            self._humidity_use_master, self.current_master_state.humidity,
+            ATTR_HUMIDITY, self._humidity_target_avg_calc
+        )
+        if self._attr_target_humidity is not None:
+            self._attr_target_humidity = self.mean_round(self._attr_target_humidity, self._humidity_round)
+
+        # Humidity limits
+        self._attr_min_humidity = reduce_attribute(self.states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY)
+        self._attr_max_humidity = reduce_attribute(self.states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
+
+    def _update_mode_attributes(self) -> None:
+        """Calculate and set fan, preset, swing modes and supported features."""
+        self._attr_fan_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_FAN_MODES))))
+        self._attr_fan_mode = most_frequent_attribute(self.states, ATTR_FAN_MODE)
+
+        self._attr_preset_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_PRESET_MODES))))
+        self._attr_preset_mode = most_frequent_attribute(self.states, ATTR_PRESET_MODE)
+
+        self._attr_swing_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_MODES))))
+        self._attr_swing_mode = most_frequent_attribute(self.states, ATTR_SWING_MODE)
+
+        self._attr_swing_horizontal_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_HORIZONTAL_MODES))))
+        self._attr_swing_horizontal_mode = most_frequent_attribute(self.states, ATTR_SWING_HORIZONTAL_MODE)
+
+        # Supported features
+        attr_supported_features = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SUPPORTED_FEATURES)), default=0)
+        self._attr_supported_features = (attr_supported_features | DEFAULT_SUPPORTED_FEATURES) & SUPPORTED_FEATURES
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
