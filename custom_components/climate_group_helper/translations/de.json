@@ -48,11 +48,13 @@
         "description": "Wähle Geräte und definiere, wie die Gruppe deren Status kombiniert.",
         "data": {
           "entities": "Klimageräte",
+          "master_entity": "Master-Gerät",
           "hvac_mode_strategy": "HVAC-Modus-Strategie",
           "feature_strategy": "Funktionskompatibilität"
         },
         "data_description": {
           "entities": "Geräte hinzufügen oder entfernen. Das Entfernen stoppt deren Steuerung durch die Gruppe.",
+          "master_entity": "Bestimme ein Gerät als führendes Thermostat. Seine Werte können die Gruppenberechnung überschreiben.",
           "hvac_mode_strategy": "Strategie zur Berechnung des Gruppenstatus aus den Mitgliedern (z.B. wenn eines 'heat' und ein anderes 'off' ist).",
           "feature_strategy": "Bestimmt, welche Funktionen (z.B. Preset-Modi, Lüfter-Modi) in der Gruppe verfügbar sind, wenn Mitglieder unterschiedliche Fähigkeiten haben."
         }
@@ -61,18 +63,20 @@
         "title": "Temperatureinstellungen",
         "description": "Konfiguriere Temperatur-Mittelung und optionale externe Sensoren.",
         "data": {
-          "temp_current_avg": "Aktuelle Temperatur (Anzeige)",
           "temp_target_avg": "Zieltemperatur (Steuerung)",
+          "temp_use_master": "Master-Zieltemperatur verwenden",
           "temp_target_round": "Zieltemperatur Präzision",
+          "temp_current_avg": "Aktuelle Temperatur (Anzeige)",
           "temp_sensors": "Externer Temperatursensor",
           "temp_update_targets": "Schreibe externe Temp. in Entitäten",
           "temp_calibration_mode": "Kalibrierungs-Modus",
           "calibration_heartbeat": "Kalibrierungs-Heartbeat (min)"
         },
         "data_description": {
-          "temp_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
           "temp_target_avg": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
+          "temp_use_master": "Den Sollwert des Master-Geräts verwenden statt den Durchschnitt zu berechnen. Fällt auf Mittelung zurück, falls nicht verfügbar.",
           "temp_target_round": "Gilt nur für Werte, die an Geräte gesendet werden, nicht für aktuelle/angezeigte Werte.",
+          "temp_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
           "temp_sensors": "Verwende externe Sensoren anstelle der Mitgliederwerte. Diese werden zur einzigen Wahrheitsquelle für die Temperatur der Gruppe.",
           "temp_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten (z.B. TRV-Kalibrierung). Nützlich, um Thermostate über die tatsächliche Raumtemperatur zu informieren.",
           "temp_calibration_mode": "Absolut: Wert direkt senden. Offset: Differenz senden (Extern - TRV Intern). Skaliert: Sende als Integer x100 (z.B. 21,5 -> 2150).",
@@ -83,16 +87,18 @@
         "title": "Feuchtigkeitseinstellungen",
         "description": "Konfiguriere Feuchtigkeits-Mittelung und externe Sensoren.",
         "data": {
-          "humidity_current_avg": "Aktuelle Luftfeuchtigkeit (Anzeige)",
           "humidity_target_avg": "Ziel-Luftfeuchtigkeit (Steuerung)",
+          "humidity_use_master": "Master-Zielfeuchtigkeit verwenden",
           "humidity_target_round": "Ziel-Feuchtigkeit Präzision",
+          "humidity_current_avg": "Aktuelle Luftfeuchtigkeit (Anzeige)",
           "humidity_sensors": "Externe Feuchtigkeitssensoren",
           "humidity_update_targets": "Schreibe externe Feuchtigkeit in Entitäten"
         },
         "data_description": {
-          "humidity_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
           "humidity_target_avg": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
+          "humidity_use_master": "Den Sollwert des Master-Geräts verwenden statt den Durchschnitt zu berechnen. Fällt auf Mittelung zurück, falls nicht verfügbar.",
           "humidity_target_round": "Gilt nur für Werte, die an Geräte gesendet werden, nicht für aktuelle/angezeigte Werte.",
+          "humidity_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
           "humidity_sensors": "Verwende externe Sensoren anstelle der Mitgliederwerte. Diese werden zur einzigen Wahrheitsquelle für die Feuchtigkeit der Gruppe.",
           "humidity_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten. Nützlich für die Kalibrierung von Luftentfeuchtern."
         }
@@ -130,19 +136,25 @@
         "description": "Konfiguriere automatische Abschaltung beim Öffnen von Fenstern. Beide Sensoren sind optional.",
         "data": {
           "window_mode": "Fenstersteuerungs-Modus",
+          "window_adopt_manual_changes": "Manuelle Änderungen übernehmen",
           "room_sensor": "Raum-Fenstersensor",
           "zone_sensor": "Zonen-Fenstersensor",
           "room_open_delay": "Verzögerung Raum (Sekunden)",
           "zone_open_delay": "Verzögerung Zone (Sekunden)",
+          "window_action": "Aktion bei offenem Fenster",
+          "window_temperature": "Zieltemperatur bei offenem Fenster",
           "close_delay": "Verzögerung Schließen (Sekunden)"
         },
         "data_description": {
           "window_mode": "Aktiviert/Deaktiviert die Klimagruppe basierend auf Fenstersensoren. Wenn aktiv, wird der HVAC-Modus auf 'off' gesetzt, wenn Fenster offen sind.",
+          "window_adopt_manual_changes": "Änderungen am Sollwert erlauben, während Fenster offen sind.",
           "room_sensor": "Binärsensor für das Fenster/Tür im Raum. Löst die kürzere Verzögerung aus.",
           "zone_sensor": "Binärsensor für andere Fenster/Türen in der Zone/Etage. Löst die längere Verzögerung aus.",
           "room_open_delay": "Wartezeit nach Öffnen des Raumfensters, bevor die Heizung ausgeschaltet wird.",
           "zone_open_delay": "Wartezeit nach Öffnen des Zonenfensters, bevor die Heizung ausgeschaltet wird.",
-          "close_delay": "Wartezeit nachdem alle Fenster geschlossen sind, bevor die Heizung wiederhergestellt wird."
+          "close_delay": "Wartezeit nachdem alle Fenster geschlossen sind, bevor die Heizung wiederhergestellt wird.",
+          "window_action": "Was passieren soll, wenn ein Fenster geöffnet wird: Komplett ausschalten oder eine bestimmte Temperatur setzen (z.B. Frostschutz).",
+          "window_temperature": "Zieltemperatur, die gesetzt wird, wenn die Aktion 'Temperatur setzen' gewählt ist."
         }
       },
       "schedule": {
@@ -167,11 +179,13 @@
         "data": {
           "expose_smart_sensors": "Smarte Sensoren bereitstellen",
           "expose_member_entities": "Mitgliederliste bereitstellen",
+          "expose_config": "Konfiguration anzeigen (Debug)",
           "min_temp_off": "Min. Temp bei 'Aus'"
         },
         "data_description": {
           "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
           "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
+          "expose_config": "Fügt alle Konfigurationswerte den Entitätsattributen hinzu. Nützlich für die Fehlersuche.",
           "min_temp_off": "Sendet die Minimaltemperatur des Geräts (z.B. 5°C) beim Ausschalten der Gruppe. (Erzwingt Ventil-Schließung)"
         }
       }
@@ -244,7 +258,8 @@
       "options": {
         "standard": "Standard (Einweg)",
         "mirror": "Mirror (Magic Sync - Zweiwege)",
-        "lock": "Lock (The Boss - Gruppe erzwingen)"
+        "lock": "Lock (The Boss - Gruppe erzwingen)",
+        "master_lock": "Master/Lock – Nur das Master-Gerät kann den Sollwert ändern"
       }
     },
     "window_mode": {
@@ -277,6 +292,19 @@
         "swing_mode": "Vertikaler Swing",
         "swing_horizontal_mode": "Horizontaler Swing",
         "humidity": "Luftfeuchtigkeit (Ziel)"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Ausschalten (Standard)",
+        "temperature": "Temperatur setzen"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Aus – Alle Änderungen blockieren",
+        "all": "Alle – Alle manuellen Änderungen übernehmen",
+        "master_only": "Nur Master – Nur das Master-Gerät akzeptieren"
       }
     }
   },
@@ -319,6 +347,16 @@
         "hvac_mode": {
           "name": "HVAC-Modus",
           "description": "Optional den Modus ändern."
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "Zeitplan-Entität setzen",
+      "description": "Ändert die aktive Zeitplan-Entität der Klimagruppe.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Zeitplan-Entität",
+          "description": "Die neue Zeitplan-Entität (z.B. schedule.urlaub). Leer lassen, um den konfigurierten Standard wiederherzustellen."
         }
       }
     }

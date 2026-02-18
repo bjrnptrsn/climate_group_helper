@@ -48,11 +48,13 @@
         "description": "选择您的设备并选择组如何组合它们的状态和功能。‘策略’定义了成员处于不同模式时组的行为。",
         "data": {
           "entities": "空调设备",
+          "master_entity": "主设备",
           "hvac_mode_strategy": "HVAC 模式策略",
           "feature_strategy": "功能兼容性"
         },
         "data_description": {
           "entities": "添加或删除设备。移除设备将停止组对其的控制。",
+          "master_entity": "指定一个设备作为主温控器。它的值可以覆盖组的计算结果。",
           "hvac_mode_strategy": "从成员计算组状态的策略 (例如，如果一个正在 'heat'，另一个已 'off')。",
           "feature_strategy": "确定当成员具有不同能力时，组上可用的功能 (例如预设模式, 风扇模式)。"
         }
@@ -61,18 +63,20 @@
         "title": "温度设置",
         "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
         "data": {
-          "temp_current_avg": "当前温度 (显示)",
           "temp_target_avg": "目标温度 (控制)",
+          "temp_use_master": "使用主设备目标温度",
           "temp_target_round": "目标温度精度",
+          "temp_current_avg": "当前温度 (显示)",
           "temp_sensors": "外部温度传感器",
           "temp_update_targets": "将外部温度写入实体",
           "temp_calibration_mode": "校准模式",
           "calibration_heartbeat": "校准心跳 (分钟)"
         },
         "data_description": {
-          "temp_current_avg": "组如何汇总成员的传感器读数。",
           "temp_target_avg": "组如何计算要发送给成员的目标设定值。",
+          "temp_use_master": "使用主设备的设定值而不是计算平均值。不可用时回退到平均值。",
           "temp_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
+          "temp_current_avg": "组如何汇总成员的传感器读数。",
           "temp_sensors": "使用外部传感器代替成员读数。这将成为组温度的唯一真实来源。",
           "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。",
           "temp_calibration_mode": "绝对: 直接发送值。偏移: 发送差值 (外部 - TRV 内部)。 缩放: 发送为整数 x100 (例如 21.5 -> 2150)。",
@@ -83,16 +87,18 @@
         "title": "湿度设置",
         "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
         "data": {
-          "humidity_current_avg": "当前湿度 (显示)",
           "humidity_target_avg": "目标湿度 (控制)",
+          "humidity_use_master": "使用主设备目标湿度",
           "humidity_target_round": "目标湿度精度",
+          "humidity_current_avg": "当前湿度 (显示)",
           "humidity_sensors": "外部湿度传感器",
           "humidity_update_targets": "将外部湿度写入实体"
         },
         "data_description": {
-          "humidity_current_avg": "组如何汇总成员的传感器读数。",
           "humidity_target_avg": "组如何计算要发送给成员的目标设定值。",
+          "humidity_use_master": "使用主设备的设定值而不是计算平均值。不可用时回退到平均值。",
           "humidity_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
+          "humidity_current_avg": "组如何汇总成员的传感器读数。",
           "humidity_sensors": "使用外部传感器代替成员读数。这将成为组湿度的唯一真实来源。",
           "humidity_update_targets": "将外部传感器值写入数字实体。用于除湿机校准。"
         }
@@ -130,19 +136,25 @@
         "description": "配置打开窗户时自动关闭加热/冷却。两个传感器都是可选的。",
         "data": {
           "window_mode": "窗口控制模式",
+          "window_adopt_manual_changes": "采用手动更改",
           "room_sensor": "房间窗口传感器",
           "zone_sensor": "区域窗口传感器",
           "room_open_delay": "房间打开延迟 (秒)",
           "zone_open_delay": "区域打开延迟 (秒)",
+          "window_action": "开窗动作",
+          "window_temperature": "开窗温度",
           "close_delay": "关闭延迟 (秒)"
         },
         "data_description": {
           "window_mode": "基于传感器启用组。窗口打开时 HVAC 设置为 'off'。",
+          "window_adopt_manual_changes": "允许在窗户打开时更改目标状态。",
           "room_sensor": "房间窗口的二进制传感器。较短延迟。",
           "zone_sensor": "区域其他窗口的二进制传感器。较长延迟。",
           "room_open_delay": "房间窗口打开后的等待时间。",
           "zone_open_delay": "区域窗口打开后的等待时间。",
-          "close_delay": "窗口关闭后的恢复等待时间。"
+          "close_delay": "窗口关闭后的恢复等待时间。",
+          "window_action": "窗户打开时的动作：完全关闭或设置为特定温度（例如防冻保护）。",
+          "window_temperature": "选择“设置温度”动作时的目标温度。"
         }
       },
       "schedule": {
@@ -167,11 +179,13 @@
         "data": {
           "expose_smart_sensors": "公开智能传感器",
           "expose_member_entities": "公开成员列表",
+          "expose_config": "显示配置 (调试)",
           "min_temp_off": "关闭时的最低温度"
         },
         "data_description": {
           "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
           "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
+          "expose_config": "将所有配置值添加到实体属性中。用于调试。",
           "min_temp_off": "将在关闭组时发送设备的最低温度（例如 5°C）。（强制关闭阀门）"
         }
       }
@@ -244,7 +258,8 @@
       "options": {
         "standard": "标准 (单向)",
         "mirror": "镜像 (Magic Sync - 双向)",
-        "lock": "锁定 (老板 - 强制组)"
+        "lock": "锁定 (老板 - 强制组)",
+        "master_lock": "Master/Lock"
       }
     },
     "window_mode": {
@@ -277,6 +292,19 @@
         "swing_mode": "垂直摆动",
         "swing_horizontal_mode": "水平摆动",
         "humidity": "湿度 (目标)"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "关闭（默认）",
+        "temperature": "设置温度"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Off",
+        "all": "All",
+        "master_only": "Master Only"
       }
     }
   },
@@ -319,6 +347,16 @@
         "hvac_mode": {
           "name": "HVAC 模式",
           "description": "可选更改模式。"
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "设置日程实体",
+      "description": "更改气候组使用的活动日程实体。",
+      "fields": {
+        "schedule_entity": {
+          "name": "日程实体",
+          "description": "要使用的新日程实体（例如 schedule.holiday）。设置为空或null以恢复配置的默认日程。"
         }
       }
     }

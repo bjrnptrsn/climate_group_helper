@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.19.0 - 2026-02-18
+
+### 🌟 New Features
+
+*   **Master Entity & Sync Logic**:
+    *   **Master Entity Support**: Designate a single member as the **Leader**. The group follows this device's target state instead of calculating averages.
+    *   **New Sync Mode `MASTER_LOCK`**: Changes on the Master are mirrored to the group, while changes on other members are reverted (Lock).
+
+*   **Window Control**:
+    *   **Adopt Manual Changes**: New option to adopt manual temperature changes made while a window is open.
+    *   **Window Action "Set Temperature"**: Optionally set a specific temperature instead of turning `OFF` when a window opens.
+
+*   **Dynamic Scheduling**:
+    *   **Service `set_schedule_entity`**: Switch the active schedule entity at runtime via service call (e.g. for presence-based updates or vacation modes).
+
+### 🚀 Optimizations
+
+*   **Optimized Calibration**: Optimized logic with smart filtering, strict tolerance, and heartbeat to reduce Zigbee traffic.
+
+*   **State Attributes**: By default, only essential attributes are exposed. Use the new `expose_config` option if you want to see all settings for debugging.
+
 ## 0.18.2 - 2026-02-05
 
 ### 🔧 Device Compatibility Fixes
@@ -41,7 +62,7 @@
 ### 🔧 Robustness & Sync Stability (Major Fixes)
 This patch release focuses on fixing race conditions and sync-loops.
 
-- **Sender Wins Strategy:** Now correctly identifies the "Master" entity for every command to prevent passive members from overwriting the group state with old data.
+- **Sender Wins Strategy:** Now correctly identifies the "Origin" entity for every command to prevent passive members from overwriting the group state with old data.
 - **Dirty Echo Protection:** Strictly ignores values from members that don't match the valid order, preventing feedback loops.
 - **Split-Brain Fix:** Fixed an edge case where Side Effects (like a thermostat acting on its own logic) broke the enforcement loop.
 

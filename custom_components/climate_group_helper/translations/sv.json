@@ -48,11 +48,13 @@
         "description": "Välj dina enheter och välj hur gruppen kombinerar deras tillstånd och funktioner. 'Strategi' definierar gruppens beteende när medlemmar är i olika lägen.",
         "data": {
           "entities": "Klimatenheter",
+          "master_entity": "Masterenhet",
           "hvac_mode_strategy": "HVAC Lägesstrategi",
           "feature_strategy": "Funktionskompatibilitet"
         },
         "data_description": {
           "entities": "Lägg till eller ta bort enheter. Att ta bort enheter stoppar dem från att kontrolleras av gruppen.",
+          "master_entity": "Utse en enhet som ledande termostat. Dess värden kan åsidosätta gruppberäkningar.",
           "hvac_mode_strategy": "Strategi för att beräkna gruppens tillstånd från sina medlemmar (t.ex. om en 'heat' och en annan är 'off').",
           "feature_strategy": "Bestämmer vilka funktioner (t.ex. förinställda lägen, fläktlägen) som är tillgängliga på gruppen när medlemmar har olika kapaciteter."
         }
@@ -61,18 +63,20 @@
         "title": "Temperaturinställningar",
         "description": "Konfigurera hur gruppen hanterar temperaturaggregering och målvärden. Externa sensorer kommer att åsidosätta medlemsavläsningar om de väljs.",
         "data": {
-          "temp_current_avg": "Aktuell Temperatur (Visning)",
           "temp_target_avg": "Mål Temperatur (Kontroll)",
+          "temp_use_master": "Använd masterenhetens måltemperatur",
           "temp_target_round": "Mål Temperatur Precision",
+          "temp_current_avg": "Aktuell Temperatur (Visning)",
           "temp_sensors": "Externa Temperatursensorer",
           "temp_update_targets": "Skriv Extern Temp till Entiteter",
           "temp_calibration_mode": "Kalibreringsläge",
           "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
         },
         "data_description": {
-          "temp_current_avg": "Hur gruppen sammanfattar sensoravläsningar från sina medlemmar.",
           "temp_target_avg": "Hur gruppen beräknar målvärdet att skicka till sina medlemmar.",
+          "temp_use_master": "Använd masterenhetens målvärde istället för att beräkna ett medelvärde. Faller tillbaka till medelvärde om otillgänglig.",
           "temp_target_round": "Gäller endast värden som skickas till enheter, inte aktuella/visade värden.",
+          "temp_current_avg": "Hur gruppen sammanfattar sensoravläsningar från sina medlemmar.",
           "temp_sensors": "Använd externa sensorer istället för medlemsavläsningar. Dessa blir den enda sanningen för gruppens temperatur.",
           "temp_update_targets": "Skriv det externa sensorvärdet till nummerentiteter (t.ex. TRV kalibrering offset). Användbart för att hålla termostater medvetna om faktisk rumstemperatur.",
           "temp_calibration_mode": "Absolut: Skicka värde direkt. Offset: Skicka skillnad (Extern - TRV Intern). Skalad: Skicka som heltal x100 (t.ex. 21.5 -> 2150).",
@@ -83,16 +87,18 @@
         "title": "Luftfuktighetsinställningar",
         "description": "Konfigurera luftfuktighetsaggregering och externa sensorer. Notera att många termostater bara rapporterar luftfuktighet och inte tillåter kontroll.",
         "data": {
-          "humidity_current_avg": "Aktuell Luftfuktighet (Visning)",
           "humidity_target_avg": "Mål Luftfuktighet (Kontroll)",
+          "humidity_use_master": "Använd masterenhetens målluftfuktighet",
           "humidity_target_round": "Mål Luftfuktighet Precision",
+          "humidity_current_avg": "Aktuell Luftfuktighet (Visning)",
           "humidity_sensors": "Externa Luftfuktighetssensorer",
           "humidity_update_targets": "Skriv Extern Luftfuktighet till Entiteter"
         },
         "data_description": {
-          "humidity_current_avg": "Hur gruppen sammanfattar sensoravläsningar från sina medlemmar.",
           "humidity_target_avg": "Hur gruppen beräknar målvärdet att skicka till sina medlemmar.",
+          "humidity_use_master": "Använd masterenhetens målvärde istället för att beräkna ett medelvärde. Faller tillbaka till medelvärde om otillgänglig.",
           "humidity_target_round": "Gäller endast värden som skickas till enheter, inte aktuella/visade värden.",
+          "humidity_current_avg": "Hur gruppen sammanfattar sensoravläsningar från sina medlemmar.",
           "humidity_sensors": "Använd externa sensorer istället för medlemsavläsningar. Dessa blir den enda sanningen för gruppens luftfuktighet.",
           "humidity_update_targets": "Skriv det externa sensorvärdet till nummerentiteter. Användbart för kalibrering av avfuktare."
         }
@@ -130,19 +136,25 @@
         "description": "Konfigurera automatisk avstängning av värme/kyla när fönster öppnas. Båda sensorerna är valfria.",
         "data": {
           "window_mode": "Fönsterkontrollsläge",
+          "window_adopt_manual_changes": "Anta manuella ändringar",
           "room_sensor": "Rumfönstersensor",
           "zone_sensor": "Zonfönstersensor",
           "room_open_delay": "Fördröjning Rum (s)",
           "zone_open_delay": "Fördröjning Zon (s)",
+          "window_action": "Åtgärd vid öppet fönster",
+          "window_temperature": "Temperatur vid öppet fönster",
           "close_delay": "Fördröjning Stängning (s)"
         },
         "data_description": {
           "window_mode": "Aktivera grupp baserat på sensorer. HVAC sätts till 'off' vid öppna fönster.",
+          "window_adopt_manual_changes": "Tillåt ändringar av målvärde medan fönster är öppna.",
           "room_sensor": "Binär sensor för rummets fönster. Kortare fördröjning.",
           "zone_sensor": "Binär sensor för andra fönster i zonen. Längre fördröjning.",
           "room_open_delay": "Väntetid efter öppning av rumsfönster.",
           "zone_open_delay": "Väntetid efter öppning av zonfönster.",
-          "close_delay": "Väntetid efter stängning av fönster."
+          "close_delay": "Väntetid efter stängning av fönster.",
+          "window_action": "Vad som ska hända när ett fönster öppnas: Stäng av helt eller ställ in en specifik temperatur (t.ex. frostskydd).",
+          "window_temperature": "Måltemperatur när 'Ställ in temperatur' är valt."
         }
       },
       "schedule": {
@@ -167,11 +179,13 @@
         "data": {
           "expose_smart_sensors": "Visa smarta sensorer",
           "expose_member_entities": "Visa medlemslista",
+          "expose_config": "Visa konfiguration (Felsökning)",
           "min_temp_off": "Lägsta temperatur vid avstängning"
         },
         "data_description": {
           "expose_smart_sensors": "Skapar extra sensorenheter för gruppens temperatur och luftfuktighet (användbart för grafer).",
           "expose_member_entities": "Skapar ett attribut som listar alla medlemsenhets-ID:n.",
+          "expose_config": "Lägger till alla konfigurationsvärden till entitetsattributen. Användbart för felsökning.",
           "min_temp_off": "Skickar enhetens lägsta temperatur (t.ex. 5°C) när gruppen stängs av. (Säkerställer att ventilen stängs)"
         }
       }
@@ -244,7 +258,8 @@
       "options": {
         "standard": "Standard (Envägs)",
         "mirror": "Mirror (Magic Sync - Tvåvägs)",
-        "lock": "Lock (Chefen - Tvinga Grupp)"
+        "lock": "Lock (Chefen - Tvinga Grupp)",
+        "master_lock": "Master/Lock"
       }
     },
     "window_mode": {
@@ -277,6 +292,19 @@
         "swing_mode": "Vertikal Omfång",
         "swing_horizontal_mode": "Horisontell Omfång",
         "humidity": "Luftfuktighet (Mål)"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Stäng av (Standard)",
+        "temperature": "Ställ in temperatur"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Off",
+        "all": "All",
+        "master_only": "Master Only"
       }
     }
   },
@@ -319,6 +347,16 @@
         "hvac_mode": {
           "name": "HVAC-läge",
           "description": "Ändra eventuellt läget."
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "Ställ in schemaenhet",
+      "description": "Ändrar den aktiva schemaenheten som används av klimatgruppen.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Schemaenhet",
+          "description": "Den nya schemaenheten att använda (t.ex. schedule.holiday). Ange null eller tomt för att återställa standardschemat från konfigurationen."
         }
       }
     }

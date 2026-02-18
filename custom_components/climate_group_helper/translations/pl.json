@@ -48,11 +48,13 @@
         "description": "Wybierz swoje urządzenia i sposób, w jaki grupa łączy ich stany i funkcje. 'Strategia' definiuje zachowanie grupy, gdy członkowie są w różnych trybach.",
         "data": {
           "entities": "Urządzenia Klimatyczne",
+          "master_entity": "Urządzenie główne",
           "hvac_mode_strategy": "Strategia Trybu HVAC",
           "feature_strategy": "Kompatybilność Funkcji"
         },
         "data_description": {
           "entities": "Dodaj lub usuń urządzenia. Usunięcie urządzeń zatrzymuje ich sterowanie przez grupę.",
+          "master_entity": "Wyznacz jedno urządzenie jako główny termostat. Jego wartości mogą nadpisać obliczenia grupy.",
           "hvac_mode_strategy": "Strategia obliczania stanu grupy na podstawie jej członków (np. jeśli jeden 'heat', a inny jest 'off').",
           "feature_strategy": "Określa, które funkcje (np. tryby wstępne, tryby wentylatora) są dostępne w grupie, gdy członkowie mają różne możliwości."
         }
@@ -61,18 +63,20 @@
         "title": "Ustawienia Temperatury",
         "description": "Skonfiguruj, jak grupa obsługuje agregację temperatury i punkty nastawy. Czujniki zewnętrzne nadpiszą odczyty członków, jeśli zostaną wybrane.",
         "data": {
-          "temp_current_avg": "Obecna Temperatura (Wyświetlanie)",
           "temp_target_avg": "Docelowa Temperatura (Sterowanie)",
+          "temp_use_master": "Użyj docelowej temperatury urządzenia głównego",
           "temp_target_round": "Precyzja Docelowej Temperatury",
+          "temp_current_avg": "Obecna Temperatura (Wyświetlanie)",
           "temp_sensors": "Zewnętrzne Czujniki Temperatury",
           "temp_update_targets": "Zapisz Zewnętrzną Temp do Encji",
           "temp_calibration_mode": "Tryb Kalibracji",
           "calibration_heartbeat": "Puls Kalibracji (min)"
         },
         "data_description": {
-          "temp_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
           "temp_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
+          "temp_use_master": "Użyj wartości zadanej urządzenia głównego zamiast obliczać średnią. Powraca do średniej, jeśli niedostępne.",
           "temp_target_round": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
+          "temp_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
           "temp_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla temperatury grupy.",
           "temp_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych (np. offsety kalibracji TRV). Przydatne, aby termostaty znały rzeczywistą temperaturę w pomieszczeniu.",
           "temp_calibration_mode": "Absolutny: Wyślij wartość bezpośrednio. Offset: Wyślij różnicę (Zewnętrzna - TRV Wewnętrzna). Skalowany: Wyślij jako liczbę całkowitą x100 (np. 21.5 -> 2150).",
@@ -83,16 +87,18 @@
         "title": "Ustawienia Wilgotności",
         "description": "Skonfiguruj agregację wilgotności i czujniki zewnętrzne. Pamiętaj, że wiele termostatów tylko raportuje wilgotność i nie pozwala na sterowanie.",
         "data": {
-          "humidity_current_avg": "Obecna Wilgotność (Wyświetlanie)",
           "humidity_target_avg": "Docelowa Wilgotność (Sterowanie)",
+          "humidity_use_master": "Użyj docelowej wilgotności urządzenia głównego",
           "humidity_target_round": "Precyzja Docelowej Wilgotności",
+          "humidity_current_avg": "Obecna Wilgotność (Wyświetlanie)",
           "humidity_sensors": "Zewnętrzne Czujniki Wilgotności",
           "humidity_update_targets": "Zapisz Zewnętrzną Wilgotność do Encji"
         },
         "data_description": {
-          "humidity_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
           "humidity_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
+          "humidity_use_master": "Użyj wartości zadanej urządzenia głównego zamiast obliczać średnią. Powraca do średniej, jeśli niedostępne.",
           "humidity_target_round": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
+          "humidity_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
           "humidity_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla wilgotności grupy.",
           "humidity_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych. Przydatne do kalibracji osuszaczy."
         }
@@ -130,19 +136,25 @@
         "description": "Skonfiguruj automatyczne wyłączanie ogrzewania/chłodzenia po otwarciu okien. Oba czujniki są opcjonalne.",
         "data": {
           "window_mode": "Tryb Sterowania Oknami",
+          "window_adopt_manual_changes": "Przyjmij zmiany ręczne",
           "room_sensor": "Czujnik Okna Pokojowego",
           "zone_sensor": "Czujnik Okna Strefowego",
           "room_open_delay": "Opóźnienie Pokoju (s)",
           "zone_open_delay": "Opóźnienie Strefy (s)",
+          "window_action": "Akcja po otwarciu okna",
+          "window_temperature": "Temperatura przy otwartym oknie",
           "close_delay": "Opóźnienie Zamknięcia (s)"
         },
         "data_description": {
           "window_mode": "Włącz grupę na podstawie czujników. HVAC ustawia się na 'off', gdy okna są otwarte.",
+          "window_adopt_manual_changes": "Zezwól na zmiany stanu docelowego, gdy okna są otwarte.",
           "room_sensor": "Czujnik binarny dla okna w pokoju. Krótsze opóźnienie.",
           "zone_sensor": "Czujnik binarny dla innych okien w strefie. Dłuższe opóźnienie.",
           "room_open_delay": "Czas oczekiwania po otwarciu okna w pokoju.",
           "zone_open_delay": "Czas oczekiwania po otwarciu okna w strefie.",
-          "close_delay": "Czas oczekiwania po zamknięciu okien."
+          "close_delay": "Czas oczekiwania po zamknięciu okien.",
+          "window_action": "Co zrobić po otwarciu okna: Wyłącz całkowicie lub ustaw określoną temperaturę (np. ochronę przed mrozem).",
+          "window_temperature": "Temperatura docelowa, gdy wybrana jest akcja 'Ustaw temperaturę'."
         }
       },
       "schedule": {
@@ -167,11 +179,13 @@
         "data": {
           "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
           "expose_member_entities": "Pokaż Listę Członków",
+          "expose_config": "Pokaż konfigurację (Debug)",
           "min_temp_off": "Minimalna temperatura po wyłączeniu"
         },
         "data_description": {
           "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
           "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
+          "expose_config": "Dodaje wszystkie wartości konfiguracji do atrybutów encji. Przydatne do debugowania.",
           "min_temp_off": "Wysyła minimalną temperaturę urządzenia (np. 5°C) po wyłączeniu grupy. (Zapewnia zamknięcie zaworu)"
         }
       }
@@ -244,7 +258,8 @@
       "options": {
         "standard": "Standard (Jednokierunkowy)",
         "mirror": "Mirror (Magic Sync - Dwujierunkowy)",
-        "lock": "Lock (Szef - Wymuś Grupę)"
+        "lock": "Lock (Szef - Wymuś Grupę)",
+        "master_lock": "Master/Lock"
       }
     },
     "window_mode": {
@@ -277,6 +292,19 @@
         "swing_mode": "Ruch Pionowy",
         "swing_horizontal_mode": "Ruch Poziomy",
         "humidity": "Wilgotność (Cel)"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Wyłącz (Domyślnie)",
+        "temperature": "Ustaw temperaturę"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Off",
+        "all": "All",
+        "master_only": "Master Only"
       }
     }
   },
@@ -319,6 +347,16 @@
         "hvac_mode": {
           "name": "Tryb HVAC",
           "description": "Opcjonalnie zmień tryb."
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "Ustaw encję harmonogramu",
+      "description": "Zmienia aktywną encję harmonogramu używaną przez Grupę Klimatyczną.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Encja harmonogramu",
+          "description": "Nowa encja harmonogramu do użycia (np. schedule.holiday). Ustaw na null lub pustą, aby przywrócić domyślny harmonogram z konfiguracji."
         }
       }
     }

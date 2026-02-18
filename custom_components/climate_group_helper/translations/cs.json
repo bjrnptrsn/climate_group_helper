@@ -48,11 +48,13 @@
         "description": "Vyberte svá zařízení a zvolte, jak skupina kombinuje jejich stavy a funkce. 'Strategie' definuje chování skupiny, když jsou členové v různých režimech.",
         "data": {
           "entities": "Klimatická Zařízení",
+          "master_entity": "Hlavní zařízení",
           "hvac_mode_strategy": "Strategie Režimu HVAC",
           "feature_strategy": "Kompatibilita Funkcí"
         },
         "data_description": {
           "entities": "Přidat nebo odebrat zařízení. Odebrání zařízení zastaví jejich ovládání skupinou.",
+          "master_entity": "Určete jedno zařízení jako hlavní termostat. Jeho hodnoty mohou přepsat skupinové výpočty.",
           "hvac_mode_strategy": "Strategie pro výpočet stavu skupiny z jejích členů (např. pokud jeden 'heat' a další je 'off').",
           "feature_strategy": "Určuje, které funkce (např. přednastavené režimy, režimy ventilátoru) jsou ve skupině dostupné, když mají členové různé možnosti."
         }
@@ -61,18 +63,20 @@
         "title": "Nastavení Teploty",
         "description": "Nakonfigurujte, jak skupina zvládá agregaci teploty a nastavené hodnoty. Externí senzory přepíší údaje členů, pokud jsou vybrány.",
         "data": {
-          "temp_current_avg": "Aktuální Teplota (Zobrazení)",
           "temp_target_avg": "Cílová Teplota (Ovládání)",
+          "temp_use_master": "Použít cílovou teplotu hlavního zařízení",
           "temp_target_round": "Přesnost Cílové Teploty",
+          "temp_current_avg": "Aktuální Teplota (Zobrazení)",
           "temp_sensors": "Externí Senzory Teploty",
           "temp_update_targets": "Zapsat Externí Teplotu do Entit",
           "temp_calibration_mode": "Režim Kalibrace",
           "calibration_heartbeat": "Kalibrace Heartbeat (min)"
         },
         "data_description": {
-          "temp_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
           "temp_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
+          "temp_use_master": "Použít hodnotu hlavního zařízení místo výpočtu průměru. Při nedostupnosti se vrátí k průměrování.",
           "temp_target_round": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
+          "temp_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
           "temp_sensors": "Použít externí senzory místo údajů od členů. Ty se stanou jediným zdrojem pravdy pro teplotu skupiny.",
           "temp_update_targets": "Zapsat hodnotu externího senzoru do číselných entit (např. offsety kalibrace TRV). Užitečné pro udržení termostatů v obraze o skutečné pokojové teplotě.",
           "temp_calibration_mode": "Absolutní: Odeslat hodnotu přímo. Offset: Odeslat rozdíl (Externí - TRV Interní). Škálované: Odeslat jako celé číslo x100 (např. 21.5 -> 2150).",
@@ -83,16 +87,18 @@
         "title": "Nastavení Vlhkosti",
         "description": "Nakonfigurujte agregaci vlhkosti a externí senzory. Pamatujte, že mnoho termostatů pouze hlásí vlhkost a neumožňuje ovládání.",
         "data": {
-          "humidity_current_avg": "Aktuální Vlhkost (Zobrazení)",
           "humidity_target_avg": "Cílová Vlhkost (Ovládání)",
+          "humidity_use_master": "Použít cílovou vlhkost hlavního zařízení",
           "humidity_target_round": "Přesnost Cílové Vlhkosti",
+          "humidity_current_avg": "Aktuální Vlhkost (Zobrazení)",
           "humidity_sensors": "Externí Senzory Vlhkosti",
           "humidity_update_targets": "Zapsat Externí Vlhkost do Entit"
         },
         "data_description": {
-          "humidity_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
           "humidity_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
+          "humidity_use_master": "Použít hodnotu hlavního zařízení místo výpočtu průměru. Při nedostupnosti se vrátí k průměrování.",
           "humidity_target_round": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
+          "humidity_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
           "humidity_sensors": "Použít externí senzory místo údajů od členů. Ty se stanou jediným zdrojem pravdy pro vlhkost skupiny.",
           "humidity_update_targets": "Zapsat hodnotu externího senzoru do číselných entit. Užitečné pro kalibraci odvlhčovačů."
         }
@@ -130,19 +136,25 @@
         "description": "Nakonfigurujte automatické vypnutí vytápění/chlazení při otevření oken. Oba senzory jsou volitelné.",
         "data": {
           "window_mode": "Režim ovládání oken",
+          "window_adopt_manual_changes": "Přijmout manuální změny",
           "room_sensor": "Pokojový okenní senzor",
           "zone_sensor": "Zónový okenní senzor",
           "room_open_delay": "Zpoždění otevření pokoje (s)",
           "zone_open_delay": "Zpoždění otevření zóny (s)",
+          "window_action": "Akce při otevření okna",
+          "window_temperature": "Teplota při otevření okna",
           "close_delay": "Zpoždění zavření (s)"
         },
         "data_description": {
           "window_mode": "Povolit nebo zakázat skupinu podle senzorů oken. Pokud je aktivní, režim HVAC se nastaví na 'off', když jsou okna otevřená.",
+          "window_adopt_manual_changes": "Povolit změny cílového stavu, zatímco jsou okna otevřená.",
           "room_sensor": "Binární senzor pro okno v místnosti. Spouští kratší zpoždění.",
           "zone_sensor": "Binární senzor pro ostatní okna v zóně/patře. Spouští delší zpoždění.",
           "room_open_delay": "Doba čekání po otevření okna v místnosti před vypnutím.",
           "zone_open_delay": "Doba čekání po otevření okna v zóně před vypnutím.",
-          "close_delay": "Doba čekání po zavření všech oken před obnovením vytápění."
+          "close_delay": "Doba čekání po zavření všech oken před obnovením vytápění.",
+          "window_action": "Co dělat při otevření okna: Úplně vypnout nebo nastavit konkrétní teplotu (např. protimrazová ochrana).",
+          "window_temperature": "Cílová teplota při výběru akce 'Nastavit teplotu'."
         }
       },
       "schedule": {
@@ -167,11 +179,13 @@
         "data": {
           "expose_smart_sensors": "Zvolte zda vytvořit senzorové entity",
           "expose_member_entities": "Zvolte zda zobrazit seznam členů",
+          "expose_config": "Zobrazit konfiguraci (Ladění)",
           "min_temp_off": "Minimální teplota při vypnutí"
         },
         "data_description": {
           "expose_smart_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
           "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
+          "expose_config": "Přidá všechny konfigurační hodnoty do atributů entity. Užitečné pro ladění.",
           "min_temp_off": "Odešle minimální teplotu zařízení (např. 5°C) při vypnutí skupiny. (Zajistí uzavření ventilu)"
         }
       }
@@ -244,7 +258,8 @@
       "options": {
         "standard": "Standardní (Jednosměrný)",
         "mirror": "Mirror (Magic Sync - Obousměrný)",
-        "lock": "Lock (Šéf - Vynutit Skupinu)"
+        "lock": "Lock (Šéf - Vynutit Skupinu)",
+        "master_lock": "Master/Lock"
       }
     },
     "window_mode": {
@@ -277,6 +292,19 @@
         "swing_mode": "Vertikální Pohyb",
         "swing_horizontal_mode": "Horizontální Pohyb",
         "humidity": "Vlhkost (Cíl)"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Vypnout (Výchozí)",
+        "temperature": "Nastavit teplotu"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Off",
+        "all": "All",
+        "master_only": "Master Only"
       }
     }
   },
@@ -319,6 +347,16 @@
         "hvac_mode": {
           "name": "Režim HVAC",
           "description": "Volitelně změnit režim."
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "Nastavit entitu plánu",
+      "description": "Změní aktivní entitu plánu používanou skupinou Climate Group.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Entita plánu",
+          "description": "Nová entita plánu k použití (např. schedule.holiday). Nastavte na null nebo prázdné pro obnovení výchozího plánu z konfigurace."
         }
       }
     }

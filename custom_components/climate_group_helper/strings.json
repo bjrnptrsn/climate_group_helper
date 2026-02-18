@@ -48,11 +48,13 @@
         "description": "Select devices and define how the group combines their states.",
         "data": {
           "entities": "Climate Devices",
+          "master_entity": "Master Entity",
           "hvac_mode_strategy": "HVAC Mode Strategy",
           "feature_strategy": "Feature Compatibility"
         },
         "data_description": {
           "entities": "Add or remove devices. Removing devices stops them from being controlled by the group.",
+          "master_entity": "Designate one device as the leading thermostat. Its values can override group calculations.",
           "hvac_mode_strategy": "Strategy for calculating the group's state from its members (e.g. if one is 'heat' and another is 'off').",
           "feature_strategy": "Determines which features (e.g. preset modes, fan modes) are available on the group when members have different capabilities."
         }
@@ -61,18 +63,20 @@
         "title": "Temperature Settings",
         "description": "Configure temperature averaging and optional external sensors.",
         "data": {
-          "temp_current_avg": "Current Temperature (Display)",
           "temp_target_avg": "Target Temperature (Control)",
+          "temp_use_master": "Use Master Target Temperature",
           "temp_target_round": "Target Temperature Precision",
+          "temp_current_avg": "Current Temperature (Display)",
           "temp_sensors": "External Temperature Sensors",
           "temp_update_targets": "Write External Temp to Entities",
           "temp_calibration_mode": "Calibration Mode",
           "calibration_heartbeat": "Calibration Heartbeat (min)"
         },
         "data_description": {
-          "temp_current_avg": "How the group summarizes sensor readings from its members.",
           "temp_target_avg": "How the group calculates the target setpoint to send to its members.",
+          "temp_use_master": "Use the master entity's setpoint instead of calculating an average. Falls back to averaging if unavailable.",
           "temp_target_round": "Only applies to values sent to devices, not to current/displayed values.",
+          "temp_current_avg": "How the group summarizes sensor readings from its members.",
           "temp_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's temperature.",
           "temp_update_targets": "Write the external sensor value to number entities (e.g. TRV calibration offsets). Useful for keeping thermostats aware of actual room temperature.",
           "temp_calibration_mode": "Absolute: Send value directly. Offset: Send delta (External - TRV Internal). Scaled: Send as Integer x100 (e.g. 21.5 -> 2150).",
@@ -83,16 +87,18 @@
         "title": "Humidity Settings",
         "description": "Configure humidity averaging and external sensors.",
         "data": {
-          "humidity_current_avg": "Current Humidity (Display)",
           "humidity_target_avg": "Target Humidity (Control)",
+          "humidity_use_master": "Use Master Target Humidity",
           "humidity_target_round": "Target Humidity Precision",
+          "humidity_current_avg": "Current Humidity (Display)",
           "humidity_sensors": "External Humidity Sensors",
           "humidity_update_targets": "Write External Humidity to Entities"
         },
         "data_description": {
-          "humidity_current_avg": "How the group summarizes sensor readings from its members.",
           "humidity_target_avg": "How the group calculates the target setpoint to send to its members.",
+          "humidity_use_master": "Use the master entity's setpoint instead of calculating an average. Falls back to averaging if unavailable.",
           "humidity_target_round": "Only applies to values sent to devices, not to current/displayed values.",
+          "humidity_current_avg": "How the group summarizes sensor readings from its members.",
           "humidity_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's humidity.",
           "humidity_update_targets": "Write the external sensor value to number entities. Useful for dehumidifier calibration."
         }
@@ -130,19 +136,25 @@
         "description": "Configure automatic heating/cooling shutdown when windows are opened. Both sensors are optional.",
         "data": {
           "window_mode": "Window Control Mode",
+          "window_adopt_manual_changes": "Adopt Manual Changes",
           "room_sensor": "Room Window Sensor",
           "zone_sensor": "Zone Window Sensor",
           "room_open_delay": "Room Open Delay (seconds)",
           "zone_open_delay": "Zone Open Delay (seconds)",
+          "window_action": "Window Open Action",
+          "window_temperature": "Window Open Temperature",
           "close_delay": "Close Delay (seconds)"
         },
         "data_description": {
           "window_mode": "Enable or disable climate group based on window/door sensors. When enabled, HVAC mode sets to 'off' when windows open and restores to the previous state when closed.",
+          "window_adopt_manual_changes": "Allow target state changes while windows are open.",
           "room_sensor": "Binary sensor for the room's own window/door. Triggers the shorter delay.",
           "zone_sensor": "Binary sensor for other windows/doors in the zone/floor. Triggers the longer delay.",
           "room_open_delay": "Time to wait after room window opens before turning off heating.",
           "zone_open_delay": "Time to wait after zone window opens before turning off heating.",
-          "close_delay": "Time to wait after all windows close before restoring heating."
+          "close_delay": "Time to wait after all windows close before restoring heating.",
+          "window_action": "What to do when window opens: Turn Off completely or set a specific Temperature (e.g. frost protection).",
+          "window_temperature": "Target temperature to set when 'Temperature' action is selected."
         }
       },
       "schedule": {
@@ -167,11 +179,13 @@
         "data": {
           "expose_smart_sensors": "Expose Smart Sensors",
           "expose_member_entities": "Expose Member List",
+          "expose_config": "Expose Configuration (Debug)",
           "min_temp_off": "Minimum Temperature when Off"
         },
         "data_description": {
           "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
           "expose_member_entities": "Creates an attribute listing all member entity IDs.",
+          "expose_config": "Adds all configuration values to the entity attributes. Useful for debugging.",
           "min_temp_off": "Sends the device's minimum temperature (e.g. 5°C) when turning the group off. (Force Valve Close)"
         }
       }
@@ -244,13 +258,27 @@
       "options": {
         "standard": "Standard – Aggregates state only, manual changes are allowed",
         "mirror": "Mirror – Manual changes on one device update all members",
-        "lock": "Lock – Reverts manual changes to match the group state"
+        "lock": "Lock – Reverts manual changes to match the group state",
+        "master_lock": "Master/Lock – Only the master entity can change the group target"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Off – Block all changes",
+        "all": "All – Accept all manual changes",
+        "master_only": "Master Only – Accept only the master entity"
       }
     },
     "window_mode": {
       "options": {
         "off": "Off – Window control is disabled",
         "on": "On – Window control is enabled"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Turn Off (Default)",
+        "temperature": "Set Temperature"
       }
     },
     "hvac_mode_strategy": {
@@ -319,6 +347,16 @@
         "hvac_mode": {
           "name": "HVAC Mode",
           "description": "Optionally change the mode."
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "Set Schedule Entity",
+      "description": "Changes the active schedule entity used by the Climate Group.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Schedule Entity",
+          "description": "The new schedule entity to use (e.g. schedule.holiday). Set to null or empty to restore the configured default schedule."
         }
       }
     }

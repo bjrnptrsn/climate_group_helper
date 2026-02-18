@@ -48,11 +48,13 @@
         "description": "Selecciona tus dispositivos y elige cómo el grupo combina sus estados y características. La 'Estrategia' define el comportamiento del grupo cuando los miembros están en modos diferentes.",
         "data": {
           "entities": "Dispositivos Climáticos",
+          "master_entity": "Dispositivo maestro",
           "hvac_mode_strategy": "Estrategia de Modo HVAC",
           "feature_strategy": "Compatibilidad de Funciones"
         },
         "data_description": {
           "entities": "Añadir o eliminar dispositivos. Eliminar dispositivos detiene su control por parte del grupo.",
+          "master_entity": "Designa un dispositivo como termostato principal. Sus valores pueden anular los cálculos del grupo.",
           "hvac_mode_strategy": "Estrategia para calcular el estado del grupo desde sus miembros (ej. si uno está 'heat' y otro está 'off').",
           "feature_strategy": "Determina qué funciones (ej. modos preestablecidos, modos ventilador) están disponibles en el grupo cuando los miembros tienen capacidades diferentes."
         }
@@ -61,18 +63,20 @@
         "title": "Ajustes de Temperatura",
         "description": "Configura cómo el grupo maneja la agregación de temperatura y puntos de ajuste. Los sensores externos anularán lecturas de miembros si se seleccionan.",
         "data": {
-          "temp_current_avg": "Temperatura Actual (Visualización)",
           "temp_target_avg": "Temperatura Objetivo (Control)",
+          "temp_use_master": "Usar temperatura objetivo del dispositivo maestro",
           "temp_target_round": "Precisión de Temperatura Objetivo",
+          "temp_current_avg": "Temperatura Actual (Visualización)",
           "temp_sensors": "Sensores de Temperatura Externos",
           "temp_update_targets": "Escribir Temp Externa en Entidades",
           "temp_calibration_mode": "Modo de Calibración",
           "calibration_heartbeat": "Heartbeat de Calibración (min)"
         },
         "data_description": {
-          "temp_current_avg": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
           "temp_target_avg": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
+          "temp_use_master": "Usar el punto de ajuste del dispositivo maestro en lugar de calcular un promedio. Vuelve al promedio si no está disponible.",
           "temp_target_round": "Solo se aplica a valores enviados a dispositivos, no a valores actuales/visualizados.",
+          "temp_current_avg": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
           "temp_sensors": "Usar sensores externos en lugar de lecturas de miembros. Se convierten en la única fuente de verdad para la temperatura del grupo.",
           "temp_update_targets": "Escribir el valor del sensor externo en entidades numéricas (ej. offsets calibración TRV). Útil para mantener termostatos conscientes de la temperatura real.",
           "temp_calibration_mode": "Absoluto: Enviar valor directamente. Offset: Enviar diferencia (Externo - TRV Interno). Escalado: Enviar como entero x100 (ej. 21.5 -> 2150).",
@@ -83,16 +87,18 @@
         "title": "Ajustes de Humedad",
         "description": "Configura la agregación de humedad y sensores externos. Ten en cuenta que muchos termostatos solo reportan humedad y no permiten control.",
         "data": {
-          "humidity_current_avg": "Humedad Actual (Visualización)",
           "humidity_target_avg": "Humedad Objetivo (Control)",
+          "humidity_use_master": "Usar humedad objetivo del dispositivo maestro",
           "humidity_target_round": "Precisión de Humedad Objetivo",
+          "humidity_current_avg": "Humedad Actual (Visualización)",
           "humidity_sensors": "Sensores de Humedad Externos",
           "humidity_update_targets": "Escribir Humedad Externa en Entidades"
         },
         "data_description": {
-          "humidity_current_avg": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
           "humidity_target_avg": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
+          "humidity_use_master": "Usar el punto de ajuste del dispositivo maestro en lugar de calcular un promedio. Vuelve al promedio si no está disponible.",
           "humidity_target_round": "Solo se aplica a valores enviados a dispositivos, no a valores actuales/visualizados.",
+          "humidity_current_avg": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
           "humidity_sensors": "Usar sensores externos en lugar de lecturas de miembros. Se convierten en la única fuente de verdad para la humedad del grupo.",
           "humidity_update_targets": "Escribir el valor del sensor externo en entidades numéricas. Útil para calibración de deshumidificadores."
         }
@@ -130,19 +136,25 @@
         "description": "Configure el apagado automático de calefacción/refrigeración al abrir ventanas. Ambos sensores son opcionales.",
         "data": {
           "window_mode": "Modo Control de Ventanas",
+          "window_adopt_manual_changes": "Adoptar cambios manuales",
           "room_sensor": "Sensor Ventana Habitación",
           "zone_sensor": "Sensor Ventana Zona",
           "room_open_delay": "Retardo Apertura Habitación (s)",
           "zone_open_delay": "Retardo Apertura Zona (s)",
+          "window_action": "Acción al abrir ventana",
+          "window_temperature": "Temperatura al abrir ventana",
           "close_delay": "Retardo Cierre (s)"
         },
         "data_description": {
           "window_mode": "Habilitar/deshabilitar grupo según sensores de ventana. Si activo, HVAC se pone en 'off' al abrir ventanas.",
+          "window_adopt_manual_changes": "Permitir cambios del estado objetivo mientras las ventanas están abiertas.",
           "room_sensor": "Sensor binario para la ventana de la habitación. Activa el retardo más corto.",
           "zone_sensor": "Sensor binario para otras ventanas en la zona/piso. Activa el retardo más largo.",
           "room_open_delay": "Tiempo a esperar tras abrir ventana de habitación antes de apagar.",
           "zone_open_delay": "Tiempo a esperar tras abrir ventana de zona antes de apagar.",
-          "close_delay": "Tiempo a esperar tras cerrar todas las ventanas antes de restaurar."
+          "close_delay": "Tiempo a esperar tras cerrar todas las ventanas antes de restaurar.",
+          "window_action": "Qué hacer al abrir una ventana: Apagar completamente o establecer una temperatura específica (ej. protección contra heladas).",
+          "window_temperature": "Temperatura objetivo cuando se selecciona la acción 'Establecer temperatura'."
         }
       },
       "schedule": {
@@ -167,11 +179,13 @@
         "data": {
           "expose_smart_sensors": "Exponer sensores inteligentes",
           "expose_member_entities": "Exponer lista de miembros",
+          "expose_config": "Mostrar configuración (Depuración)",
           "min_temp_off": "Temperatura mínima al apagar"
         },
         "data_description": {
           "expose_smart_sensors": "Crea entidades de sensor adicionales para temperatura y humedad del grupo (útil para gráficos).",
           "expose_member_entities": "Crea un atributo listando todos los IDs de entidades miembro.",
+          "expose_config": "Añade todos los valores de configuración a los atributos de la entidad. Útil para depuración.",
           "min_temp_off": "Envía la temperatura mínima del dispositivo (ej. 5°C) al apagar el grupo. (Asegura cierre de válvula)"
         }
       }
@@ -244,7 +258,8 @@
       "options": {
         "standard": "Estándar (Unidireccional)",
         "mirror": "Mirror (Magic Sync - Bidireccional)",
-        "lock": "Lock (El Jefe - Forzar Grupo)"
+        "lock": "Lock (El Jefe - Forzar Grupo)",
+        "master_lock": "Master/Lock"
       }
     },
     "window_mode": {
@@ -277,6 +292,19 @@
         "swing_mode": "Oscilación Vertical",
         "swing_horizontal_mode": "Oscilación Horizontal",
         "humidity": "Humedad (Objetivo)"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Apagar (Predeterminado)",
+        "temperature": "Establecer temperatura"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Off",
+        "all": "All",
+        "master_only": "Master Only"
       }
     }
   },
@@ -319,6 +347,16 @@
         "hvac_mode": {
           "name": "Modo HVAC",
           "description": "Opcionalmente cambiar el modo."
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "Establecer entidad de programación",
+      "description": "Cambia la entidad de programación activa utilizada por el Grupo Climático.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Entidad de programación",
+          "description": "La nueva entidad de programación a utilizar (ej. schedule.holiday). Establecer en nulo o vacío para restaurar la programación predeterminada configurada."
         }
       }
     }

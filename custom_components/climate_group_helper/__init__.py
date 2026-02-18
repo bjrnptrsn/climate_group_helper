@@ -13,13 +13,21 @@ from .const import (
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
+    CONF_EXPOSE_CONFIG,
     CONF_FEATURE_STRATEGY,
     CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_SENSORS,
     CONF_HUMIDITY_TARGET_AVG,
     CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_UPDATE_TARGETS,
+    CONF_HUMIDITY_USE_MASTER,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_IGNORE_OFF_MEMBERS,
+    CONF_MASTER_ENTITY,
+    CONF_MIN_TEMP_OFF,
+    CONF_OVERRIDE_DURATION,
+    CONF_PERSIST_CHANGES,
+    CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
@@ -32,6 +40,12 @@ from .const import (
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
+    CONF_TEMP_USE_MASTER,
+    CONF_TEMP_CALIBRATION_MODE,
+    CONF_CALIBRATION_HEARTBEAT,
+    CONF_WINDOW_ACTION,
+    CONF_WINDOW_TEMPERATURE,
+    CONF_WINDOW_ADOPT_MANUAL_CHANGES,
     CONF_WINDOW_MODE,
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
@@ -45,18 +59,24 @@ VALID_CONFIG_KEYS = {
     # HVAC options
     CONF_HVAC_MODE_STRATEGY,
     CONF_FEATURE_STRATEGY,
+    # Master entity
+    CONF_MASTER_ENTITY,
     # Temperature options
     CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_SENSORS,
     CONF_TEMP_UPDATE_TARGETS,
+    CONF_TEMP_USE_MASTER,
+    CONF_TEMP_CALIBRATION_MODE,
+    CONF_CALIBRATION_HEARTBEAT,
     # Humidity options
     CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_TARGET_AVG,
     CONF_HUMIDITY_TARGET_ROUND,
     CONF_HUMIDITY_SENSORS,
     CONF_HUMIDITY_UPDATE_TARGETS,
+    CONF_HUMIDITY_USE_MASTER,
     # Service call options
     CONF_DEBOUNCE_DELAY,
     CONF_RETRY_ATTEMPTS,
@@ -64,8 +84,13 @@ VALID_CONFIG_KEYS = {
     # Sync mode options
     CONF_SYNC_MODE,
     CONF_SYNC_ATTRS,
+    CONF_IGNORE_OFF_MEMBERS,
+    CONF_MIN_TEMP_OFF,
     # Window control options
     CONF_WINDOW_MODE,
+    CONF_WINDOW_ADOPT_MANUAL_CHANGES,
+    CONF_WINDOW_ACTION,
+    CONF_WINDOW_TEMPERATURE,
     CONF_ROOM_SENSOR,
     CONF_ZONE_SENSOR,
     CONF_ROOM_OPEN_DELAY,
@@ -73,9 +98,13 @@ VALID_CONFIG_KEYS = {
     CONF_CLOSE_DELAY,
     # Schedule options
     CONF_SCHEDULE_ENTITY,
+    CONF_RESYNC_INTERVAL,
+    CONF_OVERRIDE_DURATION,
+    CONF_PERSIST_CHANGES,
     # Other options
     CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
+    CONF_EXPOSE_CONFIG,
 }
 
 # Track which platforms have been set up per entry
@@ -125,14 +154,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
         # Combine data + options (old versions stored some keys in data)
         old_config = {**entry.data, **entry.options}
 
-        # Convert old keys (ending with '_option') to new format
-        for key in list(old_config.keys()):
-            if key.endswith("_option"):
-                old_config[key[:-7]] = old_config[key]
-                del old_config[key]
-
         # Whitelist Filter: Keep only currently valid keys
-        new_options = {k: v for k, v in old_config.items() if k in VALID_CONFIG_KEYS}
+        new_options = {key: value for key, value in old_config.items() if key in VALID_CONFIG_KEYS}
         
         # Update entry
         hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=6)

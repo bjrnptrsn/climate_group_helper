@@ -37,7 +37,7 @@ class ScheduleHandler:
         self._hass = group.hass
         self._unsub_listener = None
         self._schedule_entity = group.config.get(CONF_SCHEDULE_ENTITY)
-        
+
         # New Feature Options
         self._resync_interval = group.config.get(CONF_RESYNC_INTERVAL, 0)
         self._override_duration = group.config.get(CONF_OVERRIDE_DURATION, 0)
@@ -70,20 +70,14 @@ class ScheduleHandler:
         """Return the current target state (from central source)."""
         return self.state_manager.target_state
 
+    @property
+    def schedule_entity_id(self) -> str | None:
+        """Return the active schedule entity ID."""
+        return self._schedule_entity
+
     async def async_setup(self) -> None:
         """Subscribe to schedule entity state changes."""
-        if not self._schedule_entity:
-            _LOGGER.debug("[%s] Schedule control disabled (no entity configured)", self._group.entity_id)
-            return
-
-        @callback
-        def handle_state_change(_event):
-            _LOGGER.debug("[%s] Schedule entity changed", self._group.entity_id)
-            self._hass.async_create_task(self.schedule_listener(caller="slot"))
-
-        self._unsub_listener = async_track_state_change_event(
-            self._hass, [self._schedule_entity], handle_state_change
-        )
+        self._subscribe()
 
         # Register service call trigger
         self._group.climate_call_handler.register_call_trigger(self.service_call_trigger)
@@ -98,10 +92,28 @@ class ScheduleHandler:
 
     def async_teardown(self) -> None:
         """Unsubscribe from schedule entity."""
+        self._unsubscribe()
+        self._cancel_timer()
+
+    def _unsubscribe(self) -> None:
+        """Unsubscribe from the schedule entity."""
         if self._unsub_listener:
             self._unsub_listener()
             self._unsub_listener = None
-        self._cancel_timer()
+
+    def _subscribe(self) -> None:
+        """Subscribe to the schedule entity."""
+        if not self._schedule_entity:
+            return
+
+        @callback
+        def handle_state_change(_event):
+            _LOGGER.debug("[%s] Schedule entity changed", self._group.entity_id)
+            self._hass.async_create_task(self.schedule_listener(caller="slot"))
+
+        self._unsub_listener = async_track_state_change_event(
+            self._hass, [self._schedule_entity], handle_state_change
+        )
 
     def _cancel_timer(self) -> None:
         """Cancel the active timer (if any)."""
@@ -175,3 +187,31 @@ class ScheduleHandler:
             if caller == "service_call" and self._override_duration > 0
             else "resync"
         )
+
+    async def update_schedule_entity(self, new_entity_id: str | None) -> None:
+        """Update the active schedule entity.
+        
+        If new_entity_id is None, revert to the configured entity.
+        """
+        if not new_entity_id:
+            # Revert to config
+            new_entity_id = self._group.config.get(CONF_SCHEDULE_ENTITY)
+            if new_entity_id:
+                _LOGGER.debug("[%s] Reverting schedule entity to configured default: %s", self._group.entity_id, new_entity_id)
+            else:
+                _LOGGER.debug("[%s] Disabling schedule (no entity configured in default)", self._group.entity_id)
+
+        if self._schedule_entity == new_entity_id:
+            return
+
+        _LOGGER.debug("[%s] Switching schedule entity from '%s' to '%s'", self._group.entity_id, self._schedule_entity, new_entity_id)
+
+        self._unsubscribe()
+        self._schedule_entity = new_entity_id
+        
+        if self._schedule_entity:
+            self._subscribe()
+            # Force immediate check
+            await self.schedule_listener(caller="switch")
+        else:
+            self._cancel_timer()

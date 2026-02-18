@@ -293,13 +293,13 @@ class BaseServiceCallHandler(ABC):
     def _get_parent_id(self) -> str:
         """Create a unique Parent ID for echo tracking.
 
-        Format: "MasterEntityID|Timestamp"
-        - MasterEntityID: The entity that triggered the change (primary, for "Sender Wins" logic)
+        Format: "OriginEntityID|Timestamp"
+        - OriginEntityID: The entity that triggered the change (primary, for "Sender Wins" logic)
         - Timestamp: When the command was sent (secondary, for stale echo detection)
         """
-        master_entity = self.target_state.last_entity or ""
+        origin_entity = self.target_state.last_entity or ""
         timestamp = str(time.time())
-        return f"{master_entity}|{timestamp}"
+        return f"{origin_entity}|{timestamp}"
 
     # Filter hook to inject kwargs into service calls
     def _inject_call_kwargs(self, data: dict[str, Any]) -> dict[str, Any]:
