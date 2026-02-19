@@ -1,4 +1,4 @@
-# 🌡️ Climate Group Helper
+# Climate Group Helper
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/icon@2x.png" alt="Climate Group Helper Icon" width="192"/>
@@ -13,40 +13,68 @@ Combine multiple climate devices into a single, powerful entity for Home Assista
 
 ---
 
-## ✨ Core Features (Zero Config)
+## Table of Contents
+
+- [Core Features](#core-features-zero-config)
+- [Advanced Features](#advanced-features-optional)
+  - [Master Entity](#master-entity)
+  - [External Sensors](#external-sensors)
+  - [Device Calibration](#device-calibration)
+  - [Sync Modes](#advanced-sync-modes)
+  - [Window Control](#window-control)
+  - [Schedule & Automation](#advanced-schedule--automation)
+- [Configuration Options](#configuration-options)
+- [Services](#services)
+- [Installation](#installation)
+- [Setup](#setup)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Core Features (Zero Config)
 The "Minimalist Mode": Add your entities, and it just works. No complex setup required.
 
-### 🎛️ Unified Control
+### Unified Control
 Change settings on the group, and all member devices update to match. No more managing 5 thermostats individually.
 
-### 🌡️ Smart Averaging
+### Smart Averaging
 The group calculates the **mean** of all member temperatures to represent the true room reading.
 *   **Averaging Method:** Choose between Mean (default), Median, Min, or Max.
 *   **Precision:** Round target temperatures to device-compatible steps (0.5° or 1°). *Default: No rounding.*
 
-## 🚀 Advanced Features (Optional)
+## Advanced Features (Optional)
 Everything below is **completely optional**. If you don't configure it, the logic remains inactive and efficient ("Pay for what you use").
 
 
-### 🌡️ External Sensors
+### Master Entity
+*New in v0.19.0*
+
+Designate a single climate member as the **Reference Point** or **Leader** for the group. This is the first thing you configure in the setup wizard — and once set, it unlocks additional options in every subsequent step (Sync Mode, Window Control, and Temperature/Humidity averaging).
+
+*   **Centralized Target State:** Use the Master's target settings (temperature, humidity) as the group's goal, rather than calculated averages across all members.
+*   **Hierarchical Sync (Master/Lock):** Enables a "Follow the Leader" sync mode. Changes on the Master are mirrored to all members; manual changes on other members are automatically reverted.
+*   **Intelligent Window Control:** If enabled, only manual adjustments on the Master update the target state while windows are open. Changes on other devices remain ignored.
+
+### External Sensors
 Use **multiple external sensors** for temperature and humidity to override the member readings.
 
-### 🎚️ Device Calibration
+### Device Calibration
 *Improved in v0.18!* Write the external sensor value back to your TRVs to fix their internal temperature reading.
 *   **Modes:** Absolute (Standard), Offset (Delta calculation), and Scaled (x100 for Danfoss Ally).
 *   **Heartbeat:** Periodically re-sends the calibration value to prevent sensor timeouts on Zigbee devices.
 
-### 🔄 Advanced Sync Modes
+### Advanced Sync Modes
 *   **Standard:** Classic one-way control (Group → Members).
 *   **Mirror:** Two-way sync. Change one device, all others follow.
-*   **Lock:** Enforce group settings. Reverts manual changes on members.
+*   **Lock:** Enforce group settings. Reverts manual changes on all members.
+*   **Master/Lock:** *(Requires Master Entity)* "Follow the Leader" mode — changes on the Master are mirrored to all members, while manual changes on other members are automatically reverted.
 
-*   **Selective Attribute Sync:** Choose **exactly** which attributes to sync in Lock/Mirror modes. Example: Sync temperature but allow individual fan control.
+*   **Selective Attribute Sync:** Choose **exactly** which attributes to sync in Lock/Mirror/Master/Lock modes. Example: Sync temperature but allow individual fan control.
 *   **Partial Sync (Respect Off):** Prevents the group from waking up members that are manually turned `off`.
     *   **Ignore Off Members:** If a member is turned `off`, the group will not force it back on during synchronization (allows "Soft Off" for individual devices).
     *   **Last Man Standing:** Only when the *last* active member is turned `off`, the Group accepts this change and updates its internal **Target State** to `off`.
 
-### 🪟 Window Control
+### Window Control
 *New in v0.19: Enhanced with Temperature Targets!*
 
 Automatically turn off heating when windows open and restore it when they close.
@@ -55,18 +83,12 @@ Automatically turn off heating when windows open and restore it when they close.
 *   **Room Sensor:** Fast reaction (default: 15s). For sensors directly in the room. E.g. `binary_sensor.living_room_window`.
 *   **Zone Sensor:** Slow reaction (default: 5min). For whole-house sensors. Prevents heating shutdown in closed rooms when a distant window opens. E.g. `binary_sensor.all_windows_open`.
 *   **Blocking:** While windows are open, manual changes and background sync are blocked. Schedule changes are still accepted internally and applied when windows close.
-*   **Adopt Manual Changes:** Optionally allow manual changes to update the target state while windows are open (Passive Tracking). Changes are applied when windows close.
+*   **Adopt Manual Changes:** Optionally allow passive tracking of manual changes while windows are open:
+    *   **Off (Default):** All manual changes are blocked and discarded.
+    *   **All:** Any manual change updates the target state. Applied when windows close.
+    *   **Master Only:** *(Requires Master Entity)* Only changes on the Master update the target state. Changes on other members are ignored.
 
-### 👑 Master Entity
-*New in v0.19.0*
-
-Designate a single climate member as the **Reference Point** or **Leader** for the group. This centralizes control logic and establishes a hierarchy, allowing one device to act as the authoritative source for the room's desired state.
-
-*   **Centralized Target State:** Use the Master's target settings (temperature, humidity) as the group's goal, rather than calculated averages.
-*   **Hierarchical Sync (Master/Lock):** Enables a specialized "Follow the Leader" mode. Changes on the Master are adopted by the group, while manual changes on "Slave" members are automatically reverted.
-*   **Intelligent Window Control:** If enabled, manual adjustments on the Master are adopted as the new target state while windows are open. Changes on other devices remain ignored.
-
-### 📅 Advanced Schedule & Automation
+### Advanced Schedule & Automation
 *New in v0.19: Enhanced with Dynamic Service Control!*
 
 *   **Dynamic Control:** Change the active schedule entity on the fly via the `set_schedule_entity` service (e.g. switch to "Away Schedule" when no one is home).
@@ -99,21 +121,17 @@ monday:
 
 ---
 
-## ⚙️ Configuration Options
+## Configuration Options
 
 The configuration is organized into a wizard-style flow. Use the **Configure** button on the helper to change these settings.
 
-### Temperature & Humidity Settings
+### Members & Group Behavior
 
 | Option | Description |
 |--------|-------------|
-| **External Sensors** | Select one or more sensors to override member readings. |
-| **Calibration Targets** | Write calculated temperature to number entities. Supports **Absolute** (Standard), **Offset** (Delta), and **Scaled** (x100) modes. |
-| **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
-| **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
-| **Averaging Method** | Mean, Median, Min, or Max—separately for Current and Target values. |
-| **Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
-| **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. Essential for TRVs that don't close valves fully or provide frost protection in `off` mode. |
+| **Master Entity** | Designate one member as the group's Leader. Enables Master/Lock sync mode, Master-aware window tracking, and centralized temperature/humidity target. |
+| **HVAC Mode Strategy** | How the group reports its combined mode. See table below. |
+| **Feature Strategy** | Which features the group exposes. See table below. |
 
 ### HVAC Mode Strategy
 
@@ -130,19 +148,33 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Intersection** | Features (e.g. Fan) supported by *all* devices. Safe mode. |
 | **Union** | Features supported by *any* device. |
 
+### Temperature & Humidity Settings
+
+| Option | Description |
+|--------|-------------|
+| **External Sensors** | Select one or more sensors to override member readings. |
+| **Use Master Temperature/Humidity** | *(Requires Master Entity)* Use the Master's target value instead of averaging across all members. |
+| **Averaging Method** | Mean, Median, Min, or Max—separately for Current and Target values. |
+| **Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
+| **Calibration Targets** | Write calculated temperature to number entities. Supports **Absolute** (Standard), **Offset** (Delta), and **Scaled** (x100) modes. |
+| **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
+| **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
+| **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. Essential for TRVs that don't close valves fully or provide frost protection in `off` mode. |
+
 ### Sync Mode
 
 | Option | Description |
 |--------|-------------|
-| **Sync Mode** | Standard (One-way), Mirror (Two-way), or Lock (Enforced). |
+| **Sync Mode** | Standard (One-way), Mirror (Two-way), Lock (Enforced), or Master/Lock *(requires Master Entity)*. |
 | **Selective Sync** | Choose which attributes to enforce (e.g. sync temperature but allow local fan control). |
+| **Ignore Off Members** | Prevent the group from forcing `off` members back on during sync. |
 
 ### Window Control
 
 | Option | Description |
 |--------|-------------|
 | **Window Action** | **Turn Off** (Default) or **Set Temperature**. Useful for frost protection. |
-| **Adopt Manual Changes** | If enabled, manual changes made while windows are open are saved as the new target state (Passive Tracking). |
+| **Adopt Manual Changes** | **Off** (block all), **All** (passive tracking for all members), or **Master Only** *(requires Master Entity)*. |
 | **Window Temperature** | Target temperature to set when 'Set Temperature' action is selected. |
 | **Room Sensor** | Binary sensor for fast reaction (window in the same room). |
 | **Zone Sensor** | Binary sensor for slow reaction (e.g. whole-house "any window open"). |
@@ -168,7 +200,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 ---
 
-## 🛠️ Services
+## Services
 
 ### `climate.set_schedule_entity`
 Dynamically change the active schedule entity for a group.
@@ -188,7 +220,7 @@ data:
 
 ---
 
-## 📦 Installation
+## Installation
 
 ### Via HACS (Recommended)
 
@@ -205,7 +237,7 @@ data:
 
 ---
 
-## 🛠️ Setup
+## Setup
 
 1. Go to **Settings** > **Devices & Services** > **Helpers**
 2. Click **+ Create Helper**
@@ -219,7 +251,7 @@ data:
 
 ---
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Issues after updating?
 If you experience strange behavior after an update (e.g. settings not saving), try re-creating the group. This resolves potential migration issues.
@@ -251,12 +283,12 @@ logger:
 
 ---
 
-## ❤️ Contributing
+## Contributing
 
 Found a bug or have an idea? [Open an issue](https://github.com/bjrnptrsn/climate_group_helper/issues) on GitHub.
 
 ---
 
-## 📄 License
+## License
 
 MIT License
