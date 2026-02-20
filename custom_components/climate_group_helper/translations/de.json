@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "Klimagruppe konfigurieren",
-        "description": "Feinabstimmung des Gruppenverhaltens. Änderungen werden sofort wirksam.",
+        "description": "Verwalte Mitglieder, Sensorik, erweiterte Einstellungen und Synchronisierungsverhalten.",
         "menu_options": {
           "members": "Mitglieder & Modi",
           "temperature": "Temperatur",
           "humidity": "Feuchtigkeit",
-          "timings": "Zeiten (Timings)",
           "sync": "Sync-Modus",
           "window_control": "Fenstersteuerung",
           "schedule": "Zeitplan & Timer",
-          "other": "Andere Einstellungen"
+          "advanced": "Erweiterte Einstellungen"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "Temperatureinstellungen",
         "description": "Konfiguriere Temperatur-Mittelung und optionale externe Sensoren.",
         "data": {
-          "temp_target_avg": "Zieltemperatur (Steuerung)",
+          "temp_target_avg": "Zieltemperatur",
           "temp_use_master": "Master-Zieltemperatur verwenden",
           "temp_target_round": "Zieltemperatur Präzision",
-          "temp_current_avg": "Aktuelle Temperatur (Anzeige)",
+          "temp_current_avg": "Aktuelle Temperatur",
           "temp_sensors": "Externer Temperatursensor",
           "temp_update_targets": "Schreibe externe Temp. in Entitäten",
           "temp_calibration_mode": "Kalibrierungs-Modus",
-          "calibration_heartbeat": "Kalibrierungs-Heartbeat (min)"
+          "calibration_heartbeat": "Kalibrierungs-Heartbeat (min)",
+          "calibration_ignore_off": "Ausgeschaltete Mitglieder ignorieren"
         },
         "data_description": {
           "temp_target_avg": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
@@ -80,17 +80,18 @@
           "temp_sensors": "Verwende externe Sensoren anstelle der Mitgliederwerte. Diese werden zur einzigen Wahrheitsquelle für die Temperatur der Gruppe.",
           "temp_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten (z.B. TRV-Kalibrierung). Nützlich, um Thermostate über die tatsächliche Raumtemperatur zu informieren.",
           "temp_calibration_mode": "Absolut: Wert direkt senden. Offset: Differenz senden (Extern - TRV Intern). Skaliert: Sende als Integer x100 (z.B. 21,5 -> 2150).",
-          "calibration_heartbeat": "Erzwinge periodisch die Synchronisierung der Kalibrierung, auch wenn sich die Temperatur nicht geändert hat. Setze auf 0, um zu deaktivieren."
+          "calibration_heartbeat": "Erzwinge periodisch die Synchronisierung der Kalibrierung, auch wenn sich die Temperatur nicht geändert hat. Setze auf 0, um zu deaktivieren.",
+          "calibration_ignore_off": "Sende keine Kalibrierungs-Updates an Mitglieder, die derzeit ausgeschaltet sind."
         }
       },
       "humidity": {
         "title": "Feuchtigkeitseinstellungen",
         "description": "Konfiguriere Feuchtigkeits-Mittelung und externe Sensoren.",
         "data": {
-          "humidity_target_avg": "Ziel-Luftfeuchtigkeit (Steuerung)",
+          "humidity_target_avg": "Ziel-Luftfeuchtigkeit",
           "humidity_use_master": "Master-Zielfeuchtigkeit verwenden",
           "humidity_target_round": "Ziel-Feuchtigkeit Präzision",
-          "humidity_current_avg": "Aktuelle Luftfeuchtigkeit (Anzeige)",
+          "humidity_current_avg": "Aktuelle Luftfeuchtigkeit",
           "humidity_sensors": "Externe Feuchtigkeitssensoren",
           "humidity_update_targets": "Schreibe externe Feuchtigkeit in Entitäten"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
           "humidity_sensors": "Verwende externe Sensoren anstelle der Mitgliederwerte. Diese werden zur einzigen Wahrheitsquelle für die Feuchtigkeit der Gruppe.",
           "humidity_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten. Nützlich für die Kalibrierung von Luftentfeuchtern."
-        }
-      },
-      "timings": {
-        "title": "Kommunikationszeiten",
-        "description": "Feinabstimmung von Timings und Wiederholungen für zuverlässigen Betrieb ohne Überlastung des Netzwerks.",
-        "data": {
-          "debounce_delay": "Entprellverzögerung (Sekunden)",
-          "retry_attempts": "Wiederholungsversuche",
-          "retry_delay": "Wiederholungsverzögerung (Sekunden)"
-        },
-        "data_description": {
-          "debounce_delay": "Wartezeit vor dem Senden von Befehlen. Höhere Werte verhindern 'Maschinengewehr'-Befehle beim Schieben von Reglern, fühlen sich aber langsamer an.",
-          "retry_attempts": "Wie oft Befehle erneut gesendet werden, falls ein Gerät nicht antwortet. Auf 0 setzen zum Deaktivieren.",
-          "retry_delay": "Pause zwischen Wiederholungsversuchen. Gibt Geräten einen Moment zur Erholung."
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "Änderungen am Zeitplan selbst werden ignoriert, solange ein manueller Override aktiv ist. Wendet den aktuellen Zeitplan erst nach Ablauf des Overrides wieder an."
         }
       },
-      "other": {
-        "title": "Andere Einstellungen",
-        "description": "Zusätzliche Funktionen und Entitäten-Bereitstellung.",
+      "advanced": {
+        "title": "Erweiterte Einstellungen",
+        "description": "Feinabstimmung von Befehlsverzögerungen, zusätzlichen Funktionen und Entitäts-Sichtbarkeit.",
         "data": {
+          "debounce_delay": "Entprellverzögerung (Sekunden)",
+          "retry_attempts": "Wiederholungsversuche",
+          "retry_delay": "Wiederholungsverzögerung (Sekunden)",
           "expose_smart_sensors": "Smarte Sensoren bereitstellen",
           "expose_member_entities": "Mitgliederliste bereitstellen",
           "expose_config": "Konfiguration anzeigen (Debug)",
           "min_temp_off": "Min. Temp bei 'Aus'"
         },
         "data_description": {
+          "debounce_delay": "Wartezeit vor dem Senden von Befehlen. Höhere Werte verhindern 'Maschinengewehr'-Befehle beim Schieben von Reglern, fühlen sich aber langsamer an.",
+          "retry_attempts": "Wie oft Befehle erneut gesendet werden, falls ein Gerät nicht antwortet. Auf 0 setzen zum Deaktivieren.",
+          "retry_delay": "Pause zwischen Wiederholungsversuchen. Gibt Geräten einen Moment zur Erholung.",
           "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
           "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
           "expose_config": "Fügt alle Konfigurationswerte den Entitätsattributen hinzu. Nützlich für die Fehlersuche.",

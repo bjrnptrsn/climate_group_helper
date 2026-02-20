@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "Configure Climate Group",
-        "description": "Manage members, sensor logic, timings, and synchronization behavior.",
+        "description": "Manage members, sensor logic, advanced settings, and synchronization behavior.",
         "menu_options": {
           "members": "Members & Modes",
           "temperature": "Temperature",
           "humidity": "Humidity",
-          "timings": "Timings",
           "sync": "Sync Mode",
           "window_control": "Window Control",
           "schedule": "Schedule & Timers",
-          "other": "Other Settings"
+          "advanced": "Advanced Settings"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "Temperature Settings",
         "description": "Configure temperature averaging and optional external sensors.",
         "data": {
-          "temp_target_avg": "Target Temperature (Control)",
+          "temp_target_avg": "Target Temperature",
           "temp_use_master": "Use Master Target Temperature",
           "temp_target_round": "Target Temperature Precision",
-          "temp_current_avg": "Current Temperature (Display)",
+          "temp_current_avg": "Current Temperature",
           "temp_sensors": "External Temperature Sensors",
           "temp_update_targets": "Write External Temp to Entities",
           "temp_calibration_mode": "Calibration Mode",
-          "calibration_heartbeat": "Calibration Heartbeat (min)"
+          "calibration_heartbeat": "Calibration Heartbeat (min)",
+          "calibration_ignore_off": "Ignore Off Members"
         },
         "data_description": {
           "temp_target_avg": "How the group calculates the target setpoint to send to its members.",
@@ -80,17 +80,18 @@
           "temp_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's temperature.",
           "temp_update_targets": "Write the external sensor value to number entities (e.g. TRV calibration offsets). Useful for keeping thermostats aware of actual room temperature.",
           "temp_calibration_mode": "Absolute: Send value directly. Offset: Send delta (External - TRV Internal). Scaled: Send as Integer x100 (e.g. 21.5 -> 2150).",
-          "calibration_heartbeat": "Periodically force-sync calibration to entities even if temperature hasn't changed. Set to 0 to disable."
+          "calibration_heartbeat": "Periodically force-sync calibration to entities even if temperature hasn't changed. Set to 0 to disable.",
+          "calibration_ignore_off": "Do not send calibration updates to members that are currently off."
         }
       },
       "humidity": {
         "title": "Humidity Settings",
         "description": "Configure humidity averaging and external sensors.",
         "data": {
-          "humidity_target_avg": "Target Humidity (Control)",
+          "humidity_target_avg": "Target Humidity",
           "humidity_use_master": "Use Master Target Humidity",
           "humidity_target_round": "Target Humidity Precision",
-          "humidity_current_avg": "Current Humidity (Display)",
+          "humidity_current_avg": "Current Humidity",
           "humidity_sensors": "External Humidity Sensors",
           "humidity_update_targets": "Write External Humidity to Entities"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "How the group summarizes sensor readings from its members.",
           "humidity_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's humidity.",
           "humidity_update_targets": "Write the external sensor value to number entities. Useful for dehumidifier calibration."
-        }
-      },
-      "timings": {
-        "title": "Communication Timings",
-        "description": "Fine-tune command timings and retries to ensure reliable operation without overloading your network.",
-        "data": {
-          "debounce_delay": "Debounce Delay (seconds)",
-          "retry_attempts": "Retry Attempts",
-          "retry_delay": "Retry Delay (seconds)"
-        },
-        "data_description": {
-          "debounce_delay": "Time to wait before sending commands. Higher values prevent 'machine gun' commands when sliding controls, but feel slower.",
-          "retry_attempts": "How many times to resend a command if a device doesn't respond. Set to 0 to disable.",
-          "retry_delay": "Pause between retry attempts. Giving devices a moment to recover can improve reliability."
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "Changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires."
         }
       },
-      "other": {
-        "title": "Other Settings",
-        "description": "Additional features and entity exposure.",
+      "advanced": {
+        "title": "Advanced Settings",
+        "description": "Fine-tune command timings, additional features, and entity exposure.",
         "data": {
+          "debounce_delay": "Debounce Delay (seconds)",
+          "retry_attempts": "Retry Attempts",
+          "retry_delay": "Retry Delay (seconds)",
           "expose_smart_sensors": "Expose Smart Sensors",
           "expose_member_entities": "Expose Member List",
           "expose_config": "Expose Configuration (Debug)",
           "min_temp_off": "Minimum Temperature when Off"
         },
         "data_description": {
+          "debounce_delay": "Time to wait before sending commands. Higher values prevent 'machine gun' commands when sliding controls, but feel slower.",
+          "retry_attempts": "How many times to resend a command if a device doesn't respond. Set to 0 to disable.",
+          "retry_delay": "Pause between retry attempts. Giving devices a moment to recover can improve reliability.",
           "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
           "expose_member_entities": "Creates an attribute listing all member entity IDs.",
           "expose_config": "Adds all configuration values to the entity attributes. Useful for debugging.",

@@ -42,11 +42,14 @@ class BaseServiceCallHandler(ABC):
 
     This abstract base class provides the common infrastructure for:
     - Debouncing multiple rapid changes into a single execution
+    - Cancelling superseded retry tasks when a new command arrives
+    - Stale-call detection to abort zombie calls that arrived too late
     - Retry logic for failed operations
     - Context-based call tagging for echo detection
 
     Derived classes must implement `_generate_calls()` to define how calls are generated.
-    They can override CONTEXT_ID to set their own context identifier.
+    Hook methods (`_block_all_calls`, `_block_call_attr`, `_is_stale_call`, etc.) can be
+    overridden per handler type to customise blocking and injection behaviour.
     """
 
     CONTEXT_ID: str = "service_call"  # Default context ID, override in derived classes
@@ -97,15 +100,27 @@ class BaseServiceCallHandler(ABC):
                 _LOGGER.error("[%s] Error in execution callback: %s", self._group.entity_id, e)
 
     async def call_debounced(self, data: dict[str, Any] | None = None) -> None:
-        """Debounce and execute a service call."""
+        """Debounce and execute a service call.
+
+        Each new call cancels any running retry task from a previous command,
+        because a newer command completely supersedes it. The actual execution
+        is wrapped in an asyncio Task so it can be cancelled mid-retry-sleep.
+        Stale calls that slip through a blocking `async_call` are caught by
+        `_is_stale_call` inside `_execute_calls`.
+        """
+        # Cancel any running retry task — its stale data must not be sent.
+        for task in list(self._active_tasks):
+            task.cancel()
 
         async def debounce_func():
-            """The coroutine to be executed after debounce."""
+            """Wrap _execute_calls as a cancellable Task."""
             task = asyncio.current_task()
             if task:
                 self._active_tasks.add(task)
             try:
                 await self._execute_calls(data)
+            except asyncio.CancelledError:
+                pass  # Cancelled by a newer command — exit silently.
             finally:
                 if task:
                     self._active_tasks.discard(task)
@@ -151,6 +166,13 @@ class BaseServiceCallHandler(ABC):
                 for call in calls:
                     service = call["service"]
                     data = {ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
+
+                    # Stale guard: a new command may have arrived while the previous
+                    # blocking async_call was running. task.cancel() cannot interrupt
+                    # that await, so we check target_state here before each call.
+                    if self._is_stale_call(call["kwargs"]):
+                        _LOGGER.debug("[%s] Aborting stale call: kwargs=%s no longer match target_state", self._group.entity_id, call["kwargs"])
+                        return
 
                     await self._hass.services.async_call(
                         domain=CLIMATE_DOMAIN,
@@ -340,6 +362,20 @@ class BaseServiceCallHandler(ABC):
 
         return False
 
+    # Stale call guard hook
+    def _is_stale_call(self, call_kwargs: dict[str, Any]) -> bool:  # noqa: ARG002
+        """Return True if this call is stale and should be aborted.
+
+        Called before each individual service call inside the retry loop.
+        Default: never stale — handlers that operate on live target_state diffs
+        (SyncCallHandler, ScheduleCallHandler) are always current by design.
+
+        Override in handlers that carry a fixed data snapshot from the moment
+        the user command was issued (e.g. ClimateCallHandler), where a newer
+        command may have changed target_state while a blocking call was running.
+        """
+        return False
+
     # Block hook for unsynced entities
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:
         """Check if this entity should be skipped."""
@@ -369,16 +405,17 @@ class BaseServiceCallHandler(ABC):
 
 
 class ClimateCallHandler(BaseServiceCallHandler):
-    """Handler for ClimateGroup's own service calls (user commands).
+    """Handler for direct user commands (set_hvac_mode, set_temperature, etc.).
 
-    This handler is used for direct user interactions:
-    - set_temperature, set_hvac_mode, set_fan_mode, etc.
-
-    Generates calls based on target_state diff (only sends to unsynced members).
+    Carries the exact attributes the user changed as a fixed data snapshot and
+    forwards them to all members. Because the snapshot is frozen at command time,
+    this handler implements `_is_stale_call` to abort if target_state has moved
+    on before a blocking call completes (race condition with rapid UI input).
 
     Blocking:
-    - Blocked by Window Control/force_off for setpoint changes.
-    - HVAC Mode changes ALWAYS bypass the block (allows turning group OFF while window is open).
+    - Setpoint changes are blocked when Window Control / force_off is active.
+    - HVAC mode changes always bypass the block (turning the group OFF must work
+      even when a window is open).
     """
 
     CONTEXT_ID = "group"
@@ -394,11 +431,35 @@ class ClimateCallHandler(BaseServiceCallHandler):
         return super()._generate_calls(data=data, filter_state=filter_state)
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
-        """Block calls if blocking mode is active, UNLESS hvac_mode is being changed."""
-        if data and ATTR_HVAC_MODE in data:
-            _LOGGER.debug("[%s] Bypass blocking mode (HVAC mode change)", self._group.entity_id)
+        """Block calls if blocking mode is active, UNLESS turning the group OFF."""
+        if data and data.get(ATTR_HVAC_MODE) == HVACMode.OFF:
+            _LOGGER.debug("[%s] Bypass blocking mode (turning group OFF)", self._group.entity_id)
             return False
         return self._group.blocking_mode
+
+    def _is_stale_call(self, call_kwargs: dict[str, Any]) -> bool:
+        """Return True if any user-commanded attribute no longer matches target_state.
+
+        Handles the race condition where a new UI command arrives while a previous
+        blocking async_call is still running. In that window, target_state has
+        already moved on, so the in-flight call would push the wrong state.
+
+        Injected attributes are excluded from the check: when min_temp_off is
+        active and target is OFF, the temperature value is derived by injection
+        (_min_temp_when_off), not commanded by the user, so a mismatch there
+        is expected and must not trigger an abort.
+        """
+        target = self.target_state.to_dict()
+        turning_off_with_min_temp = (
+            self._group.min_temp_off
+            and target.get(ATTR_HVAC_MODE) == HVACMode.OFF
+        )
+        for attr, value in call_kwargs.items():
+            if turning_off_with_min_temp and attr == ATTR_TEMPERATURE:
+                continue
+            if attr in target and target[attr] is not None and target[attr] != value:
+                return True
+        return False
 
     def _block_call_attr(self, data: dict[str, Any], attr: str) -> bool:
         """Do not block any attributes."""

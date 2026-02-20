@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "Konfiguruj Grupę Klimatyczną",
-        "description": "Dostosuj zachowanie swojej grupy. Zmiany wchodzą w życie natychmiast.",
+        "description": "Zarządzaj członkami, logiką czujników, ustawieniami zaawansowanymi i zachowaniem synchronizacji.",
         "menu_options": {
           "members": "Członkowie i Tryby",
           "temperature": "Temperatura",
           "humidity": "Wilgotność",
-          "timings": "Czasy",
           "sync": "Tryb Sync",
           "window_control": "Sterowanie Oknami",
           "schedule": "Harmonogram i Timery",
-          "other": "Inne Ustawienia"
+          "advanced": "Ustawienia zaawansowane"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "Ustawienia Temperatury",
         "description": "Skonfiguruj, jak grupa obsługuje agregację temperatury i punkty nastawy. Czujniki zewnętrzne nadpiszą odczyty członków, jeśli zostaną wybrane.",
         "data": {
-          "temp_target_avg": "Docelowa Temperatura (Sterowanie)",
+          "temp_target_avg": "Docelowa Temperatura",
           "temp_use_master": "Użyj docelowej temperatury urządzenia głównego",
           "temp_target_round": "Precyzja Docelowej Temperatury",
-          "temp_current_avg": "Obecna Temperatura (Wyświetlanie)",
+          "temp_current_avg": "Obecna Temperatura",
           "temp_sensors": "Zewnętrzne Czujniki Temperatury",
           "temp_update_targets": "Zapisz Zewnętrzną Temp do Encji",
           "temp_calibration_mode": "Tryb Kalibracji",
-          "calibration_heartbeat": "Puls Kalibracji (min)"
+          "calibration_heartbeat": "Puls Kalibracji (min)",
+          "calibration_ignore_off": "Ignoruj wyłączone elementy"
         },
         "data_description": {
           "temp_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
@@ -80,17 +80,18 @@
           "temp_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla temperatury grupy.",
           "temp_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych (np. offsety kalibracji TRV). Przydatne, aby termostaty znały rzeczywistą temperaturę w pomieszczeniu.",
           "temp_calibration_mode": "Absolutny: Wyślij wartość bezpośrednio. Offset: Wyślij różnicę (Zewnętrzna - TRV Wewnętrzna). Skalowany: Wyślij jako liczbę całkowitą x100 (np. 21.5 -> 2150).",
-          "calibration_heartbeat": "Okresowo wymuszaj synchronizację kalibracji do encji, nawet jeśli temperatura się nie zmieniła. Ustaw na 0, aby wyłączyć."
+          "calibration_heartbeat": "Okresowo wymuszaj synchronizację kalibracji do encji, nawet jeśli temperatura się nie zmieniła. Ustaw na 0, aby wyłączyć.",
+          "calibration_ignore_off": "Nie wysyłaj aktualizacji kalibracji do elementów, które są obecnie wyłączone."
         }
       },
       "humidity": {
         "title": "Ustawienia Wilgotności",
         "description": "Skonfiguruj agregację wilgotności i czujniki zewnętrzne. Pamiętaj, że wiele termostatów tylko raportuje wilgotność i nie pozwala na sterowanie.",
         "data": {
-          "humidity_target_avg": "Docelowa Wilgotność (Sterowanie)",
+          "humidity_target_avg": "Docelowa Wilgotność",
           "humidity_use_master": "Użyj docelowej wilgotności urządzenia głównego",
           "humidity_target_round": "Precyzja Docelowej Wilgotności",
-          "humidity_current_avg": "Obecna Wilgotność (Wyświetlanie)",
+          "humidity_current_avg": "Obecna Wilgotność",
           "humidity_sensors": "Zewnętrzne Czujniki Wilgotności",
           "humidity_update_targets": "Zapisz Zewnętrzną Wilgotność do Encji"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
           "humidity_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla wilgotności grupy.",
           "humidity_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych. Przydatne do kalibracji osuszaczy."
-        }
-      },
-      "timings": {
-        "title": "Czasy Komunikacji",
-        "description": "Dostrój czasy poleceń i ponownych prób, aby zapewnić niezawodne działanie bez przeciążania sieci.",
-        "data": {
-          "debounce_delay": "Opóźnienie Debounce (sekundy)",
-          "retry_attempts": "Próby Ponowienia",
-          "retry_delay": "Opóźnienie Ponowienia (sekundy)"
-        },
-        "data_description": {
-          "debounce_delay": "Czas oczekiwania przed wysłaniem poleceń. Wyższe wartości zapobiegają poleceniom typu 'karabin maszynowy' przy przesuwaniu suwaków, ale wydają się wolniejsze.",
-          "retry_attempts": "Ile razy ponownie wysłać polecenie, jeśli urządzenie nie odpowiada. Ustaw na 0, aby wyłączyć.",
-          "retry_delay": "Pauza między próbami. Danie urządzeniom chwili na odzyskanie sprawności może poprawić niezawodność."
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "Zmiany w samym harmonogramie będą ignorowane, dopóki aktywny jest ręczny override. Ponownie stosuje aktualny harmonogram dopiero po wygaśnięciu override."
         }
       },
-      "other": {
-        "title": "Inne Ustawienia",
-        "description": "Dodatkowe funkcje i eksponowanie encji.",
+      "advanced": {
+        "title": "Ustawienia zaawansowane",
+        "description": "Dostosuj czasy poleceń, dodatkowe funkcje z wystawianiem encji.",
         "data": {
+          "debounce_delay": "Opóźnienie Debounce (sekundy)",
+          "retry_attempts": "Próby Ponowienia",
+          "retry_delay": "Opóźnienie Ponowienia (sekundy)",
           "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
           "expose_member_entities": "Pokaż Listę Członków",
           "expose_config": "Pokaż konfigurację (Debug)",
           "min_temp_off": "Minimalna temperatura po wyłączeniu"
         },
         "data_description": {
+          "debounce_delay": "Czas oczekiwania przed wysłaniem poleceń. Wyższe wartości zapobiegają poleceniom typu 'karabin maszynowy' przy przesuwaniu suwaków, ale wydają się wolniejsze.",
+          "retry_attempts": "Ile razy ponownie wysłać polecenie, jeśli urządzenie nie odpowiada. Ustaw na 0, aby wyłączyć.",
+          "retry_delay": "Pauza między próbami. Danie urządzeniom chwili na odzyskanie sprawności może poprawić niezawodność.",
           "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
           "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
           "expose_config": "Dodaje wszystkie wartości konfiguracji do atrybutów encji. Przydatne do debugowania.",
@@ -302,9 +295,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Off",
-        "all": "All",
-        "master_only": "Master Only"
+        "off": "Wyłączone – Blokuj wszystkie zmiany",
+        "all": "Wszystkie – Akceptuj wszystkie ręczne zmiany",
+        "master_only": "Tylko główne – Akceptuj tylko zmiany z głównego urządzenia"
       }
     }
   },

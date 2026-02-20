@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "Configurar Grupo Climático",
-        "description": "Ajuste o comportamento do seu grupo. As alterações entram em vigor imediatamente.",
+        "description": "Gerenciar membros, lógica de sensores, configurações avançadas e comportamento de sincronização.",
         "menu_options": {
           "members": "Membros & Modos",
           "temperature": "Temperatura",
           "humidity": "Umidade",
-          "timings": "Tempos",
           "sync": "Modo Sync",
           "window_control": "Controle de Janela",
           "schedule": "Agenda & Temporizadores",
-          "other": "Outros Ajustes"
+          "advanced": "Configurações Avançadas"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "Definições de Temperatura",
         "description": "Configurar como o grupo gere a agregação de temperatura e pontos de ajuste. Os sensores externos irão sobrepor leituras de membros se selecionados.",
         "data": {
-          "temp_target_avg": "Temperatura Alvo (Controlo)",
+          "temp_target_avg": "Temperatura Alvo",
           "temp_use_master": "Usar temperatura alvo da entidade principal",
           "temp_target_round": "Precisão de Temperatura Alvo",
-          "temp_current_avg": "Temperatura Atual (Visualização)",
+          "temp_current_avg": "Temperatura Atual",
           "temp_sensors": "Sensores de Temperatura Externos",
           "temp_update_targets": "Escrever Temp Externa em Entidades",
           "temp_calibration_mode": "Modo de Calibração",
-          "calibration_heartbeat": "Heartbeat de Calibração (min)"
+          "calibration_heartbeat": "Heartbeat de Calibração (min)",
+          "calibration_ignore_off": "Ignorar membros desligados"
         },
         "data_description": {
           "temp_target_avg": "Como o grupo calcula o ponto de ajuste para enviar aos seus membros.",
@@ -80,17 +80,18 @@
           "temp_sensors": "Usar sensores externos em vez de leituras de membros. Estes tornam-se a única fonte de verdade para a temperatura do grupo.",
           "temp_update_targets": "Escrever o valor do sensor externo em entidades numéricas (ex. offsets calibração TRV). Útil para manter termostatos cientes da temperatura real.",
           "temp_calibration_mode": "Absoluto: Enviar valor diretamente. Offset: Enviar diferença (Externo - TRV Interno). Escalado: Enviar como inteiro x100 (ex. 21.5 -> 2150).",
-          "calibration_heartbeat": "Forçar periodicamente a sincronização da calibração para entidades, mesmo que a temperatura não tenha mudado. Defina como 0 para desativar."
+          "calibration_heartbeat": "Forçar periodicamente a sincronização da calibração para entidades, mesmo que a temperatura não tenha mudado. Defina como 0 para desativar.",
+          "calibration_ignore_off": "Não enviar atualizações de calibração para membros que estejam atualmente desligados."
         }
       },
       "humidity": {
         "title": "Definições de Humidade",
         "description": "Configurar agregação de humidade e sensores externos. Note que muitos termostatos apenas reportam humidade e não permitem controlo.",
         "data": {
-          "humidity_target_avg": "Humidade Alvo (Controlo)",
+          "humidity_target_avg": "Humidade Alvo",
           "humidity_use_master": "Usar humidade alvo da entidade principal",
           "humidity_target_round": "Precisão de Humidade Alvo",
-          "humidity_current_avg": "Humidade Atual (Visualização)",
+          "humidity_current_avg": "Humidade Atual",
           "humidity_sensors": "Sensores de Humidade Externos",
           "humidity_update_targets": "Escrever Humidade Externa em Entidades"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
           "humidity_sensors": "Usar sensores externos em vez de leituras de membros. Estes tornam-se a única fonte de verdade para a humidade do grupo.",
           "humidity_update_targets": "Escrever o valor do sensor externo em entidades numéricas. Útil para calibração de desumidificadores."
-        }
-      },
-      "timings": {
-        "title": "Tempos de Comunicação",
-        "description": "Ajuste os tempos de comando e as tentativas de repetição para garantir uma operação confiável sem sobrecarregar sua rede.",
-        "data": {
-          "debounce_delay": "Atraso de Debounce (segundos)",
-          "retry_attempts": "Tentativas de Repetição",
-          "retry_delay": "Atraso de Repetição (segundos)"
-        },
-        "data_description": {
-          "debounce_delay": "Tempo de espera antes de enviar comandos. Valores mais altos previnem comandos 'metralhadora' ao deslizar controlos, mas parecem mais lentos.",
-          "retry_attempts": "Quantas vezes reenviar um comando se um dispositivo não responder. Definir como 0 para desativar.",
-          "retry_delay": "Pausa entre tentativas. Dar um momento aos dispositivos para recuperar pode melhorar a fiabilidade."
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "As alterações na agenda serão ignoradas enquanto um override manual estiver ativo. Reaplica a agenda atual apenas após a expiração do override."
         }
       },
-      "other": {
-        "title": "Outras Definições",
-        "description": "Funcionalidades adicionais e exposição de entidades.",
+      "advanced": {
+        "title": "Configurações Avançadas",
+        "description": "Ajustar tempos de comando, recursos adicionais e exposição a entidades.",
         "data": {
+          "debounce_delay": "Atraso de Debounce (segundos)",
+          "retry_attempts": "Tentativas de Repetição",
+          "retry_delay": "Atraso de Repetição (segundos)",
           "expose_smart_sensors": "Expor sensores inteligentes",
           "expose_member_entities": "Expor lista de membros",
           "expose_config": "Mostrar configuração (Debug)",
           "min_temp_off": "Temperatura mínima ao desligar"
         },
         "data_description": {
+          "debounce_delay": "Tempo de espera antes de enviar comandos. Valores mais altos previnem comandos 'metralhadora' ao deslizar controlos, mas parecem mais lentos.",
+          "retry_attempts": "Quantas vezes reenviar um comando se um dispositivo não responder. Definir como 0 para desativar.",
+          "retry_delay": "Pausa entre tentativas. Dar um momento aos dispositivos para recuperar pode melhorar a fiabilidade.",
           "expose_smart_sensors": "Cria entidades de sensor adicionais para a temperatura e humidade do grupo (útil para gráficos).",
           "expose_member_entities": "Cria um atributo listando todos os IDs das entidades membro.",
           "expose_config": "Adiciona todos os valores de configuração aos atributos da entidade. Útil para depuração.",
@@ -302,9 +295,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Off",
-        "all": "All",
-        "master_only": "Master Only"
+        "off": "Desativado – Bloquear todas as alterações",
+        "all": "Todas – Aceitar todas as alterações manuais",
+        "master_only": "Apenas principal – Aceitar apenas alterações da entidade principal"
       }
     }
   },

@@ -54,6 +54,7 @@ from .const import (
     CONF_TEMP_USE_MASTER,
     CONF_TEMP_CALIBRATION_MODE,
     CONF_CALIBRATION_HEARTBEAT,
+    CONF_CALIBRATION_IGNORE_OFF,
     CONF_MIN_TEMP_OFF,
     CONF_WINDOW_ACTION,
     CONF_WINDOW_TEMPERATURE,
@@ -209,11 +210,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 "members",
                 "temperature",
                 "humidity",
-                "timings",
                 "sync",
                 "window_control",
                 "schedule",
-                "other",
+                "advanced",
             ],
         )
 
@@ -417,6 +417,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     mode=selector.NumberSelectorMode.SLIDER,
                 )
             ),
+            vol.Optional(
+                CONF_CALIBRATION_IGNORE_OFF,
+                default=current_config.get(CONF_CALIBRATION_IGNORE_OFF, False),
+            ): bool,
         })
 
         return self.async_show_form(
@@ -433,7 +437,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         if user_input is not None:
             self._update_config_if_changed(current_config)
-            return await self.async_step_timings()
+            return await self.async_step_sync()
 
         master_humidity_schema = {}
         if current_config.get(CONF_MASTER_ENTITY):
@@ -502,61 +506,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="humidity",
-            data_schema=schema,
-        )
-
-    async def async_step_timings(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Manage timing settings."""
-        current_config = {**self._config_entry.options, **(user_input or {})}
-
-        if user_input is not None:
-            self._update_config_if_changed(current_config)
-            return await self.async_step_sync()
-
-        schema = vol.Schema(
-            {
-                vol.Optional(
-                    CONF_DEBOUNCE_DELAY,
-                    default=current_config.get(CONF_DEBOUNCE_DELAY, 0),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0,
-                        max=10,
-                        step=0.1,
-                        unit_of_measurement="s",
-                        mode=selector.NumberSelectorMode.SLIDER,
-                    )
-                ),
-                vol.Optional(
-                    CONF_RETRY_ATTEMPTS,
-                    default=current_config.get(CONF_RETRY_ATTEMPTS, 0),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0,
-                        max=5,
-                        step=1,
-                        mode=selector.NumberSelectorMode.SLIDER,
-                    )
-                ),
-                vol.Optional(
-                    CONF_RETRY_DELAY,
-                    default=current_config.get(CONF_RETRY_DELAY, 2.5),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0,
-                        max=10,
-                        step=0.5,
-                        unit_of_measurement="s",
-                        mode=selector.NumberSelectorMode.SLIDER,
-                    )
-                ),
-            }
-        )
-
-        return self.async_show_form(
-            step_id="timings",
             data_schema=schema,
         )
 
@@ -762,7 +711,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 current_config.pop(CONF_SCHEDULE_ENTITY, None)
 
             self._update_config_if_changed(current_config)
-            return await self.async_step_other()
+            return await self.async_step_advanced()
 
         schema = vol.Schema(
             {
@@ -812,10 +761,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             data_schema=schema,
         )
 
-    async def async_step_other(
+    async def async_step_advanced(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Manage other settings."""
+        """Manage advanced settings."""
         current_config = {**self._config_entry.options, **(user_input or {})}
 
         if user_input is not None:
@@ -823,6 +772,41 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         schema = vol.Schema(
             {
+                vol.Optional(
+                    CONF_DEBOUNCE_DELAY,
+                    default=current_config.get(CONF_DEBOUNCE_DELAY, 0),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=10,
+                        step=0.1,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(
+                    CONF_RETRY_ATTEMPTS,
+                    default=current_config.get(CONF_RETRY_ATTEMPTS, 0),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=5,
+                        step=1,
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(
+                    CONF_RETRY_DELAY,
+                    default=current_config.get(CONF_RETRY_DELAY, 2.5),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=10,
+                        step=0.5,
+                        unit_of_measurement="s",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                ),
                 vol.Optional(
                     CONF_EXPOSE_SMART_SENSORS,
                     default=current_config.get(CONF_EXPOSE_SMART_SENSORS, False),
@@ -843,6 +827,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         )
 
         return self.async_show_form(
-            step_id="other",
+            step_id="advanced",
             data_schema=schema,
         )

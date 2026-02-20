@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "Configurer le Groupe Climatique",
-        "description": "Ajustez le comportement de votre groupe. Les changements prennent effet immédiatement.",
+        "description": "Gérer les membres, la logique des capteurs, les paramètres avancés et le comportement de synchronisation.",
         "menu_options": {
           "members": "Membres & Modes",
           "temperature": "Température",
           "humidity": "Humidité",
-          "timings": "Timings",
           "sync": "Mode Sync",
           "window_control": "Contrôle des Fenêtres",
           "schedule": "Programmation & Timers",
-          "other": "Autres Paramètres"
+          "advanced": "Paramètres avancés"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "Paramètres de Température",
         "description": "Configurer comment le groupe gère l'agrégation de la température et les consignes. Les capteurs externes remplaceront les relevés des membres si sélectionnés.",
         "data": {
-          "temp_target_avg": "Température Cible (Contrôle)",
+          "temp_target_avg": "Température Cible",
           "temp_use_master": "Utiliser la température cible de l'entité maître",
           "temp_target_round": "Précision de la Température Cible",
-          "temp_current_avg": "Température Actuelle (Affichage)",
+          "temp_current_avg": "Température Actuelle",
           "temp_sensors": "Capteurs de Température Externes",
           "temp_update_targets": "Écrire la Temp Externe vers les Entités",
           "temp_calibration_mode": "Mode de Calibration",
-          "calibration_heartbeat": "Heartbeat de Calibration (min)"
+          "calibration_heartbeat": "Heartbeat de Calibration (min)",
+          "calibration_ignore_off": "Ignorer les membres éteints"
         },
         "data_description": {
           "temp_target_avg": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
@@ -80,17 +80,18 @@
           "temp_sensors": "Utiliser des capteurs externes au lieu des relevés des membres. Ils deviennent la seule source de vérité pour la température du groupe.",
           "temp_update_targets": "Écrire la valeur du capteur externe vers des entités numériques (ex. offsets de calibration TRV). Utile pour garder les thermostats informés de la température réelle de la pièce.",
           "temp_calibration_mode": "Absolu: Envoyer valeur directe. Offset: Envoyer delta (Externe - TRV Interne). Échelonné: Envoyer comme entier x100 (ex. 21.5 -> 2150).",
-          "calibration_heartbeat": "Forcer périodiquement la synchronisation de la calibration vers les entités même si la température n'a pas changé. Régler sur 0 pour désactiver."
+          "calibration_heartbeat": "Forcer périodiquement la synchronisation de la calibration vers les entités même si la température n'a pas changé. Régler sur 0 pour désactiver.",
+          "calibration_ignore_off": "Ne pas envoyer de mises à jour de calibrage aux membres actuellement éteints."
         }
       },
       "humidity": {
         "title": "Paramètres d'Humidité",
         "description": "Configurer l'agrégation de l'humidité et les capteurs externes. Notez que de nombreux thermostats ne font que signaler l'humidité et ne permettent pas le contrôle.",
         "data": {
-          "humidity_target_avg": "Humidité Cible (Contrôle)",
+          "humidity_target_avg": "Humidité Cible",
           "humidity_use_master": "Utiliser l'humidité cible de l'entité maître",
           "humidity_target_round": "Précision de l'Humidité Cible",
-          "humidity_current_avg": "Humidité Actuelle (Affichage)",
+          "humidity_current_avg": "Humidité Actuelle",
           "humidity_sensors": "Capteurs d'Humidité Externes",
           "humidity_update_targets": "Écrire l'Humidité Externe vers les Entités"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "Comment le groupe résume les relevés des capteurs de ses membres.",
           "humidity_sensors": "Utiliser des capteurs externes au lieu des relevés des membres. Ils deviennent la seule source de vérité pour l'humidité du groupe.",
           "humidity_update_targets": "Écrire la valeur du capteur externe vers des entités numériques. Utile pour l'étalonnage des déshumidificateurs."
-        }
-      },
-      "timings": {
-        "title": "Timings de Communication",
-        "description": "Ajustez les délais de commande et les tentatives pour assurer un fonctionnement fiable sans surcharger votre réseau.",
-        "data": {
-          "debounce_delay": "Délai d'Anti-rebond (secondes)",
-          "retry_attempts": "Tentatives de Réessai",
-          "retry_delay": "Délai de Réessai (secondes)"
-        },
-        "data_description": {
-          "debounce_delay": "Temps d'attente avant l'envoi des commandes. Des valeurs plus élevées empêchent les commandes 'mitraillette' lors du glissement des contrôles, mais semblent plus lentes.",
-          "retry_attempts": "Combien de fois renvoyer une commande si un appareil ne répond pas. Mettre à 0 pour désactiver.",
-          "retry_delay": "Pause entre les tentatives de réessai. Donner un moment aux appareils pour récupérer peut améliorer la fiabilité."
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "Les changements de programmation seront ignorés tant qu'un override manuel est actif. Réapplique la programmation actuelle seulement après l'expiration de l'override."
         }
       },
-      "other": {
-        "title": "Autres Paramètres",
-        "description": "Fonctionnalités supplémentaires et exposition des entités.",
+      "advanced": {
+        "title": "Paramètres avancés",
+        "description": "Ajuster les temps de commande, les fonctionnalités supplémentaires et l'exposition des entités.",
         "data": {
+          "debounce_delay": "Délai d'Anti-rebond (secondes)",
+          "retry_attempts": "Tentatives de Réessai",
+          "retry_delay": "Délai de Réessai (secondes)",
           "expose_smart_sensors": "Exposer des capteurs intelligents",
           "expose_member_entities": "Exposer la liste des membres",
           "expose_config": "Afficher la configuration (Debug)",
           "min_temp_off": "Température minimale à l'arrêt"
         },
         "data_description": {
+          "debounce_delay": "Temps d'attente avant l'envoi des commandes. Des valeurs plus élevées empêchent les commandes 'mitraillette' lors du glissement des contrôles, mais semblent plus lentes.",
+          "retry_attempts": "Combien de fois renvoyer une commande si un appareil ne répond pas. Mettre à 0 pour désactiver.",
+          "retry_delay": "Pause entre les tentatives de réessai. Donner un moment aux appareils pour récupérer peut améliorer la fiabilité.",
           "expose_smart_sensors": "Crée des entités de capteur supplémentaires pour la température et l'humidité du groupe (utile pour les graphiques).",
           "expose_member_entities": "Crée un attribut listant tous les ID d'entité des membres.",
           "expose_config": "Ajoute toutes les valeurs de configuration aux attributs de l'entité. Utile pour le débogage.",
@@ -302,9 +295,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Off",
-        "all": "All",
-        "master_only": "Master Only"
+        "off": "Désactivé – Bloquer tous les changements",
+        "all": "Tous – Accepter tous les changements manuels",
+        "master_only": "Principal uniquement – Accepter uniquement les changements de l'entité principale"
       }
     }
   },

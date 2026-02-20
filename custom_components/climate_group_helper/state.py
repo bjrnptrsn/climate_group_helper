@@ -192,14 +192,19 @@ class BaseStateManager:
             return False
 
         # Add Metadata
-        kwargs["last_source"] = self.SOURCE
+        context = self._group._context
+        if self.SOURCE == "group" and bool(context and context.user_id and not context.parent_id):
+            kwargs["last_source"] = "ui"
+        else:
+            kwargs["last_source"] = self.SOURCE
+            
         last_entity = entity_id or self._group.entity_id
         kwargs["last_entity"] = last_entity[0] if isinstance(last_entity, list) and last_entity else last_entity
         kwargs["last_timestamp"] = time.time()
 
         # Update the CENTRAL shared target state
         self._group.shared_target_state = self._group.shared_target_state.update(**kwargs)
-        _LOGGER.debug("[%s] TargetState updated (source=%s): %s", self._group.entity_id, self.SOURCE, kwargs)
+        _LOGGER.debug("[%s] TargetState updated (source=%s): %s", self._group.entity_id, kwargs["last_source"], kwargs)
         return True
 
     def _pre_update_filter(self, entity_id: str | None, kwargs: dict) -> bool:
