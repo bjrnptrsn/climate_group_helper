@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "Konfigurovat Klimatickou Skupinu",
-        "description": "Vylaďte chování vaší skupiny. Změny se projeví okamžitě.",
+        "description": "Správa členů, senzorové logiky, pokročilých nastavení a synchronizace.",
         "menu_options": {
           "members": "Členové a režimy",
           "temperature": "Teplota",
           "humidity": "Vlhkost",
-          "timings": "Časování",
           "sync": "Režim synchronizace",
           "window_control": "Ovládání oken",
           "schedule": "Rozvrh a Časovače",
-          "other": "Další nastavení"
+          "advanced": "Pokročilá nastavení"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "Nastavení Teploty",
         "description": "Nakonfigurujte, jak skupina zvládá agregaci teploty a nastavené hodnoty. Externí senzory přepíší údaje členů, pokud jsou vybrány.",
         "data": {
-          "temp_target_avg": "Cílová Teplota (Ovládání)",
+          "temp_target_avg": "Cílová Teplota",
           "temp_use_master": "Použít cílovou teplotu hlavního zařízení",
           "temp_target_round": "Přesnost Cílové Teploty",
-          "temp_current_avg": "Aktuální Teplota (Zobrazení)",
+          "temp_current_avg": "Aktuální Teplota",
           "temp_sensors": "Externí Senzory Teploty",
           "temp_update_targets": "Zapsat Externí Teplotu do Entit",
           "temp_calibration_mode": "Režim Kalibrace",
-          "calibration_heartbeat": "Kalibrace Heartbeat (min)"
+          "calibration_heartbeat": "Kalibrace Heartbeat (min)",
+          "calibration_ignore_off": "Ignorovat vypnuté členy"
         },
         "data_description": {
           "temp_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
@@ -80,17 +80,18 @@
           "temp_sensors": "Použít externí senzory místo údajů od členů. Ty se stanou jediným zdrojem pravdy pro teplotu skupiny.",
           "temp_update_targets": "Zapsat hodnotu externího senzoru do číselných entit (např. offsety kalibrace TRV). Užitečné pro udržení termostatů v obraze o skutečné pokojové teplotě.",
           "temp_calibration_mode": "Absolutní: Odeslat hodnotu přímo. Offset: Odeslat rozdíl (Externí - TRV Interní). Škálované: Odeslat jako celé číslo x100 (např. 21.5 -> 2150).",
-          "calibration_heartbeat": "Pravidelně vynutit synchronizaci kalibrace do entit, i když se teplota nezměnila. Nastavte na 0 pro vypnutí."
+          "calibration_heartbeat": "Pravidelně vynutit synchronizaci kalibrace do entit, i když se teplota nezměnila. Nastavte na 0 pro vypnutí.",
+          "calibration_ignore_off": "Neposílejte aktualizace kalibrace členům, kteří jsou aktuálně vypnutí."
         }
       },
       "humidity": {
         "title": "Nastavení Vlhkosti",
         "description": "Nakonfigurujte agregaci vlhkosti a externí senzory. Pamatujte, že mnoho termostatů pouze hlásí vlhkost a neumožňuje ovládání.",
         "data": {
-          "humidity_target_avg": "Cílová Vlhkost (Ovládání)",
+          "humidity_target_avg": "Cílová Vlhkost",
           "humidity_use_master": "Použít cílovou vlhkost hlavního zařízení",
           "humidity_target_round": "Přesnost Cílové Vlhkosti",
-          "humidity_current_avg": "Aktuální Vlhkost (Zobrazení)",
+          "humidity_current_avg": "Aktuální Vlhkost",
           "humidity_sensors": "Externí Senzory Vlhkosti",
           "humidity_update_targets": "Zapsat Externí Vlhkost do Entit"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
           "humidity_sensors": "Použít externí senzory místo údajů od členů. Ty se stanou jediným zdrojem pravdy pro vlhkost skupiny.",
           "humidity_update_targets": "Zapsat hodnotu externího senzoru do číselných entit. Užitečné pro kalibraci odvlhčovačů."
-        }
-      },
-      "timings": {
-        "title": "Časování Komunikace",
-        "description": "Vylaďte časování příkazů a opakované pokusy, abyste zajistili spolehlivý provoz bez přetížení sítě.",
-        "data": {
-          "debounce_delay": "Zpoždění Debounce (sekundy)",
-          "retry_attempts": "Pokusy o Opakování",
-          "retry_delay": "Zpoždění Opakování (sekundy)"
-        },
-        "data_description": {
-          "debounce_delay": "Čas čekání před odesláním příkazů. Vyšší hodnoty zabraňují příkazům typu 'kulomet' při posouvání ovládacích prvků, ale působí pomaleji.",
-          "retry_attempts": "Kolikrát znovu odeslat příkaz, pokud zařízení neodpovídá. Nastavte na 0 pro vypnutí.",
-          "retry_delay": "Pauza mezi pokusy. Dát zařízením chvilku na zotavení může zlepšit spolehlivost."
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "Změny v samotném rozvrhu budou ignorovány, dokud je aktivní manuální přepsání. Znovu použije aktuální rozvrh až po vypršení přepsání."
         }
       },
-      "other": {
-        "title": "Další Nastavení",
-        "description": "Další funkce a zobrazení entit.",
+      "advanced": {
+        "title": "Pokročilá nastavení",
+        "description": "Jemné doladění časování příkazů, dalších funkcí a zobrazení entit.",
         "data": {
+          "debounce_delay": "Zpoždění Debounce (sekundy)",
+          "retry_attempts": "Pokusy o Opakování",
+          "retry_delay": "Zpoždění Opakování (sekundy)",
           "expose_smart_sensors": "Zvolte zda vytvořit senzorové entity",
           "expose_member_entities": "Zvolte zda zobrazit seznam členů",
           "expose_config": "Zobrazit konfiguraci (Ladění)",
           "min_temp_off": "Minimální teplota při vypnutí"
         },
         "data_description": {
+          "debounce_delay": "Čas čekání před odesláním příkazů. Vyšší hodnoty zabraňují příkazům typu 'kulomet' při posouvání ovládacích prvků, ale působí pomaleji.",
+          "retry_attempts": "Kolikrát znovu odeslat příkaz, pokud zařízení neodpovídá. Nastavte na 0 pro vypnutí.",
+          "retry_delay": "Pauza mezi pokusy. Dát zařízením chvilku na zotavení může zlepšit spolehlivost.",
           "expose_smart_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
           "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
           "expose_config": "Přidá všechny konfigurační hodnoty do atributů entity. Užitečné pro ladění.",
@@ -302,9 +295,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Off",
-        "all": "All",
-        "master_only": "Master Only"
+        "off": "Vypnuto – Blokovat všechny změny",
+        "all": "Vše – Přijmout všechny manuální změny",
+        "master_only": "Pouze hlavní – Přijmout pouze změny z hlavního zařízení"
       }
     }
   },

@@ -95,6 +95,7 @@ from .const import (
     CONF_TEMP_USE_MASTER,
     CONF_TEMP_CALIBRATION_MODE,
     CONF_CALIBRATION_HEARTBEAT,
+    CONF_CALIBRATION_IGNORE_OFF,
     CONF_MIN_TEMP_OFF,
     ATTR_SCHEDULE_ENTITY,
     SERVICE_SET_SCHEDULE_ENTITY,
@@ -481,6 +482,16 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
     def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | str | None:
         """Determine the group's HVAC mode based on member modes and strategy."""
+        
+        # Optimistic UI Update (Grace Period)
+        if (
+            self.shared_target_state.last_source == "ui"
+            and self.shared_target_state.last_timestamp
+            and time.time() - self.shared_target_state.last_timestamp < 3.0
+            and self.shared_target_state.hvac_mode is not None
+        ):
+            _LOGGER.debug("[%s] Applying optimistic state: %s", self.entity_id, self.shared_target_state.hvac_mode)
+            return self.shared_target_state.hvac_mode
 
         active_hvac_modes = [mode for mode in current_hvac_modes if mode != HVACMode.OFF]
 
@@ -663,17 +674,25 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         valid_states, _ = self._get_valid_member_states(entity_ids)
 
+        ignore_off = self.config.get(CONF_CALIBRATION_IGNORE_OFF, False)
+
         for target_state in valid_states:
+            member_id = self._target_member_map.get(target_state.entity_id)
+            member_state = self.hass.states.get(member_id) if member_id else None
+
+            # Battery Saver Feature
+            if ignore_off and member_state and member_state.state == HVACMode.OFF:
+                _LOGGER.debug("[%s] Skipping calibration update for %s because member %s is OFF (Battery Saver)", self.entity_id, target_state.entity_id, member_id)
+                continue
+
             try:
                 # Determine Target Value
                 target_val = value
                 if domain == "temperature":
                     if mode == CalibrationMode.OFFSET:
                         ref_temp = self._member_temp_avg
-                        if target_state.entity_id in self._target_member_map:
-                            member_id = self._target_member_map[target_state.entity_id]
-                            if (member_state := self.hass.states.get(member_id)) and (member_temp := member_state.attributes.get(ATTR_CURRENT_TEMPERATURE)) is not None:
-                                ref_temp = float(member_temp)
+                        if member_state and (member_temp := member_state.attributes.get(ATTR_CURRENT_TEMPERATURE)) is not None:
+                            ref_temp = float(member_temp)
                         
                         if ref_temp is None:
                             continue

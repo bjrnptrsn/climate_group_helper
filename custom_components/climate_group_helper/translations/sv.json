@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "Konfigurera Klimatgrupp",
-        "description": "Finjustera din grupps beteende. Ändringar träder i kraft omedelbart.",
+        "description": "Hantera medlemmar, sensorlogik, avancerade inställningar och synkroniseringsbeteende.",
         "menu_options": {
           "members": "Medlemmar & Lägen",
           "temperature": "Temperatur",
           "humidity": "Fuktighet",
-          "timings": "Tider",
           "sync": "Synkroniseringsläge",
           "window_control": "Fönsterkontroll",
           "schedule": "Schema & Timers",
-          "other": "Andra Inställningar"
+          "advanced": "Avancerade inställningar"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "Temperaturinställningar",
         "description": "Konfigurera hur gruppen hanterar temperaturaggregering och målvärden. Externa sensorer kommer att åsidosätta medlemsavläsningar om de väljs.",
         "data": {
-          "temp_target_avg": "Mål Temperatur (Kontroll)",
+          "temp_target_avg": "Mål Temperatur",
           "temp_use_master": "Använd masterenhetens måltemperatur",
           "temp_target_round": "Mål Temperatur Precision",
-          "temp_current_avg": "Aktuell Temperatur (Visning)",
+          "temp_current_avg": "Aktuell Temperatur",
           "temp_sensors": "Externa Temperatursensorer",
           "temp_update_targets": "Skriv Extern Temp till Entiteter",
           "temp_calibration_mode": "Kalibreringsläge",
-          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
+          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)",
+          "calibration_ignore_off": "Ignorera avstängda medlemmar"
         },
         "data_description": {
           "temp_target_avg": "Hur gruppen beräknar målvärdet att skicka till sina medlemmar.",
@@ -80,17 +80,18 @@
           "temp_sensors": "Använd externa sensorer istället för medlemsavläsningar. Dessa blir den enda sanningen för gruppens temperatur.",
           "temp_update_targets": "Skriv det externa sensorvärdet till nummerentiteter (t.ex. TRV kalibrering offset). Användbart för att hålla termostater medvetna om faktisk rumstemperatur.",
           "temp_calibration_mode": "Absolut: Skicka värde direkt. Offset: Skicka skillnad (Extern - TRV Intern). Skalad: Skicka som heltal x100 (t.ex. 21.5 -> 2150).",
-          "calibration_heartbeat": "Tvinga periodiskt kalibreringssynkronisering till entiteter även om temperaturen inte har ändrats. Ställ in på 0 för att inaktivera."
+          "calibration_heartbeat": "Tvinga periodiskt kalibreringssynkronisering till entiteter även om temperaturen inte har ändrats. Ställ in på 0 för att inaktivera.",
+          "calibration_ignore_off": "Skicka inte kalibreringsuppdateringar till medlemmar som för närvarande är avstängda."
         }
       },
       "humidity": {
         "title": "Luftfuktighetsinställningar",
         "description": "Konfigurera luftfuktighetsaggregering och externa sensorer. Notera att många termostater bara rapporterar luftfuktighet och inte tillåter kontroll.",
         "data": {
-          "humidity_target_avg": "Mål Luftfuktighet (Kontroll)",
+          "humidity_target_avg": "Mål Luftfuktighet",
           "humidity_use_master": "Använd masterenhetens målluftfuktighet",
           "humidity_target_round": "Mål Luftfuktighet Precision",
-          "humidity_current_avg": "Aktuell Luftfuktighet (Visning)",
+          "humidity_current_avg": "Aktuell Luftfuktighet",
           "humidity_sensors": "Externa Luftfuktighetssensorer",
           "humidity_update_targets": "Skriv Extern Luftfuktighet till Entiteter"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "Hur gruppen sammanfattar sensoravläsningar från sina medlemmar.",
           "humidity_sensors": "Använd externa sensorer istället för medlemsavläsningar. Dessa blir den enda sanningen för gruppens luftfuktighet.",
           "humidity_update_targets": "Skriv det externa sensorvärdet till nummerentiteter. Användbart för kalibrering av avfuktare."
-        }
-      },
-      "timings": {
-        "title": "Kommunikation Timings",
-        "description": "Finjustera kommandotider och försök igen för att säkerställa tillförlitlig drift utan att överbelasta ditt nätverk.",
-        "data": {
-          "debounce_delay": "Debounce Fördröjning (sekunder)",
-          "retry_attempts": "Återförsök",
-          "retry_delay": "Återförsöksfördröjning (sekunder)"
-        },
-        "data_description": {
-          "debounce_delay": "Tid att vänta innan kommandon skickas. Högre värden förhindrar 'kulspruta' kommandon när man drar reglage, men känns långsammare.",
-          "retry_attempts": "Hur många gånger ett kommando ska skickas om en enhet inte svarar. Sätt till 0 för att inaktivera.",
-          "retry_delay": "Paus mellan återförsök. Att ge enheter en stund att återhämta sig kan förbättra tillförlitligheten."
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "Om aktiverat kommer ändringar i schemat att ignoreras så länge en manuell override är aktiv. Återaktiverar det aktuella schemat först efter att overriden har gått ut."
         }
       },
-      "other": {
-        "title": "Andra Inställningar",
-        "description": "Ytterligare funktioner och entitetsexponering.",
+      "advanced": {
+        "title": "Avancerade inställningar",
+        "description": "Finjustera kommandotider, ytterligare funktioner och entitetsexponering.",
         "data": {
+          "debounce_delay": "Debounce Fördröjning (sekunder)",
+          "retry_attempts": "Återförsök",
+          "retry_delay": "Återförsöksfördröjning (sekunder)",
           "expose_smart_sensors": "Visa smarta sensorer",
           "expose_member_entities": "Visa medlemslista",
           "expose_config": "Visa konfiguration (Felsökning)",
           "min_temp_off": "Lägsta temperatur vid avstängning"
         },
         "data_description": {
+          "debounce_delay": "Tid att vänta innan kommandon skickas. Högre värden förhindrar 'kulspruta' kommandon när man drar reglage, men känns långsammare.",
+          "retry_attempts": "Hur många gånger ett kommando ska skickas om en enhet inte svarar. Sätt till 0 för att inaktivera.",
+          "retry_delay": "Paus mellan återförsök. Att ge enheter en stund att återhämta sig kan förbättra tillförlitligheten.",
           "expose_smart_sensors": "Skapar extra sensorenheter för gruppens temperatur och luftfuktighet (användbart för grafer).",
           "expose_member_entities": "Skapar ett attribut som listar alla medlemsenhets-ID:n.",
           "expose_config": "Lägger till alla konfigurationsvärden till entitetsattributen. Användbart för felsökning.",
@@ -302,9 +295,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Off",
-        "all": "All",
-        "master_only": "Master Only"
+        "off": "Av – Blockera alla ändringar",
+        "all": "Alla – Acceptera alla manuella ändringar",
+        "master_only": "Endast huvud – Acceptera endast ändringar från huvudenheten"
       }
     }
   },

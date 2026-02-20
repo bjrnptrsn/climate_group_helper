@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "Konfigurer Klimagruppe",
-        "description": "Finjuster gruppens oppførsel. Endringer trer i kraft umiddelbart.",
+        "description": "Administrer medlemmer, sensorlogikk, avanserte innstillinger og synkroniseringsatferd.",
         "menu_options": {
           "members": "Medlemmer & Moduser",
           "temperature": "Temperatur",
           "humidity": "Fuktighet",
-          "timings": "Tidspunkter",
           "sync": "Sync Modus",
           "window_control": "Vinduskontroll",
           "schedule": "Tidsplan og Timere",
-          "other": "Andre Innstillinger"
+          "advanced": "Avanserte innstillinger"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "Temperaturinnstillinger",
         "description": "Konfigurer hvordan gruppen håndterer temperaturaggregering og målverdier. Eksterne sensorer vil overstyre medlemsavlesninger hvis valgt.",
         "data": {
-          "temp_target_avg": "Måltemperatur (kontroll)",
+          "temp_target_avg": "Måltemperatur",
           "temp_use_master": "Bruk masterenhetens måltemperatur",
           "temp_target_round": "Presisjon måltemperatur",
-          "temp_current_avg": "Nåværende temperatur (visning)",
+          "temp_current_avg": "Nåværende temperatur",
           "temp_sensors": "Eksterne temperatursensorer",
           "temp_update_targets": "Skriv ekstern temp til entiteter",
           "temp_calibration_mode": "Kalibreringsmodus",
-          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)"
+          "calibration_heartbeat": "Kalibrerings-Heartbeat (min)",
+          "calibration_ignore_off": "Ignorer avslåtte medlemmer"
         },
         "data_description": {
           "temp_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
@@ -80,17 +80,18 @@
           "temp_sensors": "Bruk eksterne sensorer i stedet for medlemsavlesninger. Disse blir den eneste sannhetskilden for gruppens temperatur.",
           "temp_update_targets": "Skriv verdien fra ekstern sensor til nummerentiteter (f.eks. TRV kalibreringsoffset). Nyttig for å holde termostater oppdatert om faktisk romtemperatur.",
           "temp_calibration_mode": "Absolutt: Send verdi direkte. Offset: Send differanse (Ekstern - TRV Intern). Skalert: Send som heltall x100 (f.eks. 21.5 -> 2150).",
-          "calibration_heartbeat": "Tving periodisk kalibreringssynkronisering til entiteter selv om temperaturen ikke er endret. Sett til 0 for å deaktivere."
+          "calibration_heartbeat": "Tving periodisk kalibreringssynkronisering til entiteter selv om temperaturen ikke er endret. Sett til 0 for å deaktivere.",
+          "calibration_ignore_off": "Ikke send kalibreringsoppdateringer til medlemmer som for øyeblikket er avslått."
         }
       },
       "humidity": {
         "title": "Fuktighetsinnstillinger",
         "description": "Konfigurer fuktighetsaggregering og eksterne sensorer. Merk at mange termostater kun rapporterer fuktighet og ikke tillater kontroll.",
         "data": {
-          "humidity_target_avg": "Mål fuktighet (kontroll)",
+          "humidity_target_avg": "Mål fuktighet",
           "humidity_use_master": "Bruk masterenhetens målfuktighet",
           "humidity_target_round": "Presisjon mål fuktighet",
-          "humidity_current_avg": "Nåværende fuktighet (visning)",
+          "humidity_current_avg": "Nåværende fuktighet",
           "humidity_sensors": "Eksterne fuktighetssensorer",
           "humidity_update_targets": "Skriv ekstern fuktighet til entiteter"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
           "humidity_sensors": "Bruk eksterne sensorer i stedet for medlemsavlesninger. Disse blir den eneste sannhetskilden for gruppens fuktighet.",
           "humidity_update_targets": "Skriv verdien fra ekstern sensor til nummerentiteter. Nyttig for kalibrering av avfuktere."
-        }
-      },
-      "timings": {
-        "title": "Kommunikasjonstider",
-        "description": "Finjuster kommandotider og gjenta forsøk for å sikre pålitelig drift uten å overbelaste nettverket ditt.",
-        "data": {
-          "debounce_delay": "Debounce forsinkelse (sekunder)",
-          "retry_attempts": "Forsøk på nytt",
-          "retry_delay": "Forsinkelse ved nytt forsøk (sekunder)"
-        },
-        "data_description": {
-          "debounce_delay": "Tid å vente før kommandoer sendes. Høyere verdier forhindrer 'maskingevær'-kommandoer ved justering av kontroller, men føles tregere.",
-          "retry_attempts": "Hvor mange ganger en kommando skal sendes på nytt hvis en enhet ikke svarer. Sett til 0 for å deaktivere.",
-          "retry_delay": "Pause mellom forsøk. Å gi enheter et øyeblikk til å komme seg kan forbedre påliteligheten."
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "Vil endringer i selve tidsplanen bli ignorert så lenge en manuell overstyring er aktiv. Bruker gjeldende tidsplan på nytt først etter at overstyringen er utløpt."
         }
       },
-      "other": {
-        "title": "Andre innstillinger",
-        "description": "Tilleggsfunksjoner og entitetseksponering.",
+      "advanced": {
+        "title": "Avanserte innstillinger",
+        "description": "Finjuster kommandotider, tilleggsfunksjoner og eksponering av entiteter.",
         "data": {
+          "debounce_delay": "Debounce forsinkelse (sekunder)",
+          "retry_attempts": "Forsøk på nytt",
+          "retry_delay": "Forsinkelse ved nytt forsøk (sekunder)",
           "expose_smart_sensors": "Vis smarte sensorer",
           "expose_member_entities": "Vis medlemsliste",
           "expose_config": "Vis konfigurasjon (Feilsøking)",
           "min_temp_off": "Minimumstemperatur når av"
         },
         "data_description": {
+          "debounce_delay": "Tid å vente før kommandoer sendes. Høyere verdier forhindrer 'maskingevær'-kommandoer ved justering av kontroller, men føles tregere.",
+          "retry_attempts": "Hvor mange ganger en kommando skal sendes på nytt hvis en enhet ikke svarer. Sett til 0 for å deaktivere.",
+          "retry_delay": "Pause mellom forsøk. Å gi enheter et øyeblikk til å komme seg kan forbedre påliteligheten.",
           "expose_smart_sensors": "Oppretter ekstra sensorentiteter for gruppens temperatur og luftfuktighet (nyttig for grafer).",
           "expose_member_entities": "Oppretter en attributt som lister alle medlemsenhets-ID-er.",
           "expose_config": "Legger til alle konfigurasjonsverdier i entitetens attributter. Nyttig for feilsøking.",
@@ -302,9 +295,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Off",
-        "all": "All",
-        "master_only": "Master Only"
+        "off": "Av – Blokker alle endringer",
+        "all": "Alle – Godta alle manuelle endringer",
+        "master_only": "Kun hoved – Godta kun endringer fra hovedenheten"
       }
     }
   },

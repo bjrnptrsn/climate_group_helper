@@ -48,6 +48,7 @@ CONF_TEMP_SENSORS = "temp_sensors"
 CONF_TEMP_UPDATE_TARGETS = "temp_update_targets"
 CONF_TEMP_CALIBRATION_MODE = "temp_calibration_mode"
 CONF_CALIBRATION_HEARTBEAT = "calibration_heartbeat"
+CONF_CALIBRATION_IGNORE_OFF = "calibration_ignore_off"
 
 # Humidity options
 CONF_HUMIDITY_TARGET_AVG = "humidity_target_avg"

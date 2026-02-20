@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "Klimaatgroep Configureren",
-        "description": "Verfijn het gedrag van uw groep. Wijzigingen worden onmiddellijk van kracht.",
+        "description": "Beheer leden, sensorlogica, geavanceerde instellingen en synchronisatiegedrag.",
         "menu_options": {
           "members": "Leden & Modi",
           "temperature": "Temperatuur",
           "humidity": "Vochtigheid",
-          "timings": "Timings",
           "sync": "Sync Modus",
           "window_control": "Raambediening",
           "schedule": "Schema & Timers",
-          "other": "Andere Instellingen"
+          "advanced": "Geavanceerde instellingen"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "Temperatuurinstellingen",
         "description": "Configureer hoe de groep temperatuuraggregatie en instelpunten beheert. Externe sensoren overschrijven metingen van leden indien geselecteerd.",
         "data": {
-          "temp_target_avg": "Doeltemperatuur (Regeling)",
+          "temp_target_avg": "Doeltemperatuur",
           "temp_use_master": "Gebruik doeltemperatuur van masterentiteit",
           "temp_target_round": "Precisie Doeltemperatuur",
-          "temp_current_avg": "Huidige Temperatuur (Weergave)",
+          "temp_current_avg": "Huidige Temperatuur",
           "temp_sensors": "Externe Temperatuursensoren",
           "temp_update_targets": "Schrijf Externe Temp naar Entiteiten",
           "temp_calibration_mode": "Kalibratiemodus",
-          "calibration_heartbeat": "Kalibratie Hartslag (min)"
+          "calibration_heartbeat": "Kalibratie Hartslag (min)",
+          "calibration_ignore_off": "Uitgeschakelde leden negeren"
         },
         "data_description": {
           "temp_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
@@ -80,17 +80,18 @@
           "temp_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de temperatuur van de groep.",
           "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur.",
           "temp_calibration_mode": "Absoluut: Verzend waarde direct. Offset: Verzend verschil (Extern - TRV Intern). Geschaald: Verzend als geheel getal x100 (bijv. 21.5 -> 2150).",
-          "calibration_heartbeat": "Forceer periodiek kalibratiesynchronisatie naar entiteiten, zelfs als de temperatuur niet is gewijzigd. Stel in op 0 om uit te schakelen."
+          "calibration_heartbeat": "Forceer periodiek kalibratiesynchronisatie naar entiteiten, zelfs als de temperatuur niet is gewijzigd. Stel in op 0 om uit te schakelen.",
+          "calibration_ignore_off": "Stuur geen kalibratie-updates naar leden die momenteel uitgeschakeld zijn."
         }
       },
       "humidity": {
         "title": "Luchtvochtigheidsinstellingen",
         "description": "Configureer aggregatie van luchtvochtigheid en externe sensoren. Merk op dat veel thermostaten alleen luchtvochtigheid rapporteren en geen regeling toestaan.",
         "data": {
-          "humidity_target_avg": "Doel Luchtvochtigheid (Regeling)",
+          "humidity_target_avg": "Doel Luchtvochtigheid",
           "humidity_use_master": "Gebruik doelvochtigheid van masterentiteit",
           "humidity_target_round": "Precisie Doel Luchtvochtigheid",
-          "humidity_current_avg": "Huidige Luchtvochtigheid (Weergave)",
+          "humidity_current_avg": "Huidige Luchtvochtigheid",
           "humidity_sensors": "Externe Vochtigheidssensoren",
           "humidity_update_targets": "Schrijf Externe Luchtvochtigheid naar Entiteiten"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
           "humidity_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de luchtvochtigheid van de groep.",
           "humidity_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten. Handig voor kalibratie van luchtontvochtigers."
-        }
-      },
-      "timings": {
-        "title": "Communicatie Timings",
-        "description": "Verfijn commandotimings en pogingen om een betrouwbare werking te garanderen zonder uw netwerk te overbelasten.",
-        "data": {
-          "debounce_delay": "Debounce Vertraging (seconden)",
-          "retry_attempts": "Herhaalpogingen",
-          "retry_delay": "Herhaalvertraging (seconden)"
-        },
-        "data_description": {
-          "debounce_delay": "Wachttijd voor het verzenden van commando's. Hogere waarden voorkomen 'mitrailleurvuur' commando's bij het schuiven van regelaars, maar voelen trager aan.",
-          "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
-          "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren."
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen."
         }
       },
-      "other": {
-        "title": "Andere Instellingen",
-        "description": "Extra functies en entiteit-blootstelling.",
+      "advanced": {
+        "title": "Geavanceerde instellingen",
+        "description": "Verfijn commandotimings, extra functies en blootstelling van entiteiten.",
         "data": {
+          "debounce_delay": "Debounce Vertraging (seconden)",
+          "retry_attempts": "Herhaalpogingen",
+          "retry_delay": "Herhaalvertraging (seconden)",
           "expose_smart_sensors": "Slimme sensoren weergeven",
           "expose_member_entities": "Ledenlijst weergeven",
           "expose_config": "Configuratie tonen (Debug)",
           "min_temp_off": "Minimumtemperatuur bij uit"
         },
         "data_description": {
+          "debounce_delay": "Wachttijd voor het verzenden van commando's. Hogere waarden voorkomen 'mitrailleurvuur' commando's bij het schuiven van regelaars, maar voelen trager aan.",
+          "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
+          "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren.",
           "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
           "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
           "expose_config": "Voegt alle configuratiewaarden toe aan de entiteitattributen. Handig voor debugging.",
@@ -302,9 +295,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Off",
-        "all": "All",
-        "master_only": "Master Only"
+        "off": "Uit – Alle wijzigingen blokkeren",
+        "all": "Alle – Alle handmatige wijzigingen accepteren",
+        "master_only": "Alleen hoofd – Alleen wijzigingen van het hoofdapparaat accepteren"
       }
     }
   },

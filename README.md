@@ -62,6 +62,7 @@ Use **multiple external sensors** for temperature and humidity to override the m
 *Improved in v0.18!* Write the external sensor value back to your TRVs to fix their internal temperature reading.
 *   **Modes:** Absolute (Standard), Offset (Delta calculation), and Scaled (x100 for Danfoss Ally).
 *   **Heartbeat:** Periodically re-sends the calibration value to prevent sensor timeouts on Zigbee devices.
+*   **Battery Saver (Ignore Off):** Prevent sending constant calibration updates to wireless TRVs that are currently turned `off`. Configured in the Temperature step.
 
 ### Advanced Sync Modes
 *   **Standard:** Classic one-way control (Group → Members).
@@ -158,6 +159,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
 | **Calibration Targets** | Write calculated temperature to number entities. Supports **Absolute** (Standard), **Offset** (Delta), and **Scaled** (x100) modes. |
 | **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
+| **Ignore Off Members (Calibration)** | Prevents sending calibration updates to devices that are currently `off`, preserving battery life on wireless sensors and TRVs. |
 | **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
 | **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. Essential for TRVs that don't close valves fully or provide frost protection in `off` mode. |
 

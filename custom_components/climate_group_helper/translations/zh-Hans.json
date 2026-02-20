@@ -31,16 +31,15 @@
     "step": {
       "init": {
         "title": "配置空调组",
-        "description": "微调组的行为。更改立即生效。",
+        "description": "管理成员、传感器逻辑、高级设置和同步行为。",
         "menu_options": {
           "members": "成员 & 模式",
           "temperature": "温度",
           "humidity": "湿度",
-          "timings": "时序",
           "sync": "同步模式",
           "window_control": "窗口控制",
           "schedule": "日程表与定时器",
-          "other": "其他设置"
+          "advanced": "高级设置"
         }
       },
       "members": {
@@ -63,14 +62,15 @@
         "title": "温度设置",
         "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
         "data": {
-          "temp_target_avg": "目标温度 (控制)",
+          "temp_target_avg": "目标温度",
           "temp_use_master": "使用主设备目标温度",
           "temp_target_round": "目标温度精度",
-          "temp_current_avg": "当前温度 (显示)",
+          "temp_current_avg": "当前温度",
           "temp_sensors": "外部温度传感器",
           "temp_update_targets": "将外部温度写入实体",
           "temp_calibration_mode": "校准模式",
-          "calibration_heartbeat": "校准心跳 (分钟)"
+          "calibration_heartbeat": "校准心跳 (分钟)",
+          "calibration_ignore_off": "忽略已关闭的成员"
         },
         "data_description": {
           "temp_target_avg": "组如何计算要发送给成员的目标设定值。",
@@ -80,17 +80,18 @@
           "temp_sensors": "使用外部传感器代替成员读数。这将成为组温度的唯一真实来源。",
           "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。",
           "temp_calibration_mode": "绝对: 直接发送值。偏移: 发送差值 (外部 - TRV 内部)。 缩放: 发送为整数 x100 (例如 21.5 -> 2150)。",
-          "calibration_heartbeat": "定期强制将校准同步到实体，即使温度未更改。设置为 0 以禁用。"
+          "calibration_heartbeat": "定期强制将校准同步到实体，即使温度未更改。设置为 0 以禁用。",
+          "calibration_ignore_off": "不要向当前处于关闭状态的成员发送校准更新。"
         }
       },
       "humidity": {
         "title": "湿度设置",
         "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
         "data": {
-          "humidity_target_avg": "目标湿度 (控制)",
+          "humidity_target_avg": "目标湿度",
           "humidity_use_master": "使用主设备目标湿度",
           "humidity_target_round": "目标湿度精度",
-          "humidity_current_avg": "当前湿度 (显示)",
+          "humidity_current_avg": "当前湿度",
           "humidity_sensors": "外部湿度传感器",
           "humidity_update_targets": "将外部湿度写入实体"
         },
@@ -101,20 +102,6 @@
           "humidity_current_avg": "组如何汇总成员的传感器读数。",
           "humidity_sensors": "使用外部传感器代替成员读数。这将成为组湿度的唯一真实来源。",
           "humidity_update_targets": "将外部传感器值写入数字实体。用于除湿机校准。"
-        }
-      },
-      "timings": {
-        "title": "通信时序",
-        "description": "微调命令定时和重试，以确保可靠运行而不致网络过载。",
-        "data": {
-          "debounce_delay": "防抖延迟 (秒)",
-          "retry_attempts": "重试次数",
-          "retry_delay": "重试延迟 (秒)"
-        },
-        "data_description": {
-          "debounce_delay": "发送命令前等待的时间。较高的值可防止滑动控件时的‘机枪’命令，但感觉较慢。",
-          "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
-          "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。"
         }
       },
       "sync": {
@@ -173,16 +160,22 @@
           "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。"
         }
       },
-      "other": {
-        "title": "其他设置",
-        "description": "其他功能和实体公开。",
+      "advanced": {
+        "title": "高级设置",
+        "description": "微调命令时间、附加功能和实体暴露。",
         "data": {
+          "debounce_delay": "防抖延迟 (秒)",
+          "retry_attempts": "重试次数",
+          "retry_delay": "重试延迟 (秒)",
           "expose_smart_sensors": "公开智能传感器",
           "expose_member_entities": "公开成员列表",
           "expose_config": "显示配置 (调试)",
           "min_temp_off": "关闭时的最低温度"
         },
         "data_description": {
+          "debounce_delay": "发送命令前等待的时间。较高的值可防止滑动控件时的‘机枪’命令，但感觉较慢。",
+          "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
+          "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。",
           "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
           "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
           "expose_config": "将所有配置值添加到实体属性中。用于调试。",
@@ -302,9 +295,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Off",
-        "all": "All",
-        "master_only": "Master Only"
+        "off": "关闭 – 阻止所有更改",
+        "all": "全部 – 接受所有手动更改",
+        "master_only": "仅主设备 – 仅接受主实体的更改"
       }
     }
   },

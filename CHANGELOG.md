@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.19.1 - 2026-02-20
+
+### ✨ New Features
+
+*   **Calibration Battery Saver**: The group can now automatically pause calibration updates for member devices that are currently turned off. This reduces unnecessary radio traffic and conserves the battery life of sleeping devices (especially during the summer months when heating is off).
+*   **Translations**: Added Slovak (`sk`) translation support.
+
+### 🔧 Fixes
+
+*   **UI Responsiveness & Flicker**: Resolved UI bouncing issues when rapidly clicking buttons. This was achieved through a two-layered defense:
+    *   A new 3-second optimistic "Grace Period" instantly reflects your changes on the dashboard while integrations catch up.
+    *   A robust safety mechanism that actively detects and aborts older, delayed commands in the background so they don't overwrite your newest inputs.
+*   **Window Control Bypass**: Fix to ensure that open windows correctly block all manual changes except for explicit `OFF` commands.
+
+### 🎨 UI Changes
+
+*   **Config Flow Update**: Merged the "Timings" and "Other Settings" menus into a single **"Advanced Settings"** step.
+
 ## 0.19.0 - 2026-02-18
 
 ### 🌟 New Features
