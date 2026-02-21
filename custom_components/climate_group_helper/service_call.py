@@ -239,9 +239,9 @@ class BaseServiceCallHandler(ABC):
                     low = data.get(ATTR_TARGET_TEMP_LOW)
                     high = data.get(ATTR_TARGET_TEMP_HIGH)
                     if low is not None and high is not None:
-                        if (entity_ids := self._get_call_entity_ids(attr)):
+                        if (entity_ids := self._get_call_entity_ids(attr, low)):
                             calls.append({
-                                    "service": SERVICE_SET_TEMPERATURE,
+                                "service": SERVICE_SET_TEMPERATURE,
                                 "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
                                 "entity_ids": entity_ids
                             })
@@ -252,7 +252,7 @@ class BaseServiceCallHandler(ABC):
             if not service:
                 continue
 
-            if (entity_ids := self._get_call_entity_ids(attr)):
+            if (entity_ids := self._get_call_entity_ids(attr, value)):
                     calls.append({
                         "service": service,
                         "kwargs": {attr: value},
@@ -260,39 +260,71 @@ class BaseServiceCallHandler(ABC):
                     })
         return calls
 
-    def _get_call_entity_ids(self, attr: str) -> list[str]:
-        """Get entity IDs for a given attribute.
+    def _get_call_entity_ids(self, attr: str, value: Any = None) -> list[str]:
+        """Get entity IDs for a given attribute and target value.
 
-        Default: returns all member entity IDs.
-        Override in derived classes for diffing behavior.
+        Default: all members capable of handling this attribute/value ("Can I?" only).
+        For direct UI commands (ClimateCallHandler), this is the final answer — no diffing.
+        Override in Sync/Schedule handlers to also apply necessity check ("Should I?").
         """
-        return self._group.climate_entity_ids
+        return self._get_capable_entities(attr, value)
 
-    def _get_unsynced_entities(self, attr: str) -> list[str]:
-        """Get members that need to be synced for this attribute.
+    def _get_capable_entities(self, attr: str, value: Any = None) -> list[str]:
+        """Get members that technically support this attribute/value (Capability check).
 
-        Compares current member state against target_state and returns
-        only entities that differ from the target.
+        For mode attributes (hvac_mode, fan_mode, preset_mode, swing_mode):
+            With value: checks if value is in the device's supported modes list.
+            Without value: checks only that the modes list attribute exists and is non-empty.
+            Exception for hvac_mode without value: missing modes list is tolerated
+            (some devices don't advertise hvac_modes but still accept mode commands).
+        For float attributes (temperature, humidity, etc.):
+            value is not meaningful for capability — only checks attribute existence.
 
         Args:
-            attr: The attribute to check
+            attr: The attribute to check capability for.
+            value: Target value. Used for mode attributes only — ignored for float attributes.
         """
         entity_ids = []
+        for entity_id in self._group.climate_entity_ids:
+            state = self._hass.states.get(entity_id)
+            if not state:
+                continue
+            if attr in MODE_MODES_MAP:
+                supported_modes = state.attributes.get(MODE_MODES_MAP[attr], [])
+                if value is not None:
+                    if attr == ATTR_HVAC_MODE:
+                        # hvac_mode exception: devices that don't advertise hvac_modes are
+                        # assumed to accept all mode commands (no constraint known).
+                        if supported_modes and value not in supported_modes:
+                            continue
+                    else:
+                        if value not in supported_modes:
+                            continue
+                elif attr != ATTR_HVAC_MODE and not supported_modes:
+                    continue
+            elif attr not in state.attributes:
+                continue
+            entity_ids.append(entity_id)
+        return entity_ids
+
+    def _get_unsynced_entities(self, attr: str) -> list[str]:
+        """Get members that need to be synced for this attribute (Necessity check).
+
+        Internally calls _get_capable_entities(attr, target_value) to build the
+        candidate list, then filters by value deviation and partial-sync rules.
+
+        Args:
+            attr: The attribute to check.
+        """
+        result = []
 
         target_value = getattr(self.target_state, attr, None)
         if target_value is None:
             return []
 
-        for entity_id in self._group.climate_entity_ids:
+        for entity_id in self._get_capable_entities(attr, target_value):
             state = self._hass.states.get(entity_id)
             if not state:
-                continue
-
-            # Check mode support
-            if attr in MODE_MODES_MAP:
-                if target_value not in state.attributes.get(MODE_MODES_MAP[attr], []):
-                    continue
-            elif attr not in state.attributes:
                 continue
 
             current_value = state.state if attr == ATTR_HVAC_MODE else state.attributes.get(attr)
@@ -308,9 +340,9 @@ class BaseServiceCallHandler(ABC):
                     continue
 
             if current_value != target_value:
-                entity_ids.append(entity_id)
+                result.append(entity_id)
 
-        return entity_ids
+        return result
 
     def _get_parent_id(self) -> str:
         """Create a unique Parent ID for echo tracking.
@@ -489,8 +521,8 @@ class SyncCallHandler(BaseServiceCallHandler):
         """Generate calls based on target_state diff."""
         return super()._generate_calls(data=data, filter_state=self._filter_state)
 
-    def _get_call_entity_ids(self, attr: str) -> list[str]:
-        """Override to use diffing - only return entities that need sync."""
+    def _get_call_entity_ids(self, attr: str, value: Any = None) -> list[str]:  # noqa: ARG002
+        """Capability + necessity check: 'Can I?' and 'Should I?'."""
         return self._get_unsynced_entities(attr)
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
@@ -521,6 +553,6 @@ class ScheduleCallHandler(BaseServiceCallHandler):
         """Block schedule calls if blocking mode is active."""
         return self._group.blocking_mode
 
-    def _get_call_entity_ids(self, attr: str) -> list[str]:
-        """Override to use diffing - only return entities that need sync."""
+    def _get_call_entity_ids(self, attr: str, value: Any = None) -> list[str]:  # noqa: ARG002
+        """Capability + necessity check: 'Can I?' and 'Should I?'."""
         return self._get_unsynced_entities(attr)

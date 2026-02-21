@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.19.2 - 2026-02-21
+
+### 🔧 Fixes
+
+*   **Service Call Filtering**: Improved handling of groups with mixed hardware (e.g. ACs and simple TRVs).
+    *   Commands for Presets, Fan, or Swing modes are now strictly filtered to only target members that support the specific feature and value. This resolves potential errors in Home Assistant logs when using the `Union` feature strategy.
+
 ## 0.19.1 - 2026-02-20
 
 ### ✨ New Features
