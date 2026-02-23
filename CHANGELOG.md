@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.19.3 - 2026-02-23
+
+### 🎨 UI & UX Changes
+
+*   **UI Menu Sections**: Reorganized the configuration menu into collapsible sections for better clarity.
+*   **Expand Sections Option**: Option to expand all menu sections by default.
+
 ## 0.19.2 - 2026-02-21
 
 ### 🔧 Fixes

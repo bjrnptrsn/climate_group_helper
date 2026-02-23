@@ -104,6 +104,7 @@ CONF_MIN_TEMP_OFF = "min_temp_off"
 CONF_RESYNC_INTERVAL = "resync_interval"
 CONF_OVERRIDE_DURATION = "override_duration"
 CONF_PERSIST_CHANGES = "persist_changes"
+CONF_EXPAND_SECTIONS = "expand_sections"
 
 
 class AverageOption(StrEnum):

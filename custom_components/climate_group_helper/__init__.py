@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from .const import (
     CONF_CLOSE_DELAY,
     CONF_DEBOUNCE_DELAY,
+    CONF_EXPAND_SECTIONS,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_CONFIG,
@@ -105,6 +106,7 @@ VALID_CONFIG_KEYS = {
     CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_CONFIG,
+    CONF_EXPAND_SECTIONS,
 }
 
 # Track which platforms have been set up per entry
@@ -142,25 +144,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Migrate old config entries to version 6 using a 'Soft Reset' strategy.
+    """Migrate old config entries to version 7 using a 'Soft Reset' strategy.
     
     This ensures that no invalid or legacy keys survive the migration, potentially
     resetting some user customizations if keys were renamed, but guaranteeing a 
     valid configuration state.
     """
-    if entry.version < 6:
-        _LOGGER.info("[%s] Migrating config entry from version %s to 6 (Soft Reset)", entry.title, entry.version)
+    if entry.version < 7:
+        _LOGGER.info("[%s] Migrating config entry from version %s to 7 (Soft Reset)", entry.title, entry.version)
         
-        # Combine data + options (old versions stored some keys in data)
+        # Combine data + options
         old_config = {**entry.data, **entry.options}
 
         # Whitelist Filter: Keep only currently valid keys
         new_options = {key: value for key, value in old_config.items() if key in VALID_CONFIG_KEYS}
         
-        # Update entry
-        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=6)
+        # Ensure default for expand_sections
+        if CONF_EXPAND_SECTIONS not in new_options:
+            new_options[CONF_EXPAND_SECTIONS] = False
         
-        _LOGGER.info("[%s] Migration complete. %d valid keys preserved, %d keys discarded.", entry.title, len(new_options), len(old_config) - len(new_options))
+        # Update entry
+        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=7)
+        
+        _LOGGER.info("[%s] Migration complete. %d valid keys preserved.", entry.title, len(new_options))
     
     return True
 
