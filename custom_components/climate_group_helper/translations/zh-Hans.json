@@ -18,7 +18,7 @@
       "no_entities": "您必须至少选择一个空调设备。",
       "invalid_entity": "一个或多个选定的设备不是有效的空调实体。",
       "duplicate_name": "以该名称命名的空调组已存在。",
-      "unavailable_entities": "某些选定的设备不可用。组将被创建，但在它们上线之前可能无法完全工作。"
+      "unavailable_entities": "部分所选设备不可用。群组将被创建，但在它们响应之前可能无法完全运行。"
     },
     "abort": {
       "already_configured": "此组已配置。",
@@ -31,155 +31,150 @@
     "step": {
       "init": {
         "title": "配置空调组",
-        "description": "管理成员、传感器逻辑、高级设置和同步行为。",
-        "menu_options": {
-          "members": "成员 & 模式",
-          "temperature": "温度",
-          "humidity": "湿度",
-          "sync": "同步模式",
-          "window_control": "窗口控制",
-          "schedule": "日程表与定时器",
-          "advanced": "高级设置"
-        }
-      },
-      "members": {
-        "title": "成员 & 模式",
-        "description": "选择您的设备并选择组如何组合它们的状态和功能。‘策略’定义了成员处于不同模式时组的行为。",
-        "data": {
-          "entities": "空调设备",
-          "master_entity": "主设备",
-          "hvac_mode_strategy": "HVAC 模式策略",
-          "feature_strategy": "功能兼容性"
+        "sections": {
+          "members_section": {
+            "name": "成员 & 模式",
+            "description": "添加气候设备。选择当成员功能不同时如何合并功能（预设、风扇模式）。",
+            "data": {
+              "entities": "空调设备",
+              "master_entity": "主设备",
+              "hvac_mode_strategy": "HVAC 模式策略",
+              "feature_strategy": "功能兼容性"
+            },
+            "data_description": {
+              "entities": "添加或删除设备。移除设备将停止组对其的控制。",
+              "master_entity": "指定一个设备作为主温控器。它的值可以覆盖组的计算结果。",
+              "hvac_mode_strategy": "从成员计算组状态的策略 (例如，如果一个正在 'heat'，另一个已 'off')。",
+              "feature_strategy": "确定当成员具有不同能力时，组上可用的功能 (例如预设模式, 风扇模式)。"
+            }
+          },
+          "temperature_section": {
+            "name": "温度设置",
+            "description": "通过成员计算温度或使用主实体。支持外部传感器和 TRV 校准。",
+            "data": {
+              "temp_target_avg": "目标温度",
+              "temp_use_master": "使用主设备目标温度",
+              "temp_target_round": "目标温度精度",
+              "temp_current_avg": "当前温度",
+              "temp_sensors": "外部温度传感器",
+              "temp_update_targets": "将外部温度写入实体",
+              "temp_calibration_mode": "校准模式",
+              "calibration_heartbeat": "校准心跳 (分钟)",
+              "calibration_ignore_off": "忽略已关闭的成员"
+            },
+            "data_description": {
+              "temp_target_avg": "组如何计算要发送给成员的目标设定值。",
+              "temp_use_master": "使用主设备的设定值而不是计算平均值。不可用时回退到平均值。",
+              "temp_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
+              "temp_current_avg": "组如何汇总成员的传感器读数。",
+              "temp_sensors": "使用外部传感器代替成员读数。这将成为组温度的唯一真实来源。",
+              "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。",
+              "temp_calibration_mode": "绝对: 直接发送值。偏移: 发送差值 (外部 - TRV 内部)。 缩放: 发送为整数 x100 (例如 21.5 -> 2150)。",
+              "calibration_heartbeat": "定期强制将校准同步到实体，即使温度未更改。设置为 0 以禁用。",
+              "calibration_ignore_off": "不要向当前处于关闭状态的成员发送校准更新。"
+            }
+          },
+          "humidity_section": {
+            "name": "湿度设置",
+            "description": "通过成员计算湿度或使用主实体。可选外部传感器。",
+            "data": {
+              "humidity_target_avg": "目标湿度",
+              "humidity_use_master": "使用主设备目标湿度",
+              "humidity_target_round": "目标湿度精度",
+              "humidity_current_avg": "当前湿度",
+              "humidity_sensors": "外部湿度传感器",
+              "humidity_update_targets": "将外部湿度写入实体"
+            },
+            "data_description": {
+              "humidity_target_avg": "组如何计算要发送给成员的目标设定值。",
+              "humidity_use_master": "使用主设备的设定值而不是计算平均值。不可用时回退到平均值。",
+              "humidity_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
+              "humidity_current_avg": "组如何汇总成员的传感器读数。",
+              "humidity_sensors": "使用外部传感器代替成员读数。这将成为组湿度的唯一真实来源。",
+              "humidity_update_targets": "将外部传感器值写入数字实体。用于除湿机校准。"
+            }
+          },
+          "sync_section": {
+            "name": "同步模式",
+            "description": "控制组如何同步成员的手动更改。选择同步的属性（如温度、预设等）。",
+            "data": {
+              "sync_mode": "同步模式",
+              "sync_attributes": "同步属性",
+              "ignore_off_members": "尊重成员关闭状态"
+            },
+            "data_description": {
+              "sync_mode": "标准：无同步。镜像：复制所有更改。锁定：恢复更改。主/锁定：仅主实体可控。",
+              "sync_attributes": "在此处选择的属性将在锁定/镜像模式下强制执行。未选择的属性允许本地控制 (例如同步温度但允许用户本地更改风扇速度)。",
+              "ignore_off_members": "群组将不会打开当前处于关闭状态的成员。（部分同步）"
+            }
+          },
+          "window_section": {
+            "name": "窗口控制",
+            "description": "窗户打开时关闭或调整温度。关闭后恢复。",
+            "data": {
+              "window_mode": "窗口控制模式",
+              "window_adopt_manual_changes": "采用手动更改",
+              "window_action": "开窗动作",
+              "window_temperature": "开窗温度",
+              "room_sensor": "房间窗口传感器",
+              "zone_sensor": "区域窗口传感器",
+              "room_open_delay": "房间打开延迟 (秒)",
+              "zone_open_delay": "区域打开延迟 (秒)",
+              "close_delay": "关闭延迟 (秒)"
+            },
+            "data_description": {
+              "window_mode": "基于传感器启用组。窗口打开时 HVAC 设置为 'off'。",
+              "window_adopt_manual_changes": "允许在窗户打开时更改目标状态。",
+              "window_action": "窗户打开时的动作：完全关闭或设置为特定温度（例如防冻保护）。",
+              "window_temperature": "选择“设置温度”动作时的目标温度。",
+              "room_sensor": "房间窗口的二进制传感器。较短延迟。",
+              "zone_sensor": "区域其他窗口的二进制传感器。较长延迟。",
+              "room_open_delay": "房间窗口打开后的等待时间。",
+              "zone_open_delay": "区域窗口打开后的等待时间。",
+              "close_delay": "窗口关闭后的恢复等待时间。"
+            }
+          },
+          "schedule_section": {
+            "name": "日程自动化",
+            "description": "连接 HA 日程以自动化温度。设置重新同步频率和覆盖持续时间。也可通过服务动态切换日程。",
+            "data": {
+              "schedule_entity": "日程表实体",
+              "resync_interval": "重新同步间隔 (分钟)",
+              "override_duration": "手动覆盖时长 (分钟)",
+              "persist_changes": "持久覆盖 (Sticky)"
+            },
+            "data_description": {
+              "schedule_entity": "选择一个日程表实体。日程表的“附加数据”字段可以包含 YAML 属性，如 'temperature: 20.5' 或 'hvac_mode: heat'。",
+              "resync_interval": "每 X 分钟强制将成员同步到群组的目标状态。防止设备错过命令或由于手动调整而导致的偏离。设置为 0 以禁用。",
+              "override_duration": "手动覆盖的持续时间。在此时间过后，群组将自动恢复到当前日程表。设置为 0 以跳过覆盖期。",
+              "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。"
+            }
+          },
+          "advanced_section": {
+            "name": "高级设置",
+            "description": "去抖动、重试行为、调试传感器和关闭时的最低温度（强制阀门关闭）。",
+            "data": {
+              "debounce_delay": "防抖延迟 (秒)",
+              "retry_attempts": "重试次数",
+              "retry_delay": "重试延迟 (秒)",
+              "min_temp_off": "关闭时的最低温度",
+              "expose_smart_sensors": "公开智能传感器",
+              "expose_member_entities": "公开成员列表",
+              "expose_config": "显示配置 (调试)"
+            },
+            "data_description": {
+              "debounce_delay": "发送命令前的等待时间。较高的值可防止滑动控制时出现“连发”命令。",
+              "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
+              "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。",
+              "min_temp_off": "关闭群组时发送设备的最低温度（例如 5°C）。这可确保阀门完全关闭以进行防冻保护。",
+              "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
+              "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
+              "expose_config": "将所有配置值添加到实体属性中。用于调试。"
+            }
+          }
         },
-        "data_description": {
-          "entities": "添加或删除设备。移除设备将停止组对其的控制。",
-          "master_entity": "指定一个设备作为主温控器。它的值可以覆盖组的计算结果。",
-          "hvac_mode_strategy": "从成员计算组状态的策略 (例如，如果一个正在 'heat'，另一个已 'off')。",
-          "feature_strategy": "确定当成员具有不同能力时，组上可用的功能 (例如预设模式, 风扇模式)。"
-        }
-      },
-      "temperature": {
-        "title": "温度设置",
-        "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
         "data": {
-          "temp_target_avg": "目标温度",
-          "temp_use_master": "使用主设备目标温度",
-          "temp_target_round": "目标温度精度",
-          "temp_current_avg": "当前温度",
-          "temp_sensors": "外部温度传感器",
-          "temp_update_targets": "将外部温度写入实体",
-          "temp_calibration_mode": "校准模式",
-          "calibration_heartbeat": "校准心跳 (分钟)",
-          "calibration_ignore_off": "忽略已关闭的成员"
-        },
-        "data_description": {
-          "temp_target_avg": "组如何计算要发送给成员的目标设定值。",
-          "temp_use_master": "使用主设备的设定值而不是计算平均值。不可用时回退到平均值。",
-          "temp_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
-          "temp_current_avg": "组如何汇总成员的传感器读数。",
-          "temp_sensors": "使用外部传感器代替成员读数。这将成为组温度的唯一真实来源。",
-          "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。",
-          "temp_calibration_mode": "绝对: 直接发送值。偏移: 发送差值 (外部 - TRV 内部)。 缩放: 发送为整数 x100 (例如 21.5 -> 2150)。",
-          "calibration_heartbeat": "定期强制将校准同步到实体，即使温度未更改。设置为 0 以禁用。",
-          "calibration_ignore_off": "不要向当前处于关闭状态的成员发送校准更新。"
-        }
-      },
-      "humidity": {
-        "title": "湿度设置",
-        "description": "配置湿度聚合和外部传感器。请注意，许多恒温器仅报告湿度，不允许控制。",
-        "data": {
-          "humidity_target_avg": "目标湿度",
-          "humidity_use_master": "使用主设备目标湿度",
-          "humidity_target_round": "目标湿度精度",
-          "humidity_current_avg": "当前湿度",
-          "humidity_sensors": "外部湿度传感器",
-          "humidity_update_targets": "将外部湿度写入实体"
-        },
-        "data_description": {
-          "humidity_target_avg": "组如何计算要发送给成员的目标设定值。",
-          "humidity_use_master": "使用主设备的设定值而不是计算平均值。不可用时回退到平均值。",
-          "humidity_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
-          "humidity_current_avg": "组如何汇总成员的传感器读数。",
-          "humidity_sensors": "使用外部传感器代替成员读数。这将成为组湿度的唯一真实来源。",
-          "humidity_update_targets": "将外部传感器值写入数字实体。用于除湿机校准。"
-        }
-      },
-      "sync": {
-        "title": "同步模式 & 属性",
-        "description": "控制当有人物理调整设备时会发生什么。警告: 为避免‘空调大战’，请确保设备未分配给多个启用了主动同步模式的组。",
-        "data": {
-          "sync_mode": "同步模式",
-          "sync_attributes": "同步属性",
-          "ignore_off_members": "尊重成员关闭状态"
-        },
-        "data_description": {
-          "sync_mode": "标准: 组显示聚合状态但不强制执行。镜像: 一个设备上的更改将复制到所有其他设备。锁定: 设备上的手动更改将恢复为与组匹配。",
-          "sync_attributes": "在此处选择的属性将在锁定/镜像模式下强制执行。未选择的属性允许本地控制 (例如同步温度但允许用户本地更改风扇速度)。",
-          "ignore_off_members": "群组将不会打开当前处于关闭状态的成员。（部分同步）"
-        }
-      },
-      "window_control": {
-        "title": "窗口控制",
-        "description": "配置打开窗户时自动关闭加热/冷却。两个传感器都是可选的。",
-        "data": {
-          "window_mode": "窗口控制模式",
-          "window_adopt_manual_changes": "采用手动更改",
-          "room_sensor": "房间窗口传感器",
-          "zone_sensor": "区域窗口传感器",
-          "room_open_delay": "房间打开延迟 (秒)",
-          "zone_open_delay": "区域打开延迟 (秒)",
-          "window_action": "开窗动作",
-          "window_temperature": "开窗温度",
-          "close_delay": "关闭延迟 (秒)"
-        },
-        "data_description": {
-          "window_mode": "基于传感器启用组。窗口打开时 HVAC 设置为 'off'。",
-          "window_adopt_manual_changes": "允许在窗户打开时更改目标状态。",
-          "room_sensor": "房间窗口的二进制传感器。较短延迟。",
-          "zone_sensor": "区域其他窗口的二进制传感器。较长延迟。",
-          "room_open_delay": "房间窗口打开后的等待时间。",
-          "zone_open_delay": "区域窗口打开后的等待时间。",
-          "close_delay": "窗口关闭后的恢复等待时间。",
-          "window_action": "窗户打开时的动作：完全关闭或设置为特定温度（例如防冻保护）。",
-          "window_temperature": "选择“设置温度”动作时的目标温度。"
-        }
-      },
-      "schedule": {
-        "title": "日程表与定时器",
-        "description": "配置群组的自动化。链接日程表实体以实现自动化更改，并启用定期同步。",
-        "data": {
-          "schedule_entity": "日程表实体",
-          "resync_interval": "重新同步间隔 (分钟)",
-          "override_duration": "手动覆盖时长 (分钟)",
-          "persist_changes": "持久覆盖 (Sticky)"
-        },
-        "data_description": {
-          "schedule_entity": "选择一个日程表实体。日程表的“附加数据”字段可以包含 YAML 属性，如 'temperature: 20.5' 或 'hvac_mode: heat'。",
-          "resync_interval": "每 X 分钟强制将成员同步到群组的目标状态。防止设备错过命令或由于手动调整而导致的偏离。设置为 0 以禁用。",
-          "override_duration": "手动覆盖的持续时间。在此时间过后，群组将自动恢复到当前日程表。设置为 0 以跳过覆盖期。",
-          "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。"
-        }
-      },
-      "advanced": {
-        "title": "高级设置",
-        "description": "微调命令时间、附加功能和实体暴露。",
-        "data": {
-          "debounce_delay": "防抖延迟 (秒)",
-          "retry_attempts": "重试次数",
-          "retry_delay": "重试延迟 (秒)",
-          "expose_smart_sensors": "公开智能传感器",
-          "expose_member_entities": "公开成员列表",
-          "expose_config": "显示配置 (调试)",
-          "min_temp_off": "关闭时的最低温度"
-        },
-        "data_description": {
-          "debounce_delay": "发送命令前等待的时间。较高的值可防止滑动控件时的‘机枪’命令，但感觉较慢。",
-          "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
-          "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。",
-          "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
-          "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
-          "expose_config": "将所有配置值添加到实体属性中。用于调试。",
-          "min_temp_off": "将在关闭组时发送设备的最低温度（例如 5°C）。（强制关闭阀门）"
+          "expand_sections": "默认展开所有部分"
         }
       }
     },
@@ -187,19 +182,26 @@
       "no_entities": "组中必须至少保留一个空调设备。",
       "invalid_entity": "选定的设备无效。",
       "configuration_error": "无法更新配置。",
-      "calibration_requires_sensors": "校准目标需要至少一个外部温度传感器。"
+      "calibration_requires_sensors": "校准目标需要至少一个外部温度传感器。",
+      "master_refresh_notice": "已添加主实体。新选项可用。",
+      "master_options_notice": "新的主实体选项"
     },
     "abort": {
       "no_changes": "未检测到更改。"
     }
   },
   "selector": {
-    "temp_current_avg": {
+    "hvac_mode_strategy": {
       "options": {
-        "mean": "平均值",
-        "median": "中位数 (忽略异常值)",
-        "min": "最小值 (最低)",
-        "max": "最大值 (最高)"
+        "normal": "正常 (民主)",
+        "off_priority": "关闭优先 (主开关)",
+        "auto": "自动 (智能)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "交集 (安全模式 - 共同功能)",
+        "union": "并集 (高级用户 - 所有功能)"
       }
     },
     "temp_target_avg": {
@@ -217,19 +219,19 @@
         "integer": "整数 (1°)"
       }
     },
-    "temp_calibration_mode": {
-      "options": {
-        "absolute": "绝对 – 直接发送值 (标准)",
-        "offset": "偏移 – 发送差值 (外部 - TRV 内部)",
-        "scaled": "缩放 – 整数 x100 (Danfoss Ally)"
-      }
-    },
-    "humidity_current_avg": {
+    "temp_current_avg": {
       "options": {
         "mean": "平均值",
         "median": "中位数 (忽略异常值)",
         "min": "最小值 (最低)",
         "max": "最大值 (最高)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "绝对 – 直接发送值 (标准)",
+        "offset": "偏移 – 发送差值 (外部 - TRV 内部)",
+        "scaled": "缩放 – 整数 x100 (Danfoss Ally)"
       }
     },
     "humidity_target_avg": {
@@ -247,31 +249,20 @@
         "integer": "整数 (1%)"
       }
     },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "平均值",
+        "median": "中位数 (忽略异常值)",
+        "min": "最小值 (最低)",
+        "max": "最大值 (最高)"
+      }
+    },
     "sync_mode": {
       "options": {
         "standard": "标准 (单向)",
         "mirror": "镜像 (Magic Sync - 双向)",
         "lock": "锁定 (老板 - 强制组)",
-        "master_lock": "Master/Lock"
-      }
-    },
-    "window_mode": {
-      "options": {
-        "off": "关闭 – 窗口控制已禁用",
-        "on": "开启 – 窗口控制已启用"
-      }
-    },
-    "hvac_mode_strategy": {
-      "options": {
-        "normal": "正常 (民主)",
-        "off_priority": "关闭优先 (主开关)",
-        "auto": "自动 (智能)"
-      }
-    },
-    "feature_strategy": {
-      "options": {
-        "intersection": "交集 (安全模式 - 共同功能)",
-        "union": "并集 (高级用户 - 所有功能)"
+        "master_lock": "Master/Lock – 仅主实体可以更改组目标"
       }
     },
     "sync_attributes": {
@@ -287,10 +278,10 @@
         "humidity": "湿度 (目标)"
       }
     },
-    "window_action": {
+    "window_mode": {
       "options": {
-        "off": "关闭（默认）",
-        "temperature": "设置温度"
+        "off": "关闭 – 窗口控制已禁用",
+        "on": "开启 – 窗口控制已启用"
       }
     },
     "window_adopt_manual_changes": {
@@ -298,6 +289,12 @@
         "off": "关闭 – 阻止所有更改",
         "all": "全部 – 接受所有手动更改",
         "master_only": "仅主设备 – 仅接受主实体的更改"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "关闭（默认）",
+        "temperature": "设置温度"
       }
     }
   },

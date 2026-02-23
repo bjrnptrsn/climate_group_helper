@@ -18,7 +18,7 @@
       "no_entities": "U moet ten minste één klimaatapparaat selecteren.",
       "invalid_entity": "Eén of meer geselecteerde apparaten zijn geen geldige klimaatentiteiten.",
       "duplicate_name": "Er bestaat al een klimaatgroep met deze naam.",
-      "unavailable_entities": "Sommige geselecteerde apparaten zijn niet beschikbaar. De groep wordt gemaakt maar werkt mogelijk niet volledig totdat ze gehoorzamen."
+      "unavailable_entities": "Sommige geselecteerde apparaten zijn niet beschikbaar. De groep wordt aangemaakt, maar werkt mogelijk niet volledig totdat ze reageren."
     },
     "abort": {
       "already_configured": "Deze groep is al geconfigureerd.",
@@ -31,155 +31,150 @@
     "step": {
       "init": {
         "title": "Klimaatgroep Configureren",
-        "description": "Beheer leden, sensorlogica, geavanceerde instellingen en synchronisatiegedrag.",
-        "menu_options": {
-          "members": "Leden & Modi",
-          "temperature": "Temperatuur",
-          "humidity": "Vochtigheid",
-          "sync": "Sync Modus",
-          "window_control": "Raambediening",
-          "schedule": "Schema & Timers",
-          "advanced": "Geavanceerde instellingen"
-        }
-      },
-      "members": {
-        "title": "Leden & Modi",
-        "description": "Selecteer uw apparaten en kies hoe de groep hun statussen en functies combineert. 'Strategie' definieert het gedrag van de groep wanneer leden in verschillende modi staan.",
-        "data": {
-          "entities": "Klimaatapparaten",
-          "master_entity": "Masterentiteit",
-          "hvac_mode_strategy": "HVAC Modus Strategie",
-          "feature_strategy": "Functiecompatibiliteit"
+        "sections": {
+          "members_section": {
+            "name": "Leden & Modi",
+            "description": "Voeg apparaten toe. Kies hoe functies (presets, ventilator) worden gecombineerd bij verschillen.",
+            "data": {
+              "entities": "Klimaatapparaten",
+              "master_entity": "Masterentiteit",
+              "hvac_mode_strategy": "HVAC Modus Strategie",
+              "feature_strategy": "Functiecompatibiliteit"
+            },
+            "data_description": {
+              "entities": "Apparaten toevoegen of verwijderen. Verwijderen stopt de besturing door de groep.",
+              "master_entity": "Wijs één apparaat aan als leidende thermostaat. De waarden kunnen groepsberekeningen overschrijven.",
+              "hvac_mode_strategy": "Strategie voor het berekenen van de groepsstatus vanuit zijn leden (bijv. als één 'heat' en een ander 'off' staat).",
+              "feature_strategy": "Bepaalt welke functies (bijv. preset modi, ventilatormodi) beschikbaar zijn in de groep wanneer leden verschillende mogelijkheden hebben."
+            }
+          },
+          "temperature_section": {
+            "name": "Temperatuurinstellingen",
+            "description": "Bereken temperatuur via leden of gebruik master. Externe sensoren en TRV-kalibratie.",
+            "data": {
+              "temp_target_avg": "Doeltemperatuur",
+              "temp_use_master": "Gebruik doeltemperatuur van masterentiteit",
+              "temp_target_round": "Precisie Doeltemperatuur",
+              "temp_current_avg": "Huidige Temperatuur",
+              "temp_sensors": "Externe Temperatuursensoren",
+              "temp_update_targets": "Schrijf Externe Temp naar Entiteiten",
+              "temp_calibration_mode": "Kalibratiemodus",
+              "calibration_heartbeat": "Kalibratie Hartslag (min)",
+              "calibration_ignore_off": "Uitgeschakelde leden negeren"
+            },
+            "data_description": {
+              "temp_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
+              "temp_use_master": "Gebruik het instelpunt van de masterentiteit in plaats van een gemiddelde te berekenen. Valt terug op gemiddelde indien niet beschikbaar.",
+              "temp_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
+              "temp_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
+              "temp_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de temperatuur van de groep.",
+              "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur.",
+              "temp_calibration_mode": "Absoluut: Verzend waarde direct. Offset: Verzend verschil (Extern - TRV Intern). Geschaald: Verzend als geheel getal x100 (bijv. 21.5 -> 2150).",
+              "calibration_heartbeat": "Forceer periodiek kalibratiesynchronisatie naar entiteiten, zelfs als de temperatuur niet is gewijzigd. Stel in op 0 om uit te schakelen.",
+              "calibration_ignore_off": "Stuur geen kalibratie-updates naar leden die momenteel uitgeschakeld zijn."
+            }
+          },
+          "humidity_section": {
+            "name": "Luchtvochtigheidsinstellingen",
+            "description": "Bereken vochtigheid via leden of gebruik master. Optionele externe sensoren.",
+            "data": {
+              "humidity_target_avg": "Doel Luchtvochtigheid",
+              "humidity_use_master": "Gebruik doelvochtigheid van masterentiteit",
+              "humidity_target_round": "Precisie Doel Luchtvochtigheid",
+              "humidity_current_avg": "Huidige Luchtvochtigheid",
+              "humidity_sensors": "Externe Vochtigheidssensoren",
+              "humidity_update_targets": "Schrijf Externe Luchtvochtigheid naar Entiteiten"
+            },
+            "data_description": {
+              "humidity_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
+              "humidity_use_master": "Gebruik het instelpunt van de masterentiteit in plaats van een gemiddelde te berekenen. Valt terug op gemiddelde indien niet beschikbaar.",
+              "humidity_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
+              "humidity_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
+              "humidity_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de luchtvochtigheid van de groep.",
+              "humidity_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten. Handig voor kalibratie van luchtontvochtigers."
+            }
+          },
+          "sync_section": {
+            "name": "Synchronisatiemodus",
+            "description": "Beheer synchronisatie van handmatige wijzigingen. Kies welke attributen worden gesynchroniseerd.",
+            "data": {
+              "sync_mode": "Sync-modus",
+              "sync_attributes": "Gesynchroniseerde Attributen",
+              "ignore_off_members": "Respecteer de UIT-status van leden"
+            },
+            "data_description": {
+              "sync_mode": "Standaard: Geen sync. Spiegel: Kopieer wijzigingen. Slot: Herstel status. Master: Alleen de master bestuurt.",
+              "sync_attributes": "Hier geselecteerde attributen worden afgedwongen in Lock/Mirror modi. Niet geselecteerde attributen staan lokale controle toe (bijv. temperatuur synchroniseren maar gebruikers lokaal ventilatorsnelheid laten wijzigen).",
+              "ignore_off_members": "Zal de groep GEEN leden inschakelen die momenteel UIT staan. (Gedeeltelijke synchronisatie)"
+            }
+          },
+          "window_section": {
+            "name": "Raambediening",
+            "description": "Uitschakelen of temperatuur aanpassen bij open ramen. Herstellen na sluiten.",
+            "data": {
+              "window_mode": "Raambedieningsmodus",
+              "window_adopt_manual_changes": "Handmatige wijzigingen overnemen",
+              "window_action": "Actie bij open raam",
+              "window_temperature": "Temperatuur bij open raam",
+              "room_sensor": "Kamer Raamsensor",
+              "zone_sensor": "Zone Raamsensor",
+              "room_open_delay": "Vertraging Kamer (s)",
+              "zone_open_delay": "Vertraging Zone (s)",
+              "close_delay": "Vertraging Sluiten (s)"
+            },
+            "data_description": {
+              "window_mode": "Schakel groep in/uit op basis van sensoren. HVAC gaat naar 'off' als ramen open zijn.",
+              "window_adopt_manual_changes": "Sta wijzigingen van het instelpunt toe terwijl ramen open zijn.",
+              "window_action": "Wat te doen als een raam opent: Volledig uitschakelen of een specifieke temperatuur instellen (bijv. vorstbeveiliging).",
+              "window_temperature": "Doeltemperatuur wanneer de actie 'Temperatuur instellen' is geselecteerd.",
+              "room_sensor": "Binaire sensor voor raam in de kamer. Korte vertraging.",
+              "zone_sensor": "Binaire sensor voor ramen in de zone. Lange vertraging.",
+              "room_open_delay": "Wachttijd na openen kamerraam.",
+              "zone_open_delay": "Wachttijd na openen zoneraam.",
+              "close_delay": "Wachttijd na sluiten ramen voor herstel."
+            }
+          },
+          "schedule_section": {
+            "name": "Schema-automatisering",
+            "description": "Koppel HA-schema voor automatisering. Stel resync-frequentie en override-duur in.",
+            "data": {
+              "schedule_entity": "Schema Entiteit",
+              "resync_interval": "Resync Interval (minuten)",
+              "override_duration": "Override Duur (minuten)",
+              "persist_changes": "Sticky Override"
+            },
+            "data_description": {
+              "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'.",
+              "resync_interval": "Dwing leden elke X minuten naar de doelstatus van de groep. Voorkomt verloop als apparaten een commando missen of handmatig worden aangepast. Stel in op 0 om uit te schakelen.",
+              "override_duration": "De duur van handmatige overrides. Na deze tijd keert de groep automatisch terug naar het schema. Stel in op 0 om de override-periode over te slaan.",
+              "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen."
+            }
+          },
+          "advanced_section": {
+            "name": "Geavanceerde instellingen",
+            "description": "Debounce, herhaalpogingen, debug-sensoren en minimale temperatuur bij uit (geforceerde klepsluiting).",
+            "data": {
+              "debounce_delay": "Debounce Vertraging (seconden)",
+              "retry_attempts": "Herhaalpogingen",
+              "retry_delay": "Herhaalvertraging (seconden)",
+              "min_temp_off": "Minimumtemperatuur bij uit",
+              "expose_smart_sensors": "Slimme sensoren weergeven",
+              "expose_member_entities": "Ledenlijst weergeven",
+              "expose_config": "Configuratie tonen (Debug)"
+            },
+            "data_description": {
+              "debounce_delay": "Wachttijd voor het verzenden van opdrachten. Hogere waarden voorkomen 'snelvuur'-opdrachten bij het schuiven van regelaars.",
+              "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
+              "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren.",
+              "min_temp_off": "Verzendt de minimumtemperatuur van het apparaat (bijv. 5°C) bij het uitschakelen van de groep. Dit zorgt ervoor dat kranen volledig gesloten zijn voor vorstbescherming.",
+              "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
+              "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
+              "expose_config": "Voegt alle configuratiewaarden toe aan de entiteitattributen. Handig voor debugging."
+            }
+          }
         },
-        "data_description": {
-          "entities": "Apparaten toevoegen of verwijderen. Verwijderen stopt de besturing door de groep.",
-          "master_entity": "Wijs één apparaat aan als leidende thermostaat. De waarden kunnen groepsberekeningen overschrijven.",
-          "hvac_mode_strategy": "Strategie voor het berekenen van de groepsstatus vanuit zijn leden (bijv. als één 'heat' en een ander 'off' staat).",
-          "feature_strategy": "Bepaalt welke functies (bijv. preset modi, ventilatormodi) beschikbaar zijn in de groep wanneer leden verschillende mogelijkheden hebben."
-        }
-      },
-      "temperature": {
-        "title": "Temperatuurinstellingen",
-        "description": "Configureer hoe de groep temperatuuraggregatie en instelpunten beheert. Externe sensoren overschrijven metingen van leden indien geselecteerd.",
         "data": {
-          "temp_target_avg": "Doeltemperatuur",
-          "temp_use_master": "Gebruik doeltemperatuur van masterentiteit",
-          "temp_target_round": "Precisie Doeltemperatuur",
-          "temp_current_avg": "Huidige Temperatuur",
-          "temp_sensors": "Externe Temperatuursensoren",
-          "temp_update_targets": "Schrijf Externe Temp naar Entiteiten",
-          "temp_calibration_mode": "Kalibratiemodus",
-          "calibration_heartbeat": "Kalibratie Hartslag (min)",
-          "calibration_ignore_off": "Uitgeschakelde leden negeren"
-        },
-        "data_description": {
-          "temp_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
-          "temp_use_master": "Gebruik het instelpunt van de masterentiteit in plaats van een gemiddelde te berekenen. Valt terug op gemiddelde indien niet beschikbaar.",
-          "temp_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
-          "temp_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
-          "temp_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de temperatuur van de groep.",
-          "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur.",
-          "temp_calibration_mode": "Absoluut: Verzend waarde direct. Offset: Verzend verschil (Extern - TRV Intern). Geschaald: Verzend als geheel getal x100 (bijv. 21.5 -> 2150).",
-          "calibration_heartbeat": "Forceer periodiek kalibratiesynchronisatie naar entiteiten, zelfs als de temperatuur niet is gewijzigd. Stel in op 0 om uit te schakelen.",
-          "calibration_ignore_off": "Stuur geen kalibratie-updates naar leden die momenteel uitgeschakeld zijn."
-        }
-      },
-      "humidity": {
-        "title": "Luchtvochtigheidsinstellingen",
-        "description": "Configureer aggregatie van luchtvochtigheid en externe sensoren. Merk op dat veel thermostaten alleen luchtvochtigheid rapporteren en geen regeling toestaan.",
-        "data": {
-          "humidity_target_avg": "Doel Luchtvochtigheid",
-          "humidity_use_master": "Gebruik doelvochtigheid van masterentiteit",
-          "humidity_target_round": "Precisie Doel Luchtvochtigheid",
-          "humidity_current_avg": "Huidige Luchtvochtigheid",
-          "humidity_sensors": "Externe Vochtigheidssensoren",
-          "humidity_update_targets": "Schrijf Externe Luchtvochtigheid naar Entiteiten"
-        },
-        "data_description": {
-          "humidity_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
-          "humidity_use_master": "Gebruik het instelpunt van de masterentiteit in plaats van een gemiddelde te berekenen. Valt terug op gemiddelde indien niet beschikbaar.",
-          "humidity_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
-          "humidity_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
-          "humidity_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de luchtvochtigheid van de groep.",
-          "humidity_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten. Handig voor kalibratie van luchtontvochtigers."
-        }
-      },
-      "sync": {
-        "title": "Sync Modus & Attributen",
-        "description": "Beheer wat er gebeurt wanneer iemand fysiek een apparaat aanpast. WAARSCHUWING: Om 'Klimaatoorlogen' te voorkomen, zorg ervoor dat een apparaat niet aan meerdere groepen met actieve Sync Modus is toegewezen.",
-        "data": {
-          "sync_mode": "Synchronisatiemodus",
-          "sync_attributes": "Gesynchroniseerde Attributen",
-          "ignore_off_members": "Respecteer de UIT-status van leden"
-        },
-        "data_description": {
-          "sync_mode": "Standaard: Groep toont geaggregeerde status maar dwingt deze niet af. Mirror: Wijzigingen op één apparaat worden naar alle andere gekopieerd. Lock: Handmatige wijzigingen op apparaten worden teruggedraaid om overeen te komen met de groep.",
-          "sync_attributes": "Hier geselecteerde attributen worden afgedwongen in Lock/Mirror modi. Niet geselecteerde attributen staan lokale controle toe (bijv. temperatuur synchroniseren maar gebruikers lokaal ventilatorsnelheid laten wijzigen).",
-          "ignore_off_members": "Zal de groep GEEN leden inschakelen die momenteel UIT staan. (Gedeeltelijke synchronisatie)"
-        }
-      },
-      "window_control": {
-        "title": "Raambediening",
-        "description": "Configureer automatisch uitschakelen van verwarming/koeling bij openen van ramen. Beide sensoren zijn optioneel.",
-        "data": {
-          "window_mode": "Raambedieningsmodus",
-          "window_adopt_manual_changes": "Handmatige wijzigingen overnemen",
-          "room_sensor": "Kamer Raamsensor",
-          "zone_sensor": "Zone Raamsensor",
-          "room_open_delay": "Vertraging Kamer (s)",
-          "zone_open_delay": "Vertraging Zone (s)",
-          "window_action": "Actie bij open raam",
-          "window_temperature": "Temperatuur bij open raam",
-          "close_delay": "Vertraging Sluiten (s)"
-        },
-        "data_description": {
-          "window_mode": "Schakel groep in/uit op basis van sensoren. HVAC gaat naar 'off' als ramen open zijn.",
-          "window_adopt_manual_changes": "Sta wijzigingen van het instelpunt toe terwijl ramen open zijn.",
-          "room_sensor": "Binaire sensor voor raam in de kamer. Korte vertraging.",
-          "zone_sensor": "Binaire sensor voor ramen in de zone. Lange vertraging.",
-          "room_open_delay": "Wachttijd na openen kamerraam.",
-          "zone_open_delay": "Wachttijd na openen zoneraam.",
-          "close_delay": "Wachttijd na sluiten ramen voor herstel.",
-          "window_action": "Wat te doen als een raam opent: Volledig uitschakelen of een specifieke temperatuur instellen (bijv. vorstbeveiliging).",
-          "window_temperature": "Doeltemperatuur wanneer de actie 'Temperatuur instellen' is geselecteerd."
-        }
-      },
-      "schedule": {
-        "title": "Schema & Timers",
-        "description": "Configureer automatisering voor de groep. Koppel een schema-entiteit om wijzigingen te automatiseren en periodieke synchronisatie in te schakelen.",
-        "data": {
-          "schedule_entity": "Schema Entiteit",
-          "resync_interval": "Resync Interval (minuten)",
-          "override_duration": "Override Duur (minuten)",
-          "persist_changes": "Sticky Override"
-        },
-        "data_description": {
-          "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'.",
-          "resync_interval": "Dwing leden elke X minuten naar de doelstatus van de groep. Voorkomt verloop als apparaten een commando missen of handmatig worden aangepast. Stel in op 0 om uit te schakelen.",
-          "override_duration": "De duur van handmatige overrides. Na deze tijd keert de groep automatisch terug naar het schema. Stel in op 0 om de override-periode over te slaan.",
-          "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen."
-        }
-      },
-      "advanced": {
-        "title": "Geavanceerde instellingen",
-        "description": "Verfijn commandotimings, extra functies en blootstelling van entiteiten.",
-        "data": {
-          "debounce_delay": "Debounce Vertraging (seconden)",
-          "retry_attempts": "Herhaalpogingen",
-          "retry_delay": "Herhaalvertraging (seconden)",
-          "expose_smart_sensors": "Slimme sensoren weergeven",
-          "expose_member_entities": "Ledenlijst weergeven",
-          "expose_config": "Configuratie tonen (Debug)",
-          "min_temp_off": "Minimumtemperatuur bij uit"
-        },
-        "data_description": {
-          "debounce_delay": "Wachttijd voor het verzenden van commando's. Hogere waarden voorkomen 'mitrailleurvuur' commando's bij het schuiven van regelaars, maar voelen trager aan.",
-          "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
-          "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren.",
-          "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
-          "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
-          "expose_config": "Voegt alle configuratiewaarden toe aan de entiteitattributen. Handig voor debugging.",
-          "min_temp_off": "Stuurt de minimumtemperatuur van het apparaat (bijv. 5°C) bij het uitschakelen van de groep. (Forceert sluiten ventiel)"
+          "expand_sections": "Vouw standaard alle secties uit"
         }
       }
     },
@@ -187,19 +182,26 @@
       "no_entities": "Ten minste één klimaatapparaat moet in de groep blijven.",
       "invalid_entity": "Ongeldig apparaat geselecteerd.",
       "configuration_error": "Kan configuratie niet bijwerken.",
-      "calibration_requires_sensors": "Kalibratiedoelen vereisen minimaal één externe temperatuursensor."
+      "calibration_requires_sensors": "Kalibratiedoelen vereisen minimaal één externe temperatuursensor.",
+      "master_refresh_notice": "Master-entiteit toegevoegd. Nieuwe opties beschikbaar.",
+      "master_options_notice": "Nieuwe Master-entiteit optie"
     },
     "abort": {
       "no_changes": "Geen wijzigingen gedetecteerd."
     }
   },
   "selector": {
-    "temp_current_avg": {
+    "hvac_mode_strategy": {
       "options": {
-        "mean": "Gemiddelde",
-        "median": "Mediaan (Negeer Uitschieters)",
-        "min": "Minimum (Laagste)",
-        "max": "Maximum (Hoogste)"
+        "normal": "Normaal (Democratisch)",
+        "off_priority": "Uit Prioriteit (Hoofdschakelaar)",
+        "auto": "Auto (Slim)"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Doorsnede (Veilige Modus - Gemeenschappelijke Functies)",
+        "union": "Vereniging (Geavanceerde Gebruiker - Alle Functies)"
       }
     },
     "temp_target_avg": {
@@ -217,19 +219,19 @@
         "integer": "Gehele Getallen (1°)"
       }
     },
-    "temp_calibration_mode": {
-      "options": {
-        "absolute": "Absoluut – Verzend waarde direct (Standaard)",
-        "offset": "Offset – Verzend verschil (Extern - TRV Intern)",
-        "scaled": "Geschaald – Geheel getal x100 (Danfoss Ally)"
-      }
-    },
-    "humidity_current_avg": {
+    "temp_current_avg": {
       "options": {
         "mean": "Gemiddelde",
         "median": "Mediaan (Negeer Uitschieters)",
         "min": "Minimum (Laagste)",
         "max": "Maximum (Hoogste)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absoluut – Verzend waarde direct (Standaard)",
+        "offset": "Offset – Verzend verschil (Extern - TRV Intern)",
+        "scaled": "Geschaald – Geheel getal x100 (Danfoss Ally)"
       }
     },
     "humidity_target_avg": {
@@ -247,31 +249,20 @@
         "integer": "Gehele Getallen (1%)"
       }
     },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "Gemiddelde",
+        "median": "Mediaan (Negeer Uitschieters)",
+        "min": "Minimum (Laagste)",
+        "max": "Maximum (Hoogste)"
+      }
+    },
     "sync_mode": {
       "options": {
         "standard": "Standaard (Eenrichtings)",
         "mirror": "Mirror (Magic Sync - Tweerichtings)",
         "lock": "Lock (De Baas - Groep Afdwingen)",
-        "master_lock": "Master/Lock"
-      }
-    },
-    "window_mode": {
-      "options": {
-        "off": "Uit – Raambediening is uitgeschakeld",
-        "on": "Aan – Raambediening is ingeschakeld"
-      }
-    },
-    "hvac_mode_strategy": {
-      "options": {
-        "normal": "Normaal (Democratisch)",
-        "off_priority": "Uit Prioriteit (Hoofdschakelaar)",
-        "auto": "Auto (Slim)"
-      }
-    },
-    "feature_strategy": {
-      "options": {
-        "intersection": "Doorsnede (Veilige Modus - Gemeenschappelijke Functies)",
-        "union": "Vereniging (Geavanceerde Gebruiker - Alle Functies)"
+        "master_lock": "Master/Lock – Alleen de master-entiteit kan het doel wijzigen"
       }
     },
     "sync_attributes": {
@@ -287,10 +278,10 @@
         "humidity": "Luchtvochtigheid (Doel)"
       }
     },
-    "window_action": {
+    "window_mode": {
       "options": {
-        "off": "Uitschakelen (Standaard)",
-        "temperature": "Temperatuur instellen"
+        "off": "Uit – Raambediening is uitgeschakeld",
+        "on": "Aan – Raambediening is ingeschakeld"
       }
     },
     "window_adopt_manual_changes": {
@@ -298,6 +289,12 @@
         "off": "Uit – Alle wijzigingen blokkeren",
         "all": "Alle – Alle handmatige wijzigingen accepteren",
         "master_only": "Alleen hoofd – Alleen wijzigingen van het hoofdapparaat accepteren"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Uitschakelen (Standaard)",
+        "temperature": "Temperatuur instellen"
       }
     }
   },

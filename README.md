@@ -22,7 +22,7 @@ Combine multiple climate devices into a single, powerful entity for Home Assista
   - [Device Calibration](#device-calibration)
   - [Sync Modes](#advanced-sync-modes)
   - [Window Control](#window-control)
-  - [Schedule & Automation](#advanced-schedule--automation)
+  - [Schedule Automation](#schedule-automation)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
 - [Installation](#installation)
@@ -89,7 +89,7 @@ Automatically turn off heating when windows open and restore it when they close.
     *   **All:** Any manual change updates the target state. Applied when windows close.
     *   **Master Only:** *(Requires Master Entity)* Only changes on the Master update the target state. Changes on other members are ignored.
 
-### Advanced Schedule & Automation
+### Schedule Automation
 *New in v0.19: Enhanced with Dynamic Service Control!*
 
 *   **Dynamic Control:** Change the active schedule entity on the fly via the `set_schedule_entity` service (e.g. switch to "Away Schedule" when no one is home).
@@ -161,7 +161,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
 | **Ignore Off Members (Calibration)** | Prevents sending calibration updates to devices that are currently `off`, preserving battery life on wireless sensors and TRVs. |
 | **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
-| **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. Essential for TRVs that don't close valves fully or provide frost protection in `off` mode. |
+| **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). |
 
 ### Sync Mode
 
@@ -183,7 +183,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
 | **Close Delay** | Time before restoring heating after windows close (default: 30s). |
 
-### Schedule & Timers
+### Schedule Automation
 
 | Option | Description |
 |--------|-------------|
@@ -196,7 +196,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 | Option | Description |
 |--------|-------------|
-| **Debounce Delay** | Wait before sending commands to prevent network congestion (default: 0.5s). |
+| **Debounce Delay** | Wait before sending commands. Higher values prevent 'rapid-fire' commands when sliding controls, but feel slower (default: 0.5s). |
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
 
