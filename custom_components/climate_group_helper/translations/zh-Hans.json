@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "允许在窗户打开时更改目标状态。",
               "window_action": "窗户打开时的动作：完全关闭或设置为特定温度（例如防冻保护）。",
               "window_temperature": "选择“设置温度”动作时的目标温度。",
-              "room_sensor": "房间窗口的二进制传感器。较短延迟。",
-              "zone_sensor": "区域其他窗口的二进制传感器。较长延迟。",
+              "room_sensor": "(可选) 房间窗户/门的二进制传感器。",
+              "zone_sensor": "(可选) 区域/楼层的窗户/门的二进制传感器。区域传感器应包含房间传感器。",
               "room_open_delay": "房间窗口打开后的等待时间。",
               "zone_open_delay": "区域窗口打开后的等待时间。",
               "close_delay": "窗口关闭后的恢复等待时间。"

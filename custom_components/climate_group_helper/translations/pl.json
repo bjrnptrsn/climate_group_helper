@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "Zezwól na zmiany stanu docelowego, gdy okna są otwarte.",
               "window_action": "Co zrobić po otwarciu okna: Wyłącz całkowicie lub ustaw określoną temperaturę (np. ochronę przed mrozem).",
               "window_temperature": "Temperatura docelowa, gdy wybrana jest akcja 'Ustaw temperaturę'.",
-              "room_sensor": "Czujnik binarny dla okna w pokoju. Krótsze opóźnienie.",
-              "zone_sensor": "Czujnik binarny dla innych okien w strefie. Dłuższe opóźnienie.",
+              "room_sensor": "(Opcjonalnie) Czujnik binarny dla okna/drzwi w pokoju.",
+              "zone_sensor": "(Opcjonalnie) Czujnik binarny dla okien/drzwi w strefie/piętrze. Czujnik strefy powinien obejmować czujnik pokoju.",
               "room_open_delay": "Czas oczekiwania po otwarciu okna w pokoju.",
               "zone_open_delay": "Czas oczekiwania po otwarciu okna w strefie.",
               "close_delay": "Czas oczekiwania po zamknięciu okien."

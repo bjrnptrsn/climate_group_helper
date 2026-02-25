@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "Tillad ændringer af måltilstand, mens vinduer er åbne.",
               "window_action": "Hvad der skal ske, når et vindue åbnes: Sluk helt eller indstil en bestemt temperatur (f.eks. frostbeskyttelse).",
               "window_temperature": "Måltemperatur når 'Indstil temperatur' er valgt.",
-              "room_sensor": "Binær sensor for rummets eget vindue. Udløser den kortere forsinkelse.",
-              "zone_sensor": "Binær sensor for andre vinduer i zonen. Udløser den længere forsinkelse.",
+              "room_sensor": "(Valgfri) Binær sensor for rummets eget vindue/dør.",
+              "zone_sensor": "(Valgfri) Binær sensor for vinduer/døre i zonen/etagen. Zone-sensor skal inkludere rum-sensor.",
               "room_open_delay": "Ventetid efter rumvindue åbnes før varme slukkes.",
               "zone_open_delay": "Ventetid efter zonevindue åbnes før varme slukkes.",
               "close_delay": "Ventetid efter alle vinduer lukkes før varme gendannes."

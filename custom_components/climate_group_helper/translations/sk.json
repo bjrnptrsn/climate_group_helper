@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "Povoliť zmeny cieľového stavu, kým sú okná otvorené.",
               "window_action": "Čo urobiť pri otvorení okna: Úplne vypnúť alebo nastaviť konkrétnu teplotu (napr. ochrana pred mrazom).",
               "window_temperature": "Cieľová teplota pri výbere akcie 'Nastaviť teplotu'.",
-              "room_sensor": "Binárny senzor pre okno/dvere v izbe. Spúšťa kratšie oneskorenie.",
-              "zone_sensor": "Binárny senzor pre ostatné okná/dvere v zóne/poschodí. Spúšťa dlhšie oneskorenie.",
+              "room_sensor": "(Voliteľne) Binárny senzor pre okno/dvere v izbe.",
+              "zone_sensor": "(Voliteľne) Binárny senzor pre okná/dvere v zóne/poschodí. Senzor zóny by mal zahŕňať senzor izby.",
               "room_open_delay": "Čas čakania po otvorení okna v izbe pred vypnutím vykurovania.",
               "zone_open_delay": "Čas čakania po otvorení okna v zóne pred vypnutím vykurovania.",
               "close_delay": "Čas čakania po zatvorení všetkých okien pred obnovením vykurovania."

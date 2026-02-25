@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.19.4 - 2026-02-25
+
+### 🔧 Fixes
+
+*   **Window Control**: Turning the group `OFF` (e.g. via dashboard or automation) is now always possible while a window is open, even if the "Adopt Manual Changes" option is disabled.
+*   **Target Temperature**: Fixed an issue where minor, hardware-related temperature fluctuations on some thermostats could trigger unnecessary synchronization loops.
+*   **Schedule**: Fixed a bug where a temporary user override could be prematurely cancelled under certain configurations.
+
 ## 0.19.3 - 2026-02-23
 
 ### 🎨 UI & UX Changes

@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "Tillåt ändringar av målvärde medan fönster är öppna.",
               "window_action": "Vad som ska hända när ett fönster öppnas: Stäng av helt eller ställ in en specifik temperatur (t.ex. frostskydd).",
               "window_temperature": "Måltemperatur när 'Ställ in temperatur' är valt.",
-              "room_sensor": "Binär sensor för rummets fönster. Kortare fördröjning.",
-              "zone_sensor": "Binär sensor för andra fönster i zonen. Längre fördröjning.",
+              "room_sensor": "(Valfritt) Binär sensor för rummets eget fönster/dörr.",
+              "zone_sensor": "(Valfritt) Binär sensor för fönster/dörr i zonen/våningen. Zonsensor ska inkludera rumssensor.",
               "room_open_delay": "Väntetid efter öppning av rumsfönster.",
               "zone_open_delay": "Väntetid efter öppning av zonfönster.",
               "close_delay": "Väntetid efter stängning av fönster."

@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "Permitir cambios del estado objetivo mientras las ventanas están abiertas.",
               "window_action": "Qué hacer al abrir una ventana: Apagar completamente o establecer una temperatura específica (ej. protección contra heladas).",
               "window_temperature": "Temperatura objetivo cuando se selecciona la acción 'Establecer temperatura'.",
-              "room_sensor": "Sensor binario para la ventana de la habitación. Activa el retardo más corto.",
-              "zone_sensor": "Sensor binario para otras ventanas en la zona/piso. Activa el retardo más largo.",
+              "room_sensor": "(Opcional) Sensor binario para la ventana/puerta de la habitación.",
+              "zone_sensor": "(Opcional) Sensor binario para ventanas/puertas en la zona/piso. El sensor de zona debe incluir el sensor de la habitación.",
               "room_open_delay": "Tiempo a esperar tras abrir ventana de habitación antes de apagar.",
               "zone_open_delay": "Tiempo a esperar tras abrir ventana de zona antes de apagar.",
               "close_delay": "Tiempo a esperar tras cerrar todas las ventanas antes de restaurar."

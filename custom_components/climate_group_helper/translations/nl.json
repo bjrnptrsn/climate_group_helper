@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "Sta wijzigingen van het instelpunt toe terwijl ramen open zijn.",
               "window_action": "Wat te doen als een raam opent: Volledig uitschakelen of een specifieke temperatuur instellen (bijv. vorstbeveiliging).",
               "window_temperature": "Doeltemperatuur wanneer de actie 'Temperatuur instellen' is geselecteerd.",
-              "room_sensor": "Binaire sensor voor raam in de kamer. Korte vertraging.",
-              "zone_sensor": "Binaire sensor voor ramen in de zone. Lange vertraging.",
+              "room_sensor": "(Optioneel) Binaire sensor voor het raam/deur van de kamer.",
+              "zone_sensor": "(Optioneel) Binaire sensor voor ramen/deuren in de zone/verdieping. Zone-sensor moet kamer-sensor bevatten.",
               "room_open_delay": "Wachttijd na openen kamerraam.",
               "zone_open_delay": "Wachttijd na openen zoneraam.",
               "close_delay": "Wachttijd na sluiten ramen voor herstel."

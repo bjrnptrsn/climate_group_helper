@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "Permitir alterações do estado alvo enquanto as janelas estão abertas.",
               "window_action": "O que fazer ao abrir uma janela: Desligar completamente ou definir uma temperatura específica (ex: proteção contra gelo).",
               "window_temperature": "Temperatura alvo quando a ação 'Definir temperatura' é selecionada.",
-              "room_sensor": "Sensor binário para janela do quarto. Atraso mais curto.",
-              "zone_sensor": "Sensor binário para outras janelas na zona. Atraso mais longo.",
+              "room_sensor": "(Opcional) Sensor binário para a janela/porta do quarto.",
+              "zone_sensor": "(Opcional) Sensor binário para janelas/portas na zona/piso. Sensor de zona deve incluir sensor do quarto.",
               "room_open_delay": "Tempo de espera após abrir janela do quarto.",
               "zone_open_delay": "Tempo de espera após abrir janela da zona.",
               "close_delay": "Tempo de espera após fechar janelas."
