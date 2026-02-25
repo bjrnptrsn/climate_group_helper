@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "Autoriser les modifications de la consigne lorsque les fenêtres sont ouvertes.",
               "window_action": "Action à effectuer lors de l'ouverture d'une fenêtre : Éteindre complètement ou définir une température spécifique (ex. protection contre le gel).",
               "window_temperature": "Température cible lorsque l'action 'Définir la température' est sélectionnée.",
-              "room_sensor": "Capteur binaire pour la fenêtre de la pièce. Déclenche le délai court.",
-              "zone_sensor": "Capteur binaire pour les autres fenêtres de la zone. Déclenche le délai long.",
+              "room_sensor": "(Optionnel) Capteur binaire pour la fenêtre/porte de la pièce.",
+              "zone_sensor": "(Optionnel) Capteur binaire pour les fenêtres/portes dans la zone/étage. Le capteur de zone doit inclure le capteur de la pièce.",
               "room_open_delay": "Temps d'attente après ouverture fenêtre pièce avant coupure.",
               "zone_open_delay": "Temps d'attente après ouverture fenêtre zone avant coupure.",
               "close_delay": "Temps d'attente après fermeture fenêtres avant restauration."

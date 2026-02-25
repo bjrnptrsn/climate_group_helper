@@ -8,13 +8,11 @@ from typing import Any, TYPE_CHECKING
 
 from homeassistant.core import Event
 
-from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from .const import (
     FLOAT_TOLERANCE,
     CONF_IGNORE_OFF_MEMBERS,
-    CONF_SYNC_ATTRS,
-    SYNC_TARGET_ATTRS,
     AdoptManualChanges,
 )
 
@@ -128,7 +126,7 @@ class ChangeState(ClimateState):
             if target_val is None or member_val is None or member_val == target_val:
                 continue
                 
-            if (key == "temperature" or key == "humidity") and within_tolerance(target_val, member_val):
+            if key in ("temperature", "humidity", "target_temp_low", "target_temp_high") and within_tolerance(target_val, member_val):
                 continue
                 
             deviations[key] = member_val
@@ -143,20 +141,20 @@ class ChangeState(ClimateState):
 
 
 class BaseStateManager:
-    """Base state management without filter logic.
-    
-    This class provides centralized state management with a Template Method pattern.
-    Derived classes can override `_pre_update_filter()` to implement custom filtering.
+    """Base state management with Template Method pattern.
     
     Architecture:
     - All managers share the same TargetState via _group.shared_target_state
     - Source-based access control via `update()`
     - Immutable state updates via TargetState.update()
     
-    Shared State Pattern:
-    - target_state is a property that reads from _group.shared_target_state
-    - update() writes to _group.shared_target_state
-    - All managers automatically see the same state
+    Hooks (override in derived classes):
+    - `_filter_update()`: Block or allow an update (return bool)
+    
+    Helpers (shared logic, used by hooks):
+    - `_check_blocking_mode()`: Check if blocking mode is active
+    - `_check_adopt_manual_changes()`: Check if passive tracking allows update
+    - `_check_partial_sync()`: Check Last Man Standing logic
     
     Derived classes should override SOURCE to set their identity.
     """
@@ -175,10 +173,10 @@ class BaseStateManager:
     def update(self, entity_id: str | None = None, **kwargs) -> bool:
         """Update target_state with source tracking.
         
-        This method implements the Template Method pattern:
-        1. Check `pre_update_filter` if update is not blocked
-        2. Adds metadata (source, entity_id, timestamp)
-        3. Updates the central shared_target_state
+        Template Method workflow:
+        1. Filter via `_filter_update()` (hook)
+        2. Add metadata (source, entity_id, timestamp)
+        3. Update the central shared_target_state
         
         Args:
             entity_id: The specific entity that caused the update (optional)
@@ -187,8 +185,7 @@ class BaseStateManager:
         Returns:
             True if update was allowed, False if blocked by filter
         """
-        # Template Method: Allow derived classes to filter/modify kwargs
-        if not self._pre_update_filter(entity_id, kwargs):
+        if not self._filter_update(entity_id, kwargs):
             return False
 
         # Add Metadata
@@ -207,8 +204,9 @@ class BaseStateManager:
         _LOGGER.debug("[%s] TargetState updated (source=%s): %s", self._group.entity_id, kwargs["last_source"], kwargs)
         return True
 
-    def _pre_update_filter(self, entity_id: str | None, kwargs: dict) -> bool:
-        """Hook for derived classes to filter updates.
+    def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
+        """Filter hook - return False to block this update.
+
         Args:
             entity_id: Entity causing the update
             kwargs: Mutable dict of attributes to update
@@ -217,7 +215,7 @@ class BaseStateManager:
         """
         return True
 
-    def _blocking_mode(self) -> bool:
+    def _check_blocking_mode(self) -> bool:
         """Check if blocking mode is active."""
         if self._group.blocking_mode:
             _LOGGER.debug("[%s] TargetState update check (source=%s), blocking_mode=True", self._group.entity_id, self.SOURCE)
@@ -287,9 +285,13 @@ class ClimateStateManager(BaseStateManager):
         """Initialize the climate state manager."""
         super().__init__(group)
 
-    def _pre_update_filter(self, entity_id: str | None, kwargs: dict) -> bool:
+    def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
         """Filter user updates based on blocking mode."""
-        if self._blocking_mode():
+        if self._check_blocking_mode():
+            # Allow explicit off command
+            if kwargs.get(ATTR_HVAC_MODE) == HVACMode.OFF:
+                _LOGGER.debug("[%s] Blocking mode active, but allowing adopt off command", self._group.entity_id)
+                return True
             if not self._check_adopt_manual_changes(entity_id):
                 return False
         return True
@@ -303,13 +305,12 @@ class SyncModeStateManager(BaseStateManager):
     def __init__(self, group: ClimateGroup):
         """Initialize the sync mode state manager."""
         super().__init__(group)
-        self._filter_state = FilterState.from_keys(group.config.get(CONF_SYNC_ATTRS, SYNC_TARGET_ATTRS))
 
-    def _pre_update_filter(self, entity_id: str | None, kwargs: dict) -> bool:
+    def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
         """Apply sync-mode specific filters."""
 
         # 1. Blocking Mode Filter
-        if self._blocking_mode():
+        if self._check_blocking_mode():
             if not self._check_adopt_manual_changes(entity_id):
                 return False
 
@@ -334,14 +335,19 @@ class WindowControlStateManager(BaseStateManager):
         """Initialize the window control state manager."""
         super().__init__(group)
 
-    def _pre_update_filter(self, entity_id: str | None, kwargs: dict) -> bool:
+    def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
         """Block all updates - Window Control is read-only."""
         _LOGGER.debug("[%s] TargetState update blocked for WindowControl", self._group.entity_id)
         return False
 
 
 class ScheduleStateManager(BaseStateManager):
-    """State Manager for Schedule updates."""
+    """State Manager for Schedule updates.
+
+    No filter overrides - Schedule updates are ALWAYS allowed.
+    This is intentional: the schedule must be able to prepare target_state
+    even when blocking_mode is active (background prep for window close).
+    """
 
     SOURCE = "schedule"
 

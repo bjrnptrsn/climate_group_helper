@@ -81,8 +81,9 @@ Use **multiple external sensors** for temperature and humidity to override the m
 Automatically turn off heating when windows open and restore it when they close.
 
 *   **Logic:** Opening a window forces all members to `off`. Closing the window restores the group's previous settings (e.g. `heat`).
-*   **Room Sensor:** Fast reaction (default: 15s). For sensors directly in the room. E.g. `binary_sensor.living_room_window`.
-*   **Zone Sensor:** Slow reaction (default: 5min). For whole-house sensors. Prevents heating shutdown in closed rooms when a distant window opens. E.g. `binary_sensor.all_windows_open`.
+*   **Room Sensor:** (Optional) Fast reaction (default: 15s). For sensors directly in the room, e.g. `binary_sensor.living_room_window`.
+*   **Zone Sensor:** (Optional) Slow reaction (default: 5min). For sensors covering a larger area, e.g. `binary_sensor.home_windows`.
+    *   **Note:** If both sensors are used, the room sensor should be part of the zone sensor. An active zone sensor prevents the group from being switched back on.
 *   **Blocking:** While windows are open, manual changes and background sync are blocked. Schedule changes are still accepted internally and applied when windows close.
 *   **Adopt Manual Changes:** Optionally allow passive tracking of manual changes while windows are open:
     *   **Off (Default):** All manual changes are blocked and discarded.
@@ -178,8 +179,8 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Window Action** | **Turn Off** (Default) or **Set Temperature**. Useful for frost protection. |
 | **Adopt Manual Changes** | **Off** (block all), **All** (passive tracking for all members), or **Master Only** *(requires Master Entity)*. |
 | **Window Temperature** | Target temperature to set when 'Set Temperature' action is selected. |
-| **Room Sensor** | Binary sensor for fast reaction (window in the same room). |
-| **Zone Sensor** | Binary sensor for slow reaction (e.g. whole-house "any window open"). |
+| **Room Sensor** | (Optional) Binary sensor for fast reaction (window in the same room). |
+| **Zone Sensor** | (Optional) Binary sensor for slow reaction (e.g. apartment or floor). Room sensor should be part of zone sensor group. Active zone sensor prevents the group from being switched back on. |
 | **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
 | **Close Delay** | Time before restoring heating after windows close (default: 30s). |
 

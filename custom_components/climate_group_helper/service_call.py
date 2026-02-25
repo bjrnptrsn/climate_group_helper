@@ -463,9 +463,9 @@ class ClimateCallHandler(BaseServiceCallHandler):
         return super()._generate_calls(data=data, filter_state=filter_state)
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
-        """Block calls if blocking mode is active, UNLESS turning the group OFF."""
+        """Block calls if blocking mode is active, unless turning the group off."""
         if data and data.get(ATTR_HVAC_MODE) == HVACMode.OFF:
-            _LOGGER.debug("[%s] Bypass blocking mode (turning group OFF)", self._group.entity_id)
+            _LOGGER.debug("[%s] Bypass blocking mode (turning group off)", self._group.entity_id)
             return False
         return self._group.blocking_mode
 
@@ -531,7 +531,12 @@ class SyncCallHandler(BaseServiceCallHandler):
 
 
 class WindowControlCallHandler(BaseServiceCallHandler):
-    """Call handler for Window Control operations."""
+    """Call handler for Window Control operations.
+
+    No overrides needed — Window Control always uses call_immediate() with
+    explicit data (hvac_mode=OFF or temperature). All blocking/filtering
+    is bypassed by design.
+    """
 
     CONTEXT_ID = "window_control"
 

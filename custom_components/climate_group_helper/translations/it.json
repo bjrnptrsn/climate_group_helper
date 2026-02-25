@@ -127,8 +127,8 @@
               "window_adopt_manual_changes": "Consentire modifiche al setpoint mentre le finestre sono aperte.",
               "window_action": "Cosa fare quando si apre una finestra: Spegnere completamente o impostare una temperatura specifica (es. antigelo).",
               "window_temperature": "Temperatura target quando è selezionata l'azione 'Imposta temperatura'.",
-              "room_sensor": "Sensore binario per la finestra della stanza. Attiva il ritardo breve.",
-              "zone_sensor": "Sensore binario per altre finestre nella zona. Attiva il ritardo lungo.",
+              "room_sensor": "(Opzionale) Sensore binario per la finestra/porta della stanza.",
+              "zone_sensor": "(Opzionale) Sensore binario per finestre/porte nella zona/piano. Il sensore di zona deve includere il sensore della stanza.",
               "room_open_delay": "Tempo di attesa dopo apertura finestra stanza.",
               "zone_open_delay": "Tempo di attesa dopo apertura finestra zona.",
               "close_delay": "Tempo di attesa dopo chiusura finestre prima del ripristino."

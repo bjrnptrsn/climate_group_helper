@@ -123,8 +123,6 @@ class ScheduleHandler:
 
     def _start_timer(self, timer_type: str | None = None) -> None:
         """Start an Automation Timer (Override or Resync)."""
-        self._cancel_timer()
-
         if timer_type == "resync":
             duration = self._resync_interval
         elif timer_type == "override":
@@ -135,6 +133,8 @@ class ScheduleHandler:
 
         if duration <= 0:
             return
+
+        self._cancel_timer()
 
         @callback
         def handle_timer_timeout(_now):
