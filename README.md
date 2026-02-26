@@ -9,7 +9,10 @@
   <a href="https://github.com/bjrnptrsn/climate_group_helper/releases"><img src="https://img.shields.io/github/v/release/bjrnptrsn/climate_group_helper" alt="Release"/></a>
 </p>
 
-Combine multiple climate devices into a single, powerful entity for Home Assistant. Simplify your dashboard, streamline automations, and control entire rooms or zones as one unit.
+A comprehensive climate management system for Home Assistant that combines multiple devices into a single, powerful entity. Simplify your dashboard, streamline automations, and ensure perfect comfort across entire rooms or zones.
+
+> [!TIP]
+> The features **Window Control**, **Scheduling**, and **Device Calibration** can also be used for **single devices**, providing significant added value even without a group.
 
 ---
 
@@ -32,22 +35,24 @@ Combine multiple climate devices into a single, powerful entity for Home Assista
 ---
 
 ## Core Features (Zero Config)
+
 The "Minimalist Mode": Add your entities, and it just works. No complex setup required.
 
 ### Unified Control
+
 Change settings on the group, and all member devices update to match. No more managing 5 thermostats individually.
 
 ### Smart Averaging
+
 The group calculates the **mean** of all member temperatures to represent the true room reading.
 *   **Averaging Method:** Choose between Mean (default), Median, Min, or Max.
 *   **Precision:** Round target temperatures to device-compatible steps (0.5° or 1°). *Default: No rounding.*
 
-## Advanced Features (Optional)
-Everything below is **completely optional**. If you don't configure it, the logic remains inactive and efficient ("Pay for what you use").
+## Advanced Features
 
+Everything below is **optional**. If you don't configure it, the logic remains inactive and efficient.
 
 ### Master Entity
-*New in v0.19.0*
 
 Designate a single climate member as the **Reference Point** or **Leader** for the group. This is the first thing you configure in the setup wizard — and once set, it unlocks additional options in every subsequent step (Sync Mode, Window Control, and Temperature/Humidity averaging).
 
@@ -56,49 +61,55 @@ Designate a single climate member as the **Reference Point** or **Leader** for t
 *   **Intelligent Window Control:** If enabled, only manual adjustments on the Master update the target state while windows are open. Changes on other devices remain ignored.
 
 ### External Sensors
+
 Use **multiple external sensors** for temperature and humidity to override the member readings.
 
 ### Device Calibration
-*Improved in v0.18!* Write the external sensor value back to your TRVs to fix their internal temperature reading.
+
+Write the external sensor value back to your TRVs to fix their internal temperature reading.
+
 *   **Modes:** Absolute (Standard), Offset (Delta calculation), and Scaled (x100 for Danfoss Ally).
 *   **Heartbeat:** Periodically re-sends the calibration value to prevent sensor timeouts on Zigbee devices.
 *   **Battery Saver (Ignore Off):** Prevent sending constant calibration updates to wireless TRVs that are currently turned `off`. Configured in the Temperature step.
 
 ### Advanced Sync Modes
+
+Beyond basic group control, you can mirror changes bidirectionally, enforce strict settings, or designate a leader.
+
 *   **Standard:** Classic one-way control (Group → Members).
 *   **Mirror:** Two-way sync. Change one device, all others follow.
-*   **Lock:** Enforce group settings. Reverts manual changes on all members.
-*   **Master/Lock:** *(Requires Master Entity)* "Follow the Leader" mode — changes on the Master are mirrored to all members, while manual changes on other members are automatically reverted.
+*   **Lock:** Enforce group settings. Automatically reverts manual changes on all members.
+*   **Master/Lock:** *(Requires Master Entity)* "Follow the Leader" mode — changes on the Master are mirrored to all members, while manual changes on other members are reverted.
 
-*   **Selective Attribute Sync:** Choose **exactly** which attributes to sync in Lock/Mirror/Master/Lock modes. Example: Sync temperature but allow individual fan control.
+*   **Selective Attribute Sync:** Choose **exactly** which attributes to sync (e.g. sync temperature but allow individual fan control).
 *   **Partial Sync (Respect Off):** Prevents the group from waking up members that are manually turned `off`.
-    *   **Ignore Off Members:** If a member is turned `off`, the group will not force it back on during synchronization (allows "Soft Off" for individual devices).
+    *   **Ignore Off Members:** If a member is turned `off`, the group will not force it back on during synchronization (allows "Soft Off").
     *   **Last Man Standing:** Only when the *last* active member is turned `off`, the Group accepts this change and updates its internal **Target State** to `off`.
 
 ### Window Control
-*New in v0.19: Enhanced with Temperature Targets!*
 
-Automatically turn off heating when windows open and restore it when they close.
+Binary sensor support to automatically turn off heating when a window opens and restore it when it closes.
 
-*   **Logic:** Opening a window forces all members to `off`. Closing the window restores the group's previous settings (e.g. `heat`).
-*   **Room Sensor:** (Optional) Fast reaction (default: 15s). For sensors directly in the room, e.g. `binary_sensor.living_room_window`.
-*   **Zone Sensor:** (Optional) Slow reaction (default: 5min). For sensors covering a larger area, e.g. `binary_sensor.home_windows`.
-    *   **Note:** If both sensors are used, the room sensor should be part of the zone sensor. An active zone sensor prevents the group from being switched back on.
-*   **Blocking:** While windows are open, manual changes and background sync are blocked. Schedule changes are still accepted internally and applied when windows close.
-*   **Adopt Manual Changes:** Optionally allow passive tracking of manual changes while windows are open:
+*   **Binary Sensors:** Use native HA binary sensors (or groups) for reaction.
+*   **Room + Zone Sensors:** Supports fast-reacting room sensors vs. slow-reacting zone sensors (e.g. for whole floors).
+*   **Configurable Delays:** Set custom reaction times for opening and closing.
+*   **Window Action:** Choose between full `off` or a configurable temperature setpoint.
+*   **Blocking:** While windows are open, manual changes are blocked. Schedule changes are accepted internally and applied when windows close.
+*   **Adopt Manual Changes:** Optionally allow passive tracking:
     *   **Off (Default):** All manual changes are blocked and discarded.
     *   **All:** Any manual change updates the target state. Applied when windows close.
-    *   **Master Only:** *(Requires Master Entity)* Only changes on the Master update the target state. Changes on other members are ignored.
+    *   **Master Only:** *(Requires Master Entity)* Only changes on the Master update the target state.
 
 ### Schedule Automation
-*New in v0.19: Enhanced with Dynamic Service Control!*
 
-*   **Dynamic Control:** Change the active schedule entity on the fly via the `set_schedule_entity` service (e.g. switch to "Away Schedule" when no one is home).
-*   **Intelligent Sync:** The schedule updates the group's desired settings.
-*   **Periodic Resync:** Force-sync all members to the group's target state every X minutes. Works independently of Sync Mode.
-*   **Manual Overrides:** Stay in control. Set an **Override Duration** to automatically return to the schedule after X minutes of manual adjustment.
-*   **Sticky Override (Persist Changes):** If enabled, manual changes persist until the override expires, even if the schedule changes slots in the background.
-*   **Window Aware:** If a schedule changes while windows are open, the new target is saved and applied immediately when windows close.
+Integrate native HA `schedule` helpers to automate your climate settings per time slot.
+
+*   **Time Slots:** Set temperature and HVAC mode directly in the schedule's data.
+*   **Dynamic Control:** Switch schedules on the fly via service call (e.g. for "Vacation" or "Guest" modes).
+*   **Manual Overrides:** Stay in control. Set an **Override Duration** to automatically return to the schedule after manual adjustments.
+*   **Sticky Override (Persist Changes):** If enabled, schedule changes are ignored while the override is active.
+*   **Periodic Resync:** Force-sync all members every X minutes to ensure they match the target state.
+*   **Window Aware:** If a schedule changes while windows are open, the new target is applied immediately when windows close.
 
 ### Schedule Configuration Example
 
