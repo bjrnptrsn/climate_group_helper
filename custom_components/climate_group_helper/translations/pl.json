@@ -141,13 +141,15 @@
               "schedule_entity": "Encja Harmonogramu",
               "resync_interval": "Interwał Resync (minuty)",
               "override_duration": "Czas trwania Override (minuty)",
-              "persist_changes": "Sticky Override"
+              "persist_changes": "Trwałe nadpisanie (Sticky)",
+              "persist_active_schedule": "Zachowaj nadpisanie harmonogramu"
             },
             "data_description": {
               "schedule_entity": "Wybierz encję harmonogramu. Pole 'Dodatkowe dane' może zawierać YAML z atrybutami takimi jak 'temperature: 20.5' lub 'hvac_mode: heat'.",
               "resync_interval": "Wymuś synchronizację członków do stanu docelowego co X minut. Zapobiega dryfowaniu, jeśli urządzenia przegapią polecenie lub zostaną ręcznie dostosowane. Ustaw na 0, aby wyłączyć.",
               "override_duration": "Czas trwania ręcznych override. Po tym czasie grupa automatycznie powraca do aktualnego harmonogramu. Ustaw na 0, aby pominąć okres override.",
-              "persist_changes": "Zmiany w samym harmonogramie będą ignorowane, dopóki aktywny jest ręczny override. Ponownie stosuje aktualny harmonogram dopiero po wygaśnięciu override."
+              "persist_changes": "Zmiany w samym harmonogramie będą ignorowane, dopóki aktywny jest ręczny override. Ponownie stosuje aktualny harmonogram dopiero po wygaśnięciu override.",
+              "persist_active_schedule": "Zachowuje aktywny harmonogram po restarcie, jeśli został zmieniony przez usługę. W przeciwnym razie powraca do domyślnego."
             }
           },
           "advanced_section": {

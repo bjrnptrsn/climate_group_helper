@@ -141,13 +141,15 @@
               "schedule_entity": "Entité de Programmation",
               "resync_interval": "Intervalle de Resync (minutes)",
               "override_duration": "Durée d'Override (minutes)",
-              "persist_changes": "Sticky Override"
+              "persist_changes": "Dérogation persistante (Sticky)",
+              "persist_active_schedule": "Conserver le forçage du calendrier"
             },
             "data_description": {
               "schedule_entity": "Sélectionnez une entité de programmation. Le champ 'Données supplémentaires' peut contenir du YAML avec des attributs comme 'temperature: 20.5' ou 'hvac_mode: heat'.",
               "resync_interval": "Forcer la synchronisation des membres vers l'état cible toutes les X minutes. Évite les dérives si les appareils manquent une commande ou sont ajustés manuellement. Mettre à 0 pour désactiver.",
               "override_duration": "La durée des overrides manuels. Après ce temps, le groupe revient automatiquement à la programmation actuelle. Mettre à 0 pour ignorer la période d'override.",
-              "persist_changes": "Les changements de programmation seront ignorés tant qu'un override manuel est actif. Réapplique la programmation actuelle seulement après l'expiration de l'override."
+              "persist_changes": "Les changements de programmation seront ignorés tant qu'un override manuel est actif. Réapplique la programmation actuelle seulement après l'expiration de l'override.",
+              "persist_active_schedule": "Conserve le calendrier actif après un redémarrage s'il a été modifié via le service. Sinon, il revient au calendrier par défaut."
             }
           },
           "advanced_section": {

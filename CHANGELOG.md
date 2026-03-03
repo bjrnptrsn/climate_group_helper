@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.5 - 2026-03-03
+
+### ✨ New Features
+
+*   **Schedule Persistence**: The active schedule entity set via the `set_schedule_entity` service can now optionally survive Home Assistant restarts. Enable the new **"Retain Schedule Override"** option in the Schedule section to persist the active schedule across restarts. When disabled (default), the group reverts to the configured default schedule on restart.
+
 ## 0.19.4 - 2026-02-25
 
 ### 🔧 Fixes

@@ -141,13 +141,15 @@
               "schedule_entity": "日程表实体",
               "resync_interval": "重新同步间隔 (分钟)",
               "override_duration": "手动覆盖时长 (分钟)",
-              "persist_changes": "持久覆盖 (Sticky)"
+              "persist_changes": "保持手动覆盖 (Sticky)",
+              "persist_active_schedule": "保留日程覆盖"
             },
             "data_description": {
               "schedule_entity": "选择一个日程表实体。日程表的“附加数据”字段可以包含 YAML 属性，如 'temperature: 20.5' 或 'hvac_mode: heat'。",
               "resync_interval": "每 X 分钟强制将成员同步到群组的目标状态。防止设备错过命令或由于手动调整而导致的偏离。设置为 0 以禁用。",
               "override_duration": "手动覆盖的持续时间。在此时间过后，群组将自动恢复到当前日程表。设置为 0 以跳过覆盖期。",
-              "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。"
+              "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。",
+              "persist_active_schedule": "通过服务更改日程后，在重启后保留活动日程。否则，它将恢复为配置的默认值。"
             }
           },
           "advanced_section": {

@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.event import async_track_state_change_event
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_EXPOSE_SMART_SENSORS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +30,16 @@ async def async_setup_entry(
 
     if not climate_group_entity_id:
         _LOGGER.warning("[%s] Climate group entity not found for config entry", config_entry.title)
+        return
+
+    # Check if smart sensors exposure is enabled
+    if not config_entry.options.get(CONF_EXPOSE_SMART_SENSORS, False):
+        # Clean up existing entities if they were previously enabled
+        for sensor_type in ["temperature", "humidity"]:
+            entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, f"{config_entry.unique_id}_{sensor_type}")
+            if entity_id:
+                entity_registry.async_remove(entity_id)
+                _LOGGER.debug("[%s] Removed disabled sensor %s", config_entry.title, entity_id)
         return
 
     # Keep track of already added sensors
@@ -115,6 +125,7 @@ class ClimateGroupBaseSensor(SensorEntity):
         return {
             "identifiers": {(DOMAIN, self.config_entry.unique_id)},
             "name": self.config_entry.title,
+            "manufacturer": "Climate Group Helper",
         }
 
 

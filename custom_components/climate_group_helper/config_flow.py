@@ -37,6 +37,7 @@ from .const import (
     CONF_IGNORE_OFF_MEMBERS,
     CONF_MASTER_ENTITY,
     CONF_OVERRIDE_DURATION,
+    CONF_PERSIST_ACTIVE_SCHEDULE,
     CONF_PERSIST_CHANGES,
     CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
@@ -441,6 +442,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
                     ),
                     vol.Optional(CONF_PERSIST_CHANGES, default=config.get(CONF_PERSIST_CHANGES, False)): bool,
+                    vol.Optional(CONF_PERSIST_ACTIVE_SCHEDULE, default=config.get(CONF_PERSIST_ACTIVE_SCHEDULE, False)): bool,
                 }),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
             )

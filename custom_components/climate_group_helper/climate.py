@@ -68,6 +68,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
+    ATTR_ACTIVE_SCHEDULE_ENTITY,
     ATTR_ASSUMED_STATE,
     ATTR_CURRENT_HVAC_MODES,
     ATTR_LAST_ACTIVE_HVAC_MODE,
@@ -97,6 +98,7 @@ from .const import (
     CONF_CALIBRATION_HEARTBEAT,
     CONF_CALIBRATION_IGNORE_OFF,
     CONF_MIN_TEMP_OFF,
+    CONF_PERSIST_ACTIVE_SCHEDULE,
     ATTR_SCHEDULE_ENTITY,
     SERVICE_SET_SCHEDULE_ENTITY,
     DOMAIN,
@@ -319,6 +321,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         return {
             "identifiers": {(DOMAIN, self._attr_unique_id)},
             "name": self._attr_name,
+            "manufacturer": "Climate Group Helper",
         }
 
     async def async_added_to_hass(self) -> None:
@@ -443,6 +446,14 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_min_humidity = last_attrs.get(ATTR_MIN_HUMIDITY, DEFAULT_MIN_HUMIDITY)
         self._attr_max_humidity = last_attrs.get(ATTR_MAX_HUMIDITY, DEFAULT_MAX_HUMIDITY)
 
+        # Restore persisted active schedule entity
+        if (
+            self.config.get(CONF_PERSIST_ACTIVE_SCHEDULE)
+            and (restored_schedule := last_attrs.get(ATTR_ACTIVE_SCHEDULE_ENTITY))
+        ):
+            self.schedule_handler._schedule_entity = restored_schedule
+            _LOGGER.debug("[%s] Restored active schedule entity: %s", self.entity_id, restored_schedule)
+
     def _reduce_attributes(self, attributes: list[Any], default: Any = None) -> list | int:
         """Reduce a list of attributes (modes or features) based on the feature strategy."""
         if not attributes:
@@ -566,6 +577,14 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Expose member entities if configured
         if self._expose_member_entities:
             attrs[ATTR_ENTITY_ID] = self.climate_entity_ids
+
+        # Persist active schedule entity for RestoreEntity
+        if (
+            self.config.get(CONF_PERSIST_ACTIVE_SCHEDULE)
+            and hasattr(self, "schedule_handler")
+            and self.schedule_handler.schedule_entity_id
+        ):
+            attrs[ATTR_ACTIVE_SCHEDULE_ENTITY] = self.schedule_handler.schedule_entity_id
 
         # Expose full config if enabled
         if self._expose_config:
