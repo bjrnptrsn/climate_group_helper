@@ -141,13 +141,15 @@
               "schedule_entity": "Entità Programmazione",
               "resync_interval": "Intervallo di Resync (minuti)",
               "override_duration": "Durata Override (minuti)",
-              "persist_changes": "Sticky Override"
+              "persist_changes": "Sovrascrittura persistente (Sticky)",
+              "persist_active_schedule": "Mantieni forzatura programma"
             },
             "data_description": {
               "schedule_entity": "Seleziona un'entità di programmazione. Il campo 'Dati aggiuntivi' può contenere YAML con attributi come 'temperature: 20.5' o 'hvac_mode: heat'.",
               "resync_interval": "Forza la sincronizzazione dei membri allo stato target ogni X minuti. Impedisce derive se i dispositivi perdono un comando o vengono regolati manualmente. Imposta a 0 per disabilitare.",
               "override_duration": "La durata degli override manuali. Dopo questo tempo, il gruppo torna automaticamente alla programmazione attuale. Imposta a 0 per saltare il periodo di override.",
-              "persist_changes": "Le modifiche alla programmazione stessa saranno ignorate finché un override manuale è attivo. Riapplica la programmazione attuale solo dopo la scadenza dell'override."
+              "persist_changes": "Le modifiche alla programmazione stessa saranno ignorate finché un override manuale è attivo. Riapplica la programmazione attuale solo dopo la scadenza dell'override.",
+              "persist_active_schedule": "Mantiene il programma attivo dopo un riavvio quando viene modificato tramite il servizio. In caso contrario, torna a quello predefinito."
             }
           },
           "advanced_section": {

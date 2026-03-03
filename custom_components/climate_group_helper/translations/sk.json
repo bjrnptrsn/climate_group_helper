@@ -141,13 +141,15 @@
               "schedule_entity": "Entita rozvrhu",
               "resync_interval": "Interval opätovnej synchronizácie (minúty)",
               "override_duration": "Trvanie prepísania (minúty)",
-              "persist_changes": "Trvalé prepísanie"
+              "persist_changes": "Trvalé prepísanie (Sticky)",
+              "persist_active_schedule": "Zachovať prepísanie rozvrhu"
             },
             "data_description": {
               "schedule_entity": "Vyberte entitu rozvrhu. Pole 'Ďalšie údaje' môže obsahovať YAML s atribútmi ako 'temperature: 20.5' alebo 'hvac_mode: heat'.",
               "resync_interval": "Vynútiť synchronizáciu členov na cieľový stav každých X minút. Zabezpečí, že zariadenia zostanú podľa rozvrhu aj po manuálnej úprave alebo zmeškání príkazu. Nastavte na 0 pre vypnutie.",
               "override_duration": "Trvanie manuálnych prepísaní. Po uplynutí tejto doby sa skupina automaticky vráti k aktuálnemu rozvrhu. Nastavte na 0 pre preskočenie obdobia prepísania.",
-              "persist_changes": "Zmeny samotného rozvrhu budú ignorované, kým je aktívne manuálne prepísanie. Aktuálny rozvrh sa znovu použije až po vypršaní prepísania."
+              "persist_changes": "Zmeny samotného rozvrhu budú ignorované, kým je aktívne manuálne prepísanie. Aktuálny rozvrh sa znovu použije až po vypršaní prepísania.",
+              "persist_active_schedule": "Zachová aktívny rozvrh po reštarte, ak bol zmenený prostredníctvom služby. V opačnom prípade sa vráti na predvolené nastavenie."
             }
           },
           "advanced_section": {

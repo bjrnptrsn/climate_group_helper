@@ -141,13 +141,15 @@
               "schedule_entity": "Tidsplan Enhed",
               "resync_interval": "Resync Interval (minutter)",
               "override_duration": "Override Varighed (minutter)",
-              "persist_changes": "Sticky Override"
+              "persist_changes": "Vedvarende tilsidesættelse (Sticky)",
+              "persist_active_schedule": "Behold tidsplanoverskrivelse"
             },
             "data_description": {
               "schedule_entity": "Vælg en tidsplan-enhed. Feltet 'Yderligere data' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
               "resync_interval": "Gennemtving synkronisering af medlemmer til måltilstanden for gruppen hvert X minut. Forhindrer afvigelser, hvis enheder misser en kommando eller justeres manuelt. Sæt til 0 for at deaktivere.",
               "override_duration": "Varigheden af manuelle overrides. Efter denne tid vender gruppen automatisk tilbage til den nuværende tidsplan. Sæt til 0 for at springe override-perioden over.",
-              "persist_changes": "Vil ændringer i selve tidsplanen blive ignoreret, så længe en manuel override er aktiv. Genanvender kun den nuværende tidsplan, når overriden er udløbet."
+              "persist_changes": "Vil ændringer i selve tidsplanen blive ignoreret, så længe en manuel override er aktiv. Genanvender kun den nuværende tidsplan, når overriden er udløbet.",
+              "persist_active_schedule": "Beholder den aktive tidsplan efter genstart, når den ændres via tjenesten. Ellers vender den tilbage til standarden."
             }
           },
           "advanced_section": {

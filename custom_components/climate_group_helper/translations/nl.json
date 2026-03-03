@@ -141,13 +141,15 @@
               "schedule_entity": "Schema Entiteit",
               "resync_interval": "Resync Interval (minuten)",
               "override_duration": "Override Duur (minuten)",
-              "persist_changes": "Sticky Override"
+              "persist_changes": "Persistente Override (Sticky)",
+              "persist_active_schedule": "Schema-overschrijving behouden"
             },
             "data_description": {
               "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'.",
               "resync_interval": "Dwing leden elke X minuten naar de doelstatus van de groep. Voorkomt verloop als apparaten een commando missen of handmatig worden aangepast. Stel in op 0 om uit te schakelen.",
               "override_duration": "De duur van handmatige overrides. Na deze tijd keert de groep automatisch terug naar het schema. Stel in op 0 om de override-periode over te slaan.",
-              "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen."
+              "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen.",
+              "persist_active_schedule": "Behoudt het actieve schema na een herstart wanneer gewijzigd via de service. Anders wordt het hersteld naar de standaard."
             }
           },
           "advanced_section": {

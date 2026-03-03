@@ -109,6 +109,7 @@ Integrate native HA `schedule` helpers to automate your climate settings per tim
 *   **Manual Overrides:** Stay in control. Set an **Override Duration** to automatically return to the schedule after manual adjustments.
 *   **Sticky Override (Persist Changes):** If enabled, schedule changes are ignored while the override is active.
 *   **Periodic Resync:** Force-sync all members every X minutes to ensure they match the target state.
+*   **Schedule Persistence:** Optionally retain a schedule switched via service call across Home Assistant restarts.
 *   **Window Aware:** If a schedule changes while windows are open, the new target is applied immediately when windows close.
 
 ### Schedule Configuration Example
@@ -203,6 +204,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Resync Interval** | Force-sync members to the desired group setting every X minutes (0 = disabled). |
 | **Override Duration** | Delay before returning to schedule after manual changes (0 = disabled). |
 | **Sticky Override** | Ignore schedule changes while a manual override is active. |
+| **Retain Schedule Override** | Persist the active schedule entity across restarts when changed via `set_schedule_entity` service. Without this, the group always reverts to the configured default on restart. |
 
 ### Availability & Timings
 

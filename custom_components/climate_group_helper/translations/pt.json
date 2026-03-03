@@ -141,13 +141,15 @@
               "schedule_entity": "Entidade de Agenda",
               "resync_interval": "Intervalo de Resync (minutos)",
               "override_duration": "Duração do Override (minutos)",
-              "persist_changes": "Sticky Override"
+              "persist_changes": "Override Persistente (Sticky)",
+              "persist_active_schedule": "Manter anulação de agendamento"
             },
             "data_description": {
               "schedule_entity": "Selecione uma entidade de agenda. O campo 'Dados adicionais' pode conter YAML com atributos como 'temperature: 20.5' ou 'hvac_mode: heat'.",
               "resync_interval": "Sincroniza forçadamente os membros com o estado alvo a cada X minutos. Evita desvios se os dispositivos perderem um comando ou forem ajustados manualmente. Definir como 0 para desativar.",
               "override_duration": "A duração dos overrides manuais. Após este tempo, o grupo regressa automaticamente à agenda atual. Definir como 0 para saltar o período de override.",
-              "persist_changes": "As alterações na agenda serão ignoradas enquanto um override manual estiver ativo. Reaplica a agenda atual apenas após a expiração do override."
+              "persist_changes": "As alterações na agenda serão ignoradas enquanto um override manual estiver ativo. Reaplica a agenda atual apenas após a expiração do override.",
+              "persist_active_schedule": "Mantém o agendamento ativo após um reinício quando alterado via serviço. Caso contrário, reverte para o padrão configurado."
             }
           },
           "advanced_section": {

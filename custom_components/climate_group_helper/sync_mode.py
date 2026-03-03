@@ -39,6 +39,7 @@ class SyncModeHandler:
     def __init__(self, group: ClimateGroup):
         """Initialize the sync mode handler."""
         self._group = group
+        self._hass = group.hass
         self._filter_state = FilterState.from_keys(
             self._group.config.get(CONF_SYNC_ATTRS, SYNC_TARGET_ATTRS)
         )
@@ -138,7 +139,7 @@ class SyncModeHandler:
 
         # Enforce target state on all members (skip during blocking mode)
         if not self._group.blocking_mode:
-            sync_task = self._group.hass.async_create_background_task(
+            sync_task = self._hass.async_create_background_task(
                 self.call_handler.call_debounced(), name="climate_group_sync_enforcement"
             )
             self._active_sync_tasks.add(sync_task)

@@ -104,6 +104,7 @@ CONF_MIN_TEMP_OFF = "min_temp_off"
 CONF_RESYNC_INTERVAL = "resync_interval"
 CONF_OVERRIDE_DURATION = "override_duration"
 CONF_PERSIST_CHANGES = "persist_changes"
+CONF_PERSIST_ACTIVE_SCHEDULE = "persist_active_schedule"
 CONF_EXPAND_SECTIONS = "expand_sections"
 
 
@@ -157,6 +158,7 @@ class WindowControlMode(StrEnum):
 
 
 # Extra attribute keys
+ATTR_ACTIVE_SCHEDULE_ENTITY = "active_schedule_entity"
 ATTR_ASSUMED_STATE = "assumed_state"
 ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"

@@ -141,13 +141,15 @@
               "schedule_entity": "Schedule Entity",
               "resync_interval": "Resync Interval (minutes)",
               "override_duration": "Override Duration (minutes)",
-              "persist_changes": "Sticky Override"
+              "persist_changes": "Sticky Override",
+              "persist_active_schedule": "Retain Schedule Override"
             },
             "data_description": {
               "schedule_entity": "Select a schedule entity. The schedule's 'Additional data' field can contain YAML with attributes like 'temperature: 20.5' or 'hvac_mode: heat'.",
               "resync_interval": "Force-sync members to the target state every X minutes. Ensures devices stay on schedule even if adjusted manually or commands are missed. Set to 0 to disable.",
               "override_duration": "The duration for manual overrides. After this time, the group automatically reverts to the current schedule. Set to 0 to skip the override period.",
-              "persist_changes": "Changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires."
+              "persist_changes": "Changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires.",
+              "persist_active_schedule": "Retain the active schedule after a restart when changed via service. Otherwise, it resets to the default."
             }
           },
           "advanced_section": {

@@ -27,6 +27,7 @@ from .const import (
     CONF_MASTER_ENTITY,
     CONF_MIN_TEMP_OFF,
     CONF_OVERRIDE_DURATION,
+    CONF_PERSIST_ACTIVE_SCHEDULE,
     CONF_PERSIST_CHANGES,
     CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
@@ -102,6 +103,7 @@ VALID_CONFIG_KEYS = {
     CONF_RESYNC_INTERVAL,
     CONF_OVERRIDE_DURATION,
     CONF_PERSIST_CHANGES,
+    CONF_PERSIST_ACTIVE_SCHEDULE,
     # Other options
     CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
@@ -127,14 +129,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN].setdefault(entry.entry_id, {})
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS] = set()
 
-    # Set up climate platform
-    await hass.config_entries.async_forward_entry_setups(entry, [Platform.CLIMATE])
+    # Set up climate and sensor platforms unconditionally to allow registry cleanup
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.CLIMATE, Platform.SENSOR])
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.CLIMATE)
-
-    # Set up sensor platform if exposed
-    if entry.options.get(CONF_EXPOSE_SMART_SENSORS):
-        await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
-        hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SENSOR)
+    hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SENSOR)
 
     # Register update listener for options changes, which will trigger a reload
     entry.async_on_unload(entry.add_update_listener(_update_listener))
