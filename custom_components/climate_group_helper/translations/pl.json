@@ -39,13 +39,15 @@
               "entities": "Urządzenia Klimatyczne",
               "master_entity": "Urządzenie główne",
               "hvac_mode_strategy": "Strategia Trybu HVAC",
-              "feature_strategy": "Kompatybilność Funkcji"
+              "feature_strategy": "Kompatybilność Funkcji",
+              "union_out_of_bounds_action": "Akcja poza zakresem"
             },
             "data_description": {
               "entities": "Dodaj lub usuń urządzenia. Usunięcie urządzeń zatrzymuje ich sterowanie przez grupę.",
               "master_entity": "Wyznacz jedno urządzenie jako główny termostat. Jego wartości mogą nadpisać obliczenia grupy.",
               "hvac_mode_strategy": "Strategia obliczania stanu grupy na podstawie jej członków (np. jeśli jeden 'heat', a inny jest 'off').",
-              "feature_strategy": "Określa, które funkcje (np. tryby wstępne, tryby wentylatora) są dostępne w grupie, gdy członkowie mają różne możliwości."
+              "feature_strategy": "Określa, które funkcje (np. tryby wstępne, tryby wentylatora) są dostępne w grupie, gdy członkowie mają różne możliwości.",
+              "union_out_of_bounds_action": "Co zrobić z urządzeniami, które nie mogą osiągnąć docelowej temperatury. Dotyczy tylko wtedy, gdy strategia funkcji jest ustawiona na Unię."
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "Czas oczekiwania po zamknięciu okien."
             }
           },
+          "isolation_section": {
+            "name": "Izolacja członków",
+            "description": "Tymczasowo izoluj określonych członków (np. grzejniki za zasłonami) gdy czujnik binarny jest aktywny.",
+            "data": {
+              "isolation_sensor": "Czujnik izolacji",
+              "isolation_entities": "Encje do izolacji",
+              "isolation_activate_delay": "Opóźnienie aktywacji (sekundy)",
+              "isolation_restore_delay": "Opóźnienie przywracania (sekundy)"
+            },
+            "data_description": {
+              "isolation_sensor": "(Opcjonalnie) Czujnik binarny wyzwalający izolację gdy ON.",
+              "isolation_entities": "Członkowie grupy do izolacji gdy czujnik jest aktywny.",
+              "isolation_activate_delay": "Czas oczekiwania po włączeniu czujnika przed izolacją członków.",
+              "isolation_restore_delay": "Czas oczekiwania po wyłączeniu czujnika przed przywróceniem członków."
+            }
+          },
           "schedule_section": {
             "name": "Automatyzacja harmonogramu",
             "description": "Połącz harmonogram HA do automatyzacji. Ustaw częstotliwość resynchronizacji i czas nadpisania.",
@@ -186,7 +204,8 @@
       "configuration_error": "Nie można zaktualizować konfiguracji.",
       "calibration_requires_sensors": "Cele kalibracji wymagają co najmniej jednego zewnętrznego czujnika temperatury.",
       "master_refresh_notice": "Dodano encję nadrzędną (Master). Dostępne nowe opcje.",
-      "master_options_notice": "Nowa opcja encji nadrzędnej"
+      "master_options_notice": "Nowa opcja encji nadrzędnej",
+      "isolation_all_selected": "Co najmniej jeden członek musi pozostać poza izolacją."
     },
     "abort": {
       "no_changes": "Nie wykryto zmian."
@@ -297,6 +316,12 @@
       "options": {
         "off": "Wyłącz (Domyślnie)",
         "temperature": "Ustaw temperaturę"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Wyłącz",
+        "clamp": "Ogranicz do wartości granicznej"
       }
     }
   },

@@ -7,6 +7,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from homeassistant.core import Event
 from homeassistant.components.climate import HVACMode
 
 from .const import (
@@ -88,9 +89,9 @@ class SyncModeHandler:
         if not change_dict:
             return
 
-        # Suppress echoes from window_control context
-        if event.context.id == "window_control":
-            _LOGGER.debug("[%s] Ignoring window_control echo", self._group.entity_id)
+        # Suppress echoes from window_control or isolation context
+        if event.context.id in ("window_control", "isolation"):
+            _LOGGER.debug("[%s] Ignoring %s echo", self._group.entity_id, event.context.id)
             return
 
         # Deep Origin Analysis: Did we cause this change?
@@ -137,8 +138,8 @@ class SyncModeHandler:
                     _LOGGER.debug("[%s] Master entity change adopted: %s", self._group.entity_id, filtered)
             # Non-master changes are enforced (reverted) via call_debounced below
 
-        # Enforce target state on all members (skip during blocking mode)
-        if not self._group.blocking_mode:
+        # Enforce target state on all members (skip during global blocking mode)
+        if not self._group.group_context.is_blocked:
             sync_task = self._hass.async_create_background_task(
                 self.call_handler.call_debounced(), name="climate_group_sync_enforcement"
             )
@@ -149,7 +150,7 @@ class SyncModeHandler:
 
     # --- Echo Detection Helpers ---
 
-    def _is_own_echo(self, origin_event) -> bool:
+    def _is_own_echo(self, origin_event: Event) -> bool:
         """Check if the state change was caused by one of our own service calls."""
         if not origin_event:
             return False
@@ -159,7 +160,7 @@ class SyncModeHandler:
         return origin_event.context.id in trusted_ids
 
     @staticmethod
-    def _extract_origin_entity(origin_event) -> str:
+    def _extract_origin_entity(origin_event: Event) -> str:
         """Extract origin entity from parent_id (format: 'entity_id|timestamp')."""
         parent_id = origin_event.context.parent_id or ""
         if "|" in parent_id:
@@ -170,7 +171,7 @@ class SyncModeHandler:
                 pass
         return ""
 
-    def _filter_echo_changes(self, origin_event, change_dict: dict, change_entity_id: str | None) -> dict:
+    def _filter_echo_changes(self, origin_event: Event, change_dict: dict, change_entity_id: str | None) -> dict:
         """Filter echo changes, returning only accepted side effects.
 
         - Ordered attrs that match: Clean Echo -> ignored (already in sync)

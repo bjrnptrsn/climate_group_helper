@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import asdict, dataclass, fields, replace
+from dataclasses import asdict, dataclass, field, fields, replace
 from typing import Any, TYPE_CHECKING
 
 from homeassistant.core import Event
@@ -20,6 +20,25 @@ if TYPE_CHECKING:
     from .climate import ClimateGroup
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class GroupContext:
+    """Immutable operational context for the climate group.
+
+    Centralises all factors that restrict controllability:
+    - is_blocked: global block (e.g. window open via WindowControl)
+    - isolated_members: per-member isolation (e.g. curtain closed)
+    - oob_members: members currently out-of-bounds (union strategy)
+    - blocking_reason: human-readable reason for the global block
+
+    Updates are performed via dataclasses.replace(), consistent with TargetState.
+    """
+
+    is_blocked: bool = False
+    isolated_members: frozenset[str] = field(default_factory=frozenset)
+    oob_members: frozenset[str] = field(default_factory=frozenset)
+    blocking_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -102,9 +121,10 @@ class ChangeState(ClimateState):
     @classmethod
     def from_event(cls, event: Event, target_state: ClimateState) -> ChangeState:
         """Calculates difference between Event and TargetState."""
+        entity_id = event.data.get("entity_id")
         new_state = event.data.get("new_state")
-        if new_state is None:
-            return cls(entity_id=event.data.get("entity_id"))
+        if new_state is None or target_state is None:
+            return cls(entity_id=entity_id)
 
         def within_tolerance(val1: float, val2: float, tolerance: float = FLOAT_TOLERANCE) -> bool:
             try:
@@ -114,8 +134,8 @@ class ChangeState(ClimateState):
 
         deviations: dict[str, Any] = {}
         # We iterate over the fields of the base ClimateState to ignore metadata
-        for field in fields(ClimateState):
-            key = field.name
+        for f in fields(ClimateState):
+            key = f.name
             target_val = getattr(target_state, key, None)
             
             if key == "hvac_mode":
@@ -131,7 +151,7 @@ class ChangeState(ClimateState):
                 
             deviations[key] = member_val
 
-        return cls(entity_id=event.data.get("entity_id"), **deviations)
+        return cls(entity_id=entity_id, **deviations)
 
     def attributes(self) -> dict[str, Any]:
         """Returns the state attributes excluding metadata."""
@@ -217,7 +237,7 @@ class BaseStateManager:
 
     def _check_blocking_mode(self) -> bool:
         """Check if blocking mode is active."""
-        if self._group.blocking_mode:
+        if self._group.group_context.is_blocked:
             _LOGGER.debug("[%s] TargetState update check (source=%s), blocking_mode=True", self._group.entity_id, self.SOURCE)
             return True
         return False
@@ -287,6 +307,10 @@ class ClimateStateManager(BaseStateManager):
 
     def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
         """Filter user updates based on blocking mode."""
+        if entity_id and entity_id in self._group.group_context.isolated_members:
+            _LOGGER.debug("[%s] TargetState update blocked: %s is isolated", self._group.entity_id, entity_id)
+            return False
+
         if self._check_blocking_mode():
             # Allow explicit off command
             if kwargs.get(ATTR_HVAC_MODE) == HVACMode.OFF:
@@ -308,6 +332,9 @@ class SyncModeStateManager(BaseStateManager):
 
     def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
         """Apply sync-mode specific filters."""
+        if entity_id and entity_id in self._group.group_context.isolated_members:
+            _LOGGER.debug("[%s] TargetState update blocked: %s is isolated", self._group.entity_id, entity_id)
+            return False
 
         # 1. Blocking Mode Filter
         if self._check_blocking_mode():

@@ -39,13 +39,15 @@
               "entities": "Climate Devices",
               "master_entity": "Master Entity",
               "hvac_mode_strategy": "HVAC Mode Strategy",
-              "feature_strategy": "Feature Compatibility"
+              "feature_strategy": "Feature Compatibility",
+              "union_out_of_bounds_action": "Out-of-Bounds Action"
             },
             "data_description": {
               "entities": "Add or remove devices. Removing devices stops them from being controlled by the group.",
               "master_entity": "Designate one device as the leading thermostat. Its values can override group calculations.",
               "hvac_mode_strategy": "Strategy for calculating the group's state from its members (e.g. if one is 'heat' and another is 'off').",
-              "feature_strategy": "Determines which features (e.g. preset modes, fan modes) are available on the group when members have different capabilities."
+              "feature_strategy": "Determines which features (e.g. preset modes, fan modes) are available on the group when members have different capabilities.",
+              "union_out_of_bounds_action": "What to do with members that cannot reach the target temperature. Only applies when Feature Strategy is set to Union."
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "Time to wait after all windows close before restoring heating."
             }
           },
+          "isolation_section": {
+            "name": "Member Isolation",
+            "description": "Temporarily isolate specific members (e.g. radiators behind curtains) when a binary sensor is active. Isolated members are turned off and excluded from group calculations.",
+            "data": {
+              "isolation_sensor": "Isolation Sensor",
+              "isolation_entities": "Entities to Isolate",
+              "isolation_activate_delay": "Activate Delay (seconds)",
+              "isolation_restore_delay": "Restore Delay (seconds)"
+            },
+            "data_description": {
+              "isolation_sensor": "(Optional) Binary sensor that triggers isolation when ON.",
+              "isolation_entities": "Group members to isolate when the sensor is active.",
+              "isolation_activate_delay": "Time to wait after sensor turns ON before isolating members. Useful to debounce briefly-opened curtains.",
+              "isolation_restore_delay": "Time to wait after sensor turns OFF before restoring members to the group target state."
+            }
+          },
           "schedule_section": {
             "name": "Schedule Automation",
             "description": "Connect HA schedule to automate temperatures. Set resync frequency and override duration. You can also use the set_schedule_entity service to switch schedules dynamically.",
@@ -186,7 +204,8 @@
       "configuration_error": "Could not update configuration.",
       "calibration_requires_sensors": "Calibration targets require at least one external temperature sensor.",
       "master_refresh_notice": "Master Entity added. New options available.",
-      "master_options_notice": "New Master entity option"
+      "master_options_notice": "New Master entity option",
+      "isolation_all_selected": "At least one member must remain outside isolation."
     },
     "abort": {
       "no_changes": "No changes detected."
@@ -297,6 +316,12 @@
       "options": {
         "off": "Turn Off (Default)",
         "temperature": "Set Temperature"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Turn Off",
+        "clamp": "Clamp to Limit"
       }
     }
   },

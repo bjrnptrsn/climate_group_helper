@@ -63,6 +63,12 @@ from .const import (
     CONF_WINDOW_MODE,
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
+    CONF_ISOLATION_SENSOR,
+    CONF_ISOLATION_ENTITIES,
+    CONF_ISOLATION_ACTIVATE_DELAY,
+    CONF_ISOLATION_RESTORE_DELAY,
+    DEFAULT_ISOLATION_ACTIVATE_DELAY,
+    DEFAULT_ISOLATION_RESTORE_DELAY,
     DEFAULT_CLOSE_DELAY,
     DEFAULT_NAME,
     DEFAULT_ROOM_OPEN_DELAY,
@@ -74,11 +80,14 @@ from .const import (
     HVAC_MODE_STRATEGY_NORMAL,
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
     SYNC_TARGET_ATTRS,
+    CONF_UNION_OUT_OF_BOUNDS_ACTION,
+    DEFAULT_UNION_OUT_OF_BOUNDS_ACTION,
     AdoptManualChanges,
     AverageOption,
     RoundOption,
     CalibrationMode,
     SyncMode,
+    UnionOutOfBoundsAction,
     WindowControlAction,
     WindowControlMode,
 )
@@ -216,6 +225,17 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         if not current_config.get(CONF_ROOM_SENSOR) and not current_config.get(CONF_ZONE_SENSOR):
             current_config[CONF_WINDOW_MODE] = WindowControlMode.OFF
 
+        # Isolation Logic: remove sensor key when cleared; prune stale entity refs
+        # Read from user_input (like master_entity) to detect explicit deletion
+        if not user_input.get(CONF_ISOLATION_SENSOR):
+            current_config.pop(CONF_ISOLATION_SENSOR, None)
+            current_config.pop(CONF_ISOLATION_ENTITIES, None)
+        elif CONF_ISOLATION_ENTITIES in current_config:
+            valid_members = set(current_config.get(CONF_ENTITIES, []))
+            current_config[CONF_ISOLATION_ENTITIES] = [
+                entity_id for entity_id in current_config[CONF_ISOLATION_ENTITIES] if entity_id in valid_members
+            ]
+
         # Clean up empty strings/lists for sensors
         for key in [CONF_ROOM_SENSOR, CONF_ZONE_SENSOR, CONF_SCHEDULE_ENTITY]:
             if key in current_config and not current_config[key]:
@@ -248,8 +268,18 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                             translation_key="feature_strategy",
                         )
                     ),
+                    vol.Required(
+                        CONF_UNION_OUT_OF_BOUNDS_ACTION,
+                        default=config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, DEFAULT_UNION_OUT_OF_BOUNDS_ACTION),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[UnionOutOfBoundsAction.OFF, UnionOutOfBoundsAction.CLAMP],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            translation_key="union_out_of_bounds_action",
+                        )
+                    ),
                 }),
-                {"collapsed": False}
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
             )
         }
 
@@ -427,6 +457,34 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             )
         }
 
+    def _section_factory_isolation(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Factory for member isolation section. Hidden when group has fewer than 2 members."""
+        members = config.get(CONF_ENTITIES, [])
+        if len(members) < 2:
+            return {}
+        # Filter saved entities to only those still in the group (stale-ref guard)
+        saved_isolation = [e for e in config.get(CONF_ISOLATION_ENTITIES, []) if e in members]
+        member_options = [{"value": eid, "label": eid} for eid in members]
+        return {
+            vol.Required("isolation_section"): section(
+                vol.Schema({
+                    vol.Optional(CONF_ISOLATION_SENSOR, description={"suggested_value": config.get(CONF_ISOLATION_SENSOR)}): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain="binary_sensor")
+                    ),
+                    vol.Optional(CONF_ISOLATION_ENTITIES, default=saved_isolation): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=member_options, multiple=True, mode=selector.SelectSelectorMode.DROPDOWN)
+                    ),
+                    vol.Optional(CONF_ISOLATION_ACTIVATE_DELAY, default=config.get(CONF_ISOLATION_ACTIVATE_DELAY, DEFAULT_ISOLATION_ACTIVATE_DELAY)): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
+                    ),
+                    vol.Optional(CONF_ISOLATION_RESTORE_DELAY, default=config.get(CONF_ISOLATION_RESTORE_DELAY, DEFAULT_ISOLATION_RESTORE_DELAY)): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
+                    ),
+                }),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            )
+        }
+
     def _section_factory_schedule(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for schedule section."""
         return {
@@ -503,16 +561,32 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             if master_changed and not self._refresh_hint_shown:
                 self._refresh_hint_shown = True
                 current_config = {**self._config_entry.options, **flattened_input}
-                return await self._show_main_form(current_config, show_refresh_hint=True)
+                return await self._show_main_form(current_config, form_errors={
+                    "base": "master_refresh_notice",
+                    "temperature_section": "master_options_notice",
+                    "humidity_section": "master_options_notice",
+                    "sync_section": "master_options_notice",
+                    "window_section": "master_options_notice",
+                })
 
             # Reset hint marker and save
             self._refresh_hint_shown = False
+
+            # Validate: isolation_entities must be a proper subset of entities
+            entities = set(flattened_input.get(CONF_ENTITIES, self._config_entry.options.get(CONF_ENTITIES, [])))
+            isolation_entities = set(flattened_input.get(CONF_ISOLATION_ENTITIES, []))
+            if isolation_entities and isolation_entities >= entities:
+                current_config = {**self._config_entry.options, **flattened_input}
+                return await self._show_main_form(current_config, form_errors={
+                    "isolation_section": "isolation_all_selected",
+                })
+
             final_options = self._normalize_options(flattened_input)
             return self.async_create_entry(title="", data=final_options)
 
         return await self._show_main_form(self._config_entry.options)
 
-    async def _show_main_form(self, config: dict[str, Any], show_refresh_hint: bool = False) -> ConfigFlowResult:
+    async def _show_main_form(self, config: dict[str, Any], form_errors: dict[str, str] | None = None) -> ConfigFlowResult:
         """Show the unified configuration form."""
         self._update_dynamic_limits()
 
@@ -523,26 +597,15 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         schema_dict.update(self._section_factory_humidity(config))
         schema_dict.update(self._section_factory_sync(config))
         schema_dict.update(self._section_factory_window_control(config))
+        schema_dict.update(self._section_factory_isolation(config))
         schema_dict.update(self._section_factory_schedule(config))
         schema_dict.update(self._section_factory_advanced(config))
 
         schema_dict[vol.Optional(CONF_EXPAND_SECTIONS, default=config.get(CONF_EXPAND_SECTIONS, False))] = bool
-        
-        # Build dynamic notices from translations
-        placeholders = {}
-        errors = {}
-        
-        if show_refresh_hint:
-             errors["base"] = "master_refresh_notice"
-             # Section-specific keys for precise transient hints
-             errors["temperature_section"] = "master_options_notice"
-             errors["humidity_section"] = "master_options_notice"
-             errors["sync_section"] = "master_options_notice"
-             errors["window_section"] = "master_options_notice"
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema_dict),
-            description_placeholders=placeholders,
-            errors=errors,
+            description_placeholders={},
+            errors=form_errors or {},
         )

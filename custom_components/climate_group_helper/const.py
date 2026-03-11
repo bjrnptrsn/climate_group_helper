@@ -107,6 +107,26 @@ CONF_PERSIST_CHANGES = "persist_changes"
 CONF_PERSIST_ACTIVE_SCHEDULE = "persist_active_schedule"
 CONF_EXPAND_SECTIONS = "expand_sections"
 
+CONF_UNION_OUT_OF_BOUNDS_ACTION = "union_out_of_bounds_action"
+
+
+class UnionOutOfBoundsAction(StrEnum):
+    """Out-of-bounds action when union strategy is active."""
+
+    OFF = "off"
+    CLAMP = "clamp"
+
+
+DEFAULT_UNION_OUT_OF_BOUNDS_ACTION = UnionOutOfBoundsAction.OFF
+
+# Member Isolation options
+CONF_ISOLATION_SENSOR = "isolation_sensor"
+CONF_ISOLATION_ENTITIES = "isolation_entities"
+CONF_ISOLATION_ACTIVATE_DELAY = "isolation_activate_delay"
+CONF_ISOLATION_RESTORE_DELAY = "isolation_restore_delay"
+DEFAULT_ISOLATION_ACTIVATE_DELAY = 0
+DEFAULT_ISOLATION_RESTORE_DELAY = 0
+
 
 class AverageOption(StrEnum):
     """Averaging options for temperature."""

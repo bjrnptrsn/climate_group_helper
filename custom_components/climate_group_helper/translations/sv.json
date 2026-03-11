@@ -39,13 +39,15 @@
               "entities": "Klimatenheter",
               "master_entity": "Masterenhet",
               "hvac_mode_strategy": "HVAC Lägesstrategi",
-              "feature_strategy": "Funktionskompatibilitet"
+              "feature_strategy": "Funktionskompatibilitet",
+              "union_out_of_bounds_action": "Åtgärd utanför intervall"
             },
             "data_description": {
               "entities": "Lägg till eller ta bort enheter. Att ta bort enheter stoppar dem från att kontrolleras av gruppen.",
               "master_entity": "Utse en enhet som ledande termostat. Dess värden kan åsidosätta gruppberäkningar.",
               "hvac_mode_strategy": "Strategi för att beräkna gruppens tillstånd från sina medlemmar (t.ex. om en 'heat' och en annan är 'off').",
-              "feature_strategy": "Bestämmer vilka funktioner (t.ex. förinställda lägen, fläktlägen) som är tillgängliga på gruppen när medlemmar har olika kapaciteter."
+              "feature_strategy": "Bestämmer vilka funktioner (t.ex. förinställda lägen, fläktlägen) som är tillgängliga på gruppen när medlemmar har olika kapaciteter.",
+              "union_out_of_bounds_action": "Vad som ska göras med enheter som inte kan nå måltemperaturen. Gäller endast när funktionsstrategin är inställd på Union."
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "Väntetid efter stängning av fönster."
             }
           },
+          "isolation_section": {
+            "name": "Medlemsisolering",
+            "description": "Isolera tillfälligt specifika medlemmar (t.ex. radiatorer bakom gardiner) när en binär sensor är aktiv.",
+            "data": {
+              "isolation_sensor": "Isolationssensor",
+              "isolation_entities": "Enheter att isolera",
+              "isolation_activate_delay": "Aktiveringsfördröjning (sekunder)",
+              "isolation_restore_delay": "Återställningsfördröjning (sekunder)"
+            },
+            "data_description": {
+              "isolation_sensor": "(Valfritt) Binär sensor som utlöser isolering vid ON.",
+              "isolation_entities": "Gruppmedlemmar att isolera när sensorn är aktiv.",
+              "isolation_activate_delay": "Väntetid efter sensor ON innan isolering av medlemmar.",
+              "isolation_restore_delay": "Väntetid efter sensor OFF innan återställning av medlemmar."
+            }
+          },
           "schedule_section": {
             "name": "Schema-automatisering",
             "description": "Koppla HA-schema för automatisering. Ställ in resync-intervall och varaktighet för manuell styrning.",
@@ -186,7 +204,8 @@
       "configuration_error": "Kunde inte uppdatera konfigurationen.",
       "calibration_requires_sensors": "Kalibreringsmål kräver minst en extern temperatursensor.",
       "master_refresh_notice": "Master-enhet tillagd. Nya alternativ tillgängliga.",
-      "master_options_notice": "Nytt alternativ för master-enhet"
+      "master_options_notice": "Nytt alternativ för master-enhet",
+      "isolation_all_selected": "Minst en medlem måste förbli utanför isoleringen."
     },
     "abort": {
       "no_changes": "Inga ändringar upptäcktes."
@@ -297,6 +316,12 @@
       "options": {
         "off": "Stäng av (Standard)",
         "temperature": "Ställ in temperatur"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Stäng av",
+        "clamp": "Begränsa till gränsvärde"
       }
     }
   },

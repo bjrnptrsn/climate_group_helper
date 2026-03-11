@@ -39,13 +39,15 @@
               "entities": "Appareils Climatiques",
               "master_entity": "Entité maître",
               "hvac_mode_strategy": "Stratégie du Mode HVAC",
-              "feature_strategy": "Compatibilité des Fonctionnalités"
+              "feature_strategy": "Compatibilité des Fonctionnalités",
+              "union_out_of_bounds_action": "Action hors plage"
             },
             "data_description": {
               "entities": "Ajouter ou supprimer des appareils. La suppression des appareils arrête leur contrôle par le groupe.",
               "master_entity": "Désignez un appareil comme thermostat principal. Ses valeurs peuvent remplacer les calculs du groupe.",
               "hvac_mode_strategy": "Stratégie pour calculer l'état du groupe à partir de ses membres (ex. si l'un 'heat' et un autre est 'off').",
-              "feature_strategy": "Détermine quelles fonctionnalités (ex. modes prédéfinis, modes ventilateur) sont disponibles sur le groupe lorsque les membres ont des capacités différentes."
+              "feature_strategy": "Détermine quelles fonctionnalités (ex. modes prédéfinis, modes ventilateur) sont disponibles sur le groupe lorsque les membres ont des capacités différentes.",
+              "union_out_of_bounds_action": "Que faire des appareils qui ne peuvent pas atteindre la température cible. S'applique uniquement si la stratégie de fonctionnalités est définie sur Union."
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "Temps d'attente après fermeture fenêtres avant restauration."
             }
           },
+          "isolation_section": {
+            "name": "Isolation de membres",
+            "description": "Isoler temporairement des membres spécifiques (ex: radiateurs derrière des rideaux) lorsqu'un capteur binaire est actif.",
+            "data": {
+              "isolation_sensor": "Capteur d'isolation",
+              "isolation_entities": "Entités à isoler",
+              "isolation_activate_delay": "Délai d'activation (secondes)",
+              "isolation_restore_delay": "Délai de restauration (secondes)"
+            },
+            "data_description": {
+              "isolation_sensor": "(Optionnel) Capteur binaire qui déclenche l'isolation lorsqu'il est ON.",
+              "isolation_entities": "Membres du groupe à isoler quand le capteur est actif.",
+              "isolation_activate_delay": "Temps d'attente après l'activation du capteur avant d'isoler les membres.",
+              "isolation_restore_delay": "Temps d'attente après la désactivation avant de restaurer les membres."
+            }
+          },
           "schedule_section": {
             "name": "Automatisation du planning",
             "description": "Connectez le planning HA pour automatiser. Définissez la fréquence de resync et la durée de dérogation.",
@@ -186,7 +204,8 @@
       "configuration_error": "Impossible de mettre à jour la configuration.",
       "calibration_requires_sensors": "Les cibles de calibration nécessitent au moins un capteur de température externe.",
       "master_refresh_notice": "Entité Maître ajoutée. Nouvelles options disponibles.",
-      "master_options_notice": "Nouvelle option d'entité Maître"
+      "master_options_notice": "Nouvelle option d'entité Maître",
+      "isolation_all_selected": "Au moins un membre doit rester en dehors de l'isolation."
     },
     "abort": {
       "no_changes": "Aucun changement détecté."
@@ -297,6 +316,12 @@
       "options": {
         "off": "Éteindre (Défaut)",
         "temperature": "Définir la température"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Éteindre",
+        "clamp": "Limiter à la borne"
       }
     }
   },

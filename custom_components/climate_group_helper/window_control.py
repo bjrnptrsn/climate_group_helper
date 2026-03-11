@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import HVACMode
@@ -170,13 +171,18 @@ class WindowControlHandler:
 
     async def _execute_action(self, mode: str) -> None:
         """Execute heating ON/OFF action.
-        
+
         Window Control does NOT modify target_state:
-        - OPEN: Forces members OFF via call_immediate
-        - CLOSE: Restores members to target_state via call_immediate
+        - OPEN: Forces members OFF via call_immediate, sets is_blocked=True
+        - CLOSE: Restores members to target_state via call_immediate, clears is_blocked
         """
-        # Update control state first
+        # Update control state and group_context
         self._control_state = mode
+        self._group.group_context = replace(
+            self._group.group_context,
+            is_blocked=(mode == WINDOW_OPEN),
+            blocking_reason="window_open" if mode == WINDOW_OPEN else None,
+        )
 
         if mode == WINDOW_OPEN:
             if self._window_action == WindowControlAction.TEMPERATURE and self._window_temperature is not None:

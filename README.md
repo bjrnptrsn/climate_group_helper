@@ -25,6 +25,7 @@ A comprehensive climate management system for Home Assistant that combines multi
   - [Device Calibration](#device-calibration)
   - [Sync Modes](#advanced-sync-modes)
   - [Window Control](#window-control)
+  - [Member Isolation](#member-isolation)
   - [Schedule Automation](#schedule-automation)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
@@ -100,6 +101,15 @@ Binary sensor support to automatically turn off heating when a window opens and 
     *   **All:** Any manual change updates the target state. Applied when windows close.
     *   **Master Only:** *(Requires Master Entity)* Only changes on the Master update the target state.
 
+### Member Isolation
+
+Temporarily isolate specific group members when a binary sensor is active (e.g. a curtain closes, a room becomes unoccupied).
+
+*   **Sensor ON:** After an optional activate delay, isolated members are turned `off` and excluded from all group calculations (temperature averaging, HVAC mode, sync).
+*   **Sensor OFF:** After an optional restore delay, isolated members are restored to the group's current target state.
+*   **Window Control Interaction:** Isolated members are never touched by Window Control — neither on open nor on close. If a window is open when isolation deactivates, the restore is deferred until the window closes.
+*   **Constraints:** At least one member must remain active — you cannot isolate all members. The section is hidden when the group has only one member.
+
 ### Schedule Automation
 
 Integrate native HA `schedule` helpers to automate your climate settings per time slot.
@@ -159,8 +169,15 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 | Strategy | Behavior |
 |----------|----------|
-| **Intersection** | Features (e.g. Fan) supported by *all* devices. Safe mode. |
-| **Union** | Features supported by *any* device. |
+| **Intersection** | Features (e.g. Fan) supported by *all* devices. Safe mode. Temperature range is the narrowest common window across all members. |
+| **Union** | Features supported by *any* device. Temperature range spans the full range across all members (widest min/max). When a target temperature falls outside a member's supported range, the configured **Out-of-Bounds Action** applies. |
+
+### Out-of-Bounds Action *(Union only)*
+
+| Action | Behavior |
+|--------|----------|
+| **Off (Default)** | Member is turned `off` when the target temperature is outside its supported range. Restored automatically when the target moves back in range. |
+| **Clamp** | Member is set to its nearest supported limit (`min_temp` or `max_temp`). |
 
 ### Temperature & Humidity Settings
 
@@ -195,6 +212,15 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Zone Sensor** | (Optional) Binary sensor for slow reaction (e.g. apartment or floor). Room sensor should be part of zone sensor group. Active zone sensor prevents the group from being switched back on. |
 | **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
 | **Close Delay** | Time before restoring heating after windows close (default: 30s). |
+
+### Member Isolation
+
+| Option | Description |
+|--------|-------------|
+| **Isolation Sensor** | Binary sensor that triggers isolation when active. |
+| **Isolated Members** | Which group members to isolate. Must be a subset — at least one member must remain active. |
+| **Activate Delay** | Time to wait after the sensor activates before isolating members. |
+| **Restore Delay** | Time to wait after the sensor deactivates before restoring members. |
 
 ### Schedule Automation
 

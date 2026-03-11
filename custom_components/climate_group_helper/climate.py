@@ -103,6 +103,7 @@ from .const import (
     SERVICE_SET_SCHEDULE_ENTITY,
     DOMAIN,
     FEATURE_STRATEGY_INTERSECTION,
+    FEATURE_STRATEGY_UNION,
     FLOAT_TOLERANCE,
     HVAC_MODE_STRATEGY_AUTO,
     HVAC_MODE_STRATEGY_NORMAL,
@@ -113,9 +114,25 @@ from .const import (
     CalibrationMode,
     SyncMode,
 )
+from .isolation import MemberIsolationHandler
 from .schedule import ScheduleHandler
-from .service_call import SyncCallHandler, ScheduleCallHandler, WindowControlCallHandler, ClimateCallHandler
-from .state import ClimateState, TargetState, CurrentState, ChangeState, SyncModeStateManager, ScheduleStateManager, WindowControlStateManager, ClimateStateManager
+from .service_call import (
+    SyncCallHandler,
+    ScheduleCallHandler,
+    WindowControlCallHandler,
+    ClimateCallHandler,
+)
+from .state import (
+    ClimateState,
+    GroupContext,
+    TargetState,
+    CurrentState,
+    ChangeState,
+    SyncModeStateManager,
+    ScheduleStateManager,
+    WindowControlStateManager,
+    ClimateStateManager,
+)
 from .sync_mode import SyncModeHandler
 from .window_control import WindowControlHandler
 
@@ -249,6 +266,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # State variables
         self.states: list[State] | None = None
         self.shared_target_state = TargetState()
+        self.group_context = GroupContext()
         self.current_group_state = CurrentState()
         self.change_state: ChangeState | None = None
 
@@ -268,6 +286,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.sync_mode_handler = SyncModeHandler(self)
         self.window_control_handler = WindowControlHandler(self)
         self.schedule_handler = ScheduleHandler(self)
+        self.member_isolation_handler = MemberIsolationHandler(self)
 
         self.startup_time: float | None = None
         self._last_active_hvac_mode = None
@@ -309,11 +328,6 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         self._attr_swing_horizontal_modes = None
         self._attr_swing_horizontal_mode = None
-
-    @property
-    def blocking_mode(self) -> bool:
-        """Return True if any module is blocking hvac_mode changes (e.g. Window Control)."""
-        return self.window_control_handler.force_off
 
     @property
     def device_info(self) -> dict[str, Any]:
@@ -371,6 +385,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Setup schedule handler (subscribes to schedule entity and execution hooks)
         await self.schedule_handler.async_setup()
 
+        # Setup member isolation handler (subscribes to isolation sensor events)
+        await self.member_isolation_handler.async_setup()
+
         # Update initial state
         self.async_defer_or_update_ha_state()
 
@@ -395,6 +412,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         await self.climate_call_handler.async_cancel_all()
         self.window_control_handler.async_teardown()
         self.schedule_handler.async_teardown()
+        self.member_isolation_handler.async_teardown()
 
     def _restore_state(self, last_state: State) -> None:
         """Restore state from last known state."""
@@ -570,9 +588,17 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
         }
 
-        # Blocking Reason (Window Control)
-        if self.window_control_handler.force_off:
-            attrs["blocking_reason"] = "window_open"
+        # Blocking Reason (Window Control / global block)
+        if self.group_context.blocking_reason:
+            attrs["blocking_reason"] = self.group_context.blocking_reason
+
+        # Isolated members
+        if self.group_context.isolated_members:
+            attrs["isolated_members"] = sorted(self.group_context.isolated_members)
+
+        # Out-of-bounds members (union strategy)
+        if self.group_context.oob_members:
+            attrs["oob_members"] = sorted(self.group_context.oob_members)
 
         # Expose member entities if configured
         if self._expose_member_entities:
@@ -618,18 +644,22 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
     def _get_valid_member_states(self, entity_ids: list[str]) -> tuple[list[State], bool]:
         """Get valid states for provided entities.
-        
+
+        Excludes isolated members (e.g. curtain closed) from all calculations.
         Returns:
-            Tuple of (valid_states, all_ready) where all_ready is True when 
+            Tuple of (valid_states, all_ready) where all_ready is True when
             all entity_ids have a valid (not unavailable/unknown) state.
         """
+        excluded = self.group_context.isolated_members
+        expected_entity_ids = [entity_id for entity_id in entity_ids if entity_id not in excluded]
+
         all_states = [
             state
-            for entity_id in entity_ids
+            for entity_id in expected_entity_ids
             if (state := self.hass.states.get(entity_id)) is not None
         ]
         valid_states = [state for state in all_states if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)]
-        all_ready = len(valid_states) == len(entity_ids)
+        all_ready = len(valid_states) == len(expected_entity_ids) if expected_entity_ids else True
         return valid_states, all_ready
 
     def _get_avg_sensor_value(self, sensor_ids: list[str], calc_func) -> float | None:
@@ -909,8 +939,14 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Temperature limits and step
         self._attr_target_temperature_step = reduce_attribute(self.states, ATTR_TARGET_TEMP_STEP, reduce=max)
-        self._attr_min_temp = reduce_attribute(self.states, ATTR_MIN_TEMP, reduce=max, default=DEFAULT_MIN_TEMP)
-        self._attr_max_temp = reduce_attribute(self.states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
+        if self._feature_strategy == FEATURE_STRATEGY_UNION:
+            # Union: widest range — lowest min, highest max
+            self._attr_min_temp = reduce_attribute(self.states, ATTR_MIN_TEMP, reduce=min, default=DEFAULT_MIN_TEMP)
+            self._attr_max_temp = reduce_attribute(self.states, ATTR_MAX_TEMP, reduce=max, default=DEFAULT_MAX_TEMP)
+        else:
+            # Intersection (default): narrowest range — highest min, lowest max
+            self._attr_min_temp = reduce_attribute(self.states, ATTR_MIN_TEMP, reduce=max, default=DEFAULT_MIN_TEMP)
+            self._attr_max_temp = reduce_attribute(self.states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
 
     def _update_humidity_attributes(self) -> None:
         """Calculate and set all humidity-related attributes."""
