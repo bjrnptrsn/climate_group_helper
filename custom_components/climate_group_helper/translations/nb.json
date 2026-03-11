@@ -39,13 +39,15 @@
               "entities": "Klimaenheter",
               "master_entity": "Masterenhet",
               "hvac_mode_strategy": "HVAC Modusstrategi",
-              "feature_strategy": "Funksjonskompatibilitet"
+              "feature_strategy": "Funksjonskompatibilitet",
+              "union_out_of_bounds_action": "Handling utenfor område"
             },
             "data_description": {
               "entities": "Legg til eller fjern enheter. Fjerning av enheter stopper kontrollen av dem fra gruppen.",
               "master_entity": "Utpek én enhet som ledende termostat. Verdiene kan overstyre gruppeberegninger.",
               "hvac_mode_strategy": "Strategi for å beregne gruppens status fra medlemmene (f.eks. hvis en 'heat' og en annen er 'off').",
-              "feature_strategy": "Bestemmer hvilke funksjoner (f.eks. forhåndsinnstilte moduser, viftemoduser) som er tilgjengelige i gruppen når medlemmene har forskjellige evner."
+              "feature_strategy": "Bestemmer hvilke funksjoner (f.eks. forhåndsinnstilte moduser, viftemoduser) som er tilgjengelige i gruppen når medlemmene har forskjellige evner.",
+              "union_out_of_bounds_action": "Hva som skal gjøres med enheter som ikke kan nå måltemperaturen. Gjelder kun når funksjonsstrategien er satt til Union."
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "Ventetid etter lukking av vinduer."
             }
           },
+          "isolation_section": {
+            "name": "Medlemsisolering",
+            "description": "Isoler midlertidig spesifikke medlemmer (f.eks. radiatorer bak gardiner) når en binær sensor er aktiv.",
+            "data": {
+              "isolation_sensor": "Isolasjonssensor",
+              "isolation_entities": "Enheter som skal isoleres",
+              "isolation_activate_delay": "Aktiveringsforsinkelese (sekunder)",
+              "isolation_restore_delay": "Gjenopprettingsforsinkelse (sekunder)"
+            },
+            "data_description": {
+              "isolation_sensor": "(Valgfri) Binær sensor som utløser isolering ved ON.",
+              "isolation_entities": "Gruppemedlemmer som skal isoleres når sensoren er aktiv.",
+              "isolation_activate_delay": "Ventetid etter sensor ON før isolering av medlemmer.",
+              "isolation_restore_delay": "Ventetid etter sensor OFF før gjenoppretting av medlemmer."
+            }
+          },
           "schedule_section": {
             "name": "Tidsplan-automatisering",
             "description": "Koble til HA-plan for automatisering. Still inn resync-frekvens og overstyringsvarighet.",
@@ -186,7 +204,8 @@
       "configuration_error": "Kunne ikke oppdatere konfigurasjonen.",
       "calibration_requires_sensors": "Kalibreringsmål krever minst én ekstern temperatursensor.",
       "master_refresh_notice": "Master-enhet lagt til. Nye alternativer tilgjengelig.",
-      "master_options_notice": "Nytt valg for master-enhet"
+      "master_options_notice": "Nytt valg for master-enhet",
+      "isolation_all_selected": "Minst ett medlem må forbli utenfor isolasjonen."
     },
     "abort": {
       "no_changes": "Ingen endringer oppdaget."
@@ -297,6 +316,12 @@
       "options": {
         "off": "Slå av (Standard)",
         "temperature": "Sett temperatur"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Slå av",
+        "clamp": "Begrens til grenseverdi"
       }
     }
   },

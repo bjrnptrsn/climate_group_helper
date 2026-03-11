@@ -39,13 +39,15 @@
               "entities": "空调设备",
               "master_entity": "主设备",
               "hvac_mode_strategy": "HVAC 模式策略",
-              "feature_strategy": "功能兼容性"
+              "feature_strategy": "功能兼容性",
+              "union_out_of_bounds_action": "超出范围操作"
             },
             "data_description": {
               "entities": "添加或删除设备。移除设备将停止组对其的控制。",
               "master_entity": "指定一个设备作为主温控器。它的值可以覆盖组的计算结果。",
               "hvac_mode_strategy": "从成员计算组状态的策略 (例如，如果一个正在 'heat'，另一个已 'off')。",
-              "feature_strategy": "确定当成员具有不同能力时，组上可用的功能 (例如预设模式, 风扇模式)。"
+              "feature_strategy": "确定当成员具有不同能力时，组上可用的功能 (例如预设模式, 风扇模式)。",
+              "union_out_of_bounds_action": "对无法达到目标温度的设备执行的操作。仅在功能策略设置为联合时适用。"
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "窗口关闭后的恢复等待时间。"
             }
           },
+          "isolation_section": {
+            "name": "成员隔离",
+            "description": "当二进制传感器激活时，临时隔离特定成员（如窗帘后的暖气片）。隔离的成员将被关闭并从组计算中排除。",
+            "data": {
+              "isolation_sensor": "隔离传感器",
+              "isolation_entities": "要隔离的实体",
+              "isolation_activate_delay": "激活延迟（秒）",
+              "isolation_restore_delay": "恢复延迟（秒）"
+            },
+            "data_description": {
+              "isolation_sensor": "（可选）当传感器为ON时触发隔离的二进制传感器。",
+              "isolation_entities": "传感器激活时要隔离的组成员。",
+              "isolation_activate_delay": "传感器ON后等待隔离成员的时间。",
+              "isolation_restore_delay": "传感器OFF后等待恢复成员的时间。"
+            }
+          },
           "schedule_section": {
             "name": "日程自动化",
             "description": "连接 HA 日程以自动化温度。设置重新同步频率和覆盖持续时间。也可通过服务动态切换日程。",
@@ -186,7 +204,8 @@
       "configuration_error": "无法更新配置。",
       "calibration_requires_sensors": "校准目标需要至少一个外部温度传感器。",
       "master_refresh_notice": "已添加主实体。新选项可用。",
-      "master_options_notice": "新的主实体选项"
+      "master_options_notice": "新的主实体选项",
+      "isolation_all_selected": "至少一个成员必须保留在隔离之外。"
     },
     "abort": {
       "no_changes": "未检测到更改。"
@@ -297,6 +316,12 @@
       "options": {
         "off": "关闭（默认）",
         "temperature": "设置温度"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "关闭",
+        "clamp": "限制到边界值"
       }
     }
   },

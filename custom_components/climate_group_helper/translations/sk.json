@@ -39,13 +39,15 @@
               "entities": "Klimatické zariadenia",
               "master_entity": "Hlavné zariadenie",
               "hvac_mode_strategy": "Stratégia režimu HVAC",
-              "feature_strategy": "Kompatibilita funkcií"
+              "feature_strategy": "Kompatibilita funkcií",
+              "union_out_of_bounds_action": "Akcia mimo rozsahu"
             },
             "data_description": {
               "entities": "Pridajte alebo odoberte zariadenia. Odobranie zariadenia zastaví jeho ovládanie skupinou.",
               "master_entity": "Určte jedno zariadenie ako hlavný termostat. Jeho hodnoty môžu prepísať skupinové výpočty.",
               "hvac_mode_strategy": "Stratégia pre výpočet stavu skupiny z jej členov (napr. ak jeden je 'heat' a druhý je 'off').",
-              "feature_strategy": "Určuje, ktoré funkcie (napr. prednastavené režimy, režimy ventilátora) sú v skupine dostupné, keď majú členovia rôzne možnosti."
+              "feature_strategy": "Určuje, ktoré funkcie (napr. prednastavené režimy, režimy ventilátora) sú v skupine dostupné, keď majú členovia rôzne možnosti.",
+              "union_out_of_bounds_action": "Čo robiť so zariadeniami, ktoré nemôžu dosiahnuť cieľovú teplotu. Platí iba ak je stratégia funkcií nastavená na Zjednotenie."
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "Čas čakania po zatvorení všetkých okien pred obnovením vykurovania."
             }
           },
+          "isolation_section": {
+            "name": "Izolácia členov",
+            "description": "Dočasne izolujte konkrétnych členov (napr. radiátory za záclonami) keď je binárny senzor aktívny.",
+            "data": {
+              "isolation_sensor": "Izolačný senzor",
+              "isolation_entities": "Entity na izoláciu",
+              "isolation_activate_delay": "Oneskorenie aktivácie (sekundy)",
+              "isolation_restore_delay": "Oneskorenie obnovenia (sekundy)"
+            },
+            "data_description": {
+              "isolation_sensor": "(Voliteľné) Binárny senzor, ktorý spustí izoláciu pri ON.",
+              "isolation_entities": "Členovia skupiny na izoláciu pri aktívnom senzore.",
+              "isolation_activate_delay": "Čakacia doba po zapnutí senzora pred izolovaním členov.",
+              "isolation_restore_delay": "Čakacia doba po vypnutí senzora pred obnovením členov."
+            }
+          },
           "schedule_section": {
             "name": "Automatizácia plánu",
             "description": "Pripojiť plán HA pre automatizáciu. Nastaviť frekvenciu resynchronizácie a dobu prebitia.",
@@ -186,7 +204,8 @@
       "configuration_error": "Konfiguráciu sa nepodarilo aktualizovať.",
       "calibration_requires_sensors": "Kalibračné ciele vyžadujú aspoň jeden externý teplotný senzor.",
       "master_refresh_notice": "Pridaná Hlavná entita (Master). Dostupné nové možnosti.",
-      "master_options_notice": "Nová možnosť Hlavnej entity"
+      "master_options_notice": "Nová možnosť Hlavnej entity",
+      "isolation_all_selected": "Aspoň jeden člen musí zostať mimo izolácie."
     },
     "abort": {
       "no_changes": "Neboli zistené žiadne zmeny."
@@ -297,6 +316,12 @@
       "options": {
         "off": "Vypnúť (predvolené)",
         "temperature": "Nastaviť teplotu"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Vypnúť",
+        "clamp": "Obmedziť na hraničnú hodnotu"
       }
     }
   },

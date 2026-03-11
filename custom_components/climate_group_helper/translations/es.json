@@ -39,13 +39,15 @@
               "entities": "Dispositivos Climáticos",
               "master_entity": "Dispositivo maestro",
               "hvac_mode_strategy": "Estrategia de Modo HVAC",
-              "feature_strategy": "Compatibilidad de Funciones"
+              "feature_strategy": "Compatibilidad de Funciones",
+              "union_out_of_bounds_action": "Acción fuera de rango"
             },
             "data_description": {
               "entities": "Añadir o eliminar dispositivos. Eliminar dispositivos detiene su control por parte del grupo.",
               "master_entity": "Designa un dispositivo como termostato principal. Sus valores pueden anular los cálculos del grupo.",
               "hvac_mode_strategy": "Estrategia para calcular el estado del grupo desde sus miembros (ej. si uno está 'heat' y otro está 'off').",
-              "feature_strategy": "Determina qué funciones (ej. modos preestablecidos, modos ventilador) están disponibles en el grupo cuando los miembros tienen capacidades diferentes."
+              "feature_strategy": "Determina qué funciones (ej. modos preestablecidos, modos ventilador) están disponibles en el grupo cuando los miembros tienen capacidades diferentes.",
+              "union_out_of_bounds_action": "Qué hacer con los dispositivos que no pueden alcanzar la temperatura objetivo. Solo se aplica cuando la estrategia de funciones está configurada en Unión."
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "Tiempo a esperar tras cerrar todas las ventanas antes de restaurar."
             }
           },
+          "isolation_section": {
+            "name": "Aislamiento de miembros",
+            "description": "Aislar temporalmente miembros específicos (ej: radiadores detrás de cortinas) cuando un sensor binario está activo.",
+            "data": {
+              "isolation_sensor": "Sensor de aislamiento",
+              "isolation_entities": "Entidades a aislar",
+              "isolation_activate_delay": "Retraso de activación (segundos)",
+              "isolation_restore_delay": "Retraso de restauración (segundos)"
+            },
+            "data_description": {
+              "isolation_sensor": "(Opcional) Sensor binario que activa el aislamiento cuando está ON.",
+              "isolation_entities": "Miembros del grupo a aislar cuando el sensor está activo.",
+              "isolation_activate_delay": "Tiempo de espera tras activar el sensor antes de aislar miembros.",
+              "isolation_restore_delay": "Tiempo de espera tras desactivar el sensor antes de restaurar miembros."
+            }
+          },
           "schedule_section": {
             "name": "Automatización de horarios",
             "description": "Conecta el horario de HA para automatizar temperaturas. Establece frecuencia de resincronización y duración del cambio manual.",
@@ -186,7 +204,8 @@
       "configuration_error": "No se pudo actualizar la configuración.",
       "calibration_requires_sensors": "Los objetivos de calibración requieren al menos un sensor de temperatura externo.",
       "master_refresh_notice": "Entidad Maestra añadida. Nuevas opciones disponibles.",
-      "master_options_notice": "Nueva opción de entidad Maestra"
+      "master_options_notice": "Nueva opción de entidad Maestra",
+      "isolation_all_selected": "Al menos un miembro debe permanecer fuera del aislamiento."
     },
     "abort": {
       "no_changes": "No se detectaron cambios."
@@ -297,6 +316,12 @@
       "options": {
         "off": "Apagar (Predeterminado)",
         "temperature": "Establecer temperatura"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Apagar",
+        "clamp": "Limitar al máximo/mínimo"
       }
     }
   },

@@ -39,13 +39,15 @@
               "entities": "Klimageräte",
               "master_entity": "Master-Gerät",
               "hvac_mode_strategy": "HVAC-Modus-Strategie",
-              "feature_strategy": "Funktionskompatibilität"
+              "feature_strategy": "Funktionskompatibilität",
+              "union_out_of_bounds_action": "Außerhalb-Bereich-Aktion"
             },
             "data_description": {
               "entities": "Geräte hinzufügen oder entfernen. Das Entfernen stoppt deren Steuerung durch die Gruppe.",
               "master_entity": "Bestimme ein Gerät als führendes Thermostat. Seine Werte können die Gruppenberechnung überschreiben.",
               "hvac_mode_strategy": "Strategie zur Berechnung des Gruppenstatus aus den Mitgliedern (z.B. wenn eines 'heat' und ein anderes 'off' ist).",
-              "feature_strategy": "Bestimmt, welche Funktionen (z.B. Preset-Modi, Lüfter-Modi) in der Gruppe verfügbar sind, wenn Mitglieder unterschiedliche Fähigkeiten haben."
+              "feature_strategy": "Bestimmt, welche Funktionen (z.B. Preset-Modi, Lüfter-Modi) in der Gruppe verfügbar sind, wenn Mitglieder unterschiedliche Fähigkeiten haben.",
+              "union_out_of_bounds_action": "Was mit Geräten geschieht, die die Zieltemperatur nicht erreichen können. Gilt nur wenn die Feature-Strategie auf Union gesetzt ist."
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "Wartezeit nachdem alle Fenster geschlossen sind, bevor die Heizung wiederhergestellt wird."
             }
           },
+          "isolation_section": {
+            "name": "Mitglieds-Isolierung",
+            "description": "Bestimmte Mitglieder (z.B. Heizkörper hinter Vorhängen) temporär isolieren, wenn ein Binärsensor aktiv ist. Isolierte Mitglieder werden ausgeschaltet und aus Gruppenberechnungen ausgeschlossen.",
+            "data": {
+              "isolation_sensor": "Isolierungs-Sensor",
+              "isolation_entities": "Zu isolierende Geräte",
+              "isolation_activate_delay": "Aktivierungs-Verzögerung (Sekunden)",
+              "isolation_restore_delay": "Wiederherstell-Verzögerung (Sekunden)"
+            },
+            "data_description": {
+              "isolation_sensor": "(Optional) Binärsensor, der die Isolierung bei ON auslöst.",
+              "isolation_entities": "Gruppenmitglieder, die beim aktiven Sensor isoliert werden.",
+              "isolation_activate_delay": "Wartezeit nach Sensor ON, bevor Mitglieder isoliert werden.",
+              "isolation_restore_delay": "Wartezeit nach Sensor OFF, bevor Mitglieder synchronisiert werden."
+            }
+          },
           "schedule_section": {
             "name": "Zeitplan-Automatisierung",
             "description": "HA-Zeitpläne koppeln. Resync-Frequenz und Override-Dauer festlegen oder Zeitpläne via Dienst dynamisch wechseln.",
@@ -186,7 +204,8 @@
       "configuration_error": "Konfiguration konnte nicht aktualisiert werden.",
       "calibration_requires_sensors": "Kalibrierungsziele erfordern mindestens einen externen Temperatursensor.",
       "master_refresh_notice": "Master-Entität hinzugefügt. Neue Optionen verfügbar.",
-      "master_options_notice": "Neue Master-Entitäts-Option"
+      "master_options_notice": "Neue Master-Entitäts-Option",
+      "isolation_all_selected": "Mindestens ein Mitglied muss außerhalb der Isolierung bleiben."
     },
     "abort": {
       "no_changes": "Keine Änderungen erkannt."
@@ -297,6 +316,12 @@
       "options": {
         "off": "Ausschalten (Standard)",
         "temperature": "Temperatur setzen"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Ausschalten",
+        "clamp": "Auf Grenzwert begrenzen"
       }
     }
   },

@@ -39,13 +39,15 @@
               "entities": "Klimaatapparaten",
               "master_entity": "Masterentiteit",
               "hvac_mode_strategy": "HVAC Modus Strategie",
-              "feature_strategy": "Functiecompatibiliteit"
+              "feature_strategy": "Functiecompatibiliteit",
+              "union_out_of_bounds_action": "Buiten-bereik-actie"
             },
             "data_description": {
               "entities": "Apparaten toevoegen of verwijderen. Verwijderen stopt de besturing door de groep.",
               "master_entity": "Wijs één apparaat aan als leidende thermostaat. De waarden kunnen groepsberekeningen overschrijven.",
               "hvac_mode_strategy": "Strategie voor het berekenen van de groepsstatus vanuit zijn leden (bijv. als één 'heat' en een ander 'off' staat).",
-              "feature_strategy": "Bepaalt welke functies (bijv. preset modi, ventilatormodi) beschikbaar zijn in de groep wanneer leden verschillende mogelijkheden hebben."
+              "feature_strategy": "Bepaalt welke functies (bijv. preset modi, ventilatormodi) beschikbaar zijn in de groep wanneer leden verschillende mogelijkheden hebben.",
+              "union_out_of_bounds_action": "Wat te doen met apparaten die de doeltemperatuur niet kunnen bereiken. Alleen van toepassing wanneer de functiestrategie is ingesteld op Unie."
             }
           },
           "temperature_section": {
@@ -134,6 +136,22 @@
               "close_delay": "Wachttijd na sluiten ramen voor herstel."
             }
           },
+          "isolation_section": {
+            "name": "Ledenisolatie",
+            "description": "Isoleer specifieke leden tijdelijk (bijv. radiatoren achter gordijnen) wanneer een binaire sensor actief is.",
+            "data": {
+              "isolation_sensor": "Isolatiesensor",
+              "isolation_entities": "Te isoleren entiteiten",
+              "isolation_activate_delay": "Activeringsvertraging (seconden)",
+              "isolation_restore_delay": "Herstelvertraging (seconden)"
+            },
+            "data_description": {
+              "isolation_sensor": "(Optioneel) Binaire sensor die isolatie activeert wanneer ON.",
+              "isolation_entities": "Groepsleden om te isoleren wanneer de sensor actief is.",
+              "isolation_activate_delay": "Wachttijd na sensor ON voordat leden worden geïsoleerd.",
+              "isolation_restore_delay": "Wachttijd na sensor OFF voordat leden worden hersteld."
+            }
+          },
           "schedule_section": {
             "name": "Schema-automatisering",
             "description": "Koppel HA-schema voor automatisering. Stel resync-frequentie en override-duur in.",
@@ -186,7 +204,8 @@
       "configuration_error": "Kan configuratie niet bijwerken.",
       "calibration_requires_sensors": "Kalibratiedoelen vereisen minimaal één externe temperatuursensor.",
       "master_refresh_notice": "Master-entiteit toegevoegd. Nieuwe opties beschikbaar.",
-      "master_options_notice": "Nieuwe Master-entiteit optie"
+      "master_options_notice": "Nieuwe Master-entiteit optie",
+      "isolation_all_selected": "Ten minste één lid moet buiten de isolatie blijven."
     },
     "abort": {
       "no_changes": "Geen wijzigingen gedetecteerd."
@@ -297,6 +316,12 @@
       "options": {
         "off": "Uitschakelen (Standaard)",
         "temperature": "Temperatuur instellen"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Uitschakelen",
+        "clamp": "Beperken tot grenswaarde"
       }
     }
   },

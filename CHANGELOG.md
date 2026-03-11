@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.0 - 2026-03-11
+
+### 🌟 New Features
+
+*   **Member Isolation**: Isolate specific group members when a binary sensor (e.g. a curtain sensor) is active. After an optional delay, isolated members are turned `off` and excluded from all group calculations. They are automatically restored (after an optional restore delay) when the sensor deactivates. Configure via the new **Member Isolation** section in the options flow.
+
+*   **Union Temperature Limits**: The **Union** feature strategy now exposes the full temperature range across all members (widest min/max). When a target temperature falls outside a member's supported range, the new **Out-of-Bounds Action** determines what happens: **Off** (default) turns the member off, **Clamp** sets it to its nearest supported limit. Members are automatically restored when the temperature moves back into range.
+
 ## 0.19.5 - 2026-03-03
 
 ### ✨ New Features
