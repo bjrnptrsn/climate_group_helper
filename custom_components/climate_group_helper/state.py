@@ -205,6 +205,10 @@ class BaseStateManager:
         Returns:
             True if update was allowed, False if blocked by filter
         """
+        # HA may pass entity_id as a list (e.g. from async_set_temperature kwargs) — normalize to str
+        if isinstance(entity_id, list):
+            entity_id = entity_id[0] if entity_id else None
+
         if not self._filter_update(entity_id, kwargs):
             return False
 
@@ -216,7 +220,7 @@ class BaseStateManager:
             kwargs["last_source"] = self.SOURCE
             
         last_entity = entity_id or self._group.entity_id
-        kwargs["last_entity"] = last_entity[0] if isinstance(last_entity, list) and last_entity else last_entity
+        kwargs["last_entity"] = last_entity
         kwargs["last_timestamp"] = time.time()
 
         # Update the CENTRAL shared target state
