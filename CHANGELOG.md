@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.1 - 2026-03-12
+
+### 🔧 Fixes
+
+*   **Member Isolation**: Fixed a crash (`TypeError: unhashable type: 'list'`) that occurred when controlling a group with Member Isolation configured.
+
 ## 0.20.0 - 2026-03-11
 
 ### 🌟 New Features
