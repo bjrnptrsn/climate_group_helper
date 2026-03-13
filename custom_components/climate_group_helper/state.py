@@ -23,22 +23,26 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class GroupContext:
-    """Immutable operational context for the climate group.
+class RunState:
+    """Immutable operational status for the climate group.
 
-    Centralises all factors that restrict controllability:
-    - is_blocked: global block (e.g. window open via WindowControl)
+    Centralises all factors that restrict controllability and runtime markers:
+    - blocked: global block (e.g. window open via WindowControl)
     - isolated_members: per-member isolation (e.g. curtain closed)
     - oob_members: members currently out-of-bounds (union strategy)
     - blocking_reason: human-readable reason for the global block
+    - startup_time: unix timestamp of initialisation completion
+    - last_active_hvac_mode: cache of last mode other than OFF
 
     Updates are performed via dataclasses.replace(), consistent with TargetState.
     """
 
-    is_blocked: bool = False
+    blocked: bool = False
+    blocking_reason: str | None = None
     isolated_members: frozenset[str] = field(default_factory=frozenset)
     oob_members: frozenset[str] = field(default_factory=frozenset)
-    blocking_reason: str | None = None
+    startup_time: float | None = None
+    last_active_hvac_mode: str | None = None
 
 
 @dataclass(frozen=True)
@@ -241,7 +245,7 @@ class BaseStateManager:
 
     def _check_blocking_mode(self) -> bool:
         """Check if blocking mode is active."""
-        if self._group.group_context.is_blocked:
+        if self._group.run_state.blocked:
             _LOGGER.debug("[%s] TargetState update check (source=%s), blocking_mode=True", self._group.entity_id, self.SOURCE)
             return True
         return False
@@ -311,7 +315,7 @@ class ClimateStateManager(BaseStateManager):
 
     def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
         """Filter user updates based on blocking mode."""
-        if entity_id and entity_id in self._group.group_context.isolated_members:
+        if entity_id and entity_id in self._group.run_state.isolated_members:
             _LOGGER.debug("[%s] TargetState update blocked: %s is isolated", self._group.entity_id, entity_id)
             return False
 
@@ -336,7 +340,7 @@ class SyncModeStateManager(BaseStateManager):
 
     def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
         """Apply sync-mode specific filters."""
-        if entity_id and entity_id in self._group.group_context.isolated_members:
+        if entity_id and entity_id in self._group.run_state.isolated_members:
             _LOGGER.debug("[%s] TargetState update blocked: %s is isolated", self._group.entity_id, entity_id)
             return False
 

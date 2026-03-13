@@ -273,8 +273,8 @@ class BaseServiceCallHandler(ABC):
         (e.g. curtain closed). Returns True if either applies.
         Override in derived handlers that bypass all blocking (e.g. IsolationCallHandler).
         """
-        ctx = self._group.group_context
-        return ctx.is_blocked or entity_id in ctx.isolated_members
+        run_state = self._group.run_state
+        return run_state.blocked or entity_id in run_state.isolated_members
 
     def _get_capable_entities(self, attr: str, value: Any = None) -> list[str]:
         """Get members that technically support this attribute/value (Capability check).
@@ -372,26 +372,41 @@ class BaseServiceCallHandler(ABC):
         Injected attributes (intentionally deviating from target_state) receive
         'injected': [list_of_attrs] so _is_stale_call does not abort the call.
         """
-        if attr == ATTR_HVAC_MODE and value == HVACMode.OFF and self._group.min_temp_off:
+        if attr == ATTR_HVAC_MODE and self._group.min_temp_off:
             temp_ids = [
                 eid for eid in entity_ids
                 if (state := self._hass.states.get(eid)) and ATTR_TEMPERATURE in state.attributes
             ]
             non_temp_ids = [eid for eid in entity_ids if eid not in temp_ids]
             calls = []
-            if temp_ids:
-                calls.append({
-                    "service": SERVICE_SET_TEMPERATURE,
-                    "kwargs": {ATTR_TEMPERATURE: self._group._attr_min_temp, ATTR_HVAC_MODE: HVACMode.OFF},
-                    "entity_ids": temp_ids,
-                    "injected": [ATTR_TEMPERATURE],
-                })
-            if non_temp_ids:
-                calls.append({
-                    "service": SERVICE_SET_HVAC_MODE,
-                    "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
-                    "entity_ids": non_temp_ids,
-                })
+            if value == HVACMode.OFF:
+                if temp_ids:
+                    calls.append({
+                        "service": SERVICE_SET_TEMPERATURE,
+                        "kwargs": {ATTR_TEMPERATURE: self._group._attr_min_temp, ATTR_HVAC_MODE: HVACMode.OFF},
+                        "entity_ids": temp_ids,
+                        "injected": [ATTR_TEMPERATURE],
+                    })
+                if non_temp_ids:
+                    calls.append({
+                        "service": SERVICE_SET_HVAC_MODE,
+                        "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
+                        "entity_ids": non_temp_ids,
+                    })
+            else:
+                target_temp = self.target_state.temperature
+                if target_temp is not None and temp_ids:
+                    calls.append({
+                        "service": SERVICE_SET_TEMPERATURE,
+                        "kwargs": {ATTR_TEMPERATURE: target_temp, ATTR_HVAC_MODE: value},
+                        "entity_ids": temp_ids,
+                    })
+                if non_temp_ids or (target_temp is None and temp_ids):
+                    calls.append({
+                        "service": SERVICE_SET_HVAC_MODE,
+                        "kwargs": {ATTR_HVAC_MODE: value},
+                        "entity_ids": non_temp_ids + (temp_ids if target_temp is None else []),
+                    })
             return calls
 
         # OOB — only for ATTR_TEMPERATURE and only when union strategy is active
@@ -400,21 +415,23 @@ class BaseServiceCallHandler(ABC):
 
         if not entity_ids:
             return []
+
         service = ATTR_SERVICE_MAP.get(attr)
         if not service:
             return []
+
         return [{"service": service, "kwargs": {attr: value}, "entity_ids": entity_ids}]
 
     def _process_oob(self, value: float, entity_ids: list[str]) -> list[dict]:
         """OOB handling after entity selection (union strategy only).
 
         Splits entity_ids into in-range and out-of-bounds. Generates entity-specific
-        extra calls (OFF or CLAMP). Writes group_context.oob_members once at the end
+        extra calls (OFF or CLAMP). Writes run_state.oob_members once at the end
         (retry-safe — no partial state).
         """
         action = self._group.config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, DEFAULT_UNION_OUT_OF_BOUNDS_ACTION)
-        ctx = self._group.group_context
-        new_oob = set(ctx.oob_members)
+        run_state = self._group.run_state
+        new_oob = set(run_state.oob_members)
         in_range_ids = []
         extra_calls = []
 
@@ -422,10 +439,11 @@ class BaseServiceCallHandler(ABC):
             state = self._hass.states.get(entity_id)
             if not state:
                 continue
-            min_t = state.attributes.get("min_temp")
-            max_t = state.attributes.get("max_temp")
 
-            if (min_t is not None and value < min_t) or (max_t is not None and value > max_t):
+            min_temp = state.attributes.get("min_temp")
+            max_temp = state.attributes.get("max_temp")
+
+            if (min_temp is not None and value < min_temp) or (max_temp is not None and value > max_temp):
                 new_oob.add(entity_id)
                 if action == UnionOutOfBoundsAction.OFF:
                     if state.state != HVACMode.OFF:
@@ -433,11 +451,10 @@ class BaseServiceCallHandler(ABC):
                             "service": SERVICE_SET_HVAC_MODE,
                             "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
                             "entity_ids": [entity_id],
-                            # hvac_mode=off intentionally deviates from target_state
                             "injected": [ATTR_HVAC_MODE],
                         })
                 else:  # CLAMP
-                    clamped = max_t if value > max_t else min_t
+                    clamped = max_temp if value > max_temp else min_temp
                     extra_calls.append({
                         "service": SERVICE_SET_TEMPERATURE,
                         "kwargs": {ATTR_TEMPERATURE: clamped},
@@ -446,7 +463,7 @@ class BaseServiceCallHandler(ABC):
                     })
             else:
                 in_range_ids.append(entity_id)
-                if entity_id in ctx.oob_members and state.state == HVACMode.OFF:
+                if entity_id in run_state.oob_members and state.state == HVACMode.OFF:
                     # Was OOB-forced OFF — restore hvac_mode if target is not OFF
                     if self.target_state.hvac_mode and self.target_state.hvac_mode != HVACMode.OFF:
                         extra_calls.append({
@@ -457,9 +474,9 @@ class BaseServiceCallHandler(ABC):
                 new_oob.discard(entity_id)
 
         # Write once at end (retry-safe, no partial state).
-        # Read current group_context (not snapshot) to avoid overwriting
+        # Read current run_state (not snapshot) to avoid overwriting
         # concurrent changes to other fields (e.g. isolated_members).
-        self._group.group_context = replace(self._group.group_context, oob_members=frozenset(new_oob))
+        self._group.run_state = replace(self._group.run_state, oob_members=frozenset(new_oob))
 
         calls = []
         if in_range_ids:
@@ -562,10 +579,12 @@ class ClimateCallHandler(BaseServiceCallHandler):
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block calls if blocking mode is active, unless turning the group off."""
+        blocked = self._group.run_state.blocked
         if data and data.get(ATTR_HVAC_MODE) == HVACMode.OFF:
-            _LOGGER.debug("[%s] Bypass blocking mode (turning group off)", self._group.entity_id)
+            if blocked:
+                _LOGGER.debug("[%s] Bypass blocking mode (turning group off)", self._group.entity_id)
             return False
-        return self._group.group_context.is_blocked
+        return blocked
 
     def _is_stale_call(self, call: dict[str, Any]) -> bool:
         """Return True if any user-commanded attribute no longer matches target_state.
@@ -628,18 +647,18 @@ class SyncCallHandler(BaseServiceCallHandler):
         """
         if super()._is_member_blocked(entity_id):
             return True
-        return entity_id in self._group.group_context.oob_members
+        return entity_id in self._group.run_state.oob_members
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block calls if blocking mode is active."""
-        return self._group.group_context.is_blocked
+        return self._group.run_state.blocked
 
 
 class WindowControlCallHandler(BaseServiceCallHandler):
     """Call handler for Window Control operations.
 
     Bypasses member-level blocking so that window open/close commands
-    always reach all members regardless of group_context state.
+    always reach all members regardless of run_state state.
     """
 
     CONTEXT_ID = "window_control"
@@ -650,7 +669,7 @@ class WindowControlCallHandler(BaseServiceCallHandler):
 
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Bypass global block, but still respect per-member isolation."""
-        return entity_id in self._group.group_context.isolated_members
+        return entity_id in self._group.run_state.isolated_members
 
 
 class ScheduleCallHandler(BaseServiceCallHandler):
@@ -666,11 +685,11 @@ class ScheduleCallHandler(BaseServiceCallHandler):
         """Extend base blocking with OOB check (same as SyncCallHandler)."""
         if super()._is_member_blocked(entity_id):
             return True
-        return entity_id in self._group.group_context.oob_members
+        return entity_id in self._group.run_state.oob_members
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block schedule calls if blocking mode is active."""
-        return self._group.group_context.is_blocked
+        return self._group.run_state.blocked
 
     def _get_call_entity_ids(self, attr: str, value: Any = None) -> list[str]:  # noqa: ARG002
         """Capability + necessity check: 'Can I?' and 'Should I?'."""
