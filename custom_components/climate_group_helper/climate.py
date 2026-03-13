@@ -1,7 +1,7 @@
 """This platform allows several climate devices to be grouped into one climate device."""
 from __future__ import annotations
 
-from dataclasses import fields
+from dataclasses import fields, replace
 from functools import reduce
 import logging
 import time
@@ -110,28 +110,28 @@ from .const import (
     HVAC_MODE_STRATEGY_OFF_PRIORITY,
     AdoptManualChanges,
     AverageOption,
-    RoundOption,
     CalibrationMode,
+    RoundOption,
     SyncMode,
 )
 from .isolation import MemberIsolationHandler
 from .schedule import ScheduleHandler
 from .service_call import (
-    SyncCallHandler,
-    ScheduleCallHandler,
-    WindowControlCallHandler,
     ClimateCallHandler,
+    ScheduleCallHandler,
+    SyncCallHandler,
+    WindowControlCallHandler,
 )
 from .state import (
-    ClimateState,
-    GroupContext,
-    TargetState,
-    CurrentState,
     ChangeState,
-    SyncModeStateManager,
-    ScheduleStateManager,
-    WindowControlStateManager,
+    ClimateState,
+    CurrentState,
+    RunState,
+    TargetState,
     ClimateStateManager,
+    ScheduleStateManager,
+    SyncModeStateManager,
+    WindowControlStateManager,
 )
 from .sync_mode import SyncModeHandler
 from .window_control import WindowControlHandler
@@ -245,6 +245,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._expose_config = config.get(CONF_EXPOSE_CONFIG, False)
         # Sync mode
         self.sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
+        # Advanced options
         self.min_temp_off = config.get(CONF_MIN_TEMP_OFF, False)
         # Window control
         self._window_adopt_manual_changes = config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES, AdoptManualChanges.OFF)
@@ -265,31 +266,28 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # State variables
         self.states: list[State] | None = None
-        self.shared_target_state = TargetState()
-        self.group_context = GroupContext()
-        self.current_group_state = CurrentState()
         self.change_state: ChangeState | None = None
+        self.current_group_state = CurrentState()
+        self.run_state = RunState()
+        self.shared_target_state = TargetState()
 
         # State managers
         self.climate_state_manager = ClimateStateManager(self)
+        self.schedule_state_manager = ScheduleStateManager(self)
         self.sync_mode_state_manager = SyncModeStateManager(self)
         self.window_control_state_manager = WindowControlStateManager(self)
-        self.schedule_state_manager = ScheduleStateManager(self)
 
         # Call handlers
         self.climate_call_handler = ClimateCallHandler(self)
+        self.schedule_call_handler = ScheduleCallHandler(self)
         self.sync_mode_call_handler = SyncCallHandler(self)
         self.window_control_call_handler = WindowControlCallHandler(self)
-        self.schedule_call_handler = ScheduleCallHandler(self)
 
         # Modules
+        self.member_isolation_handler = MemberIsolationHandler(self)
+        self.schedule_handler = ScheduleHandler(self)
         self.sync_mode_handler = SyncModeHandler(self)
         self.window_control_handler = WindowControlHandler(self)
-        self.schedule_handler = ScheduleHandler(self)
-        self.member_isolation_handler = MemberIsolationHandler(self)
-
-        self.startup_time: float | None = None
-        self._last_active_hvac_mode = None
 
         # Attributes
         self._attr_supported_features = DEFAULT_SUPPORTED_FEATURES
@@ -472,6 +470,10 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             self.schedule_handler._schedule_entity = restored_schedule
             _LOGGER.debug("[%s] Restored active schedule entity: %s", self.entity_id, restored_schedule)
 
+        # Restore last active HVAC mode
+        if (last_active := last_attrs.get(ATTR_LAST_ACTIVE_HVAC_MODE)) is not None:
+            self.run_state = replace(self.run_state, last_active_hvac_mode=last_active)
+
     def _reduce_attributes(self, attributes: list[Any], default: Any = None) -> list | int:
         """Reduce a list of attributes (modes or features) based on the feature strategy."""
         if not attributes:
@@ -584,21 +586,21 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Minimal attributes by default
         attrs = {
             ATTR_ASSUMED_STATE: self._attr_assumed_state,
-            ATTR_LAST_ACTIVE_HVAC_MODE: self._last_active_hvac_mode,
+            ATTR_LAST_ACTIVE_HVAC_MODE: self.run_state.last_active_hvac_mode,
             ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
         }
 
         # Blocking Reason (Window Control / global block)
-        if self.group_context.blocking_reason:
-            attrs["blocking_reason"] = self.group_context.blocking_reason
+        if self.run_state.blocking_reason:
+            attrs["blocking_reason"] = self.run_state.blocking_reason
 
         # Isolated members
-        if self.group_context.isolated_members:
-            attrs["isolated_members"] = sorted(self.group_context.isolated_members)
+        if self.run_state.isolated_members:
+            attrs["isolated_members"] = sorted(self.run_state.isolated_members)
 
         # Out-of-bounds members (union strategy)
-        if self.group_context.oob_members:
-            attrs["oob_members"] = sorted(self.group_context.oob_members)
+        if self.run_state.oob_members:
+            attrs["oob_members"] = sorted(self.run_state.oob_members)
 
         # Expose member entities if configured
         if self._expose_member_entities:
@@ -650,7 +652,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             Tuple of (valid_states, all_ready) where all_ready is True when
             all entity_ids have a valid (not unavailable/unknown) state.
         """
-        excluded = self.group_context.isolated_members
+        excluded = self.run_state.isolated_members
         expected_entity_ids = [entity_id for entity_id in entity_ids if entity_id not in excluded]
 
         all_states = [
@@ -801,8 +803,8 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.states, all_members_ready = self._get_valid_member_states(self.climate_entity_ids)
 
         # Set startup time if all members are ready
-        if not self.startup_time and all_members_ready:
-            self.startup_time = time.time()
+        if not self.run_state.startup_time and all_members_ready:
+            self.run_state = replace(self.run_state, startup_time=time.time())
             self.hass.async_create_task(self.schedule_handler.schedule_listener(caller="group"))
             self._device_calibration("temperature", force=True)
             self._device_calibration("humidity", force=True)
@@ -851,8 +853,8 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_hvac_mode = self._determine_hvac_mode(current_hvac_modes)
 
         # Update last active HVAC mode
-        if self._attr_hvac_mode not in (HVACMode.OFF, self._last_active_hvac_mode):
-            self._last_active_hvac_mode = self._attr_hvac_mode
+        if self._attr_hvac_mode is not None and self._attr_hvac_mode not in (HVACMode.OFF, self.run_state.last_active_hvac_mode):
+            self.run_state = replace(self.run_state, last_active_hvac_mode=self._attr_hvac_mode)
 
         # The group is available if any member is available
         self._attr_available = True
@@ -1034,9 +1036,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         """Forward the turn_on command to all climate in the climate group."""
 
         # Set to the last active HVAC mode if available
-        if self._last_active_hvac_mode is not None:
-            _LOGGER.debug("[%s] Turn on with the last active HVAC mode: %s", self.entity_id, self._last_active_hvac_mode)
-            await self.async_set_hvac_mode(self._last_active_hvac_mode)
+        if self.run_state.last_active_hvac_mode is not None:
+            _LOGGER.debug("[%s] Turn on with the last active HVAC mode: %s", self.entity_id, self.run_state.last_active_hvac_mode)
+            await self.async_set_hvac_mode(self.run_state.last_active_hvac_mode)
 
         # Try to set the first available HVAC mode
         elif self._attr_hvac_modes:

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.2 - 2026-03-13
+
+### 🔧 Fixes
+
+*   **Setpoint Restoration**: Fixed an issue where thermostats would stay at the low "Frost Protection" temperature (e.g. 5°C) after turning the group back on. The target temperature is now correctly restored immediately upon activation.
+*   **Startup Leak Prevention**: Sealed the initial synchronization block to strictly prevent unintended member updates during Home Assistant startup.
+*   **State Restoration Hardening**: Improved the "Last Active HVAC Mode" memory to ensure the group correctly remembers its previous mode even if restarted while `off`.
+
 ## 0.20.1 - 2026-03-12
 
 ### 🔧 Fixes

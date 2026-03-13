@@ -173,14 +173,14 @@ class WindowControlHandler:
         """Execute heating ON/OFF action.
 
         Window Control does NOT modify target_state:
-        - OPEN: Forces members OFF via call_immediate, sets is_blocked=True
-        - CLOSE: Restores members to target_state via call_immediate, clears is_blocked
+        - OPEN: Forces members OFF via call_immediate, sets blocked=True
+        - CLOSE: Restores members to target_state via call_immediate, clears blocked
         """
-        # Update control state and group_context
+        # Update control state and run_state
         self._control_state = mode
-        self._group.group_context = replace(
-            self._group.group_context,
-            is_blocked=(mode == WINDOW_OPEN),
+        self._group.run_state = replace(
+            self._group.run_state,
+            blocked=(mode == WINDOW_OPEN),
             blocking_reason="window_open" if mode == WINDOW_OPEN else None,
         )
 

@@ -75,8 +75,8 @@ class SyncModeHandler:
 
         # Block during startup to prevent initial state flood from overwriting target_state.
         if (
-            self._group.startup_time
-            and (time.time() - self._group.startup_time) < STARTUP_BLOCK_DELAY
+            not self._group.run_state.startup_time
+            or (time.time() - self._group.run_state.startup_time) < STARTUP_BLOCK_DELAY
         ):
             _LOGGER.debug("[%s] Startup phase, sync blocked", self._group.entity_id)
             return
@@ -139,7 +139,7 @@ class SyncModeHandler:
             # Non-master changes are enforced (reverted) via call_debounced below
 
         # Enforce target state on all members (skip during global blocking mode)
-        if not self._group.group_context.is_blocked:
+        if not self._group.run_state.blocked:
             sync_task = self._hass.async_create_background_task(
                 self.call_handler.call_debounced(), name="climate_group_sync_enforcement"
             )

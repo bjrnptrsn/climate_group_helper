@@ -29,9 +29,9 @@ _LOGGER = logging.getLogger(__name__)
 class IsolationCallHandler(BaseServiceCallHandler):
     """Call handler for Member Isolation operations.
 
-    Always bypasses global blocking (is_blocked) and member isolation checks —
+    Always bypasses global blocking (blocked) and member isolation checks —
     the isolation handler itself must be able to send commands regardless of
-    the current group_context state.
+    the current run_state state.
     """
 
     CONTEXT_ID = "isolation"
@@ -65,16 +65,16 @@ class IsolationCallHandler(BaseServiceCallHandler):
 
 
 class MemberIsolationHandler:
-    """Monitors an isolation sensor and manages GroupContext.isolated_members.
+    """Monitors an isolation sensor and manages RunState.isolated_members.
 
     When the sensor turns ON:
       1. Optionally waits for activate_delay seconds.
-      2. Adds the configured entities to group_context.isolated_members.
+      2. Adds the configured entities to run_state.isolated_members.
       3. Actively turns each isolated entity OFF.
 
     When the sensor turns OFF:
       1. Optionally waits for restore_delay seconds.
-      2. Removes the entities from group_context.isolated_members.
+      2. Removes the entities from run_state.isolated_members.
       3. Immediately syncs each entity back to the current target_state.
     """
 
@@ -171,9 +171,9 @@ class MemberIsolationHandler:
 
     async def _activate_isolation(self) -> None:
         """Add entities to isolated_members and turn them OFF."""
-        new_isolated = self._group.group_context.isolated_members | frozenset(self._isolation_entity_ids)
-        self._group.group_context = replace(
-            self._group.group_context,
+        new_isolated = self._group.run_state.isolated_members | frozenset(self._isolation_entity_ids)
+        self._group.run_state = replace(
+            self._group.run_state,
             isolated_members=new_isolated,
         )
         _LOGGER.debug("[%s] Isolation activated for: %s", self._group.entity_id, self._isolation_entity_ids)
@@ -190,16 +190,16 @@ class MemberIsolationHandler:
 
     async def _deactivate_isolation(self) -> None:
         """Remove entities from isolated_members and restore to target_state."""
-        new_isolated = self._group.group_context.isolated_members - frozenset(self._isolation_entity_ids)
-        self._group.group_context = replace(
-            self._group.group_context,
+        new_isolated = self._group.run_state.isolated_members - frozenset(self._isolation_entity_ids)
+        self._group.run_state = replace(
+            self._group.run_state,
             isolated_members=new_isolated,
         )
         _LOGGER.debug("[%s] Isolation deactivated for: %s", self._group.entity_id, self._isolation_entity_ids)
 
         # Skip restore if globally blocked (e.g. window open) — Window Control
         # will restore all members (including the newly un-isolated one) when the block is lifted.
-        if not self._group.group_context.is_blocked:
+        if not self._group.run_state.blocked:
             for entity_id in self._isolation_entity_ids:
                 if handler := self._call_handlers.get(entity_id):
                     await handler.call_immediate()
