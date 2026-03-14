@@ -15,8 +15,11 @@ from .const import (
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_RESTORE_DELAY,
     CONF_ISOLATION_SENSOR,
+    CONF_ISOLATION_TRIGGER,
+    CONF_ISOLATION_TRIGGER_HVAC_MODES,
     DEFAULT_ISOLATION_ACTIVATE_DELAY,
     DEFAULT_ISOLATION_RESTORE_DELAY,
+    IsolationTrigger,
 )
 from .service_call import BaseServiceCallHandler
 
@@ -65,14 +68,18 @@ class IsolationCallHandler(BaseServiceCallHandler):
 
 
 class MemberIsolationHandler:
-    """Monitors an isolation sensor and manages RunState.isolated_members.
+    """Monitors an isolation trigger and manages RunState.isolated_members.
 
-    When the sensor turns ON:
+    Trigger modes:
+      - SENSOR: Activates when a binary_sensor turns ON.
+      - HVAC_MODE: Activates when target_state.hvac_mode is in the configured set.
+
+    When the trigger activates:
       1. Optionally waits for activate_delay seconds.
       2. Adds the configured entities to run_state.isolated_members.
       3. Actively turns each isolated entity OFF.
 
-    When the sensor turns OFF:
+    When the trigger deactivates:
       1. Optionally waits for restore_delay seconds.
       2. Removes the entities from run_state.isolated_members.
       3. Immediately syncs each entity back to the current target_state.
@@ -83,42 +90,58 @@ class MemberIsolationHandler:
         self._group = group
         self._hass = group.hass
 
+        self._trigger: IsolationTrigger = IsolationTrigger(
+            group.config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.SENSOR)
+        )
         self._sensor_id: str | None = group.config.get(CONF_ISOLATION_SENSOR)
+        self._trigger_hvac_modes: list[str] = group.config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, [])
         self._isolation_entity_ids: list[str] = group.config.get(CONF_ISOLATION_ENTITIES, [])
         self._activate_delay: float = group.config.get(CONF_ISOLATION_ACTIVATE_DELAY, DEFAULT_ISOLATION_ACTIVATE_DELAY)
         self._restore_delay: float = group.config.get(CONF_ISOLATION_RESTORE_DELAY, DEFAULT_ISOLATION_RESTORE_DELAY)
 
         self._unsub_listener = None
         self._pending_timer: Any = None
+        self._hvac_trigger_active: bool = False
 
         # Per-entity call handlers (created lazily in async_setup)
         self._call_handlers: dict[str, IsolationCallHandler] = {}
 
         _LOGGER.debug(
-            "[%s] MemberIsolation initialized. sensor=%s, entities=%s, activate_delay=%ss, restore_delay=%ss",
-            group.entity_id, self._sensor_id, self._isolation_entity_ids,
-            self._activate_delay, self._restore_delay,
+            "[%s] MemberIsolation initialized. trigger=%s, sensor=%s, hvac_modes=%s, entities=%s, activate_delay=%ss, restore_delay=%ss",
+            group.entity_id, self._trigger, self._sensor_id, self._trigger_hvac_modes,
+            self._isolation_entity_ids, self._activate_delay, self._restore_delay,
         )
 
     async def async_setup(self) -> None:
-        """Subscribe to isolation sensor state changes."""
-        if not self._sensor_id or not self._isolation_entity_ids:
-            _LOGGER.debug("[%s] Member isolation disabled (no sensor or entities configured)", self._group.entity_id)
+        """Subscribe to the configured trigger."""
+        if not self._isolation_entity_ids:
+            _LOGGER.debug("[%s] Member isolation disabled (no entities configured)", self._group.entity_id)
             return
 
         # Create per-entity call handlers
         for entity_id in self._isolation_entity_ids:
             self._call_handlers[entity_id] = IsolationCallHandler(self._group, entity_id)
 
-        self._unsub_listener = async_track_state_change_event(
-            self._hass, [self._sensor_id], self._state_change_listener,
-        )
-        _LOGGER.debug("[%s] Member isolation subscribed to sensor: %s", self._group.entity_id, self._sensor_id)
-
-        # Check initial sensor state
-        if (state := self._hass.states.get(self._sensor_id)) and state.state == STATE_ON:
-            _LOGGER.debug("[%s] Isolation sensor already ON at startup, activating immediately", self._group.entity_id)
-            await self._activate_isolation()
+        if self._trigger == IsolationTrigger.SENSOR:
+            if not self._sensor_id:
+                _LOGGER.debug("[%s] Member isolation disabled (sensor trigger but no sensor configured)", self._group.entity_id)
+                return
+            self._unsub_listener = async_track_state_change_event(
+                self._hass, [self._sensor_id], self._state_change_listener,
+            )
+            _LOGGER.debug("[%s] Member isolation subscribed to sensor: %s", self._group.entity_id, self._sensor_id)
+            # Check initial sensor state
+            if (state := self._hass.states.get(self._sensor_id)) and state.state == STATE_ON:
+                _LOGGER.debug("[%s] Isolation sensor already ON at startup, activating immediately", self._group.entity_id)
+                await self._activate_isolation()
+        else:
+            # HVAC_MODE trigger: no listener needed here — climate.py calls on_target_hvac_mode_changed()
+            _LOGGER.debug("[%s] Member isolation configured for hvac_mode trigger: %s", self._group.entity_id, self._trigger_hvac_modes)
+            # Check initial hvac_mode at startup (analog to sensor state check above)
+            if self._group.shared_target_state.hvac_mode in self._trigger_hvac_modes:
+                self._hvac_trigger_active = True
+                _LOGGER.debug("[%s] Isolation hvac_mode already active at startup, activating immediately", self._group.entity_id)
+                await self._activate_isolation()
 
     def async_teardown(self) -> None:
         """Unsubscribe from sensor and cancel pending timers."""
@@ -128,8 +151,33 @@ class MemberIsolationHandler:
             self._unsub_listener = None
 
     @callback
+    def on_target_hvac_mode_changed(self, hvac_mode: str | None) -> None:
+        """Called by ClimateGroup when target_state.hvac_mode changes (HVAC_MODE trigger only)."""
+        if self._trigger != IsolationTrigger.HVAC_MODE or not self._trigger_hvac_modes:
+            return
+
+        now_active = hvac_mode in self._trigger_hvac_modes
+        if now_active == self._hvac_trigger_active:
+            return  # no change
+
+        self._hvac_trigger_active = now_active
+        self._cancel_timer()
+        _LOGGER.debug("[%s] HVAC-mode isolation trigger: hvac_mode=%s → active=%s", self._group.entity_id, hvac_mode, now_active)
+
+        if now_active:
+            if self._activate_delay > 0:
+                self._pending_timer = async_call_later(self._hass, self._activate_delay, self._timer_activate)
+            else:
+                self._hass.async_create_task(self._activate_isolation())
+        else:
+            if self._restore_delay > 0:
+                self._pending_timer = async_call_later(self._hass, self._restore_delay, self._timer_restore)
+            else:
+                self._hass.async_create_task(self._deactivate_isolation())
+
+    @callback
     def _state_change_listener(self, event: Event[EventStateChangedData]) -> None:
-        """Handle sensor state change."""
+        """Handle sensor state change (SENSOR trigger only)."""
         new_state = event.data.get("new_state")
         if new_state is None:
             return

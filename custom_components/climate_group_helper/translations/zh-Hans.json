@@ -140,13 +140,17 @@
             "name": "成员隔离",
             "description": "当二进制传感器激活时，临时隔离特定成员（如窗帘后的暖气片）。隔离的成员将被关闭并从组计算中排除。",
             "data": {
+              "isolation_trigger": "触发类型",
               "isolation_sensor": "隔离传感器",
+              "isolation_trigger_hvac_modes": "HVAC 模式触发",
               "isolation_entities": "要隔离的实体",
               "isolation_activate_delay": "激活延迟（秒）",
               "isolation_restore_delay": "恢复延迟（秒）"
             },
             "data_description": {
+              "isolation_trigger": "选择激活隔离的方式：二进制传感器或组的特定 HVAC 模式。",
               "isolation_sensor": "（可选）当传感器为ON时触发隔离的二进制传感器。",
+              "isolation_trigger_hvac_modes": "（HVAC 模式触发）当组的目标模式为其中之一时，隔离将激活。",
               "isolation_entities": "传感器激活时要隔离的组成员。",
               "isolation_activate_delay": "传感器ON后等待隔离成员的时间。",
               "isolation_restore_delay": "传感器OFF后等待恢复成员的时间。"
@@ -322,6 +326,12 @@
       "options": {
         "off": "关闭",
         "clamp": "限制到边界值"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "sensor": "二进制传感器 – 传感器开启时隔离",
+        "hvac_mode": "HVAC 模式 – 组模式匹配时隔离"
       }
     }
   },

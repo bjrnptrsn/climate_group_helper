@@ -138,18 +138,22 @@
           },
           "isolation_section": {
             "name": "Member Isolation",
-            "description": "Temporarily isolate specific members (e.g. radiators behind curtains) when a binary sensor is active. Isolated members are turned off and excluded from group calculations.",
+            "description": "Temporarily isolate specific members (e.g. radiators behind curtains) when a trigger is active. Isolated members are turned off and excluded from group calculations.",
             "data": {
+              "isolation_trigger": "Trigger Type",
               "isolation_sensor": "Isolation Sensor",
+              "isolation_trigger_hvac_modes": "HVAC Mode Trigger",
               "isolation_entities": "Entities to Isolate",
               "isolation_activate_delay": "Activate Delay (seconds)",
               "isolation_restore_delay": "Restore Delay (seconds)"
             },
             "data_description": {
-              "isolation_sensor": "(Optional) Binary sensor that triggers isolation when ON.",
-              "isolation_entities": "Group members to isolate when the sensor is active.",
-              "isolation_activate_delay": "Time to wait after sensor turns ON before isolating members. Useful to debounce briefly-opened curtains.",
-              "isolation_restore_delay": "Time to wait after sensor turns OFF before restoring members to the group target state."
+              "isolation_trigger": "Choose what activates the isolation: a binary sensor or a specific HVAC mode of the group.",
+              "isolation_sensor": "(Sensor trigger) Binary sensor that triggers isolation when ON.",
+              "isolation_trigger_hvac_modes": "(HVAC mode trigger) Isolation activates when the group's target mode is one of these.",
+              "isolation_entities": "Group members to isolate when the trigger is active.",
+              "isolation_activate_delay": "Time to wait after the trigger activates before isolating members.",
+              "isolation_restore_delay": "Time to wait after the trigger deactivates before restoring members to the group target state."
             }
           },
           "schedule_section": {
@@ -322,6 +326,12 @@
       "options": {
         "off": "Turn Off",
         "clamp": "Clamp to Limit"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "sensor": "Binary Sensor – Isolate when sensor is ON",
+        "hvac_mode": "HVAC Mode – Isolate when group mode matches"
       }
     }
   },

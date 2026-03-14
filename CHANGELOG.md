@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.20.3 - 2026-03-14
+
+### ✨ New Features
+
+*   **Member Isolation — HVAC Mode Trigger**: Isolation can now optionally be triggered by the group's HVAC mode. When the group's target mode matches one of the configured trigger modes (e.g. `cool`), the isolated members are turned off and excluded from all group calculations. They are automatically restored when the mode changes away from the trigger set.
+
+### 🔧 Fixes
+
+*   **Sensor Selectors**: The **Isolation Sensor**, **Room Sensor**, and **Zone Sensor** fields now also accept `input_boolean` entities in addition to `binary_sensor`. This allows automations or manual helpers to be used directly as triggers without an additional template sensor.
+
 ## 0.20.2 - 2026-03-13
 
 ### 🔧 Fixes

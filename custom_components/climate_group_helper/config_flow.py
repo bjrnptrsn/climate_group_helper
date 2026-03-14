@@ -10,6 +10,7 @@ from homeassistant.components.climate import (
     DOMAIN as CLIMATE_DOMAIN,
     ATTR_MIN_TEMP,
     ATTR_MAX_TEMP,
+    HVACMode,
 )
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
@@ -67,8 +68,11 @@ from .const import (
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_ACTIVATE_DELAY,
     CONF_ISOLATION_RESTORE_DELAY,
+    CONF_ISOLATION_TRIGGER,
+    CONF_ISOLATION_TRIGGER_HVAC_MODES,
     DEFAULT_ISOLATION_ACTIVATE_DELAY,
     DEFAULT_ISOLATION_RESTORE_DELAY,
+    IsolationTrigger,
     DEFAULT_CLOSE_DELAY,
     DEFAULT_NAME,
     DEFAULT_ROOM_OPEN_DELAY,
@@ -225,16 +229,31 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         if not current_config.get(CONF_ROOM_SENSOR) and not current_config.get(CONF_ZONE_SENSOR):
             current_config[CONF_WINDOW_MODE] = WindowControlMode.OFF
 
-        # Isolation Logic: remove sensor key when cleared; prune stale entity refs
-        # Read from user_input (like master_entity) to detect explicit deletion
-        if not user_input.get(CONF_ISOLATION_SENSOR):
+        # Isolation Logic
+        trigger = current_config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.SENSOR)
+        valid_members = set(current_config.get(CONF_ENTITIES, []))
+
+        if trigger == IsolationTrigger.SENSOR:
+            # Remove HVAC-mode trigger keys when sensor mode is active
+            current_config.pop(CONF_ISOLATION_TRIGGER_HVAC_MODES, None)
+            if not user_input.get(CONF_ISOLATION_SENSOR):
+                current_config.pop(CONF_ISOLATION_SENSOR, None)
+                current_config.pop(CONF_ISOLATION_ENTITIES, None)
+            elif CONF_ISOLATION_ENTITIES in current_config:
+                current_config[CONF_ISOLATION_ENTITIES] = [
+                    eid for eid in current_config[CONF_ISOLATION_ENTITIES] if eid in valid_members
+                ]
+        else:
+            # HVAC_MODE trigger: remove sensor key; prune stale entity refs
             current_config.pop(CONF_ISOLATION_SENSOR, None)
-            current_config.pop(CONF_ISOLATION_ENTITIES, None)
-        elif CONF_ISOLATION_ENTITIES in current_config:
-            valid_members = set(current_config.get(CONF_ENTITIES, []))
-            current_config[CONF_ISOLATION_ENTITIES] = [
-                entity_id for entity_id in current_config[CONF_ISOLATION_ENTITIES] if entity_id in valid_members
-            ]
+            if CONF_ISOLATION_ENTITIES in current_config:
+                current_config[CONF_ISOLATION_ENTITIES] = [
+                    eid for eid in current_config[CONF_ISOLATION_ENTITIES] if eid in valid_members
+                ]
+            # Remove trigger if no hvac_modes configured
+            if not current_config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES):
+                current_config.pop(CONF_ISOLATION_TRIGGER_HVAC_MODES, None)
+                current_config.pop(CONF_ISOLATION_ENTITIES, None)
 
         # Clean up empty strings/lists for sensors
         for key in [CONF_ROOM_SENSOR, CONF_ZONE_SENSOR, CONF_SCHEDULE_ENTITY]:
@@ -438,10 +457,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         selector.NumberSelectorConfig(min=self._min_temp, max=self._max_temp, step=0.5, unit_of_measurement="°C", mode=selector.NumberSelectorMode.SLIDER)
                     ),
                     vol.Optional(CONF_ROOM_SENSOR, description={"suggested_value": config.get(CONF_ROOM_SENSOR)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="binary_sensor")
+                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
                     ),
                     vol.Optional(CONF_ZONE_SENSOR, description={"suggested_value": config.get(CONF_ZONE_SENSOR)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="binary_sensor")
+                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
                     ),
                     vol.Optional(CONF_ROOM_OPEN_DELAY, default=config.get(CONF_ROOM_OPEN_DELAY, DEFAULT_ROOM_OPEN_DELAY)): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
@@ -462,14 +481,46 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         members = config.get(CONF_ENTITIES, [])
         if len(members) < 2:
             return {}
+
         # Filter saved entities to only those still in the group (stale-ref guard)
         saved_isolation = [e for e in config.get(CONF_ISOLATION_ENTITIES, []) if e in members]
         member_options = [{"value": eid, "label": eid} for eid in members]
+
+        # Collect available HVAC modes from member states (for HVAC_MODE trigger selector)
+        from homeassistant.components.climate import ATTR_HVAC_MODES as _ATTR_HVAC_MODES
+        available_hvac_modes: list[str] = []
+        seen: set[str] = set()
+        for entity_id in members:
+            if state := self.hass.states.get(entity_id):
+                for mode in state.attributes.get(_ATTR_HVAC_MODES, []):
+                    if mode not in seen:
+                        seen.add(mode)
+                        available_hvac_modes.append(mode)
+
+        trigger = config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.SENSOR)
+        saved_hvac_modes = [m for m in config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, []) if m in seen]
+        hvac_mode_options = available_hvac_modes if available_hvac_modes else [m.value for m in HVACMode]
+
         return {
             vol.Required("isolation_section"): section(
                 vol.Schema({
+                    vol.Required(CONF_ISOLATION_TRIGGER, default=trigger): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[IsolationTrigger.SENSOR, IsolationTrigger.HVAC_MODE],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            translation_key="isolation_trigger",
+                        )
+                    ),
                     vol.Optional(CONF_ISOLATION_SENSOR, description={"suggested_value": config.get(CONF_ISOLATION_SENSOR)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="binary_sensor")
+                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
+                    ),
+                    vol.Optional(CONF_ISOLATION_TRIGGER_HVAC_MODES, default=saved_hvac_modes): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=hvac_mode_options,
+                            multiple=True,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            translation_key="isolation_trigger_hvac_modes",
+                        )
                     ),
                     vol.Optional(CONF_ISOLATION_ENTITIES, default=saved_isolation): selector.SelectSelector(
                         selector.SelectSelectorConfig(options=member_options, multiple=True, mode=selector.SelectSelectorMode.DROPDOWN)

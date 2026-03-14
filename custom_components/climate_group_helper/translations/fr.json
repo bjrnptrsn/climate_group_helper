@@ -140,13 +140,17 @@
             "name": "Isolation de membres",
             "description": "Isoler temporairement des membres spécifiques (ex: radiateurs derrière des rideaux) lorsqu'un capteur binaire est actif.",
             "data": {
+              "isolation_trigger": "Type de déclencheur",
               "isolation_sensor": "Capteur d'isolation",
+              "isolation_trigger_hvac_modes": "Déclencheur par mode HVAC",
               "isolation_entities": "Entités à isoler",
               "isolation_activate_delay": "Délai d'activation (secondes)",
               "isolation_restore_delay": "Délai de restauration (secondes)"
             },
             "data_description": {
+              "isolation_trigger": "Choisissez ce qui active l'isolation : un capteur binaire ou un mode HVAC spécifique du groupe.",
               "isolation_sensor": "(Optionnel) Capteur binaire qui déclenche l'isolation lorsqu'il est ON.",
+              "isolation_trigger_hvac_modes": "(Déclencheur par mode HVAC) L'isolation s'active lorsque le mode cible du groupe correspond à l'un de ces modes.",
               "isolation_entities": "Membres du groupe à isoler quand le capteur est actif.",
               "isolation_activate_delay": "Temps d'attente après l'activation du capteur avant d'isoler les membres.",
               "isolation_restore_delay": "Temps d'attente après la désactivation avant de restaurer les membres."
@@ -322,6 +326,12 @@
       "options": {
         "off": "Éteindre",
         "clamp": "Limiter à la borne"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "sensor": "Capteur binaire – Isoler quand le capteur est ACTIF",
+        "hvac_mode": "Mode HVAC – Isoler quand le mode du groupe correspond"
       }
     }
   },

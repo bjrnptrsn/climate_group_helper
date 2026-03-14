@@ -124,8 +124,17 @@ CONF_ISOLATION_SENSOR = "isolation_sensor"
 CONF_ISOLATION_ENTITIES = "isolation_entities"
 CONF_ISOLATION_ACTIVATE_DELAY = "isolation_activate_delay"
 CONF_ISOLATION_RESTORE_DELAY = "isolation_restore_delay"
+CONF_ISOLATION_TRIGGER = "isolation_trigger"
+CONF_ISOLATION_TRIGGER_HVAC_MODES = "isolation_trigger_hvac_modes"
 DEFAULT_ISOLATION_ACTIVATE_DELAY = 0
 DEFAULT_ISOLATION_RESTORE_DELAY = 0
+
+
+class IsolationTrigger(StrEnum):
+    """Isolation trigger modes."""
+
+    SENSOR = "sensor"
+    HVAC_MODE = "hvac_mode"
 
 
 class AverageOption(StrEnum):
