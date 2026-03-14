@@ -140,13 +140,17 @@
             "name": "Ledenisolatie",
             "description": "Isoleer specifieke leden tijdelijk (bijv. radiatoren achter gordijnen) wanneer een binaire sensor actief is.",
             "data": {
+              "isolation_trigger": "Triggertype",
               "isolation_sensor": "Isolatiesensor",
+              "isolation_trigger_hvac_modes": "HVAC-stand trigger",
               "isolation_entities": "Te isoleren entiteiten",
               "isolation_activate_delay": "Activeringsvertraging (seconden)",
               "isolation_restore_delay": "Herstelvertraging (seconden)"
             },
             "data_description": {
+              "isolation_trigger": "Kies wat de isolatie activeert: een binaire sensor of een specifieke HVAC-stand van de groep.",
               "isolation_sensor": "(Optioneel) Binaire sensor die isolatie activeert wanneer ON.",
+              "isolation_trigger_hvac_modes": "(HVAC-stand trigger) Isolatie wordt geactiveerd wanneer de doelstand van de groep overeenkomt met een van deze standen.",
               "isolation_entities": "Groepsleden om te isoleren wanneer de sensor actief is.",
               "isolation_activate_delay": "Wachttijd na sensor ON voordat leden worden geïsoleerd.",
               "isolation_restore_delay": "Wachttijd na sensor OFF voordat leden worden hersteld."
@@ -322,6 +326,12 @@
       "options": {
         "off": "Uitschakelen",
         "clamp": "Beperken tot grenswaarde"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "sensor": "Binaire sensor – Isoleer wanneer sensor AAN is",
+        "hvac_mode": "HVAC-stand – Isoleer wanneer groepsstand overeenkomt"
       }
     }
   },

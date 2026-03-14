@@ -140,13 +140,17 @@
             "name": "Izolacja członków",
             "description": "Tymczasowo izoluj określonych członków (np. grzejniki za zasłonami) gdy czujnik binarny jest aktywny.",
             "data": {
+              "isolation_trigger": "Typ wyzwalacza",
               "isolation_sensor": "Czujnik izolacji",
+              "isolation_trigger_hvac_modes": "Wyzwalacz trybu HVAC",
               "isolation_entities": "Encje do izolacji",
               "isolation_activate_delay": "Opóźnienie aktywacji (sekundy)",
               "isolation_restore_delay": "Opóźnienie przywracania (sekundy)"
             },
             "data_description": {
+              "isolation_trigger": "Wybierz, co aktywuje izolację: czujnik binarny lub określony tryb HVAC grupy.",
               "isolation_sensor": "(Opcjonalnie) Czujnik binarny wyzwalający izolację gdy ON.",
+              "isolation_trigger_hvac_modes": "(Wyzwalacz trybu HVAC) Izolacja aktywuje się, gdy docelowy tryb grupy jest jednym z tych trybów.",
               "isolation_entities": "Członkowie grupy do izolacji gdy czujnik jest aktywny.",
               "isolation_activate_delay": "Czas oczekiwania po włączeniu czujnika przed izolacją członków.",
               "isolation_restore_delay": "Czas oczekiwania po wyłączeniu czujnika przed przywróceniem członków."
@@ -322,6 +326,12 @@
       "options": {
         "off": "Wyłącz",
         "clamp": "Ogranicz do wartości granicznej"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "sensor": "Czujnik binarny – Izoluj gdy czujnik jest WŁĄCZONY",
+        "hvac_mode": "Tryb HVAC – Izoluj gdy tryb grupy pasuje"
       }
     }
   },

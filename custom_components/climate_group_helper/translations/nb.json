@@ -140,13 +140,17 @@
             "name": "Medlemsisolering",
             "description": "Isoler midlertidig spesifikke medlemmer (f.eks. radiatorer bak gardiner) når en binær sensor er aktiv.",
             "data": {
+              "isolation_trigger": "Utløsertype",
               "isolation_sensor": "Isolasjonssensor",
+              "isolation_trigger_hvac_modes": "HVAC-modus utløser",
               "isolation_entities": "Enheter som skal isoleres",
               "isolation_activate_delay": "Aktiveringsforsinkelese (sekunder)",
               "isolation_restore_delay": "Gjenopprettingsforsinkelse (sekunder)"
             },
             "data_description": {
+              "isolation_trigger": "Velg hva som aktiverer isolasjonen: en binær sensor eller en bestemt HVAC-modus for gruppen.",
               "isolation_sensor": "(Valgfri) Binær sensor som utløser isolering ved ON.",
+              "isolation_trigger_hvac_modes": "(HVAC-modus utløser) Isolasjon aktiveres når gruppens målmodus er en av disse.",
               "isolation_entities": "Gruppemedlemmer som skal isoleres når sensoren er aktiv.",
               "isolation_activate_delay": "Ventetid etter sensor ON før isolering av medlemmer.",
               "isolation_restore_delay": "Ventetid etter sensor OFF før gjenoppretting av medlemmer."
@@ -322,6 +326,12 @@
       "options": {
         "off": "Slå av",
         "clamp": "Begrens til grenseverdi"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "sensor": "Binær sensor – Isoler når sensor er PÅ",
+        "hvac_mode": "HVAC-modus – Isoler når gruppemodus stemmer overens"
       }
     }
   },

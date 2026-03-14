@@ -140,13 +140,17 @@
             "name": "Izolace členů",
             "description": "Dočasně izolujte konkrétní členy (např. radiátory za závěsy) když je binární senzor aktivní.",
             "data": {
+              "isolation_trigger": "Typ spouštěče",
               "isolation_sensor": "Izolační senzor",
+              "isolation_trigger_hvac_modes": "Spouštěč režimem HVAC",
               "isolation_entities": "Entity k izolaci",
               "isolation_activate_delay": "Zpoždění aktivace (sekundy)",
               "isolation_restore_delay": "Zpoždění obnovení (sekundy)"
             },
             "data_description": {
+              "isolation_trigger": "Vyberte, co aktivuje izolaci: binární senzor nebo konkrétní režim HVAC skupiny.",
               "isolation_sensor": "(Volitelné) Binární senzor, který spustí izolaci při ON.",
+              "isolation_trigger_hvac_modes": "(Spouštěč režimem HVAC) Izolace se aktivuje, když cílový režim skupiny odpovídá jednomu z těchto režimů.",
               "isolation_entities": "Členové skupiny k izolaci při aktivním senzoru.",
               "isolation_activate_delay": "Čekací doba po zapnutí senzoru před izolací členů.",
               "isolation_restore_delay": "Čekací doba po vypnutí senzoru před obnovením členů."
@@ -322,6 +326,12 @@
       "options": {
         "off": "Vypnout",
         "clamp": "Omezit na mezní hodnotu"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "sensor": "Binární senzor – Izolovat, když je senzor zapnutý",
+        "hvac_mode": "Režim HVAC – Izolovat, když režim skupiny odpovídá"
       }
     }
   },

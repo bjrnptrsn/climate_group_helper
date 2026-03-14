@@ -140,13 +140,17 @@
             "name": "Mitglieds-Isolierung",
             "description": "Bestimmte Mitglieder (z.B. Heizkörper hinter Vorhängen) temporär isolieren, wenn ein Binärsensor aktiv ist. Isolierte Mitglieder werden ausgeschaltet und aus Gruppenberechnungen ausgeschlossen.",
             "data": {
+              "isolation_trigger": "Auslösertyp",
               "isolation_sensor": "Isolierungs-Sensor",
+              "isolation_trigger_hvac_modes": "HVAC-Modus-Auslöser",
               "isolation_entities": "Zu isolierende Geräte",
               "isolation_activate_delay": "Aktivierungs-Verzögerung (Sekunden)",
               "isolation_restore_delay": "Wiederherstell-Verzögerung (Sekunden)"
             },
             "data_description": {
+              "isolation_trigger": "Wähle aus, was die Isolierung aktiviert: ein binärer Sensor oder ein bestimmter HVAC-Modus der Gruppe.",
               "isolation_sensor": "(Optional) Binärsensor, der die Isolierung bei ON auslöst.",
+              "isolation_trigger_hvac_modes": "(HVAC-Modus-Auslöser) Die Isolierung wird aktiviert, wenn der Zielmodus der Gruppe einem dieser Modi entspricht.",
               "isolation_entities": "Gruppenmitglieder, die beim aktiven Sensor isoliert werden.",
               "isolation_activate_delay": "Wartezeit nach Sensor ON, bevor Mitglieder isoliert werden.",
               "isolation_restore_delay": "Wartezeit nach Sensor OFF, bevor Mitglieder synchronisiert werden."
@@ -322,6 +326,12 @@
       "options": {
         "off": "Ausschalten",
         "clamp": "Auf Grenzwert begrenzen"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "sensor": "Binärer Sensor – Isolieren, wenn Sensor AN",
+        "hvac_mode": "HVAC-Modus – Isolieren, wenn Gruppenmodus übereinstimmt"
       }
     }
   },

@@ -140,13 +140,17 @@
             "name": "Aislamiento de miembros",
             "description": "Aislar temporalmente miembros específicos (ej: radiadores detrás de cortinas) cuando un sensor binario está activo.",
             "data": {
+              "isolation_trigger": "Tipo de activador",
               "isolation_sensor": "Sensor de aislamiento",
+              "isolation_trigger_hvac_modes": "Activador por modo HVAC",
               "isolation_entities": "Entidades a aislar",
               "isolation_activate_delay": "Retraso de activación (segundos)",
               "isolation_restore_delay": "Retraso de restauración (segundos)"
             },
             "data_description": {
+              "isolation_trigger": "Elige qué activa el aislamiento: un sensor binario o un modo HVAC específico del grupo.",
               "isolation_sensor": "(Opcional) Sensor binario que activa el aislamiento cuando está ON.",
+              "isolation_trigger_hvac_modes": "(Activador por modo HVAC) El aislamiento se activa cuando el modo objetivo del grupo es uno de estos.",
               "isolation_entities": "Miembros del grupo a aislar cuando el sensor está activo.",
               "isolation_activate_delay": "Tiempo de espera tras activar el sensor antes de aislar miembros.",
               "isolation_restore_delay": "Tiempo de espera tras desactivar el sensor antes de restaurar miembros."
@@ -322,6 +326,12 @@
       "options": {
         "off": "Apagar",
         "clamp": "Limitar al máximo/mínimo"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "sensor": "Sensor binario – Aislar cuando el sensor está ACTIVO",
+        "hvac_mode": "Modo HVAC – Aislar cuando el modo del grupo coincide"
       }
     }
   },
