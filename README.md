@@ -303,15 +303,16 @@ If you experience strange behavior after an update (e.g. settings not saving), t
 To see more details, enable debug logging:
 
 #### Option 1: Via UI (Recommended)
-This method applies instantly and does not require a restart.
+This method applies instantly and does not require a restart. However, if the issue occurs during startup (e.g. state restore, initialization), restart Home Assistant after enabling debug logging so the full startup sequence is captured.
 
 1.  Go to **Settings > Devices & Services**.
 2.  Select the **Devices** tab (at the top).
 3.  Search for and select your configured **Climate Group Helper** device from the list.
 4.  In the **Device info** panel, click on the **Climate Group Helper** link.
 5.  On the integration page, click the menu (3 dots) on the left and select **Enable debug logging**.
-6.  Reproduce the issue.
-7.  Disable debug logging via the same menu. The log file will be downloaded automatically.
+6.  *(Optional but recommended for startup issues)* Restart Home Assistant now.
+7.  Reproduce the issue.
+8.  Disable debug logging via the same menu. The log file will be downloaded automatically.
 
 #### Option 2: Via YAML (Manual)
 Add the following to your `configuration.yaml` file (requires restart):
