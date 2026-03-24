@@ -761,6 +761,24 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 if isinstance(target_val, float):
                     target_val = round(target_val, 1)
 
+                # Clamp to entity's min/max range
+                try:
+                    entity_min = target_state.attributes.get("min")
+                    entity_max = target_state.attributes.get("max")
+                    clamped = target_val
+                    if entity_min is not None:
+                        clamped = max(float(entity_min), clamped)
+                    if entity_max is not None:
+                        clamped = min(float(entity_max), clamped)
+                    if clamped != target_val:
+                        _LOGGER.warning(
+                            "[%s] Clamped calibration value for %s from %s to %s (entity range: %s–%s)",
+                            self.entity_id, target_state.entity_id, target_val, clamped, entity_min, entity_max,
+                        )
+                        target_val = clamped
+                except (ValueError, TypeError):
+                    pass
+
                 # Determine if Sync is required
                 try:
                     current_val = float(target_state.state)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.4 - 2026-03-24
+
+### 🔧 Fixes
+
+*   **Calibration**: Calculated values are now clamped to the target entity's `min`/`max` range to prevent out-of-range errors. Especially relevant for Offset mode, where large temperature differences can exceed a device's hardware limits. A warning is logged when clamping occurs.
+
 ## 0.20.3 - 2026-03-14
 
 ### ✨ New Features
