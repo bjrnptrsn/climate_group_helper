@@ -136,6 +136,10 @@
               "close_delay": "Wartezeit nachdem alle Fenster geschlossen sind, bevor die Heizung wiederhergestellt wird."
             }
           },
+          "temp_offsets_section": {
+            "name": "Geräte-Offsets",
+            "description": "Lege einen Temperatur-Offset für einzelne Mitglieder fest. Der Gruppen-Zielwert wird um diesen Wert angepasst, bevor er an jedes Gerät gesendet wird. Auf 0 belassen für keinen Offset."
+          },
           "isolation_section": {
             "name": "Mitglieds-Isolierung",
             "description": "Bestimmte Mitglieder (z.B. Heizkörper hinter Vorhängen) temporär isolieren, wenn ein Binärsensor aktiv ist. Isolierte Mitglieder werden ausgeschaltet und aus Gruppenberechnungen ausgeschlossen.",

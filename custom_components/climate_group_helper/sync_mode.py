@@ -99,6 +99,7 @@ class SyncModeHandler:
             accepted = self._filter_echo_changes(origin_event, change_dict, change_entity_id)
             if accepted:
                 _LOGGER.debug("[%s] Adopting side effects: %s", self._group.entity_id, accepted)
+                self._reverse_offset_temperatures(change_entity_id, accepted)
                 self.state_manager.update(entity_id=change_entity_id, **accepted)
             return
 
@@ -117,6 +118,7 @@ class SyncModeHandler:
         # Mirror mode: adopt filtered changes into target_state
         if self._group.sync_mode == SyncMode.MIRROR:
             if filtered := {key: value for key, value in change_dict.items() if self._filter_state.to_dict().get(key)}:
+                self._reverse_offset_temperatures(change_entity_id, filtered)
                 self.state_manager.update(entity_id=change_entity_id, **filtered)
                 _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
 
@@ -134,6 +136,7 @@ class SyncModeHandler:
             master_id = self._group._master_entity_id
             if master_id and change_entity_id == master_id:
                 if filtered := {key: value for key, value in change_dict.items() if self._filter_state.to_dict().get(key)}:
+                    self._reverse_offset_temperatures(change_entity_id, filtered)
                     self.state_manager.update(entity_id=change_entity_id, **filtered)
                     _LOGGER.debug("[%s] Master entity change adopted: %s", self._group.entity_id, filtered)
             # Non-master changes are enforced (reverted) via call_debounced below
@@ -147,6 +150,23 @@ class SyncModeHandler:
             sync_task.add_done_callback(self._active_sync_tasks.discard)
         else:
             _LOGGER.debug("[%s] Enforcement skipped (blocking mode)", self._group.entity_id)
+
+    # --- Offset Helpers ---
+
+    def _reverse_offset_temperatures(self, entity_id: str, data: dict) -> None:
+        """Reverse-transform member temperatures to logical group values (in-place).
+
+        When adopting a member's temperature in Mirror/Master-Lock mode,
+        the member's actual value must be converted back to the group-level
+        value by subtracting the member's offset.
+        """
+        offset_map = self._group._temp_offset_map
+        if not offset_map or entity_id not in offset_map:
+            return
+        offset = offset_map[entity_id]
+        for key in ("temperature", "target_temp_low", "target_temp_high"):
+            if key in data and data[key] is not None:
+                data[key] = data[key] - offset
 
     # --- Echo Detection Helpers ---
 

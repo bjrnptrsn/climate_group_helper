@@ -136,6 +136,10 @@
               "close_delay": "Ventetid efter alle vinduer lukkes før varme gendannes."
             }
           },
+          "temp_offsets_section": {
+            "name": "Medlem Offsets",
+            "description": "Indstil en temperaturforskydning for individuelle medlemmer. Gruppens mål justeres med denne værdi, før det sendes til hver enhed. Lad stå på 0 for ingen forskydning."
+          },
           "isolation_section": {
             "name": "Medlemsisolering",
             "description": "Isoler midlertidigt specifikke medlemmer (f.eks. radiatorer bag gardiner) når en binær sensor er aktiv.",

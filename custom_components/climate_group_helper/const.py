@@ -108,6 +108,7 @@ CONF_PERSIST_ACTIVE_SCHEDULE = "persist_active_schedule"
 CONF_EXPAND_SECTIONS = "expand_sections"
 
 CONF_UNION_OUT_OF_BOUNDS_ACTION = "union_out_of_bounds_action"
+CONF_MEMBER_TEMP_OFFSETS = "member_temp_offsets"
 
 
 class UnionOutOfBoundsAction(StrEnum):

@@ -136,6 +136,10 @@
               "close_delay": "Wachttijd na sluiten ramen voor herstel."
             }
           },
+          "temp_offsets_section": {
+            "name": "Leden Offsets",
+            "description": "Stel een temperatuuroffset in voor individuele leden. Het groepsdoel wordt met deze waarde aangepast voordat het naar elk apparaat wordt verzonden. Laat op 0 voor geen offset."
+          },
           "isolation_section": {
             "name": "Ledenisolatie",
             "description": "Isoleer specifieke leden tijdelijk (bijv. radiatoren achter gordijnen) wanneer een binaire sensor actief is.",

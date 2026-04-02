@@ -25,6 +25,7 @@ A comprehensive climate management system for Home Assistant that combines multi
   - [Device Calibration](#device-calibration)
   - [Sync Modes](#advanced-sync-modes)
   - [Window Control](#window-control)
+  - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
   - [Schedule Automation](#schedule-automation)
 - [Configuration Options](#configuration-options)
@@ -100,6 +101,13 @@ Binary sensor support to automatically turn off heating when a window opens and 
     *   **Off (Default):** All manual changes are blocked and discarded.
     *   **All:** Any manual change updates the target state. Applied when windows close.
     *   **Master Only:** *(Requires Master Entity)* Only changes on the Master update the target state.
+
+### Member Offsets
+
+Apply a permanent individual offset (±20°C, 0.5°C steps) to each group member, so rooms can run proportionately warmer or cooler than the group's target setting — without changing what you set on the group entity itself.
+
+*   **Example:** Group target is 21°C. Bedroom has offset −1°C → receives 20°C. Living Room has offset +0.5°C → receives 21.5°C.
+*   **Mirror / Master-Lock aware:** When a member change is adopted back into the group's target state, the offset is reversed so the global target stays consistent.
 
 ### Member Isolation
 
@@ -192,6 +200,12 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Ignore Off Members (Calibration)** | Prevents sending calibration updates to devices that are currently `off`, preserving battery life on wireless sensors and TRVs. |
 | **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
 | **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). |
+
+### Member Offsets
+
+| Option | Description |
+|--------|-------------|
+| **Offset per Member** | Individual temperature offset (±20°C, 0.5°C steps) for each group member. Positive values make the room warmer, negative values cooler relative to the group's target. |
 
 ### Sync Mode
 

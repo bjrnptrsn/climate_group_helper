@@ -136,6 +136,10 @@
               "close_delay": "Ventetid etter lukking av vinduer."
             }
           },
+          "temp_offsets_section": {
+            "name": "Medlem Offsets",
+            "description": "Still inn et temperaturavvik for individuelle medlemmer. Gruppemålet justeres med denne verdien før den sendes til hver enhet. La stå på 0 for ingen forskjell."
+          },
           "isolation_section": {
             "name": "Medlemsisolering",
             "description": "Isoler midlertidig spesifikke medlemmer (f.eks. radiatorer bak gardiner) når en binær sensor er aktiv.",

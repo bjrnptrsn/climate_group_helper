@@ -136,6 +136,10 @@
               "close_delay": "Czas oczekiwania po zamknięciu okien."
             }
           },
+          "temp_offsets_section": {
+            "name": "Offsety członków",
+            "description": "Ustaw przesunięcie temperatury dla poszczególnych członków. Cel grupy jest dostosowywany o tę wartość przed wysłaniem do każdego urządzenia. Pozostaw na 0, aby nie stosować przesunięcia."
+          },
           "isolation_section": {
             "name": "Izolacja członków",
             "description": "Tymczasowo izoluj określonych członków (np. grzejniki za zasłonami) gdy czujnik binarny jest aktywny.",

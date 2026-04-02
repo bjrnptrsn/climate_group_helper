@@ -55,6 +55,7 @@ from .const import (
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_ACTIVATE_DELAY,
     CONF_ISOLATION_RESTORE_DELAY,
+    CONF_MEMBER_TEMP_OFFSETS,
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
     DOMAIN,
 )
@@ -121,6 +122,8 @@ VALID_CONFIG_KEYS = {
     CONF_ISOLATION_RESTORE_DELAY,
     # Union OOB options
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
+    # Per-member temperature offsets
+    CONF_MEMBER_TEMP_OFFSETS,
 }
 
 # Track which platforms have been set up per entry

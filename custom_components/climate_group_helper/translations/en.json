@@ -136,6 +136,10 @@
               "close_delay": "Time to wait after all windows close before restoring heating."
             }
           },
+          "temp_offsets_section": {
+            "name": "Member Offsets",
+            "description": "Set a temperature offset for individual members. The group target is adjusted by this value before sending to each device. Leave at 0 for no offset."
+          },
           "isolation_section": {
             "name": "Member Isolation",
             "description": "Temporarily isolate specific members (e.g. radiators behind curtains) when a trigger is active. Isolated members are turned off and excluded from group calculations.",

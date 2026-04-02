@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.21.0 - 2026-04-02
+
+### ✨ New Features
+
+*   **Member Offsets**: Define an individual temperature offset (±20°C, 0.5°C steps) per group member to permanently balance temperature differences between rooms.
+
+### 🔧 Fixes
+
+*   **Out-of-Bounds Sync Lockout**: Members were permanently excluded from sync/schedule updates even after the target temperature moved back into their valid range.
+*   **Min Temp Off**: Each device now receives its own minimum temperature when the group turns off, rather than the group's aggregated minimum.
+
 ## 0.20.4 - 2026-03-24
 
 ### 🔧 Fixes

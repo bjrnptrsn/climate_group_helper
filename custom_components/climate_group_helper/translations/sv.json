@@ -136,6 +136,10 @@
               "close_delay": "Väntetid efter stängning av fönster."
             }
           },
+          "temp_offsets_section": {
+            "name": "Medlems Förskjutningar",
+            "description": "Ställ in en temperaturförskjutning för enskilda medlemmar. Gruppens mål justeras med detta värde innan det skickas till varje enhet. Lämna på 0 för ingen förskjutning."
+          },
           "isolation_section": {
             "name": "Medlemsisolering",
             "description": "Isolera tillfälligt specifika medlemmar (t.ex. radiatorer bakom gardiner) när en binär sensor är aktiv.",

@@ -136,6 +136,10 @@
               "close_delay": "Tempo di attesa dopo chiusura finestre prima del ripristino."
             }
           },
+          "temp_offsets_section": {
+            "name": "Offset dei membri",
+            "description": "Imposta un offset di temperatura per i singoli membri. L'obiettivo del gruppo viene regolato di questo valore prima di essere inviato a ciascun dispositivo. Lascia a 0 per nessun offset."
+          },
           "isolation_section": {
             "name": "Isolamento membri",
             "description": "Isola temporaneamente membri specifici (es: radiatori dietro tende) quando un sensore binario è attivo.",

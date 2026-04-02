@@ -97,6 +97,7 @@ from .const import (
     CONF_TEMP_CALIBRATION_MODE,
     CONF_CALIBRATION_HEARTBEAT,
     CONF_CALIBRATION_IGNORE_OFF,
+    CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
     CONF_PERSIST_ACTIVE_SCHEDULE,
     ATTR_SCHEDULE_ENTITY,
@@ -249,6 +250,8 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.min_temp_off = config.get(CONF_MIN_TEMP_OFF, False)
         # Window control
         self._window_adopt_manual_changes = config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES, AdoptManualChanges.OFF)
+        # Per-member temperature offsets
+        self._temp_offset_map: dict[str, float] = config.get(CONF_MEMBER_TEMP_OFFSETS, {})
 
         # Calibration options
         self._temp_calibration_mode = config.get(CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE)
@@ -852,7 +855,11 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Calculate and store ChangeState
         if self.event:
-            self.change_state = ChangeState.from_event(self.event, self.shared_target_state)
+            self.change_state = ChangeState.from_event(
+                self.event,
+                self.shared_target_state,
+                offset_map=self._temp_offset_map or None,
+            )
             self._event_entity_id = self.event.data.get(ATTR_ENTITY_ID)
 
         # Check if the change state is from a member entity
@@ -921,6 +928,13 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             return master_value
         return reduce_attribute(self.states, attr, reduce=lambda *data: avg_calc(data))
 
+    def get_effective_temperature(self, entity_id: str, target_temp: float | None) -> float | None:
+        """Apply per-member offset to a target temperature."""
+        if target_temp is None:
+            return None
+        offset = self._temp_offset_map.get(entity_id, 0.0)
+        return target_temp + offset
+
     def _update_temperature_attributes(self) -> None:
         """Calculate and set all temperature-related attributes."""
         # Current temperature
@@ -939,17 +953,24 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         else:
             self._attr_current_temperature = self._member_temp_avg
 
-        # Target temperatures (master override or member average)
-        master = self.current_master_state
-        self._attr_target_temperature = self._resolve_master_or_avg(
-            self._temp_use_master, master.temperature, ATTR_TEMPERATURE, self._temp_target_avg_calc
-        )
-        self._attr_target_temperature_low = self._resolve_master_or_avg(
-            self._temp_use_master, master.target_temp_low, ATTR_TARGET_TEMP_LOW, self._temp_target_avg_calc
-        )
-        self._attr_target_temperature_high = self._resolve_master_or_avg(
-            self._temp_use_master, master.target_temp_high, ATTR_TARGET_TEMP_HIGH, self._temp_target_avg_calc
-        )
+        # Target temperatures
+        if self._temp_offset_map:
+            # Offset active: show the logical group value from target_state
+            self._attr_target_temperature = self.shared_target_state.temperature
+            self._attr_target_temperature_low = self.shared_target_state.target_temp_low
+            self._attr_target_temperature_high = self.shared_target_state.target_temp_high
+        else:
+            # Default: master override or member average
+            master = self.current_master_state
+            self._attr_target_temperature = self._resolve_master_or_avg(
+                self._temp_use_master, master.temperature, ATTR_TEMPERATURE, self._temp_target_avg_calc
+            )
+            self._attr_target_temperature_low = self._resolve_master_or_avg(
+                self._temp_use_master, master.target_temp_low, ATTR_TARGET_TEMP_LOW, self._temp_target_avg_calc
+            )
+            self._attr_target_temperature_high = self._resolve_master_or_avg(
+                self._temp_use_master, master.target_temp_high, ATTR_TARGET_TEMP_HIGH, self._temp_target_avg_calc
+            )
 
         # Round target values
         for attr in ("_attr_target_temperature", "_attr_target_temperature_low", "_attr_target_temperature_high"):

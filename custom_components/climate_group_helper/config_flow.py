@@ -64,6 +64,7 @@ from .const import (
     CONF_WINDOW_MODE,
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
+    CONF_MEMBER_TEMP_OFFSETS,
     CONF_ISOLATION_SENSOR,
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_ACTIVATE_DELAY,
@@ -259,6 +260,29 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         for key in [CONF_ROOM_SENSOR, CONF_ZONE_SENSOR, CONF_SCHEDULE_ENTITY]:
             if key in current_config and not current_config[key]:
                 current_config.pop(key, None)
+
+        # Collect per-member temperature offsets from form fields
+        offset_map: dict[str, float] = {}
+        for key in list(current_config.keys()):
+            if isinstance(key, str) and key.startswith("Offset: ") and key.endswith(")"):
+                # Extract entity_id from between the last parenthesis
+                try:
+                    entity_id = key.rsplit("(", 1)[-1].rstrip(")")
+                    val = current_config.pop(key)
+                    if val and val != 0.0:
+                        offset_map[entity_id] = float(val)
+                except IndexError:
+                    pass
+            # Backwards compatibility for old temp_offset__ keys during active forms/migrations
+            elif isinstance(key, str) and key.startswith("temp_offset__"):
+                entity_id = key[len("temp_offset__"):]
+                val = current_config.pop(key)
+                if val and val != 0.0:
+                    offset_map[entity_id] = float(val)
+        if offset_map:
+            current_config[CONF_MEMBER_TEMP_OFFSETS] = offset_map
+        else:
+            current_config.pop(CONF_MEMBER_TEMP_OFFSETS, None)
 
         return current_config
 
@@ -476,6 +500,31 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             )
         }
 
+    def _section_factory_temp_offsets(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Factory for per-member temperature offset section."""
+        entities = config.get(CONF_ENTITIES, [])
+        if len(entities) < 2:
+            return {}
+        offsets = config.get(CONF_MEMBER_TEMP_OFFSETS, {})
+        fields = {}
+        for entity_id in entities:
+            # Try to get a friendly name for a more readable UI label
+            state = self.hass.states.get(entity_id)
+            name = state.attributes.get("friendly_name", entity_id) if state else entity_id
+            
+            # Format: "Offset: Friendly Name (entity_id)" so HA displays it nicely
+            key = f"Offset: {name} ({entity_id})"
+            
+            fields[vol.Optional(key, default=offsets.get(entity_id, 0.0))] = selector.NumberSelector(
+                selector.NumberSelectorConfig(min=-20, max=20, step=0.5, unit_of_measurement="°", mode=selector.NumberSelectorMode.SLIDER)
+            )
+        return {
+            vol.Required("temp_offsets_section"): section(
+                vol.Schema(fields),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            )
+        }
+
     def _section_factory_isolation(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for member isolation section. Hidden when group has fewer than 2 members."""
         members = config.get(CONF_ENTITIES, [])
@@ -648,6 +697,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         schema_dict.update(self._section_factory_humidity(config))
         schema_dict.update(self._section_factory_sync(config))
         schema_dict.update(self._section_factory_window_control(config))
+        schema_dict.update(self._section_factory_temp_offsets(config))
         schema_dict.update(self._section_factory_isolation(config))
         schema_dict.update(self._section_factory_schedule(config))
         schema_dict.update(self._section_factory_advanced(config))

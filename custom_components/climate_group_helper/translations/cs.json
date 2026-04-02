@@ -136,6 +136,10 @@
               "close_delay": "Doba čekání po zavření všech oken před obnovením vytápění."
             }
           },
+          "temp_offsets_section": {
+            "name": "Posuny členů",
+            "description": "Nastavte posun teploty pro jednotlivé členy. Cílová hodnota skupiny je upravena o tuto hodnotu před odesláním do každého zařízení. Ponechte na 0 pro žádný posun."
+          },
           "isolation_section": {
             "name": "Izolace členů",
             "description": "Dočasně izolujte konkrétní členy (např. radiátory za závěsy) když je binární senzor aktivní.",

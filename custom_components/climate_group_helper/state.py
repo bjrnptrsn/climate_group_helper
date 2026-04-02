@@ -123,7 +123,12 @@ class ChangeState(ClimateState):
     entity_id: str | None = None
 
     @classmethod
-    def from_event(cls, event: Event, target_state: ClimateState) -> ChangeState:
+    def from_event(
+        cls,
+        event: Event,
+        target_state: ClimateState,
+        offset_map: dict[str, float] | None = None,
+    ) -> ChangeState:
         """Calculates difference between Event and TargetState."""
         entity_id = event.data.get("entity_id")
         new_state = event.data.get("new_state")
@@ -141,7 +146,12 @@ class ChangeState(ClimateState):
         for f in fields(ClimateState):
             key = f.name
             target_val = getattr(target_state, key, None)
-            
+
+            # Apply per-member offset for temperature fields
+            if key in ("temperature", "target_temp_low", "target_temp_high"):
+                if offset_map and entity_id and entity_id in offset_map and target_val is not None:
+                    target_val = target_val + offset_map[entity_id]
+
             if key == "hvac_mode":
                 member_val = new_state.state
             else:
@@ -149,10 +159,10 @@ class ChangeState(ClimateState):
 
             if target_val is None or member_val is None or member_val == target_val:
                 continue
-                
+
             if key in ("temperature", "humidity", "target_temp_low", "target_temp_high") and within_tolerance(target_val, member_val):
                 continue
-                
+
             deviations[key] = member_val
 
         return cls(entity_id=entity_id, **deviations)

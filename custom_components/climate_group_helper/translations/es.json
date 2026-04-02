@@ -136,6 +136,10 @@
               "close_delay": "Tiempo a esperar tras cerrar todas las ventanas antes de restaurar."
             }
           },
+          "temp_offsets_section": {
+            "name": "Desviaciones de miembros",
+            "description": "Establece una desviación de temperatura para miembros individuales. El objetivo del grupo se ajusta por este valor antes de enviarse a cada dispositivo. Deje en 0 para no aplicar desviación."
+          },
           "isolation_section": {
             "name": "Aislamiento de miembros",
             "description": "Aislar temporalmente miembros específicos (ej: radiadores detrás de cortinas) cuando un sensor binario está activo.",

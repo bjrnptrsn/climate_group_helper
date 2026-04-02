@@ -136,6 +136,10 @@
               "close_delay": "Temps d'attente après fermeture fenêtres avant restauration."
             }
           },
+          "temp_offsets_section": {
+            "name": "Décalages des membres",
+            "description": "Définissez un décalage de température pour chaque membre. L'objectif du groupe est ajusté de cette valeur avant d'être envoyé à chaque appareil. Laissez à 0 pour aucun décalage."
+          },
           "isolation_section": {
             "name": "Isolation de membres",
             "description": "Isoler temporairement des membres spécifiques (ex: radiateurs derrière des rideaux) lorsqu'un capteur binaire est actif.",

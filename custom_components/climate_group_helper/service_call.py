@@ -15,6 +15,7 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     ATTR_TEMPERATURE,
+    DEFAULT_MIN_TEMP,
     DOMAIN as CLIMATE_DOMAIN,
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
@@ -213,6 +214,8 @@ class BaseServiceCallHandler(ABC):
         - Applies wake-up bug prevention (skip setpoints when target is OFF)
         - Handles temperature range specially (must be sent in one call)
         - Uses _get_call_entity_ids() for entity selection
+        - Routes calls through the processing pipeline:
+          _build_initial_call → _process_min_temp_off → _process_offset → _process_oob_guard
 
         Args:
             data: Dict of attribute values to sync
@@ -244,16 +247,26 @@ class BaseServiceCallHandler(ABC):
                     high = data.get(ATTR_TARGET_TEMP_HIGH)
                     if low is not None and high is not None:
                         if (entity_ids := self._get_call_entity_ids(attr, low)):
-                            calls.append({
-                                "service": SERVICE_SET_TEMPERATURE,
-                                "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
-                                "entity_ids": entity_ids
-                            })
+                            raw = [{"service": SERVICE_SET_TEMPERATURE,
+                                    "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
+                                    "entity_ids": entity_ids}]
+                            processed = self._process_min_temp_off(raw)
+                            processed = self._process_offset(processed)
+                            processed = self._process_oob_guard(processed)
+                            calls.extend(processed)
                             temp_range_processed = True
                 continue
 
             entity_ids = self._get_call_entity_ids(attr, value)
-            calls.extend(self._post_process_call(attr, value, entity_ids))
+            if not entity_ids:
+                continue
+
+            # Pipeline: build → process min_temp_off → process OOB guard
+            raw = self._build_initial_call(attr, value, entity_ids)
+            processed = self._process_min_temp_off(raw)
+            processed = self._process_offset(processed)
+            processed = self._process_oob_guard(processed)
+            calls.extend(processed)
 
         return calls
 
@@ -275,6 +288,46 @@ class BaseServiceCallHandler(ABC):
         """
         run_state = self._group.run_state
         return run_state.blocked or entity_id in run_state.isolated_members
+
+    def _is_member_blocked_for_sync(self, entity_id: str) -> bool:
+        """Shared blocking logic for Sync and Schedule handlers, including OOB checks."""
+        # 1. Base Checks (e.g. isolated members or global window block).
+        # We explicitly call the Base class method here to avoid an infinite recursion,
+        # because self._is_member_blocked() would polymorphically resolve to the
+        # subclass override which loops back to this method.
+        if BaseServiceCallHandler._is_member_blocked(self, entity_id):
+            return True
+
+        # 2. OOB Lockout Check
+        if entity_id in self._group.run_state.oob_members:
+            # Check if current target_state would STILL put it OOB.
+            # If target_state is now valid, unblock it so it can receive the call & restore.
+            temp_attrs = (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+            active_temps = [
+                getattr(self.target_state, attr) for attr in temp_attrs
+                if getattr(self.target_state, attr) is not None
+            ]
+
+            if not active_temps:
+                return False  # Targets cleared -> no longer OOB
+
+            state = self._hass.states.get(entity_id)
+            if not state:
+                return True  # Device unavailable -> keep blocked
+
+            min_temp = state.attributes.get("min_temp")
+            max_temp = state.attributes.get("max_temp")
+            offset = self._group._temp_offset_map.get(entity_id, 0.0)
+
+            for target_temp in active_temps:
+                effective_tgt = target_temp + offset
+                if (min_temp is not None and effective_tgt < min_temp) or \
+                   (max_temp is not None and effective_tgt > max_temp):
+                    return True  # Still OOB -> keep blocked
+
+            return False  # In range! Remove block so _process_oob_guard can clear it.
+
+        return False
 
     def _get_capable_entities(self, attr: str, value: Any = None) -> list[str]:
         """Get members that technically support this attribute/value (Capability check).
@@ -336,19 +389,25 @@ class BaseServiceCallHandler(ABC):
             if not state:
                 continue
 
+            # Apply per-member offset for temperature comparisons
+            if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
+                effective_target = self._group.get_effective_temperature(entity_id, target_value)
+            else:
+                effective_target = target_value
+
             current_value = state.state if attr == ATTR_HVAC_MODE else state.attributes.get(attr)
 
             # Output Filter
-            if self._block_unsynced_entity(attr, target_value, state):
+            if self._block_unsynced_entity(attr, effective_target, state):
                 _LOGGER.debug("[%s] Skipping member %s", self._group.entity_id, entity_id)
                 continue
 
             # Float tolerance check
             if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH, ATTR_HUMIDITY):
-                if self._group.within_tolerance(current_value, target_value):
+                if self._group.within_tolerance(current_value, effective_target):
                     continue
 
-            if current_value != target_value:
+            if current_value != effective_target:
                 result.append(entity_id)
 
         return result
@@ -364,128 +423,223 @@ class BaseServiceCallHandler(ABC):
         timestamp = str(time.time())
         return f"{origin_entity}|{timestamp}"
 
-    def _post_process_call(self, attr: str, value: Any, entity_ids: list[str]) -> list[dict]:
-        """Post-process a call after entity selection.
+    def _build_initial_call(self, attr: str, value: Any, entity_ids: list[str]) -> list[dict]:
+        """Build a simple initial call dict from attr/value. No feature logic."""
+        service = ATTR_SERVICE_MAP.get(attr)
+        if not service:
+            return []
+        return [{"service": service, "kwargs": {attr: value}, "entity_ids": entity_ids}]
 
-        Default: produce a single standard call for all entity_ids.
-        Override for entity-specific logic (e.g. OOB handling in Phase 2).
-        Injected attributes (intentionally deviating from target_state) receive
-        'injected': [list_of_attrs] so _is_stale_call does not abort the call.
+    def _process_min_temp_off(self, calls: list[dict]) -> list[dict]:
+        """Handle min_temp_off: restructure HVAC_MODE calls for temp-capable devices.
+
+        - OFF: split into temp-capable (SET_TEMPERATURE with min_temp + OFF) and
+          non-temp (SET_HVAC_MODE OFF)
+        - Restore (ON): inject target_temp for temp-capable devices
+        - Non-applicable calls pass through unchanged.
         """
-        if attr == ATTR_HVAC_MODE and self._group.min_temp_off:
+        if not self._group.min_temp_off:
+            return calls  # Feature not active → No-Op
+
+        result = []
+        for call in calls:
+            kwargs = call["kwargs"]
+
+            # Only process HVAC_MODE calls
+            if ATTR_HVAC_MODE not in kwargs or call["service"] != SERVICE_SET_HVAC_MODE:
+                result.append(call)
+                continue
+
+            hvac_mode = kwargs[ATTR_HVAC_MODE]
+            entity_ids = call["entity_ids"]
+
+            # Entity split: temp-capable vs. non-temp devices
             temp_ids = [
                 eid for eid in entity_ids
                 if (state := self._hass.states.get(eid)) and ATTR_TEMPERATURE in state.attributes
             ]
             non_temp_ids = [eid for eid in entity_ids if eid not in temp_ids]
-            calls = []
-            if value == HVACMode.OFF:
-                if temp_ids:
-                    calls.append({
+
+            if hvac_mode == HVACMode.OFF:
+                # OFF: each temp-capable device gets its own min_temp
+                for eid in temp_ids:
+                    state = self._hass.states.get(eid)
+                    device_min = state.attributes.get("min_temp", DEFAULT_MIN_TEMP) if state else DEFAULT_MIN_TEMP
+                    result.append({
                         "service": SERVICE_SET_TEMPERATURE,
-                        "kwargs": {ATTR_TEMPERATURE: self._group._attr_min_temp, ATTR_HVAC_MODE: HVACMode.OFF},
-                        "entity_ids": temp_ids,
+                        "kwargs": {ATTR_TEMPERATURE: device_min, ATTR_HVAC_MODE: HVACMode.OFF},
+                        "entity_ids": [eid],
                         "injected": [ATTR_TEMPERATURE],
                     })
                 if non_temp_ids:
-                    calls.append({
+                    result.append({
                         "service": SERVICE_SET_HVAC_MODE,
                         "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
                         "entity_ids": non_temp_ids,
                     })
             else:
+                # Restore (turning ON): inject target_temp for temp-capable devices
                 target_temp = self.target_state.temperature
                 if target_temp is not None and temp_ids:
-                    calls.append({
+                    result.append({
                         "service": SERVICE_SET_TEMPERATURE,
-                        "kwargs": {ATTR_TEMPERATURE: target_temp, ATTR_HVAC_MODE: value},
+                        "kwargs": {ATTR_TEMPERATURE: target_temp, ATTR_HVAC_MODE: hvac_mode},
                         "entity_ids": temp_ids,
                     })
                 if non_temp_ids or (target_temp is None and temp_ids):
-                    calls.append({
+                    result.append({
                         "service": SERVICE_SET_HVAC_MODE,
-                        "kwargs": {ATTR_HVAC_MODE: value},
+                        "kwargs": {ATTR_HVAC_MODE: hvac_mode},
                         "entity_ids": non_temp_ids + (temp_ids if target_temp is None else []),
                     })
-            return calls
 
-        # OOB — only for ATTR_TEMPERATURE and only when union strategy is active
-        if attr == ATTR_TEMPERATURE and self._group.config.get(CONF_FEATURE_STRATEGY) == FEATURE_STRATEGY_UNION:
-            return self._process_oob(value, entity_ids)
+        return result
 
-        if not entity_ids:
-            return []
+    def _process_offset(self, calls: list[dict]) -> list[dict]:
+        """Apply per-entity temperature offset.
 
-        service = ATTR_SERVICE_MAP.get(attr)
-        if not service:
-            return []
-
-        return [{"service": service, "kwargs": {attr: value}, "entity_ids": entity_ids}]
-
-    def _process_oob(self, value: float, entity_ids: list[str]) -> list[dict]:
-        """OOB handling after entity selection (union strategy only).
-
-        Splits entity_ids into in-range and out-of-bounds. Generates entity-specific
-        extra calls (OFF or CLAMP). Writes run_state.oob_members once at the end
-        (retry-safe — no partial state).
+        For calls with temperature kwargs that are not already injected,
+        apply the configured offset. Members with offset are split into
+        per-entity calls; members without offset are batched together.
         """
-        action = self._group.config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, DEFAULT_UNION_OUT_OF_BOUNDS_ACTION)
-        run_state = self._group.run_state
-        new_oob = set(run_state.oob_members)
-        in_range_ids = []
-        extra_calls = []
+        if not self._group._temp_offset_map:
+            return calls  # No-op when no offsets configured
 
-        for entity_id in entity_ids:
-            state = self._hass.states.get(entity_id)
-            if not state:
+        result = []
+        temp_attrs = {ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH}
+
+        for call in calls:
+            kwargs = call["kwargs"]
+            injected = set(call.get("injected", []))
+            # Only transform temp attrs that are not already injected
+            transformable = temp_attrs & set(kwargs) - injected
+
+            if not transformable:
+                result.append(call)
                 continue
 
-            min_temp = state.attributes.get("min_temp")
-            max_temp = state.attributes.get("max_temp")
+            # Split by offset: batch no-offset entities, per-entity for offset
+            no_offset_ids = []
+            for entity_id in call["entity_ids"]:
+                offset = self._group._temp_offset_map.get(entity_id, 0.0)
+                if offset == 0.0:
+                    no_offset_ids.append(entity_id)
+                    continue
 
-            if (min_temp is not None and value < min_temp) or (max_temp is not None and value > max_temp):
-                new_oob.add(entity_id)
-                if action == UnionOutOfBoundsAction.OFF:
-                    if state.state != HVACMode.OFF:
-                        extra_calls.append({
-                            "service": SERVICE_SET_HVAC_MODE,
-                            "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
-                            "entity_ids": [entity_id],
-                            "injected": [ATTR_HVAC_MODE],
-                        })
-                else:  # CLAMP
-                    clamped = max_temp if value > max_temp else min_temp
-                    extra_calls.append({
-                        "service": SERVICE_SET_TEMPERATURE,
-                        "kwargs": {ATTR_TEMPERATURE: clamped},
-                        "entity_ids": [entity_id],
-                        "injected": [ATTR_TEMPERATURE],
-                    })
-            else:
-                in_range_ids.append(entity_id)
-                if entity_id in run_state.oob_members and state.state == HVACMode.OFF:
-                    # Was OOB-forced OFF — restore hvac_mode if target is not OFF
-                    if self.target_state.hvac_mode and self.target_state.hvac_mode != HVACMode.OFF:
-                        extra_calls.append({
-                            "service": SERVICE_SET_HVAC_MODE,
-                            "kwargs": {ATTR_HVAC_MODE: self.target_state.hvac_mode},
-                            "entity_ids": [entity_id],
-                        })
-                new_oob.discard(entity_id)
+                adjusted_kwargs = dict(kwargs)
+                for attr in transformable:
+                    if adjusted_kwargs[attr] is not None:
+                        adjusted_kwargs[attr] = adjusted_kwargs[attr] + offset
 
-        # Write once at end (retry-safe, no partial state).
-        # Read current run_state (not snapshot) to avoid overwriting
-        # concurrent changes to other fields (e.g. isolated_members).
+                result.append({
+                    **call,
+                    "kwargs": adjusted_kwargs,
+                    "entity_ids": [entity_id],
+                    "injected": list(injected | transformable),
+                })
+
+            if no_offset_ids:
+                result.append({**call, "entity_ids": no_offset_ids})
+
+        return result
+
+    def _process_oob_guard(self, calls: list[dict]) -> list[dict]:
+        """OOB guard: check if temperature values are within device range (union only).
+
+        Checks ALL calls with ATTR_TEMPERATURE kwargs against device min/max.
+        Preserves upstream kwargs (e.g. hvac_mode from min_temp_off restore).
+        Mutates run_state.oob_members once at the end.
+        """
+        if self._group.config.get(CONF_FEATURE_STRATEGY) != FEATURE_STRATEGY_UNION:
+            return calls  # No-op when not union strategy
+
+        result = []
+        new_oob = set(self._group.run_state.oob_members)
+        action = self._group.config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, DEFAULT_UNION_OUT_OF_BOUNDS_ACTION)
+
+        temp_attrs = (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+
+        for call in calls:
+            kwargs = call["kwargs"]
+
+            # Intercept any temperature-altering attributes
+            call_temp_attrs = {attr: kwargs[attr] for attr in temp_attrs if attr in kwargs}
+            if not call_temp_attrs:
+                result.append(call)
+                continue
+
+            upstream_kwargs = {k: v for k, v in kwargs.items() if k not in temp_attrs}
+
+            in_range_ids = []
+            for entity_id in call["entity_ids"]:
+                state = self._hass.states.get(entity_id)
+                if not state:
+                    continue
+
+                min_temp = state.attributes.get("min_temp")
+                max_temp = state.attributes.get("max_temp")
+
+                is_oob = False
+                for attr, value in call_temp_attrs.items():
+                    if (min_temp is not None and value < min_temp) or \
+                       (max_temp is not None and value > max_temp):
+                        is_oob = True
+                        break
+
+                if is_oob:
+                    # → OOB
+                    new_oob.add(entity_id)
+                    if action == UnionOutOfBoundsAction.OFF:
+                        if state.state != HVACMode.OFF:
+                            result.append({
+                                "service": SERVICE_SET_HVAC_MODE,
+                                "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
+                                "entity_ids": [entity_id],
+                                "injected": [ATTR_HVAC_MODE],
+                            })
+                    else:  # CLAMP
+                        clamped_kwargs = {**upstream_kwargs}
+                        injected = []
+                        for attr, value in call_temp_attrs.items():
+                            clamped = value
+                            if min_temp is not None and value < min_temp:
+                                clamped = min_temp
+                            elif max_temp is not None and value > max_temp:
+                                clamped = max_temp
+                            clamped_kwargs[attr] = clamped
+                            injected.append(attr)
+                            
+                        result.append({
+                            "service": SERVICE_SET_TEMPERATURE,
+                            "kwargs": clamped_kwargs,
+                            "entity_ids": [entity_id],
+                            "injected": injected,
+                        })
+                else:
+                    # → In-range
+                    in_range_ids.append(entity_id)
+                    if entity_id in self._group.run_state.oob_members and state.state == HVACMode.OFF:
+                        if self.target_state.hvac_mode and self.target_state.hvac_mode != HVACMode.OFF:
+                            result.append({
+                                "service": SERVICE_SET_HVAC_MODE,
+                                "kwargs": {ATTR_HVAC_MODE: self.target_state.hvac_mode},
+                                "entity_ids": [entity_id],
+                            })
+                    new_oob.discard(entity_id)
+
+            if in_range_ids:
+                result.append({
+                    "service": call["service"],
+                    "kwargs": {**call_temp_attrs, **upstream_kwargs},
+                    "entity_ids": in_range_ids,
+                    # Preserve injected from original call if present
+                    **({"injected": call["injected"]} if call.get("injected") else {}),
+                })
+
+        # Side effect: write oob_members once at end (retry-safe)
         self._group.run_state = replace(self._group.run_state, oob_members=frozenset(new_oob))
 
-        calls = []
-        if in_range_ids:
-            calls.append({
-                "service": SERVICE_SET_TEMPERATURE,
-                "kwargs": {ATTR_TEMPERATURE: value},
-                "entity_ids": in_range_ids,
-            })
-        return calls + extra_calls
+        return result
 
     # Block hook to prevent all service calls
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
@@ -505,7 +659,7 @@ class BaseServiceCallHandler(ABC):
 
         Prevent setpoint changes if target HVAC mode is OFF.
         The min_temp_when_off temperature is now part of the HVAC_MODE call
-        via _post_process_call, so no exception needed here.
+        via _process_min_temp_off, so no exception needed here.
         """
         return data.get(ATTR_HVAC_MODE) == HVACMode.OFF and attr != ATTR_HVAC_MODE
 
@@ -645,9 +799,7 @@ class SyncCallHandler(BaseServiceCallHandler):
         target_state. ClimateCallHandler (base) does NOT override this, so
         direct user commands still reach OOB members and can clear their OOB state.
         """
-        if super()._is_member_blocked(entity_id):
-            return True
-        return entity_id in self._group.run_state.oob_members
+        return self._is_member_blocked_for_sync(entity_id)
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block calls if blocking mode is active."""
@@ -683,9 +835,7 @@ class ScheduleCallHandler(BaseServiceCallHandler):
 
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Extend base blocking with OOB check (same as SyncCallHandler)."""
-        if super()._is_member_blocked(entity_id):
-            return True
-        return entity_id in self._group.run_state.oob_members
+        return self._is_member_blocked_for_sync(entity_id)
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block schedule calls if blocking mode is active."""
