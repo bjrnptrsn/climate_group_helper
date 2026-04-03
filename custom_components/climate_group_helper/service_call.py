@@ -312,7 +312,7 @@ class BaseServiceCallHandler(ABC):
                 return False  # Targets cleared -> no longer OOB
 
             state = self._hass.states.get(entity_id)
-            if not state:
+            if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 return True  # Device unavailable -> keep blocked
 
             min_temp = state.attributes.get("min_temp")
@@ -349,7 +349,7 @@ class BaseServiceCallHandler(ABC):
             if self._is_member_blocked(entity_id):
                 continue
             state = self._hass.states.get(entity_id)
-            if not state:
+            if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
             if attr in MODE_MODES_MAP:
                 supported_modes = state.attributes.get(MODE_MODES_MAP[attr], [])

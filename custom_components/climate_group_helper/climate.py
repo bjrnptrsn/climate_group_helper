@@ -734,6 +734,11 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             member_id = self._target_member_map.get(target_state.entity_id)
             member_state = self.hass.states.get(member_id) if member_id else None
 
+            # Skip calibration for offline devices
+            if member_state and member_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                _LOGGER.debug("[%s] Skipping calibration update for %s because member %s is unavailable", self.entity_id, target_state.entity_id, member_id)
+                continue
+
             # Battery Saver Feature
             if ignore_off and member_state and member_state.state == HVACMode.OFF:
                 _LOGGER.debug("[%s] Skipping calibration update for %s because member %s is OFF (Battery Saver)", self.entity_id, target_state.entity_id, member_id)

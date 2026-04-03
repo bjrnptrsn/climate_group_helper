@@ -298,7 +298,7 @@ class BaseStateManager:
             return True
 
         # Only if setting hvac_mode to OFF
-        if HVACMode.OFF not in kwargs.get("hvac_mode", ""):
+        if kwargs.get("hvac_mode") != HVACMode.OFF:
             return True
 
         # Last Man Standing Check logic

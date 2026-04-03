@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.1 - 2026-04-03
+
+### 🔧 Fixes
+
+*   **Offline Device Resilience**: Fixed several edge cases where offline devices (`unavailable` / `unknown`) could bypass capability checks due to stale attribute caches, receive unnecessary calibration updates (Battery Saver), or trigger incorrect partial-sync logic. Service calls are now securely prevented from reaching unreachable members.
+
 ## 0.21.0 - 2026-04-02
 
 ### ✨ New Features
