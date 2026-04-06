@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "Sync-Modus",
               "sync_attributes": "Synchronisierte Attribute",
-              "ignore_off_members": "Respektiere 'Aus'-Status der Mitglieder"
+              "ignore_off_members_sync": "Respektiere 'Aus'-Status der Mitglieder (Sync)"
             },
             "data_description": {
               "sync_mode": "Standard: Kein Sync. Mirror: Änderungen kopieren. Lock: Änderungen erzwingen. Master/Lock: Nur Master steuert.",
               "sync_attributes": "Hier ausgewählte Attribute werden im Lock/Mirror-Modus erzwungen. Nicht ausgewählte Attribute erlauben lokale Steuerung (z.B. Temperatur synchronisieren, aber Lüfter lokal steuern lassen).",
-              "ignore_off_members": "Schaltet die Gruppe keine Mitglieder ein, die aktuell ausgeschaltet sind. (Partial Sync)"
+              "ignore_off_members_sync": "Sync- und Lock/Mirror-Modi schalten keine Mitglieder ein, die aktuell ausgeschaltet sind."
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "Resync-Intervall (Minuten)",
               "override_duration": "Override-Dauer (Minuten)",
               "persist_changes": "Dauerhafter Override (Sticky)",
-              "persist_active_schedule": "Zeitplan-Überschreibung beibehalten"
+              "persist_active_schedule": "Zeitplan-Überschreibung beibehalten",
+              "ignore_off_members_schedule": "Respektiere 'Aus'-Status der Mitglieder (Zeitplan)"
             },
             "data_description": {
               "schedule_entity": "Wähle eine Zeitplan-Entität. Das Feld 'Zusätzliche Daten' des Zeitplans kann YAML mit Attributen wie 'temperature: 20.5' oder 'hvac_mode: heat' enthalten.",
               "resync_interval": "Erzwinge alle X Minuten den Zielzustand der Gruppe. Stellt sicher, dass alle Geräte dem Zeitplan folgen. Auf 0 setzen zum Deaktivieren.",
               "override_duration": "Die Dauer für manuelle Änderungen. Nach dieser Zeit kehrt die Gruppe automatisch zum Zeitplan zurück. Auf 0 setzen, um die Schonfrist zu überspringen.",
               "persist_changes": "Änderungen am Zeitplan selbst werden ignoriert, solange ein manueller Override aktiv ist. Wendet den aktuellen Zeitplan erst nach Ablauf des Overrides wieder an.",
-              "persist_active_schedule": "Behält den über den Dienst geänderten Zeitplan nach einem Neustart bei. Andernfalls wird auf den konfigurierten Standardzeitplan zurückgesetzt."
+              "persist_active_schedule": "Behält den über den Dienst geänderten Zeitplan nach einem Neustart bei. Andernfalls wird auf den konfigurierten Standardzeitplan zurückgesetzt.",
+              "ignore_off_members_schedule": "Der Zeitplan schaltet keine Mitglieder ein, die aktuell ausgeschaltet sind."
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "Standard (Einweg)",
+        "disabled": "Deaktiviert – Keine automatische Synchronisierung zwischen Mitgliedern",
         "mirror": "Mirror (Magic Sync - Zweiwege)",
         "lock": "Lock (The Boss - Gruppe erzwingen)",
         "master_lock": "Master/Lock – Nur das Master-Gerät kann den Sollwert ändern"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "Deaktiviert – Mitglieder-Isolierung ist deaktiviert",
         "sensor": "Binärer Sensor – Isolieren, wenn Sensor AN",
-        "hvac_mode": "HVAC-Modus – Isolieren, wenn Gruppenmodus übereinstimmt"
+        "hvac_mode": "HVAC-Modus – Isolieren, wenn Gruppenmodus übereinstimmt",
+        "member_off": "Mitglied aus – Isolieren, wenn ein Mitglied manuell ausgeschaltet wird"
       }
     }
   },

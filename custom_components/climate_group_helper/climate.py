@@ -245,7 +245,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
         self._expose_config = config.get(CONF_EXPOSE_CONFIG, False)
         # Sync mode
-        self.sync_mode = config.get(CONF_SYNC_MODE, SyncMode.STANDARD)
+        self.sync_mode = SyncMode(config.get(CONF_SYNC_MODE, SyncMode.DISABLED))
         # Advanced options
         self.min_temp_off = config.get(CONF_MIN_TEMP_OFF, False)
         # Window control
@@ -421,10 +421,12 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # We filter for ClimateState fields to ensure we only store relevant climate attributes
         restored_data = {}
+        valid_hvac_modes = {m.value for m in HVACMode}
         for field in fields(ClimateState):
             key = field.name
-            if key == "hvac_mode" and last_state.state:
-                restored_data[key] = last_state.state
+            if key == "hvac_mode":
+                if last_state.state in valid_hvac_modes:
+                    restored_data[key] = last_state.state
             elif (value := last_attrs.get(key)) is not None:
                 restored_data[key] = value
 
@@ -433,7 +435,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             _LOGGER.debug("[%s] Restored Persistent Target State: %s", self.entity_id, self.shared_target_state)
 
         # Restore modes and features
-        if last_state.state:
+        if last_state.state in valid_hvac_modes:
             self._attr_hvac_mode = last_state.state
             self._attr_available = True
             self._attr_assumed_state = True

@@ -23,7 +23,8 @@ from .const import (
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HUMIDITY_USE_MASTER,
     CONF_HVAC_MODE_STRATEGY,
-    CONF_IGNORE_OFF_MEMBERS,
+    CONF_IGNORE_OFF_MEMBERS_SYNC,
+    CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
     CONF_MASTER_ENTITY,
     CONF_MIN_TEMP_OFF,
     CONF_OVERRIDE_DURATION,
@@ -92,8 +93,10 @@ VALID_CONFIG_KEYS = {
     # Sync mode options
     CONF_SYNC_MODE,
     CONF_SYNC_ATTRS,
-    CONF_IGNORE_OFF_MEMBERS,
+    CONF_IGNORE_OFF_MEMBERS_SYNC,
     CONF_MIN_TEMP_OFF,
+    # Schedule options (partial sync)
+    CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
     # Window control options
     CONF_WINDOW_MODE,
     CONF_WINDOW_ADOPT_MANUAL_CHANGES,
@@ -165,22 +168,39 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
     """
     if entry.version < 7:
         _LOGGER.info("[%s] Migrating config entry from version %s to 7 (Soft Reset)", entry.title, entry.version)
-        
+
         # Combine data + options
         old_config = {**entry.data, **entry.options}
 
         # Whitelist Filter: Keep only currently valid keys
         new_options = {key: value for key, value in old_config.items() if key in VALID_CONFIG_KEYS}
-        
+
         # Ensure default for expand_sections
         if CONF_EXPAND_SECTIONS not in new_options:
             new_options[CONF_EXPAND_SECTIONS] = False
-        
+
         # Update entry
         hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=7)
-        
+
         _LOGGER.info("[%s] Migration complete. %d valid keys preserved.", entry.title, len(new_options))
-    
+
+    if entry.version == 7:
+        _LOGGER.info("[%s] Migrating config entry from version 7 to 8", entry.title)
+
+        old_options = dict(entry.options)
+        old_value = old_options.pop("ignore_off_members", False)
+
+        old_options[CONF_IGNORE_OFF_MEMBERS_SYNC] = old_value
+        old_options[CONF_IGNORE_OFF_MEMBERS_SCHEDULE] = old_value
+
+        # SyncMode.STANDARD was renamed to SyncMode.DISABLED in v0.22.0
+        if old_options.get(CONF_SYNC_MODE) == "standard":
+            old_options[CONF_SYNC_MODE] = "disabled"
+
+        hass.config_entries.async_update_entry(entry, options=old_options, version=8)
+
+        _LOGGER.info("[%s] Migration to v8 complete (ignore_off_members → sync=%s, schedule=%s)", entry.title, old_value, old_value)
+
     return True
 
 

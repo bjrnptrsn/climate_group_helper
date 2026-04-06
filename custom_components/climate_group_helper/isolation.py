@@ -6,7 +6,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import HVACMode
-from homeassistant.const import STATE_ON
+from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Event, EventStateChangedData, callback
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 
@@ -51,7 +51,7 @@ class IsolationCallHandler(BaseServiceCallHandler):
     def _get_capable_entities(self, attr: str, value: Any = None) -> list[str]:
         """Return only the single isolated entity (if capable)."""
         state = self._hass.states.get(self._entity_id)
-        if not state:
+        if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return []
         # For float attrs just check existence; for mode attrs delegate to parent
         from .const import MODE_MODES_MAP  # local import to avoid circular
@@ -91,7 +91,7 @@ class MemberIsolationHandler:
         self._hass = group.hass
 
         self._trigger: IsolationTrigger = IsolationTrigger(
-            group.config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.SENSOR)
+            group.config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
         )
         self._sensor_id: str | None = group.config.get(CONF_ISOLATION_SENSOR)
         self._trigger_hvac_modes: list[str] = group.config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, [])
@@ -114,13 +114,23 @@ class MemberIsolationHandler:
 
     async def async_setup(self) -> None:
         """Subscribe to the configured trigger."""
-        if not self._isolation_entity_ids:
+        if self._trigger == IsolationTrigger.DISABLED:
+            _LOGGER.debug("[%s] Member isolation disabled (trigger=DISABLED)", self._group.entity_id)
+            return
+        if self._trigger != IsolationTrigger.MEMBER_OFF and not self._isolation_entity_ids:
             _LOGGER.debug("[%s] Member isolation disabled (no entities configured)", self._group.entity_id)
             return
 
         # Create per-entity call handlers
         for entity_id in self._isolation_entity_ids:
             self._call_handlers[entity_id] = IsolationCallHandler(self._group, entity_id)
+
+        if self._trigger == IsolationTrigger.MEMBER_OFF:
+            _LOGGER.debug(
+                "[%s] Member isolation configured for MEMBER_OFF trigger, watching: %s",
+                self._group.entity_id, self._isolation_entity_ids,
+            )
+            return
 
         if self._trigger == IsolationTrigger.SENSOR:
             if not self._sensor_id:
@@ -253,3 +263,57 @@ class MemberIsolationHandler:
                     await handler.call_immediate()
 
         self._group.async_defer_or_update_ha_state()
+
+    # --- Per-member methods for MEMBER_OFF trigger ---
+
+    def isolate_member_sync(self, entity_id: str) -> None:
+        """Synchronously add a member to isolated_members (MEMBER_OFF trigger).
+
+        Called directly from SyncModeHandler.resync() so that the LOCK enforcement
+        task that runs immediately after sees the updated run_state and skips the
+        member — preventing a send→echo→re-isolate loop.
+
+        Handles the "last active member" edge case: releases all isolated members
+        instead (group goes OFF naturally).
+        """
+        remaining_active = [
+            e for e in self._group.climate_entity_ids
+            if e not in self._group.run_state.isolated_members
+            and e != entity_id
+        ]
+        if not remaining_active:
+            _LOGGER.debug(
+                "[%s] Last active member %s going OFF — releasing all isolated members",
+                self._group.entity_id, entity_id,
+            )
+            self._group.run_state = replace(self._group.run_state, isolated_members=frozenset())
+            _LOGGER.debug("[%s] All isolated members released (group goes OFF)", self._group.entity_id)
+        else:
+            new_isolated = self._group.run_state.isolated_members | frozenset([entity_id])
+            self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
+            _LOGGER.debug("[%s] MEMBER_OFF: isolated %s", self._group.entity_id, entity_id)
+        # No async_defer_or_update_ha_state here — the caller's _state_change_listener
+        # will trigger async_update_group_state naturally after resync() returns.
+
+    def release_member_sync(self, entity_id: str) -> None:
+        """Synchronously remove a member from isolated_members (MEMBER_OFF trigger).
+
+        Called from SyncModeHandler before scheduling send_restore_call() so that
+        any subsequent LOCK enforcement does NOT skip the newly active member.
+        No async_defer_or_update_ha_state — the caller's _state_change_listener handles it.
+        """
+        new_isolated = self._group.run_state.isolated_members - frozenset([entity_id])
+        self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
+        _LOGGER.debug("[%s] MEMBER_OFF: sync-released %s", self._group.entity_id, entity_id)
+
+    async def send_restore_call(self, entity_id: str) -> None:
+        """Send a restore call to a single member (MEMBER_OFF trigger).
+
+        Called after release_member_sync() — does NOT touch run_state.
+        """
+        if self._group.run_state.blocked:
+            return
+        if handler := self._call_handlers.get(entity_id):
+            await handler.call_immediate()
+        self._group.async_defer_or_update_ha_state()
+

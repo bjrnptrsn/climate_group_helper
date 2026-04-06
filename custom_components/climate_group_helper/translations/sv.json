@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "Sync-läge",
               "sync_attributes": "Synkroniserade Attribut",
-              "ignore_off_members": "Respektera medlemmars AV-status"
+              "ignore_off_members_sync": "Respektera medlemmars AV-status (Synkronisering)"
             },
             "data_description": {
               "sync_mode": "Standard: Ingen synk. Spegling: Kopiera ändringar. Lås: Återställ ändringar. Master: Endast mastern styr.",
               "sync_attributes": "Attribut som valts här kommer att tvingas i Lock/Mirror-lägen. Icke-valda attribut tillåter lokal kontroll (t.ex. synkronisera temperatur men låt användare ändra fläkthastighet lokalt).",
-              "ignore_off_members": "Om aktiverat kommer gruppen INTE att slå på medlemmar som för närvarande är AVSTÄNGDA. (Partiell synkronisering)"
+              "ignore_off_members_sync": "Sync- och Lock/Mirror-lägen kommer INTE att slå på medlemmar som för närvarande är AVSTÄNGDA."
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "Resync Intervall (minuter)",
               "override_duration": "Override Varaktighet (minuter)",
               "persist_changes": "Bestående åsidosättning (Sticky)",
-              "persist_active_schedule": "Behåll schemaunderkännande"
+              "persist_active_schedule": "Behåll schemaunderkännande",
+              "ignore_off_members_schedule": "Respektera medlemmars AV-status (Schema)"
             },
             "data_description": {
               "schedule_entity": "Välj en schema-enhet. Fältet 'Ytterligare data' kann innehålla YAML med attribut som 'temperature: 20.5' eller 'hvac_mode: heat'.",
               "resync_interval": "Tvinga synkronisering av medlemmar till måltillståndet var X minut. Förhindrar avvikelser om enheter missar ett kommando eller justeras manuellt. Sätt till 0 för att inaktivera.",
               "override_duration": "Varaktigheten för manuella overrides. Efter denna tid återgår gruppen automatiskt till det aktuella schemat. Sätt till 0 för att hoppa över override-perioden.",
               "persist_changes": "Om aktiverat kommer ändringar i schemat att ignoreras så länge en manuell override är aktiv. Återaktiverar det aktuella schemat först efter att overriden har gått ut.",
-              "persist_active_schedule": "Behåller det aktiva schemat efter en omstart när det ändras via tjänsten. Annars återgår det till standardinställningen."
+              "persist_active_schedule": "Behåller det aktiva schemat efter en omstart när det ändras via tjänsten. Annars återgår det till standardinställningen.",
+              "ignore_off_members_schedule": "Schemat kommer INTE att slå på medlemmar som för närvarande är AVSTÄNGDA."
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "Standard (Envägs)",
+        "disabled": "Inaktiverat – Ingen automatisk synkronisering mellan medlemmar",
         "mirror": "Mirror (Magic Sync - Tvåvägs)",
         "lock": "Lock (Chefen - Tvinga Grupp)",
         "master_lock": "Master/Lock – Endast master-enheten kann ändra målet"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "Inaktiverat – Isolering av medlemmar är inaktiverat",
         "sensor": "Binär sensor – Isolera när sensorn är PÅ",
-        "hvac_mode": "HVAC-läge – Isolera när grupläget matchar"
+        "hvac_mode": "HVAC-läge – Isolera när grupläget matchar",
+        "member_off": "Medlem av – Isolera när en medlem stängs av manuellt"
       }
     }
   },

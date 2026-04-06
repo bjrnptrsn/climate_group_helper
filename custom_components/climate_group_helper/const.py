@@ -81,12 +81,6 @@ DEFAULT_ROOM_OPEN_DELAY = 15
 DEFAULT_ZONE_OPEN_DELAY = 300
 DEFAULT_CLOSE_DELAY = 30
 
-class WindowControlAction(StrEnum):
-    """Window control actions."""
-    
-    OFF = "off"
-    TEMPERATURE = "temperature"
-
 # Schedule options
 CONF_SCHEDULE_ENTITY = "schedule_entity"
 
@@ -95,7 +89,8 @@ SERVICE_SET_SCHEDULE_ENTITY = "set_schedule_entity"
 ATTR_SCHEDULE_ENTITY = "schedule_entity"
 
 # Other options
-CONF_IGNORE_OFF_MEMBERS = "ignore_off_members"
+CONF_IGNORE_OFF_MEMBERS_SYNC = "ignore_off_members_sync"
+CONF_IGNORE_OFF_MEMBERS_SCHEDULE = "ignore_off_members_schedule"
 CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_EXPOSE_CONFIG = "expose_config"
@@ -110,16 +105,6 @@ CONF_EXPAND_SECTIONS = "expand_sections"
 CONF_UNION_OUT_OF_BOUNDS_ACTION = "union_out_of_bounds_action"
 CONF_MEMBER_TEMP_OFFSETS = "member_temp_offsets"
 
-
-class UnionOutOfBoundsAction(StrEnum):
-    """Out-of-bounds action when union strategy is active."""
-
-    OFF = "off"
-    CLAMP = "clamp"
-
-
-DEFAULT_UNION_OUT_OF_BOUNDS_ACTION = UnionOutOfBoundsAction.OFF
-
 # Member Isolation options
 CONF_ISOLATION_SENSOR = "isolation_sensor"
 CONF_ISOLATION_ENTITIES = "isolation_entities"
@@ -131,11 +116,13 @@ DEFAULT_ISOLATION_ACTIVATE_DELAY = 0
 DEFAULT_ISOLATION_RESTORE_DELAY = 0
 
 
-class IsolationTrigger(StrEnum):
-    """Isolation trigger modes."""
+class UnionOutOfBoundsAction(StrEnum):
+    """Out-of-bounds action when union strategy is active."""
 
-    SENSOR = "sensor"
-    HVAC_MODE = "hvac_mode"
+    OFF = "off"
+    CLAMP = "clamp"
+
+DEFAULT_UNION_OUT_OF_BOUNDS_ACTION = UnionOutOfBoundsAction.OFF
 
 
 class AverageOption(StrEnum):
@@ -166,10 +153,17 @@ class CalibrationMode(StrEnum):
 class SyncMode(StrEnum):
     """Enum for sync modes."""
 
-    STANDARD = "standard"
+    DISABLED = "disabled"
     LOCK = "lock"
     MIRROR = "mirror"
     MASTER_LOCK = "master_lock"
+
+
+class WindowControlMode(StrEnum):
+    """Window control modes."""
+
+    OFF = "off"
+    ON = "on"
 
 
 class AdoptManualChanges(StrEnum):
@@ -180,11 +174,20 @@ class AdoptManualChanges(StrEnum):
     MASTER_ONLY = "master_only"
 
 
-class WindowControlMode(StrEnum):
-    """Window control modes."""
-
+class WindowControlAction(StrEnum):
+    """Window control actions."""
+    
     OFF = "off"
-    ON = "on"
+    TEMPERATURE = "temperature"
+
+
+class IsolationTrigger(StrEnum):
+    """Isolation trigger modes."""
+
+    DISABLED = "disabled"
+    SENSOR = "sensor"
+    HVAC_MODE = "hvac_mode"
+    MEMBER_OFF = "member_off"
 
 
 # Extra attribute keys

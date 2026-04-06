@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "Mode Sync",
               "sync_attributes": "Attributs Synchronisés",
-              "ignore_off_members": "Respecter l'état Off des membres"
+              "ignore_off_members_sync": "Respecter l'état Off des membres (Sync)"
             },
             "data_description": {
               "sync_mode": "Standard : Pas de synchro. Miroir : Copier modifs. Verrouillage : Annuler modifs. Maître : Seul le maître contrôle.",
               "sync_attributes": "Les attributs sélectionnés ici seront appliqués en modes Lock/Mirror. Les attributs non sélectionnés permettent un contrôle local (ex. synchroniser la température mais laisser les utilisateurs changer la vitesse du ventilateur localement).",
-              "ignore_off_members": "Le groupe n'allumera PAS les membres qui sont actuellement ÉTEINTS. (Synchronisation partielle)"
+              "ignore_off_members_sync": "Les modes Sync et Lock/Mirror n'allumeront PAS les membres actuellement ÉTEINTS."
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "Intervalle de Resync (minutes)",
               "override_duration": "Durée d'Override (minutes)",
               "persist_changes": "Dérogation persistante (Sticky)",
-              "persist_active_schedule": "Conserver le forçage du calendrier"
+              "persist_active_schedule": "Conserver le forçage du calendrier",
+              "ignore_off_members_schedule": "Respecter l'état Off des membres (Planification)"
             },
             "data_description": {
               "schedule_entity": "Sélectionnez une entité de programmation. Le champ 'Données supplémentaires' peut contenir du YAML avec des attributs comme 'temperature: 20.5' ou 'hvac_mode: heat'.",
               "resync_interval": "Forcer la synchronisation des membres vers l'état cible toutes les X minutes. Évite les dérives si les appareils manquent une commande ou sont ajustés manuellement. Mettre à 0 pour désactiver.",
               "override_duration": "La durée des overrides manuels. Après ce temps, le groupe revient automatiquement à la programmation actuelle. Mettre à 0 pour ignorer la période d'override.",
               "persist_changes": "Les changements de programmation seront ignorés tant qu'un override manuel est actif. Réapplique la programmation actuelle seulement après l'expiration de l'override.",
-              "persist_active_schedule": "Conserve le calendrier actif après un redémarrage s'il a été modifié via le service. Sinon, il revient au calendrier par défaut."
+              "persist_active_schedule": "Conserve le calendrier actif après un redémarrage s'il a été modifié via le service. Sinon, il revient au calendrier par défaut.",
+              "ignore_off_members_schedule": "La Planification n'allumera PAS les membres actuellement ÉTEINTS."
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "Standard (Unidirectionnel)",
+        "disabled": "Désactivé – Pas de synchronisation automatique entre membres",
         "mirror": "Mirror (Magic Sync - Bidirectionnel)",
         "lock": "Lock (Le Patron - Forcer le Groupe)",
         "master_lock": "Master/Lock – Seule l'entité maître peut modifier la cible"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "Désactivé – L'isolation des membres est désactivée",
         "sensor": "Capteur binaire – Isoler quand le capteur est ACTIF",
-        "hvac_mode": "Mode HVAC – Isoler quand le mode du groupe correspond"
+        "hvac_mode": "Mode HVAC – Isoler quand le mode du groupe correspond",
+        "member_off": "Membre éteint – Isoler quand un membre s'éteint manuellement"
       }
     }
   },

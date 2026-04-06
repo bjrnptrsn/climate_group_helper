@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "同步模式",
               "sync_attributes": "同步属性",
-              "ignore_off_members": "尊重成员关闭状态"
+              "ignore_off_members_sync": "尊重成员关闭状态（同步）"
             },
             "data_description": {
               "sync_mode": "标准：无同步。镜像：复制所有更改。锁定：恢复更改。主/锁定：仅主实体可控。",
               "sync_attributes": "在此处选择的属性将在锁定/镜像模式下强制执行。未选择的属性允许本地控制 (例如同步温度但允许用户本地更改风扇速度)。",
-              "ignore_off_members": "群组将不会打开当前处于关闭状态的成员。（部分同步）"
+              "ignore_off_members_sync": "同步和锁定/镜像模式不会打开当前处于关闭状态的成员。"
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "重新同步间隔 (分钟)",
               "override_duration": "手动覆盖时长 (分钟)",
               "persist_changes": "保持手动覆盖 (Sticky)",
-              "persist_active_schedule": "保留日程覆盖"
+              "persist_active_schedule": "保留日程覆盖",
+              "ignore_off_members_schedule": "尊重成员关闭状态（计划）"
             },
             "data_description": {
               "schedule_entity": "选择一个日程表实体。日程表的“附加数据”字段可以包含 YAML 属性，如 'temperature: 20.5' 或 'hvac_mode: heat'。",
               "resync_interval": "每 X 分钟强制将成员同步到群组的目标状态。防止设备错过命令或由于手动调整而导致的偏离。设置为 0 以禁用。",
               "override_duration": "手动覆盖的持续时间。在此时间过后，群组将自动恢复到当前日程表。设置为 0 以跳过覆盖期。",
               "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。",
-              "persist_active_schedule": "通过服务更改日程后，在重启后保留活动日程。否则，它将恢复为配置的默认值。"
+              "persist_active_schedule": "通过服务更改日程后，在重启后保留活动日程。否则，它将恢复为配置的默认值。",
+              "ignore_off_members_schedule": "计划不会打开当前处于关闭状态的成员。"
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "标准 (单向)",
+        "disabled": "禁用 – 成员之间无自动同步",
         "mirror": "镜像 (Magic Sync - 双向)",
         "lock": "锁定 (老板 - 强制组)",
         "master_lock": "Master/Lock – 仅主实体可以更改组目标"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "禁用 – 成员隔离已禁用",
         "sensor": "二进制传感器 – 传感器开启时隔离",
-        "hvac_mode": "HVAC 模式 – 组模式匹配时隔离"
+        "hvac_mode": "HVAC 模式 – 组模式匹配时隔离",
+        "member_off": "成员关闭 – 当成员手动关闭时进行隔离"
       }
     }
   },

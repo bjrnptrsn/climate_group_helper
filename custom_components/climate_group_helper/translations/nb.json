@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "Sync-modus",
               "sync_attributes": "Synkroniserte attributter",
-              "ignore_off_members": "Respekter medlemmers AV-tilstand"
+              "ignore_off_members_sync": "Respekter medlemmers AV-tilstand (Synk)"
             },
             "data_description": {
               "sync_mode": "Standard: Ingen synk. Speiling: Kopier endringer. Lås: Tilbakestill endringer. Master: Kun master styrer.",
               "sync_attributes": "Attributter valgt her vil bli håndhevet i Lock/Mirror-moduser. Ikke-valgte attributter tillater lokal kontroll (f.eks. synkroniser temperatur, men la brukere endre viftehastighet lokalt).",
-              "ignore_off_members": "Vil gruppen IKKE slå på medlemmer som for tiden er AV. (Delvis synkronisering)"
+              "ignore_off_members_sync": "Synk- og Lock/Mirror-modi vil IKKE slå på medlemmer som for tiden er AV."
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "Resync-intervall (minutter)",
               "override_duration": "Varighet for overstyring (minutter)",
               "persist_changes": "Vedvarende overstyring (Sticky)",
-              "persist_active_schedule": "Behold tidsplanoverstyring"
+              "persist_active_schedule": "Behold tidsplanoverstyring",
+              "ignore_off_members_schedule": "Respekter medlemmers AV-tilstand (Tidsplan)"
             },
             "data_description": {
               "schedule_entity": "Velg en tidsplan-enhet. Feltet 'Tilleggsdata' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
               "resync_interval": "Tvinge synkronisering av medlemmer til gruppens måltilstand hvert X minutt. Forhindrer avvik hvis enheter går glipp av en kommando eller justeres manuelt. Sett til 0 for å deaktivere.",
               "override_duration": "Varigheten av manuelle overstyringer. Etter denne tiden går gruppen automatisk tilbake til gjeldende tidsplan. Sett til 0 for å hoppe over overstyringsperioden.",
               "persist_changes": "Vil endringer i selve tidsplanen bli ignorert så lenge en manuell overstyring er aktiv. Bruker gjeldende tidsplan på nytt først etter at overstyringen er utløpt.",
-              "persist_active_schedule": "Beholder den aktive tidsplanen etter en omstart når den endres via tjenesten. Ellers går den tilbake til standarden."
+              "persist_active_schedule": "Beholder den aktive tidsplanen etter en omstart når den endres via tjenesten. Ellers går den tilbake til standarden.",
+              "ignore_off_members_schedule": "Tidsplanen vil IKKE slå på medlemmer som for tiden er AV."
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "Standard (Enveis)",
+        "disabled": "Deaktivert – Ingen automatisk synkronisering mellom medlemmer",
         "mirror": "Mirror (Magic Sync - Toveis)",
         "lock": "Lock (Sjefen - Tving gruppe)",
         "master_lock": "Master/Lock – Kun master-enheten kan endre gruppens mål"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "Deaktivert – Isolering av medlemmer er deaktivert",
         "sensor": "Binær sensor – Isoler når sensor er PÅ",
-        "hvac_mode": "HVAC-modus – Isoler når gruppemodus stemmer overens"
+        "hvac_mode": "HVAC-modus – Isoler når gruppemodus stemmer overens",
+        "member_off": "Medlem av – Isoler når et medlem slås av manuelt"
       }
     }
   },

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.22.0 - 2026-04-06
+
+### ✨ New Features
+
+*   **Member Isolation — Member Off Trigger**: A group member is now automatically isolated when it turns off manually (e.g. via the physical device or a local automation). While isolated, it is excluded from all group commands and calculations. As soon as it turns back on, isolation is released and the group's target state is restored.
+
+### ⚙️ Configuration Changes
+
+*   **"Respect Member Off State" split into two independent options**: You can now configure this separately for **Sync/Lock enforcement** and **Schedule automation**. Previously, a single toggle controlled both.
+
+### 🔧 Fixes
+
+*   **State Restore on Startup**: Fixed a crash (`ValueError`) that could occur after an ungraceful shutdown if a member reported `unavailable` or `unknown` as its HVAC mode when Home Assistant restarted.
+
 ## 0.21.1 - 2026-04-03
 
 ### 🔧 Fixes

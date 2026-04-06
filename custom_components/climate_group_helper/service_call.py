@@ -29,7 +29,8 @@ from .const import (
     MODE_MODES_MAP,
     ATTR_SERVICE_MAP,
     CONF_FEATURE_STRATEGY,
-    CONF_IGNORE_OFF_MEMBERS,
+    CONF_IGNORE_OFF_MEMBERS_SYNC,
+    CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
     CONF_SYNC_ATTRS,
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
     DEFAULT_UNION_OUT_OF_BOUNDS_ACTION,
@@ -273,11 +274,27 @@ class BaseServiceCallHandler(ABC):
     def _get_call_entity_ids(self, attr: str, value: Any = None) -> list[str]:
         """Get entity IDs for a given attribute and target value.
 
-        Default: all members capable of handling this attribute/value ("Can I?" only).
-        For direct UI commands (ClimateCallHandler), this is the final answer — no diffing.
-        Override in Sync/Schedule handlers to also apply necessity check ("Should I?").
+        Delegates to _get_filtered_entities, which applies capability check,
+        _block_unsynced_entity hook, and optionally value diffing (_should_diff).
         """
-        return self._get_capable_entities(attr, value)
+        return self._get_filtered_entities(attr, value)
+
+    def _should_diff(self) -> bool:
+        """Whether _get_filtered_entities should filter by value deviation.
+
+        False (default): all capable entities are included regardless of current value.
+        Override to True in handlers that should only update members that actually need it
+        (Sync/Schedule).
+        """
+        return False
+
+    def _get_target_value(self, attr: str, value: Any = None) -> Any:
+        """Get the target value for an attribute.
+
+        Default: return the explicitly passed value (used by direct command handlers).
+        Override in Sync/Schedule handlers to read from target_state instead.
+        """
+        return value
 
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Check if a specific member should be excluded from service calls.
@@ -289,16 +306,12 @@ class BaseServiceCallHandler(ABC):
         run_state = self._group.run_state
         return run_state.blocked or entity_id in run_state.isolated_members
 
-    def _is_member_blocked_for_sync(self, entity_id: str) -> bool:
-        """Shared blocking logic for Sync and Schedule handlers, including OOB checks."""
-        # 1. Base Checks (e.g. isolated members or global window block).
-        # We explicitly call the Base class method here to avoid an infinite recursion,
-        # because self._is_member_blocked() would polymorphically resolve to the
-        # subclass override which loops back to this method.
-        if BaseServiceCallHandler._is_member_blocked(self, entity_id):
-            return True
+    def _is_oob_blocked(self, entity_id: str) -> bool:
+        """Check if a member is blocked due to being out-of-bounds (OOB).
 
-        # 2. OOB Lockout Check
+        If target_state has drifted back into range, the member is unblocked
+        so _process_oob_guard can restore it.
+        """
         if entity_id in self._group.run_state.oob_members:
             # Check if current target_state would STILL put it OOB.
             # If target_state is now valid, unblock it so it can receive the call & restore.
@@ -369,24 +382,27 @@ class BaseServiceCallHandler(ABC):
             entity_ids.append(entity_id)
         return entity_ids
 
-    def _get_unsynced_entities(self, attr: str) -> list[str]:
-        """Get members that need to be synced for this attribute (Necessity check).
+    def _get_filtered_entities(self, attr: str, value: Any = None) -> list[str]:
+        """Get members that should receive a call for this attribute.
 
-        Internally calls _get_capable_entities(attr, target_value) to build the
-        candidate list, then filters by value deviation and partial-sync rules.
+        Unified entity selection pipeline used by all handlers:
+        1. Capability check via _get_capable_entities (with target value for mode attrs).
+        2. _block_unsynced_entity hook (e.g. skip OFF members for Partial Sync).
+        3. Value diffing — skipped when _should_diff() returns False (ClimateCallHandler).
 
         Args:
             attr: The attribute to check.
+            value: Explicit value (used by ClimateCallHandler via _get_target_value override).
         """
         result = []
 
-        target_value = getattr(self.target_state, attr, None)
+        target_value = self._get_target_value(attr, value)
         if target_value is None:
             return []
 
         for entity_id in self._get_capable_entities(attr, target_value):
             state = self._hass.states.get(entity_id)
-            if not state:
+            if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
 
             # Apply per-member offset for temperature comparisons
@@ -397,9 +413,13 @@ class BaseServiceCallHandler(ABC):
 
             current_value = state.state if attr == ATTR_HVAC_MODE else state.attributes.get(attr)
 
-            # Output Filter
+            # Output Filter hook (e.g. Partial Sync: skip OFF members)
             if self._block_unsynced_entity(attr, effective_target, state):
                 _LOGGER.debug("[%s] Skipping member %s", self._group.entity_id, entity_id)
+                continue
+
+            if not self._should_diff():  # default: skip diffing
+                result.append(entity_id)
                 continue
 
             # Float tolerance check
@@ -664,7 +684,7 @@ class BaseServiceCallHandler(ABC):
         return data.get(ATTR_HVAC_MODE) == HVACMode.OFF and attr != ATTR_HVAC_MODE
 
     # Stale call guard hook
-    def _is_stale_call(self, call: dict[str, Any]) -> bool:  # noqa: ARG002
+    def _is_stale_call(self, call: dict[str, Any]) -> bool:
         """Return True if this call is stale and should be aborted.
 
         Called before each individual service call inside the retry loop.
@@ -679,16 +699,16 @@ class BaseServiceCallHandler(ABC):
 
     # Block hook for unsynced entities
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:
-        """Check if this entity should be skipped."""
-        return self._skip_off_member(state=state, target_value=target_value)
+        """Check if this entity should be skipped. Default: no filtering."""
+        return False
 
-    def _skip_off_member(self, state: State, target_value: Any) -> bool:
+    def _skip_off_member(self, state: State, target_value: Any, conf_key: str) -> bool:
         """Check if this OFF member should be skipped (Partial Sync).
 
-        Used by handlers that support CONF_IGNORE_OFF_MEMBERS to prevent
-        waking up members that were manually turned OFF.
+        Args:
+            conf_key: The config key to check (CONF_IGNORE_OFF_MEMBERS_SYNC or _SCHEDULE).
         """
-        if not self._group.config.get(CONF_IGNORE_OFF_MEMBERS):
+        if not self._group.config.get(conf_key):
             return False
         if self.target_state.hvac_mode == HVACMode.OFF:
             return False
@@ -787,10 +807,6 @@ class SyncCallHandler(BaseServiceCallHandler):
         """Generate calls based on target_state diff."""
         return super()._generate_calls(data=data, filter_state=self._filter_state)
 
-    def _get_call_entity_ids(self, attr: str, value: Any = None) -> list[str]:  # noqa: ARG002
-        """Capability + necessity check: 'Can I?' and 'Should I?'."""
-        return self._get_unsynced_entities(attr)
-
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Extend base blocking with OOB check.
 
@@ -799,7 +815,19 @@ class SyncCallHandler(BaseServiceCallHandler):
         target_state. ClimateCallHandler (base) does NOT override this, so
         direct user commands still reach OOB members and can clear their OOB state.
         """
-        return self._is_member_blocked_for_sync(entity_id)
+        return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
+
+    def _should_diff(self) -> bool:
+        """Only update members that actually need it."""
+        return True
+
+    def _get_target_value(self, attr: str, value: Any = None) -> Any:
+        """Read from target_state instead of using the passed value."""
+        return getattr(self.target_state, attr, None)
+
+    def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
+        """Apply Partial Sync: skip OFF members if CONF_IGNORE_OFF_MEMBERS_SYNC is set."""
+        return self._skip_off_member(state=state, target_value=target_value, conf_key=CONF_IGNORE_OFF_MEMBERS_SYNC)
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block calls if blocking mode is active."""
@@ -835,12 +863,20 @@ class ScheduleCallHandler(BaseServiceCallHandler):
 
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Extend base blocking with OOB check (same as SyncCallHandler)."""
-        return self._is_member_blocked_for_sync(entity_id)
+        return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
+
+    def _should_diff(self) -> bool:
+        """Only update members that actually need it."""
+        return True
+
+    def _get_target_value(self, attr: str, value: Any = None) -> Any:
+        """Read from target_state instead of using the passed value."""
+        return getattr(self.target_state, attr, None)
+
+    def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
+        """Apply Partial Sync: skip OFF members if CONF_IGNORE_OFF_MEMBERS_SCHEDULE is set."""
+        return self._skip_off_member(state=state, target_value=target_value, conf_key=CONF_IGNORE_OFF_MEMBERS_SCHEDULE)
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block schedule calls if blocking mode is active."""
         return self._group.run_state.blocked
-
-    def _get_call_entity_ids(self, attr: str, value: Any = None) -> list[str]:  # noqa: ARG002
-        """Capability + necessity check: 'Can I?' and 'Should I?'."""
-        return self._get_unsynced_entities(attr)

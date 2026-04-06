@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "Modo de Sincronização",
               "sync_attributes": "Atributos Sincronizados",
-              "ignore_off_members": "Respeitar estado Off dos membros"
+              "ignore_off_members_sync": "Respeitar estado Off dos membros (Sincronização)"
             },
             "data_description": {
               "sync_mode": "Padrão: Sem sincronização. Espelho: Copiar alterações. Bloqueio: Reverter alterações. Mestre: Apenas o mestre controla.",
               "sync_attributes": "Os atributos selecionados aqui serão forçados em modos Lock/Mirror. Os não selecionados permitem controlo local (ex. sincronizar temperatura mas deixar os utilizadores mudar a velocidade da ventoinha localmente).",
-              "ignore_off_members": "O grupo NÃO ligará os membros que estão atualmente DESLIGADOS. (Sincronização Parcial)"
+              "ignore_off_members_sync": "Os modos Sync e Lock/Mirror NÃO ligarão os membros que estão atualmente DESLIGADOS."
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "Intervalo de Resync (minutos)",
               "override_duration": "Duração do Override (minutos)",
               "persist_changes": "Override Persistente (Sticky)",
-              "persist_active_schedule": "Manter anulação de agendamento"
+              "persist_active_schedule": "Manter anulação de agendamento",
+              "ignore_off_members_schedule": "Respeitar estado Off dos membros (Agendamento)"
             },
             "data_description": {
               "schedule_entity": "Selecione uma entidade de agenda. O campo 'Dados adicionais' pode conter YAML com atributos como 'temperature: 20.5' ou 'hvac_mode: heat'.",
               "resync_interval": "Sincroniza forçadamente os membros com o estado alvo a cada X minutos. Evita desvios se os dispositivos perderem um comando ou forem ajustados manualmente. Definir como 0 para desativar.",
               "override_duration": "A duração dos overrides manuais. Após este tempo, o grupo regressa automaticamente à agenda atual. Definir como 0 para saltar o período de override.",
               "persist_changes": "As alterações na agenda serão ignoradas enquanto um override manual estiver ativo. Reaplica a agenda atual apenas após a expiração do override.",
-              "persist_active_schedule": "Mantém o agendamento ativo após um reinício quando alterado via serviço. Caso contrário, reverte para o padrão configurado."
+              "persist_active_schedule": "Mantém o agendamento ativo após um reinício quando alterado via serviço. Caso contrário, reverte para o padrão configurado.",
+              "ignore_off_members_schedule": "O Agendamento NÃO ligará os membros que estão atualmente DESLIGADOS."
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "Padrão (Unidirecional)",
+        "disabled": "Desativado – Sem sincronização automática entre membros",
         "mirror": "Mirror (Magic Sync - Bidirecional)",
         "lock": "Lock (O Chefe - Forçar Grupo)",
         "master_lock": "Master/Lock – Apenas a entidade mestre pode alterar o alvo"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "Desativado – O isolamento de membros está desativado",
         "sensor": "Sensor binário – Isolar quando o sensor estiver ATIVO",
-        "hvac_mode": "Modo HVAC – Isolar quando o modo do grupo corresponde"
+        "hvac_mode": "Modo HVAC – Isolar quando o modo do grupo corresponde",
+        "member_off": "Membro desligado – Isolar quando um membro é desligado manualmente"
       }
     }
   },

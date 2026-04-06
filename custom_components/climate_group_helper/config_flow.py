@@ -35,7 +35,8 @@ from .const import (
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HUMIDITY_USE_MASTER,
     CONF_HVAC_MODE_STRATEGY,
-    CONF_IGNORE_OFF_MEMBERS,
+    CONF_IGNORE_OFF_MEMBERS_SYNC,
+    CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
     CONF_MASTER_ENTITY,
     CONF_OVERRIDE_DURATION,
     CONF_PERSIST_ACTIVE_SCHEDULE,
@@ -106,7 +107,7 @@ from .climate import (
 class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 7
+    VERSION = 8
 
     @staticmethod
     @callback
@@ -231,10 +232,15 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             current_config[CONF_WINDOW_MODE] = WindowControlMode.OFF
 
         # Isolation Logic
-        trigger = current_config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.SENSOR)
+        trigger = current_config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
         valid_members = set(current_config.get(CONF_ENTITIES, []))
 
-        if trigger == IsolationTrigger.SENSOR:
+        if trigger == IsolationTrigger.DISABLED:
+            # Feature off — clean up all isolation keys
+            current_config.pop(CONF_ISOLATION_SENSOR, None)
+            current_config.pop(CONF_ISOLATION_ENTITIES, None)
+            current_config.pop(CONF_ISOLATION_TRIGGER_HVAC_MODES, None)
+        elif trigger == IsolationTrigger.SENSOR:
             # Remove HVAC-mode trigger keys when sensor mode is active
             current_config.pop(CONF_ISOLATION_TRIGGER_HVAC_MODES, None)
             if not user_input.get(CONF_ISOLATION_SENSOR):
@@ -244,6 +250,16 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 current_config[CONF_ISOLATION_ENTITIES] = [
                     eid for eid in current_config[CONF_ISOLATION_ENTITIES] if eid in valid_members
                 ]
+        elif trigger == IsolationTrigger.MEMBER_OFF:
+            # MEMBER_OFF: no sensor, no hvac_mode trigger.
+            # Prune stale entity refs; fall back to all members if none selected.
+            current_config.pop(CONF_ISOLATION_SENSOR, None)
+            current_config.pop(CONF_ISOLATION_TRIGGER_HVAC_MODES, None)
+            pruned = [
+                eid for eid in current_config.get(CONF_ISOLATION_ENTITIES, [])
+                if eid in valid_members
+            ]
+            current_config[CONF_ISOLATION_ENTITIES] = pruned or list(valid_members)
         else:
             # HVAC_MODE trigger: remove sensor key; prune stale entity refs
             current_config.pop(CONF_ISOLATION_SENSOR, None)
@@ -430,7 +446,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         return {
             vol.Required("sync_section"): section(
                 vol.Schema({
-                    vol.Required(CONF_SYNC_MODE, default=config.get(CONF_SYNC_MODE, SyncMode.STANDARD)): selector.SelectSelector(
+                    vol.Required(CONF_SYNC_MODE, default=config.get(CONF_SYNC_MODE, SyncMode.DISABLED)): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=sync_options,
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -440,7 +456,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     vol.Required(CONF_SYNC_ATTRS, default=config.get(CONF_SYNC_ATTRS, SYNC_TARGET_ATTRS)): selector.SelectSelector(
                         selector.SelectSelectorConfig(options=SYNC_TARGET_ATTRS, mode=selector.SelectSelectorMode.LIST, multiple=True, translation_key="sync_attributes")
                     ),
-                    vol.Optional(CONF_IGNORE_OFF_MEMBERS, default=config.get(CONF_IGNORE_OFF_MEMBERS, False)): bool,
+                    vol.Optional(CONF_IGNORE_OFF_MEMBERS_SYNC, default=config.get(CONF_IGNORE_OFF_MEMBERS_SYNC, False)): bool,
                 }),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
             )
@@ -546,7 +562,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         seen.add(mode)
                         available_hvac_modes.append(mode)
 
-        trigger = config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.SENSOR)
+        trigger = config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
         saved_hvac_modes = [m for m in config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, []) if m in seen]
         hvac_mode_options = available_hvac_modes if available_hvac_modes else [m.value for m in HVACMode]
 
@@ -555,7 +571,12 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 vol.Schema({
                     vol.Required(CONF_ISOLATION_TRIGGER, default=trigger): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=[IsolationTrigger.SENSOR, IsolationTrigger.HVAC_MODE],
+                            options=[
+                                IsolationTrigger.DISABLED,
+                                IsolationTrigger.SENSOR,
+                                IsolationTrigger.HVAC_MODE,
+                                IsolationTrigger.MEMBER_OFF,
+                            ],
                             mode=selector.SelectSelectorMode.DROPDOWN,
                             translation_key="isolation_trigger",
                         )
@@ -601,6 +622,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     ),
                     vol.Optional(CONF_PERSIST_CHANGES, default=config.get(CONF_PERSIST_CHANGES, False)): bool,
                     vol.Optional(CONF_PERSIST_ACTIVE_SCHEDULE, default=config.get(CONF_PERSIST_ACTIVE_SCHEDULE, False)): bool,
+                    vol.Optional(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, default=config.get(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, False)): bool,
                 }),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
             )
@@ -673,9 +695,11 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             self._refresh_hint_shown = False
 
             # Validate: isolation_entities must be a proper subset of entities
+            # (not enforced for MEMBER_OFF — dynamic per-entity trigger has no batch deadlock risk)
             entities = set(flattened_input.get(CONF_ENTITIES, self._config_entry.options.get(CONF_ENTITIES, [])))
+            isolation_trigger = flattened_input.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
             isolation_entities = set(flattened_input.get(CONF_ISOLATION_ENTITIES, []))
-            if isolation_entities and isolation_entities >= entities:
+            if isolation_trigger not in (IsolationTrigger.DISABLED, IsolationTrigger.MEMBER_OFF) and isolation_entities and isolation_entities >= entities:
                 current_config = {**self._config_entry.options, **flattened_input}
                 return await self._show_main_form(current_config, form_errors={
                     "isolation_section": "isolation_all_selected",

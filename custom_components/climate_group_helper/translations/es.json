@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "Modo Sync",
               "sync_attributes": "Atributos Sincronizados",
-              "ignore_off_members": "Respetar estado Off de miembros"
+              "ignore_off_members_sync": "Respetar estado Off de miembros (Sincronización)"
             },
             "data_description": {
               "sync_mode": "Estándar: Sin sincronización. Espejo: Copiar cambios. Bloqueo: Revertir cambios. Maestro: Solo el maestro controla.",
               "sync_attributes": "Los atributos seleccionados aquí se forzarán en modos Lock/Mirror. Los no seleccionados permiten control local (ej. sincronizar temperatura pero dejar que usuarios cambien velocidad de ventilador localmente).",
-              "ignore_off_members": "El grupo NO encenderá los miembros que estén actualmente APAGADOS. (Sincronización parcial)"
+              "ignore_off_members_sync": "Los modos Sync y Lock/Mirror NO encenderán los miembros que estén actualmente APAGADOS."
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "Intervalo de Resincronización (minutos)",
               "override_duration": "Duración de Anulación (minutos)",
               "persist_changes": "Anulación Persistente (Sticky)",
-              "persist_active_schedule": "Mantener anulación de horario"
+              "persist_active_schedule": "Mantener anulación de horario",
+              "ignore_off_members_schedule": "Respetar estado Off de miembros (Programación)"
             },
             "data_description": {
               "schedule_entity": "Seleccione una entidad de programación. El campo 'Datos adicionales' puede contener YAML con atributos como 'temperature: 20.5' o 'hvac_mode: heat'.",
               "resync_interval": "Fuerza la sincronización de los miembros al estado objetivo cada X minutes. Evita desviaciones si los dispositivos pierden un comando o se ajustan manualmente. Establece en 0 para desactivar.",
               "override_duration": "La duración de las anulaciones manuales. Después de este tiempo, el grupo vuelve automáticamente a la programación actual. Establece en 0 para omitir el periodo de anulación.",
               "persist_changes": "Los cambios en la programación se ignorarán mientras haya una anulación manual activa. Vuelve a aplicar la programación actual solo tras caducar la anulación.",
-              "persist_active_schedule": "Mantiene el horario activo después de un reinicio cuando se cambia mediante el servicio. De lo contrario, vuelve al valor predeterminado."
+              "persist_active_schedule": "Mantiene el horario activo después de un reinicio cuando se cambia mediante el servicio. De lo contrario, vuelve al valor predeterminado.",
+              "ignore_off_members_schedule": "La Programación NO encenderá los miembros que estén actualmente APAGADOS."
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "Estándar (Unidireccional)",
+        "disabled": "Desactivado – Sin sincronización automática entre miembros",
         "mirror": "Mirror (Magic Sync - Bidireccional)",
         "lock": "Lock (El Jefe - Forzar Grupo)",
         "master_lock": "Master/Lock – Solo la entidad maestra puede cambiar el objetivo"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "Desactivado – El aislamiento de miembros está desactivado",
         "sensor": "Sensor binario – Aislar cuando el sensor está ACTIVO",
-        "hvac_mode": "Modo HVAC – Aislar cuando el modo del grupo coincide"
+        "hvac_mode": "Modo HVAC – Aislar cuando el modo del grupo coincide",
+        "member_off": "Miembro apagado – Aislar cuando un miembro se apaga manualmente"
       }
     }
   },

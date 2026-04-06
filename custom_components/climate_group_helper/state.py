@@ -12,7 +12,7 @@ from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from .const import (
     FLOAT_TOLERANCE,
-    CONF_IGNORE_OFF_MEMBERS,
+    CONF_IGNORE_OFF_MEMBERS_SYNC,
     AdoptManualChanges,
 )
 
@@ -115,6 +115,23 @@ class FilterState(ClimateState):
             if attr in data:
                 data[attr] = True
         return cls(**data)
+
+
+_TRUSTED_CONTEXT_IDS = frozenset({"service_call", "group", "sync_mode", "schedule", "isolation"})
+
+
+def is_own_echo(event: Event) -> bool:
+    """Return True if the event was caused by one of our own service calls.
+
+    Checks the origin_event context against the set of trusted context IDs
+    that the group uses when dispatching commands to members.
+    """
+    origin_event = getattr(event.context, "origin_event", None)
+    if not origin_event:
+        return False
+    if origin_event.event_type != "call_service" or origin_event.data.get("domain") != "climate":
+        return False
+    return origin_event.context.id in _TRUSTED_CONTEXT_IDS
 
 
 @dataclass(frozen=True)
@@ -293,8 +310,8 @@ class BaseStateManager:
         Returns:
             True to allow, False to block
         """
-        # Only if CONF_IGNORE_OFF_MEMBERS is enabled
-        if not self._group.config.get(CONF_IGNORE_OFF_MEMBERS):
+        # Only if CONF_IGNORE_OFF_MEMBERS_SYNC is enabled
+        if not self._group.config.get(CONF_IGNORE_OFF_MEMBERS_SYNC):
             return True
 
         # Only if setting hvac_mode to OFF

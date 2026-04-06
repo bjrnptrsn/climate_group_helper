@@ -78,7 +78,7 @@ Write the external sensor value back to your TRVs to fix their internal temperat
 
 Beyond basic group control, you can mirror changes bidirectionally, enforce strict settings, or designate a leader.
 
-*   **Standard:** Classic one-way control (Group → Members).
+*   **Disabled:** Classic one-way control (Group → Members). No enforcement.
 *   **Mirror:** Two-way sync. Change one device, all others follow.
 *   **Lock:** Enforce group settings. Automatically reverts manual changes on all members.
 *   **Master/Lock:** *(Requires Master Entity)* "Follow the Leader" mode — changes on the Master are mirrored to all members, while manual changes on other members are reverted.
@@ -111,10 +111,15 @@ Apply a permanent individual offset (±20°C, 0.5°C steps) to each group member
 
 ### Member Isolation
 
-Temporarily isolate specific group members when a binary sensor is active (e.g. a curtain closes, a room becomes unoccupied).
+Temporarily isolate specific group members based on a configurable trigger. Isolated members are turned `off` and excluded from all group calculations (temperature averaging, HVAC mode, sync).
 
-*   **Sensor ON:** After an optional activate delay, isolated members are turned `off` and excluded from all group calculations (temperature averaging, HVAC mode, sync).
-*   **Sensor OFF:** After an optional restore delay, isolated members are restored to the group's current target state.
+**Trigger modes:**
+*   **Binary Sensor:** Isolation activates when a binary sensor turns ON (e.g. a curtain sensor, an occupancy helper). Deactivates when the sensor turns OFF.
+*   **HVAC Mode:** Isolation activates when the group's target mode matches a configured set (e.g. isolate radiators when the group switches to `cool`).
+*   **Member Off:** A member is isolated automatically when it turns `off` manually. Isolation is released and the target state is restored as soon as it turns back on.
+
+**Optional delays:** Configure an activate delay and a restore delay for Sensor and HVAC Mode triggers.
+
 *   **Window Control Interaction:** Isolated members are never touched by Window Control — neither on open nor on close. If a window is open when isolation deactivates, the restore is deferred until the window closes.
 *   **Constraints:** At least one member must remain active — you cannot isolate all members. The section is hidden when the group has only one member.
 
@@ -211,7 +216,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 | Option | Description |
 |--------|-------------|
-| **Sync Mode** | Standard (One-way), Mirror (Two-way), Lock (Enforced), or Master/Lock *(requires Master Entity)*. |
+| **Sync Mode** | Disabled (One-way), Mirror (Two-way), Lock (Enforced), or Master/Lock *(requires Master Entity)*. |
 | **Selective Sync** | Choose which attributes to enforce (e.g. sync temperature but allow local fan control). |
 | **Ignore Off Members** | Prevent the group from forcing `off` members back on during sync. |
 
@@ -231,10 +236,12 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 | Option | Description |
 |--------|-------------|
-| **Isolation Sensor** | Binary sensor that triggers isolation when active. |
-| **Isolated Members** | Which group members to isolate. Must be a subset — at least one member must remain active. |
-| **Activate Delay** | Time to wait after the sensor activates before isolating members. |
-| **Restore Delay** | Time to wait after the sensor deactivates before restoring members. |
+| **Trigger Type** | **Binary Sensor** (activates when sensor is ON), **HVAC Mode** (activates when group mode matches), or **Member Off** (isolates each member individually when it turns off manually). |
+| **Isolation Sensor** | *(Sensor trigger)* Binary sensor that triggers isolation when active. |
+| **HVAC Mode Trigger** | *(HVAC Mode trigger)* The group modes that activate isolation. |
+| **Isolated Members** | Which group members to isolate. For Member Off, defaults to all members. |
+| **Activate Delay** | Time to wait after the trigger activates before isolating members. |
+| **Restore Delay** | Time to wait after the trigger deactivates before restoring members. |
 
 ### Schedule Automation
 

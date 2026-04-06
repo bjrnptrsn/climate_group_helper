@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "Sync-modus",
               "sync_attributes": "Gesynchroniseerde Attributen",
-              "ignore_off_members": "Respecteer de UIT-status van leden"
+              "ignore_off_members_sync": "Respecteer de UIT-status van leden (Synchronisatie)"
             },
             "data_description": {
               "sync_mode": "Standaard: Geen sync. Spiegel: Kopieer wijzigingen. Slot: Herstel status. Master: Alleen de master bestuurt.",
               "sync_attributes": "Hier geselecteerde attributen worden afgedwongen in Lock/Mirror modi. Niet geselecteerde attributen staan lokale controle toe (bijv. temperatuur synchroniseren maar gebruikers lokaal ventilatorsnelheid laten wijzigen).",
-              "ignore_off_members": "Zal de groep GEEN leden inschakelen die momenteel UIT staan. (Gedeeltelijke synchronisatie)"
+              "ignore_off_members_sync": "Sync- en Lock/Mirror-modi zullen GEEN leden inschakelen die momenteel UIT staan."
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "Resync Interval (minuten)",
               "override_duration": "Override Duur (minuten)",
               "persist_changes": "Persistente Override (Sticky)",
-              "persist_active_schedule": "Schema-overschrijving behouden"
+              "persist_active_schedule": "Schema-overschrijving behouden",
+              "ignore_off_members_schedule": "Respecteer de UIT-status van leden (Planning)"
             },
             "data_description": {
               "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'.",
               "resync_interval": "Dwing leden elke X minuten naar de doelstatus van de groep. Voorkomt verloop als apparaten een commando missen of handmatig worden aangepast. Stel in op 0 om uit te schakelen.",
               "override_duration": "De duur van handmatige overrides. Na deze tijd keert de groep automatisch terug naar het schema. Stel in op 0 om de override-periode over te slaan.",
               "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen.",
-              "persist_active_schedule": "Behoudt het actieve schema na een herstart wanneer gewijzigd via de service. Anders wordt het hersteld naar de standaard."
+              "persist_active_schedule": "Behoudt het actieve schema na een herstart wanneer gewijzigd via de service. Anders wordt het hersteld naar de standaard.",
+              "ignore_off_members_schedule": "De Planning zal GEEN leden inschakelen die momenteel UIT staan."
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "Standaard (Eenrichtings)",
+        "disabled": "Uitgeschakeld – Geen automatische synchronisatie tussen leden",
         "mirror": "Mirror (Magic Sync - Tweerichtings)",
         "lock": "Lock (De Baas - Groep Afdwingen)",
         "master_lock": "Master/Lock – Alleen de master-entiteit kan het doel wijzigen"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "Uitgeschakeld – Ledenisolatie is uitgeschakeld",
         "sensor": "Binaire sensor – Isoleer wanneer sensor AAN is",
-        "hvac_mode": "HVAC-stand – Isoleer wanneer groepsstand overeenkomt"
+        "hvac_mode": "HVAC-stand – Isoleer wanneer groepsstand overeenkomt",
+        "member_off": "Lid uit – Isoleer wanneer een lid handmatig wordt uitgeschakeld"
       }
     }
   },

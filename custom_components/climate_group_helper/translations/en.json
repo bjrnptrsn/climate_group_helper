@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "Sync Mode",
               "sync_attributes": "Synced Attributes",
-              "ignore_off_members": "Respect Member Off State"
+              "ignore_off_members_sync": "Respect Member Off State (Sync)"
             },
             "data_description": {
-              "sync_mode": "Standard: No sync. Mirror: Copy changes to all. Lock: Revert changes. Master/Lock: Master changes only.",
+              "sync_mode": "Disabled: No sync. Mirror: Copy changes to all. Lock: Revert changes. Master/Lock: Master changes only.",
               "sync_attributes": "Attributes selected here will be enforced in Lock/Mirror modes. Unselected attributes allow for local control (e.g. sync temperature but let users change fan speed locally).",
-              "ignore_off_members": "The group will NOT turn on members that are currently Off. (Partial Sync)"
+              "ignore_off_members_sync": "Sync and Lock/Mirror modes will NOT turn on members that are currently Off."
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "Resync Interval (minutes)",
               "override_duration": "Override Duration (minutes)",
               "persist_changes": "Sticky Override",
-              "persist_active_schedule": "Retain Schedule Override"
+              "persist_active_schedule": "Retain Schedule Override",
+              "ignore_off_members_schedule": "Respect Member Off State (Schedule)"
             },
             "data_description": {
               "schedule_entity": "Select a schedule entity. The schedule's 'Additional data' field can contain YAML with attributes like 'temperature: 20.5' or 'hvac_mode: heat'.",
               "resync_interval": "Force-sync members to the target state every X minutes. Ensures devices stay on schedule even if adjusted manually or commands are missed. Set to 0 to disable.",
               "override_duration": "The duration for manual overrides. After this time, the group automatically reverts to the current schedule. Set to 0 to skip the override period.",
               "persist_changes": "Changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires.",
-              "persist_active_schedule": "Retain the active schedule after a restart when changed via service. Otherwise, it resets to the default."
+              "persist_active_schedule": "Retain the active schedule after a restart when changed via service. Otherwise, it resets to the default.",
+              "ignore_off_members_schedule": "The Schedule will NOT turn on members that are currently Off."
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "Standard – Aggregates state only, manual changes are allowed",
+        "disabled": "Disabled – No automatic sync between members",
         "mirror": "Mirror – Manual changes on one device update all members",
         "lock": "Lock – Reverts manual changes to match the group state",
         "master_lock": "Master/Lock – Only the master entity can change the group target"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "Disabled – Member isolation is disabled",
         "sensor": "Binary Sensor – Isolate when sensor is ON",
-        "hvac_mode": "HVAC Mode – Isolate when group mode matches"
+        "hvac_mode": "HVAC Mode – Isolate when group mode matches",
+        "member_off": "Member Off – Isolate when a member turns off manually"
       }
     }
   },

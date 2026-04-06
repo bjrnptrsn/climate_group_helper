@@ -102,12 +102,12 @@
             "data": {
               "sync_mode": "Režim synchronizace",
               "sync_attributes": "Synchronizované Atributy",
-              "ignore_off_members": "Respektovat stav Vypnuto členů"
+              "ignore_off_members_sync": "Respektovat stav Vypnuto členů (Synchronizace)"
             },
             "data_description": {
               "sync_mode": "Standard: Bez synchronizace. Zrcadlo: Kopírovat změny. Zámek: Vrátit změny. Master: Ovládá pouze master.",
               "sync_attributes": "Atributy vybrané zde budou vynuceny v režimech Lock/Mirror. Nevybrané atributy umožňují lokální ovládání (např. synchronizovat teplotu, ale nechat uživatele měnit rychlost ventilátoru lokálně).",
-              "ignore_off_members": "Skupina NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ. (Částečná synchronizace)"
+              "ignore_off_members_sync": "Synchronizace a režimy Lock/Mirror NEZAPNOU členy, kteří jsou aktuálně VYPNUTÍ."
             }
           },
           "window_section": {
@@ -168,14 +168,16 @@
               "resync_interval": "Interval znovu-synchronizace (minuty)",
               "override_duration": "Doba trvání přepsání (minuty)",
               "persist_changes": "Trvalé přepsání (Sticky)",
-              "persist_active_schedule": "Zachovat přepsání rozvrhu"
+              "persist_active_schedule": "Zachovat přepsání rozvrhu",
+              "ignore_off_members_schedule": "Respektovat stav Vypnuto členů (Plánování)"
             },
             "data_description": {
               "schedule_entity": "Vyberte entitu rozvrhu. Pole 'Další data' může obsahovat YAML s atributy jako 'temperature: 20.5' nebo 'hvac_mode: heat'.",
               "resync_interval": "Vynutit synchronizaci členů na cílový stav skupiny každých X minut. Zabraňuje odchylkám, pokud zařízení zmeškají příkaz nebo jsou ručně upravena. Nastavte na 0 pro deaktivaci.",
               "override_duration": "Doba trvání manuálních přepsání. Po této době se skupina automaticky vrátí k aktuálnímu rozvrhu. Nastavte na 0 pro přeskočení doby přepsání.",
               "persist_changes": "Změny v samotném rozvrhu budou ignorovány, dokud je aktivní manuální přepsání. Znovu použije aktuální rozvrh až po vypršení přepsání.",
-              "persist_active_schedule": "Zachová aktivní rozvrh po restartu, pokud byl změněn prostřednictvím služby. V opačném případě se vrátí na výchozí nastavení."
+              "persist_active_schedule": "Zachová aktivní rozvrh po restartu, pokud byl změněn prostřednictvím služby. V opačném případě se vrátí na výchozí nastavení.",
+              "ignore_off_members_schedule": "Plánování NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ."
             }
           },
           "advanced_section": {
@@ -288,7 +290,7 @@
     },
     "sync_mode": {
       "options": {
-        "standard": "Standardní (Jednosměrný)",
+        "disabled": "Zakázáno – Žádná automatická synchronizace mezi členy",
         "mirror": "Mirror (Magic Sync - Obousměrný)",
         "lock": "Lock (Šéf - Vynutit Skupinu)",
         "master_lock": "Master/Lock – Pouze hlavní zařízení může měnit cíl skupiny"
@@ -334,8 +336,10 @@
     },
     "isolation_trigger": {
       "options": {
+        "disabled": "Zakázáno – Izolace členů je deaktivována",
         "sensor": "Binární senzor – Izolovat, když je senzor zapnutý",
-        "hvac_mode": "Režim HVAC – Izolovat, když režim skupiny odpovídá"
+        "hvac_mode": "Režim HVAC – Izolovat, když režim skupiny odpovídá",
+        "member_off": "Člen vypnut – Izolovat, když se člen ručně vypne"
       }
     }
   },
