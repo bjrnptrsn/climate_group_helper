@@ -156,8 +156,8 @@
               "isolation_sensor": "(Valfritt) Binär sensor som utlöser isolering vid ON.",
               "isolation_trigger_hvac_modes": "(HVAC-läge utlösare) Isolering aktiveras när gruppens målläge är ett av dessa.",
               "isolation_entities": "Gruppmedlemmar att isolera när sensorn är aktiv.",
-              "isolation_activate_delay": "Väntetid efter sensor ON innan isolering av medlemmar.",
-              "isolation_restore_delay": "Väntetid efter sensor OFF innan återställning av medlemmar."
+              "isolation_activate_delay": "(Endast sensor- / HVAC-lägesutlösare) Väntetid efter sensor ON innan isolering av medlemmar.",
+              "isolation_restore_delay": "(Endast sensor- / HVAC-lägesutlösare) Väntetid efter sensor OFF innan återställning av medlemmar."
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Av – Fönsterkontroll är inaktiverad",
-        "on": "På – Fönsterkontroll är aktiverad"
+        "off": "Inaktiverad – Fönsterkontroll är inaktiv",
+        "on": "Aktiverad – Fönsterkontroll är aktiv"
       }
     },
     "window_adopt_manual_changes": {

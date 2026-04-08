@@ -136,7 +136,12 @@ def is_own_echo(event: Event) -> bool:
 
 @dataclass(frozen=True)
 class ChangeState(ClimateState):
-    """Represents a state deviation delta from a TargetState."""
+    """Delta between a member's current state and the group's TargetState.
+
+    Only attributes that deviate from the target are populated — all others are None.
+    Float attributes (temperature, humidity) use FLOAT_TOLERANCE to suppress noise.
+    Per-member offsets are applied before comparison so the delta reflects logical values.
+    """
     entity_id: str | None = None
 
     @classmethod
@@ -146,7 +151,7 @@ class ChangeState(ClimateState):
         target_state: ClimateState,
         offset_map: dict[str, float] | None = None,
     ) -> ChangeState:
-        """Calculates difference between Event and TargetState."""
+        """Build a ChangeState from a state_changed event vs. the current TargetState."""
         entity_id = event.data.get("entity_id")
         new_state = event.data.get("new_state")
         if new_state is None or target_state is None:
@@ -159,7 +164,7 @@ class ChangeState(ClimateState):
                 return False
 
         deviations: dict[str, Any] = {}
-        # We iterate over the fields of the base ClimateState to ignore metadata
+        # Iterate over ClimateState fields only — ignores ChangeState metadata (entity_id)
         for f in fields(ClimateState):
             key = f.name
             target_val = getattr(target_state, key, None)
@@ -185,7 +190,7 @@ class ChangeState(ClimateState):
         return cls(entity_id=entity_id, **deviations)
 
     def attributes(self) -> dict[str, Any]:
-        """Returns the state attributes excluding metadata."""
+        """Return deviated attributes, excluding entity_id metadata."""
         data = self.to_dict()
         data.pop("entity_id", None)
         return data
@@ -243,7 +248,7 @@ class BaseStateManager:
         if not self._filter_update(entity_id, kwargs):
             return False
 
-        # Add Metadata
+        # Inject provenance metadata (source, entity, timestamp)
         context = self._group._context
         if self.SOURCE == "group" and bool(context and context.user_id and not context.parent_id):
             kwargs["last_source"] = "ui"
@@ -254,7 +259,6 @@ class BaseStateManager:
         kwargs["last_entity"] = last_entity
         kwargs["last_timestamp"] = time.time()
 
-        # Update the CENTRAL shared target state
         self._group.shared_target_state = self._group.shared_target_state.update(**kwargs)
         _LOGGER.debug("[%s] TargetState updated (source=%s): %s", self._group.entity_id, kwargs["last_source"], kwargs)
 
@@ -276,7 +280,7 @@ class BaseStateManager:
         return True
 
     def _check_blocking_mode(self) -> bool:
-        """Check if blocking mode is active."""
+        """Return True if global blocking is active (e.g. window open)."""
         if self._group.run_state.blocked:
             _LOGGER.debug("[%s] TargetState update check (source=%s), blocking_mode=True", self._group.entity_id, self.SOURCE)
             return True
@@ -318,8 +322,7 @@ class BaseStateManager:
         if kwargs.get("hvac_mode") != HVACMode.OFF:
             return True
 
-        # Last Man Standing Check logic
-        # If all other members are OFF, allow update
+        # Allow if no other members are still ON (Last Man Standing)
         other_active_members = [
             entity for entity in self._group.climate_entity_ids
             if entity != entity_id 

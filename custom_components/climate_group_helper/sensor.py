@@ -76,9 +76,7 @@ async def async_setup_entry(
         async_track_state_change_event(
             hass,
             climate_group_entity_id,
-            lambda event: hass.loop.call_soon_threadsafe(
-                async_add_sensors, event.data.get("new_state")
-            ),
+            lambda event: async_add_sensors(event.data.get("new_state")),
         )
     )
 

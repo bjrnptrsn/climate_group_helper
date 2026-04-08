@@ -32,11 +32,12 @@ class SyncModeHandler:
     """Synchronizes group state with members using Lock or Mirror mode.
 
     Sync Modes:
-    - STANDARD: No enforcement, passive aggregation only
+    - DISABLED: No enforcement, passive aggregation only
     - LOCK: Reverts member deviations to group target
     - MIRROR: Adopts member changes and propagates to all members
+    - MASTER_LOCK: Only the master entity can change the group target
 
-    Uses "Persistent Target State" - the group's target_state is the
+    Uses "Persistent Target State" — the group's target_state is the
     single source of truth for what the desired state should be.
     """
 
@@ -89,7 +90,8 @@ class SyncModeHandler:
         if not change_dict:
             return
 
-        # Suppress echoes from window_control or isolation context
+        # Suppress direct echoes: events fired with our own context IDs
+        # (e.g. window_control restore, isolation restore) are not external changes.
         if event.context.id in ("window_control", "isolation"):
             _LOGGER.debug("[%s] Ignoring %s echo", self._group.entity_id, event.context.id)
             return

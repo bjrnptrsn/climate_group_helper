@@ -72,26 +72,20 @@ from .const import (
     CONF_ISOLATION_RESTORE_DELAY,
     CONF_ISOLATION_TRIGGER,
     CONF_ISOLATION_TRIGGER_HVAC_MODES,
-    DEFAULT_ISOLATION_ACTIVATE_DELAY,
-    DEFAULT_ISOLATION_RESTORE_DELAY,
-    IsolationTrigger,
     DEFAULT_CLOSE_DELAY,
     DEFAULT_NAME,
     DEFAULT_ROOM_OPEN_DELAY,
     DEFAULT_ZONE_OPEN_DELAY,
     DOMAIN,
-    FEATURE_STRATEGY_INTERSECTION,
-    FEATURE_STRATEGY_UNION,
-    HVAC_MODE_STRATEGY_AUTO,
-    HVAC_MODE_STRATEGY_NORMAL,
-    HVAC_MODE_STRATEGY_OFF_PRIORITY,
     SYNC_TARGET_ATTRS,
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
-    DEFAULT_UNION_OUT_OF_BOUNDS_ACTION,
     AdoptManualChanges,
     AverageOption,
-    RoundOption,
     CalibrationMode,
+    FeatureStrategy,
+    HvacModeStrategy,
+    IsolationTrigger,
+    RoundOption,
     SyncMode,
     UnionOutOfBoundsAction,
     WindowControlAction,
@@ -251,10 +245,12 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     eid for eid in current_config[CONF_ISOLATION_ENTITIES] if eid in valid_members
                 ]
         elif trigger == IsolationTrigger.MEMBER_OFF:
-            # MEMBER_OFF: no sensor, no hvac_mode trigger.
-            # Prune stale entity refs; fall back to all members if none selected.
+            # MEMBER_OFF: no sensor, no hvac_mode trigger, no delays (isolation is
+            # per-member and immediate — a delay would conflict with LOCK enforcement).
             current_config.pop(CONF_ISOLATION_SENSOR, None)
             current_config.pop(CONF_ISOLATION_TRIGGER_HVAC_MODES, None)
+            current_config[CONF_ISOLATION_ACTIVATE_DELAY] = 0
+            current_config[CONF_ISOLATION_RESTORE_DELAY] = 0
             pruned = [
                 eid for eid in current_config.get(CONF_ISOLATION_ENTITIES, [])
                 if eid in valid_members
@@ -313,23 +309,23 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(CONF_MASTER_ENTITY, description={"suggested_value": config.get(CONF_MASTER_ENTITY)}): selector.EntitySelector(
                         selector.EntitySelectorConfig(domain=CLIMATE_DOMAIN)
                     ),
-                    vol.Required(CONF_HVAC_MODE_STRATEGY, default=config.get(CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL)): selector.SelectSelector(
+                    vol.Required(CONF_HVAC_MODE_STRATEGY, default=config.get(CONF_HVAC_MODE_STRATEGY, HvacModeStrategy.NORMAL)): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=[HVAC_MODE_STRATEGY_NORMAL, HVAC_MODE_STRATEGY_OFF_PRIORITY, HVAC_MODE_STRATEGY_AUTO],
+                            options=[HvacModeStrategy.NORMAL, HvacModeStrategy.OFF_PRIORITY, HvacModeStrategy.AUTO],
                             mode=selector.SelectSelectorMode.DROPDOWN,
                             translation_key="hvac_mode_strategy",
                         )
                     ),
-                    vol.Required(CONF_FEATURE_STRATEGY, default=config.get(CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION)): selector.SelectSelector(
+                    vol.Required(CONF_FEATURE_STRATEGY, default=config.get(CONF_FEATURE_STRATEGY, FeatureStrategy.INTERSECTION)): selector.SelectSelector(
                         selector.SelectSelectorConfig(
-                            options=[FEATURE_STRATEGY_INTERSECTION, FEATURE_STRATEGY_UNION],
+                            options=[FeatureStrategy.INTERSECTION, FeatureStrategy.UNION],
                             mode=selector.SelectSelectorMode.DROPDOWN,
                             translation_key="feature_strategy",
                         )
                     ),
                     vol.Required(
                         CONF_UNION_OUT_OF_BOUNDS_ACTION,
-                        default=config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, DEFAULT_UNION_OUT_OF_BOUNDS_ACTION),
+                        default=config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, UnionOutOfBoundsAction.OFF),
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=[UnionOutOfBoundsAction.OFF, UnionOutOfBoundsAction.CLAMP],
@@ -595,10 +591,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(CONF_ISOLATION_ENTITIES, default=saved_isolation): selector.SelectSelector(
                         selector.SelectSelectorConfig(options=member_options, multiple=True, mode=selector.SelectSelectorMode.DROPDOWN)
                     ),
-                    vol.Optional(CONF_ISOLATION_ACTIVATE_DELAY, default=config.get(CONF_ISOLATION_ACTIVATE_DELAY, DEFAULT_ISOLATION_ACTIVATE_DELAY)): selector.NumberSelector(
+                    vol.Optional(CONF_ISOLATION_ACTIVATE_DELAY, default=config.get(CONF_ISOLATION_ACTIVATE_DELAY, 0)): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
                     ),
-                    vol.Optional(CONF_ISOLATION_RESTORE_DELAY, default=config.get(CONF_ISOLATION_RESTORE_DELAY, DEFAULT_ISOLATION_RESTORE_DELAY)): selector.NumberSelector(
+                    vol.Optional(CONF_ISOLATION_RESTORE_DELAY, default=config.get(CONF_ISOLATION_RESTORE_DELAY, 0)): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
                     ),
                 }),

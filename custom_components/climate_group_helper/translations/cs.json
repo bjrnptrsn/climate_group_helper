@@ -156,8 +156,8 @@
               "isolation_sensor": "(Volitelné) Binární senzor, který spustí izolaci při ON.",
               "isolation_trigger_hvac_modes": "(Spouštěč režimem HVAC) Izolace se aktivuje, když cílový režim skupiny odpovídá jednomu z těchto režimů.",
               "isolation_entities": "Členové skupiny k izolaci při aktivním senzoru.",
-              "isolation_activate_delay": "Čekací doba po zapnutí senzoru před izolací členů.",
-              "isolation_restore_delay": "Čekací doba po vypnutí senzoru před obnovením členů."
+              "isolation_activate_delay": "(Pouze pro spouštěč senzor / režim HVAC) Čekací doba po zapnutí senzoru před izolací členů.",
+              "isolation_restore_delay": "(Pouze pro spouštěč senzor / režim HVAC) Čekací doba po vypnutí senzoru před obnovením členů."
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Vypnuto – Ovládání oken je deaktivováno",
-        "on": "Zapnuto – Ovládání oken je povoleno"
+        "off": "Deaktivováno – Ovládání oken je neaktivní",
+        "on": "Aktivováno – Ovládání oken je aktivní"
       }
     },
     "window_adopt_manual_changes": {

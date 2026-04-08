@@ -17,8 +17,7 @@ from .const import (
     CONF_ISOLATION_SENSOR,
     CONF_ISOLATION_TRIGGER,
     CONF_ISOLATION_TRIGGER_HVAC_MODES,
-    DEFAULT_ISOLATION_ACTIVATE_DELAY,
-    DEFAULT_ISOLATION_RESTORE_DELAY,
+    MODE_MODES_MAP,
     IsolationTrigger,
 )
 from .service_call import BaseServiceCallHandler
@@ -53,8 +52,7 @@ class IsolationCallHandler(BaseServiceCallHandler):
         state = self._hass.states.get(self._entity_id)
         if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return []
-        # For float attrs just check existence; for mode attrs delegate to parent
-        from .const import MODE_MODES_MAP  # local import to avoid circular
+        # For float attrs just check existence; for mode attrs check supported values
         if attr in MODE_MODES_MAP:
             supported_modes = state.attributes.get(MODE_MODES_MAP[attr], [])
             if value is not None and attr != "hvac_mode":
@@ -71,18 +69,23 @@ class MemberIsolationHandler:
     """Monitors an isolation trigger and manages RunState.isolated_members.
 
     Trigger modes:
-      - SENSOR: Activates when a binary_sensor turns ON.
+      - DISABLED: Feature off — async_setup returns immediately.
+      - SENSOR: Activates when a binary_sensor or input_boolean turns ON.
       - HVAC_MODE: Activates when target_state.hvac_mode is in the configured set.
+        Hook: climate.py calls on_target_hvac_mode_changed() after every hvac_mode update.
+      - MEMBER_OFF: Activates per-member when a member turns OFF manually (not via group
+        command). Handled in SyncModeHandler.resync() via _maybe_isolate_off_member().
+        State mutation is synchronous so LOCK enforcement immediately sees updated state.
 
-    When the trigger activates:
+    When the trigger activates (SENSOR / HVAC_MODE):
       1. Optionally waits for activate_delay seconds.
       2. Adds the configured entities to run_state.isolated_members.
       3. Actively turns each isolated entity OFF.
 
-    When the trigger deactivates:
+    When the trigger deactivates (SENSOR / HVAC_MODE):
       1. Optionally waits for restore_delay seconds.
       2. Removes the entities from run_state.isolated_members.
-      3. Immediately syncs each entity back to the current target_state.
+      3. Syncs each entity back to the current target_state (unless globally blocked).
     """
 
     def __init__(self, group: ClimateGroup) -> None:
@@ -96,14 +99,14 @@ class MemberIsolationHandler:
         self._sensor_id: str | None = group.config.get(CONF_ISOLATION_SENSOR)
         self._trigger_hvac_modes: list[str] = group.config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, [])
         self._isolation_entity_ids: list[str] = group.config.get(CONF_ISOLATION_ENTITIES, [])
-        self._activate_delay: float = group.config.get(CONF_ISOLATION_ACTIVATE_DELAY, DEFAULT_ISOLATION_ACTIVATE_DELAY)
-        self._restore_delay: float = group.config.get(CONF_ISOLATION_RESTORE_DELAY, DEFAULT_ISOLATION_RESTORE_DELAY)
+        self._activate_delay: float = group.config.get(CONF_ISOLATION_ACTIVATE_DELAY, 0)
+        self._restore_delay: float = group.config.get(CONF_ISOLATION_RESTORE_DELAY, 0)
 
         self._unsub_listener = None
         self._pending_timer: Any = None
-        self._hvac_trigger_active: bool = False
+        self._trigger_active: bool = False
 
-        # Per-entity call handlers (created lazily in async_setup)
+        # Per-entity call handlers — created in async_setup, keyed by entity_id
         self._call_handlers: dict[str, IsolationCallHandler] = {}
 
         _LOGGER.debug(
@@ -145,11 +148,11 @@ class MemberIsolationHandler:
                 _LOGGER.debug("[%s] Isolation sensor already ON at startup, activating immediately", self._group.entity_id)
                 await self._activate_isolation()
         else:
-            # HVAC_MODE trigger: no listener needed here — climate.py calls on_target_hvac_mode_changed()
+            # HVAC_MODE: no state listener — climate.py calls on_target_hvac_mode_changed() on every update.
             _LOGGER.debug("[%s] Member isolation configured for hvac_mode trigger: %s", self._group.entity_id, self._trigger_hvac_modes)
-            # Check initial hvac_mode at startup (analog to sensor state check above)
+            # Check initial hvac_mode at startup (same pattern as sensor state check above)
             if self._group.shared_target_state.hvac_mode in self._trigger_hvac_modes:
-                self._hvac_trigger_active = True
+                self._trigger_active = True
                 _LOGGER.debug("[%s] Isolation hvac_mode already active at startup, activating immediately", self._group.entity_id)
                 await self._activate_isolation()
 
@@ -167,23 +170,12 @@ class MemberIsolationHandler:
             return
 
         now_active = hvac_mode in self._trigger_hvac_modes
-        if now_active == self._hvac_trigger_active:
+        if now_active == self._trigger_active:
             return  # no change
 
-        self._hvac_trigger_active = now_active
-        self._cancel_timer()
+        self._trigger_active = now_active
         _LOGGER.debug("[%s] HVAC-mode isolation trigger: hvac_mode=%s → active=%s", self._group.entity_id, hvac_mode, now_active)
-
-        if now_active:
-            if self._activate_delay > 0:
-                self._pending_timer = async_call_later(self._hass, self._activate_delay, self._timer_activate)
-            else:
-                self._hass.async_create_task(self._activate_isolation())
-        else:
-            if self._restore_delay > 0:
-                self._pending_timer = async_call_later(self._hass, self._restore_delay, self._timer_restore)
-            else:
-                self._hass.async_create_task(self._deactivate_isolation())
+        self._schedule_trigger(now_active)
 
     @callback
     def _state_change_listener(self, event: Event[EventStateChangedData]) -> None:
@@ -192,33 +184,31 @@ class MemberIsolationHandler:
         if new_state is None:
             return
 
+        now_active = new_state.state == STATE_ON
         _LOGGER.debug("[%s] Isolation sensor %s changed to: %s", self._group.entity_id, self._sensor_id, new_state.state)
+        self._trigger_active = now_active
+        self._schedule_trigger(now_active)
+
+    @callback
+    def _schedule_trigger(self, activate: bool) -> None:
+        """Cancel any pending timer and schedule activate or deactivate."""
         self._cancel_timer()
-
-        if new_state.state == STATE_ON:
-            if self._activate_delay > 0:
-                _LOGGER.debug("[%s] Scheduling isolation activation in %.1fs", self._group.entity_id, self._activate_delay)
-                self._pending_timer = async_call_later(self._hass, self._activate_delay, self._timer_activate)
-            else:
-                self._hass.async_create_task(self._activate_isolation())
+        delay = self._activate_delay if activate else self._restore_delay
+        if delay > 0:
+            _LOGGER.debug("[%s] Scheduling isolation %s in %.1fs", self._group.entity_id, "activation" if activate else "restore", delay)
+            self._pending_timer = async_call_later(self._hass, delay, self._timer_expired)
         else:
-            if self._restore_delay > 0:
-                _LOGGER.debug("[%s] Scheduling isolation restore in %.1fs", self._group.entity_id, self._restore_delay)
-                self._pending_timer = async_call_later(self._hass, self._restore_delay, self._timer_restore)
-            else:
-                self._hass.async_create_task(self._deactivate_isolation())
+            self._hass.async_create_task(
+                self._activate_isolation() if activate else self._deactivate_isolation()
+            )
 
     @callback
-    def _timer_activate(self, _now: Any) -> None:
-        """Timer callback for delayed activation."""
+    def _timer_expired(self, _now: Any) -> None:
+        """Timer callback — activate or deactivate based on current trigger state."""
         self._pending_timer = None
-        self._hass.async_create_task(self._activate_isolation())
-
-    @callback
-    def _timer_restore(self, _now: Any) -> None:
-        """Timer callback for delayed restore."""
-        self._pending_timer = None
-        self._hass.async_create_task(self._deactivate_isolation())
+        self._hass.async_create_task(
+            self._activate_isolation() if self._trigger_active else self._deactivate_isolation()
+        )
 
     def _cancel_timer(self) -> None:
         """Cancel any pending activation/restore timer."""
@@ -237,12 +227,10 @@ class MemberIsolationHandler:
         _LOGGER.debug("[%s] Isolation activated for: %s", self._group.entity_id, self._isolation_entity_ids)
 
         for entity_id in self._isolation_entity_ids:
-            handler = self._call_handlers.get(entity_id)
-            if handler is None:
-                continue
-            member_state = self._hass.states.get(entity_id)
-            if member_state and member_state.state != HVACMode.OFF:
-                await handler.call_immediate({"hvac_mode": HVACMode.OFF})
+            if handler := self._call_handlers.get(entity_id):
+                member_state = self._hass.states.get(entity_id)
+                if member_state and member_state.state != HVACMode.OFF:
+                    await handler.call_immediate({"hvac_mode": HVACMode.OFF})
 
         self._group.async_defer_or_update_ha_state()
 
@@ -282,25 +270,18 @@ class MemberIsolationHandler:
             and e != entity_id
         ]
         if not remaining_active:
-            _LOGGER.debug(
-                "[%s] Last active member %s going OFF — releasing all isolated members",
-                self._group.entity_id, entity_id,
-            )
+            _LOGGER.debug("[%s] Last active member %s going OFF — clearing all isolated members", self._group.entity_id, entity_id)
             self._group.run_state = replace(self._group.run_state, isolated_members=frozenset())
-            _LOGGER.debug("[%s] All isolated members released (group goes OFF)", self._group.entity_id)
         else:
             new_isolated = self._group.run_state.isolated_members | frozenset([entity_id])
             self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
             _LOGGER.debug("[%s] MEMBER_OFF: isolated %s", self._group.entity_id, entity_id)
-        # No async_defer_or_update_ha_state here — the caller's _state_change_listener
-        # will trigger async_update_group_state naturally after resync() returns.
 
     def release_member_sync(self, entity_id: str) -> None:
         """Synchronously remove a member from isolated_members (MEMBER_OFF trigger).
 
-        Called from SyncModeHandler before scheduling send_restore_call() so that
-        any subsequent LOCK enforcement does NOT skip the newly active member.
-        No async_defer_or_update_ha_state — the caller's _state_change_listener handles it.
+        Called from SyncModeHandler before dispatching send_restore_call() so that
+        subsequent LOCK enforcement does not skip the newly active member.
         """
         new_isolated = self._group.run_state.isolated_members - frozenset([entity_id])
         self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)

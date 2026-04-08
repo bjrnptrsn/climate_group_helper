@@ -160,11 +160,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Migrate old config entries to version 7 using a 'Soft Reset' strategy.
-    
-    This ensures that no invalid or legacy keys survive the migration, potentially
-    resetting some user customizations if keys were renamed, but guaranteeing a 
-    valid configuration state.
+    """Migrate old config entries to the current version.
+
+    v<7 → v7: Soft Reset — combine data+options, whitelist-filter, ensure defaults.
+    v7  → v8: Split ignore_off_members; rename SyncMode.STANDARD → DISABLED.
     """
     if entry.version < 7:
         _LOGGER.info("[%s] Migrating config entry from version %s to 7 (Soft Reset)", entry.title, entry.version)

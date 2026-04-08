@@ -156,8 +156,8 @@
               "isolation_sensor": "(Optioneel) Binaire sensor die isolatie activeert wanneer ON.",
               "isolation_trigger_hvac_modes": "(HVAC-stand trigger) Isolatie wordt geactiveerd wanneer de doelstand van de groep overeenkomt met een van deze standen.",
               "isolation_entities": "Groepsleden om te isoleren wanneer de sensor actief is.",
-              "isolation_activate_delay": "Wachttijd na sensor ON voordat leden worden geïsoleerd.",
-              "isolation_restore_delay": "Wachttijd na sensor OFF voordat leden worden hersteld."
+              "isolation_activate_delay": "(Alleen sensor- / HVAC-modus trigger) Wachttijd na sensor ON voordat leden worden geïsoleerd.",
+              "isolation_restore_delay": "(Alleen sensor- / HVAC-modus trigger) Wachttijd na sensor OFF voordat leden worden hersteld."
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Uit – Raambediening is uitgeschakeld",
-        "on": "Aan – Raambediening is ingeschakeld"
+        "off": "Uitgeschakeld – Raambediening is inactief",
+        "on": "Ingeschakeld – Raambediening is actief"
       }
     },
     "window_adopt_manual_changes": {

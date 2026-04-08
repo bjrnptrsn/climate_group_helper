@@ -156,8 +156,8 @@
               "isolation_sensor": "(Optionnel) Capteur binaire qui déclenche l'isolation lorsqu'il est ON.",
               "isolation_trigger_hvac_modes": "(Déclencheur par mode HVAC) L'isolation s'active lorsque le mode cible du groupe correspond à l'un de ces modes.",
               "isolation_entities": "Membres du groupe à isoler quand le capteur est actif.",
-              "isolation_activate_delay": "Temps d'attente après l'activation du capteur avant d'isoler les membres.",
-              "isolation_restore_delay": "Temps d'attente après la désactivation avant de restaurer les membres."
+              "isolation_activate_delay": "(Déclencheur capteur / mode HVAC uniquement) Temps d'attente après l'activation du capteur avant d'isoler les membres.",
+              "isolation_restore_delay": "(Déclencheur capteur / mode HVAC uniquement) Temps d'attente après la désactivation avant de restaurer les membres."
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Désactivé – Le contrôle des fenêtres est désactivé",
-        "on": "Activé – Le contrôle des fenêtres est activé"
+        "off": "Désactivé – Le contrôle des fenêtres est inactif",
+        "on": "Activé – Le contrôle des fenêtres est actif"
       }
     },
     "window_adopt_manual_changes": {

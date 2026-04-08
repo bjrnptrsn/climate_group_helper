@@ -33,9 +33,8 @@ from .const import (
     CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
     CONF_SYNC_ATTRS,
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
-    DEFAULT_UNION_OUT_OF_BOUNDS_ACTION,
-    FEATURE_STRATEGY_UNION,
     SYNC_TARGET_ATTRS,
+    FeatureStrategy,
     UnionOutOfBoundsAction,
 )
 from .state import FilterState
@@ -570,12 +569,12 @@ class BaseServiceCallHandler(ABC):
         Preserves upstream kwargs (e.g. hvac_mode from min_temp_off restore).
         Mutates run_state.oob_members once at the end.
         """
-        if self._group.config.get(CONF_FEATURE_STRATEGY) != FEATURE_STRATEGY_UNION:
+        if self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
             return calls  # No-op when not union strategy
 
         result = []
         new_oob = set(self._group.run_state.oob_members)
-        action = self._group.config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, DEFAULT_UNION_OUT_OF_BOUNDS_ACTION)
+        action = self._group.config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, UnionOutOfBoundsAction.OFF)
 
         temp_attrs = (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
 

@@ -156,8 +156,8 @@
               "isolation_sensor": "(Sensor trigger) Binary sensor that triggers isolation when ON.",
               "isolation_trigger_hvac_modes": "(HVAC mode trigger) Isolation activates when the group's target mode is one of these.",
               "isolation_entities": "Group members to isolate when the trigger is active.",
-              "isolation_activate_delay": "Time to wait after the trigger activates before isolating members.",
-              "isolation_restore_delay": "Time to wait after the trigger deactivates before restoring members to the group target state."
+              "isolation_activate_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger activates before isolating members.",
+              "isolation_restore_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger deactivates before restoring members to the group target state."
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Off – Window control is disabled",
-        "on": "On – Window control is enabled"
+        "off": "Disabled – Window control is inactive",
+        "on": "Enabled – Window control is active"
       }
     },
     "window_adopt_manual_changes": {

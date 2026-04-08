@@ -156,8 +156,8 @@
               "isolation_sensor": "（可选）当传感器为ON时触发隔离的二进制传感器。",
               "isolation_trigger_hvac_modes": "（HVAC 模式触发）当组的目标模式为其中之一时，隔离将激活。",
               "isolation_entities": "传感器激活时要隔离的组成员。",
-              "isolation_activate_delay": "传感器ON后等待隔离成员的时间。",
-              "isolation_restore_delay": "传感器OFF后等待恢复成员的时间。"
+              "isolation_activate_delay": "(仅限传感器 / HVAC 模式触发器) 传感器ON后等待隔离成员的时间。",
+              "isolation_restore_delay": "(仅限传感器 / HVAC 模式触发器) 传感器OFF后等待恢复成员的时间。"
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "关闭 – 窗口控制已禁用",
-        "on": "开启 – 窗口控制已启用"
+        "off": "已禁用 – 窗口控制未激活",
+        "on": "已启用 – 窗口控制已激活"
       }
     },
     "window_adopt_manual_changes": {

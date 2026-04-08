@@ -70,8 +70,12 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .const import (
     ATTR_ACTIVE_SCHEDULE_ENTITY,
     ATTR_ASSUMED_STATE,
+    ATTR_BLOCKING_REASON,
     ATTR_CURRENT_HVAC_MODES,
+    ATTR_ISOLATED_MEMBERS,
     ATTR_LAST_ACTIVE_HVAC_MODE,
+    ATTR_OOB_MEMBERS,
+    ATTR_SCHEDULE_OVERRIDE_ACTIVE,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_CONFIG,
     CONF_EXPOSE_MEMBER_ENTITIES,
@@ -103,15 +107,12 @@ from .const import (
     ATTR_SCHEDULE_ENTITY,
     SERVICE_SET_SCHEDULE_ENTITY,
     DOMAIN,
-    FEATURE_STRATEGY_INTERSECTION,
-    FEATURE_STRATEGY_UNION,
     FLOAT_TOLERANCE,
-    HVAC_MODE_STRATEGY_AUTO,
-    HVAC_MODE_STRATEGY_NORMAL,
-    HVAC_MODE_STRATEGY_OFF_PRIORITY,
     AdoptManualChanges,
     AverageOption,
     CalibrationMode,
+    FeatureStrategy,
+    HvacModeStrategy,
     RoundOption,
     SyncMode,
 )
@@ -229,9 +230,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._humidity_target_avg_calc = CALC_TYPES[config.get(CONF_HUMIDITY_TARGET_AVG, AverageOption.MEAN)]
         self._humidity_round = config.get(CONF_HUMIDITY_TARGET_ROUND, RoundOption.NONE)
         # HVAC mode strategy
-        self._hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY, HVAC_MODE_STRATEGY_NORMAL)
+        self._hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY, HvacModeStrategy.NORMAL)
         # Feature strategy
-        self._feature_strategy = config.get(CONF_FEATURE_STRATEGY, FEATURE_STRATEGY_INTERSECTION)
+        self._feature_strategy = config.get(CONF_FEATURE_STRATEGY, FeatureStrategy.INTERSECTION)
         # Debounce options
         self.debounce_delay = config.get(CONF_DEBOUNCE_DELAY, 0)
         self.retry_attempts = int(config.get(CONF_RETRY_ATTEMPTS, 0))
@@ -487,7 +488,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Handle list of features [ClimateEntityFeature | int]
         if isinstance(attributes[0], (ClimateEntityFeature, int)):
             # Intersection (common features)
-            if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
+            if self._feature_strategy == FeatureStrategy.INTERSECTION:
                 return reduce(lambda x, y: x & y, attributes)
             # Union (all features)
             return reduce(lambda x, y: x | y, attributes)
@@ -499,7 +500,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             return []
 
         # Intersection (common modes)
-        if self._feature_strategy == FEATURE_STRATEGY_INTERSECTION:
+        if self._feature_strategy == FeatureStrategy.INTERSECTION:
             modes = list(reduce(lambda x, y: set(x) & set(y), valid_attributes))
         # Union (all modes)
         else:
@@ -538,16 +539,16 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         strategy = self._hvac_mode_strategy
 
         # Auto strategy
-        if strategy == HVAC_MODE_STRATEGY_AUTO:
+        if strategy == HvacModeStrategy.AUTO:
             # If target HVAC mode is OFF or None, use normal strategy
             if self.shared_target_state.hvac_mode in (HVACMode.OFF, None):
-                strategy = HVAC_MODE_STRATEGY_NORMAL
+                strategy = HvacModeStrategy.NORMAL
             # If target HVAC mode is ON (e.g. heat, cool), use off priority strategy
             else:
-                strategy = HVAC_MODE_STRATEGY_OFF_PRIORITY
+                strategy = HvacModeStrategy.OFF_PRIORITY
 
         # Normal strategy
-        if strategy == HVAC_MODE_STRATEGY_NORMAL:
+        if strategy == HvacModeStrategy.NORMAL:
             # If all members are OFF, the group is OFF
             if all(mode == HVACMode.OFF for mode in current_hvac_modes) if current_hvac_modes else False:
                 return HVACMode.OFF
@@ -555,7 +556,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             return most_common_active_hvac_mode
 
         # Off priority strategy
-        if strategy == HVAC_MODE_STRATEGY_OFF_PRIORITY:
+        if strategy == HvacModeStrategy.OFF_PRIORITY:
             # If any member is OFF, the group is OFF
             if HVACMode.OFF in current_hvac_modes:
                 return HVACMode.OFF
@@ -597,34 +598,31 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Blocking Reason (Window Control / global block)
         if self.run_state.blocking_reason:
-            attrs["blocking_reason"] = self.run_state.blocking_reason
+            attrs[ATTR_BLOCKING_REASON] = self.run_state.blocking_reason
 
         # Isolated members
         if self.run_state.isolated_members:
-            attrs["isolated_members"] = sorted(self.run_state.isolated_members)
+            attrs[ATTR_ISOLATED_MEMBERS] = sorted(self.run_state.isolated_members)
 
         # Out-of-bounds members (union strategy)
         if self.run_state.oob_members:
-            attrs["oob_members"] = sorted(self.run_state.oob_members)
+            attrs[ATTR_OOB_MEMBERS] = sorted(self.run_state.oob_members)
 
         # Expose member entities if configured
         if self._expose_member_entities:
             attrs[ATTR_ENTITY_ID] = self.climate_entity_ids
 
-        # Persist active schedule entity for RestoreEntity
-        if (
-            self.config.get(CONF_PERSIST_ACTIVE_SCHEDULE)
-            and hasattr(self, "schedule_handler")
-            and self.schedule_handler.schedule_entity_id
-        ):
+        # Schedule override status
+        if self.schedule_handler.override_active:
+            attrs[ATTR_SCHEDULE_OVERRIDE_ACTIVE] = True
+
+        # Active schedule entity (always shown if configured; also used for RestoreEntity)
+        if self.schedule_handler.schedule_entity_id:
             attrs[ATTR_ACTIVE_SCHEDULE_ENTITY] = self.schedule_handler.schedule_entity_id
 
         # Expose full config if enabled
         if self._expose_config:
             attrs.update(self.config)
-            # Add dynamic runtime values that might differ from config
-            if hasattr(self, "schedule_handler") and self.schedule_handler.schedule_entity_id != self.config.get(ATTR_SCHEDULE_ENTITY):
-                attrs[ATTR_SCHEDULE_ENTITY] = self.schedule_handler.schedule_entity_id
 
         return attrs
 
@@ -987,7 +985,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Temperature limits and step
         self._attr_target_temperature_step = reduce_attribute(self.states, ATTR_TARGET_TEMP_STEP, reduce=max)
-        if self._feature_strategy == FEATURE_STRATEGY_UNION:
+        if self._feature_strategy == FeatureStrategy.UNION:
             # Union: widest range — lowest min, highest max
             self._attr_min_temp = reduce_attribute(self.states, ATTR_MIN_TEMP, reduce=min, default=DEFAULT_MIN_TEMP)
             self._attr_max_temp = reduce_attribute(self.states, ATTR_MAX_TEMP, reduce=max, default=DEFAULT_MAX_TEMP)

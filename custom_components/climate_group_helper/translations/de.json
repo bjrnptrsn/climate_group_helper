@@ -156,8 +156,8 @@
               "isolation_sensor": "(Optional) Binärsensor, der die Isolierung bei ON auslöst.",
               "isolation_trigger_hvac_modes": "(HVAC-Modus-Auslöser) Die Isolierung wird aktiviert, wenn der Zielmodus der Gruppe einem dieser Modi entspricht.",
               "isolation_entities": "Gruppenmitglieder, die beim aktiven Sensor isoliert werden.",
-              "isolation_activate_delay": "Wartezeit nach Sensor ON, bevor Mitglieder isoliert werden.",
-              "isolation_restore_delay": "Wartezeit nach Sensor OFF, bevor Mitglieder synchronisiert werden."
+              "isolation_activate_delay": "(Nur Sensor- / HVAC-Modus-Auslöser) Wartezeit nach Sensor ON, bevor Mitglieder isoliert werden.",
+              "isolation_restore_delay": "(Nur Sensor- / HVAC-Modus-Auslöser) Wartezeit nach Sensor OFF, bevor Mitglieder synchronisiert werden."
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Aus – Fenstersteuerung ist deaktiviert",
-        "on": "Ein – Fenstersteuerung ist aktiviert"
+        "off": "Deaktiviert – Fenstersteuerung ist inaktiv",
+        "on": "Aktiviert – Fenstersteuerung ist aktiv"
       }
     },
     "window_adopt_manual_changes": {

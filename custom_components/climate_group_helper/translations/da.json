@@ -156,8 +156,8 @@
               "isolation_sensor": "(Valgfri) Binær sensor der udløser isolering når ON.",
               "isolation_trigger_hvac_modes": "(HVAC-tilstand udløser) Isolation aktiveres, når gruppens måltilstand er en af disse.",
               "isolation_entities": "Gruppemedlemmer der skal isoleres når sensoren er aktiv.",
-              "isolation_activate_delay": "Ventetid efter sensor ON inden isolering af medlemmer.",
-              "isolation_restore_delay": "Ventetid efter sensor OFF inden gendannelse af medlemmer."
+              "isolation_activate_delay": "(Kun sensor / HVAC-tilstand trigger) Ventetid efter sensor ON inden isolering af medlemmer.",
+              "isolation_restore_delay": "(Kun sensor / HVAC-tilstand trigger) Ventetid efter sensor OFF inden gendannelse af medlemmer."
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Fra – Vinduesstyring er deaktiveret",
-        "on": "Til – Vinduesstyring er aktiveret"
+        "off": "Deaktiveret – Vinduesstyring er inaktiv",
+        "on": "Aktiveret – Vinduesstyring er aktiv"
       }
     },
     "window_adopt_manual_changes": {

@@ -156,8 +156,8 @@
               "isolation_sensor": "(Opcional) Sensor binario que activa el aislamiento cuando está ON.",
               "isolation_trigger_hvac_modes": "(Activador por modo HVAC) El aislamiento se activa cuando el modo objetivo del grupo es uno de estos.",
               "isolation_entities": "Miembros del grupo a aislar cuando el sensor está activo.",
-              "isolation_activate_delay": "Tiempo de espera tras activar el sensor antes de aislar miembros.",
-              "isolation_restore_delay": "Tiempo de espera tras desactivar el sensor antes de restaurar miembros."
+              "isolation_activate_delay": "(Solo disparador sensor / modo HVAC) Tiempo de espera tras activar el sensor antes de aislar miembros.",
+              "isolation_restore_delay": "(Solo disparador sensor / modo HVAC) Tiempo de espera tras desactivar el sensor antes de restaurar miembros."
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Apagado – El control de ventanas está desactivado",
-        "on": "Encendido – El control de ventanas está activado"
+        "off": "Desactivado – El control de ventanas está inactivo",
+        "on": "Activado – El control de ventanas está activo"
       }
     },
     "window_adopt_manual_changes": {

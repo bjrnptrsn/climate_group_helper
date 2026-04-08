@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.22.1 - 2026-04-08
+
+### ✨ Improvements
+
+*   **Schedule Reset via Service**: Calling `set_schedule_entity` with no arguments now always resets to the configured schedule and immediately applies the current slot — even if the same entity was already active. This also cancels any running override timer, making it a reliable "return to schedule" command for automations.
+
+*   **Active Schedule always visible**: The `active_schedule_entity` attribute is now always shown when a schedule entity is configured.
+
+*   **Schedule Override Status**: A new `schedule_override_active` attribute appears while a manual override is active.
+
 ## 0.22.0 - 2026-04-06
 
 ### ✨ New Features

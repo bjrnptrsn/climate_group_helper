@@ -156,8 +156,8 @@
               "isolation_sensor": "(Opcjonalnie) Czujnik binarny wyzwalający izolację gdy ON.",
               "isolation_trigger_hvac_modes": "(Wyzwalacz trybu HVAC) Izolacja aktywuje się, gdy docelowy tryb grupy jest jednym z tych trybów.",
               "isolation_entities": "Członkowie grupy do izolacji gdy czujnik jest aktywny.",
-              "isolation_activate_delay": "Czas oczekiwania po włączeniu czujnika przed izolacją członków.",
-              "isolation_restore_delay": "Czas oczekiwania po wyłączeniu czujnika przed przywróceniem członków."
+              "isolation_activate_delay": "(Tylko wyzwalacz czujnik / tryb HVAC) Czas oczekiwania po włączeniu czujnika przed izolacją członków.",
+              "isolation_restore_delay": "(Tylko wyzwalacz czujnik / tryb HVAC) Czas oczekiwania po wyłączeniu czujnika przed przywróceniem członków."
             }
           },
           "schedule_section": {
@@ -311,8 +311,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Wył. – Sterowanie oknami jest wyłączone",
-        "on": "Wł. – Sterowanie oknami jest włączone"
+        "off": "Wyłączone – Sterowanie oknami jest nieaktywne",
+        "on": "Włączone – Sterowanie oknami jest aktywne"
       }
     },
     "window_adopt_manual_changes": {

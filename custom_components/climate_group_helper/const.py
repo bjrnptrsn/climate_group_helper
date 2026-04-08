@@ -29,17 +29,13 @@ from homeassistant.const import ATTR_TEMPERATURE
 DOMAIN = "climate_group_helper"
 DEFAULT_NAME = "Climate Group"
 
-# Member options
-CONF_FEATURE_STRATEGY = "feature_strategy"
-CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
+# Member & Modes
 CONF_MASTER_ENTITY = "master_entity"
-HVAC_MODE_STRATEGY_AUTO = "auto"
-HVAC_MODE_STRATEGY_NORMAL = "normal"
-HVAC_MODE_STRATEGY_OFF_PRIORITY = "off_priority"
-FEATURE_STRATEGY_INTERSECTION = "intersection"
-FEATURE_STRATEGY_UNION = "union"
+CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
+CONF_FEATURE_STRATEGY = "feature_strategy"
+CONF_UNION_OUT_OF_BOUNDS_ACTION = "union_out_of_bounds_action"
 
-# Temperature options
+# Temperature Settings
 CONF_TEMP_TARGET_AVG = "temp_target_avg"
 CONF_TEMP_TARGET_ROUND = "temp_target_round"
 CONF_TEMP_CURRENT_AVG = "temp_current_avg"
@@ -50,7 +46,7 @@ CONF_TEMP_CALIBRATION_MODE = "temp_calibration_mode"
 CONF_CALIBRATION_HEARTBEAT = "calibration_heartbeat"
 CONF_CALIBRATION_IGNORE_OFF = "calibration_ignore_off"
 
-# Humidity options
+# Humidity Settings
 CONF_HUMIDITY_TARGET_AVG = "humidity_target_avg"
 CONF_HUMIDITY_TARGET_ROUND = "humidity_target_round"
 CONF_HUMIDITY_CURRENT_AVG = "humidity_current_avg"
@@ -58,16 +54,12 @@ CONF_HUMIDITY_USE_MASTER = "humidity_use_master"
 CONF_HUMIDITY_SENSORS = "humidity_sensors"
 CONF_HUMIDITY_UPDATE_TARGETS = "humidity_update_targets"
 
-# Timings options
-CONF_DEBOUNCE_DELAY = "debounce_delay"
-CONF_RETRY_ATTEMPTS = "retry_attempts"
-CONF_RETRY_DELAY = "retry_delay"
-
-# Sync options
+# Sync Mode
 CONF_SYNC_MODE = "sync_mode"
 CONF_SYNC_ATTRS = "sync_attributes"
+CONF_IGNORE_OFF_MEMBERS_SYNC = "ignore_off_members_sync"
 
-# Window options
+# Window Control
 CONF_WINDOW_MODE = "window_mode"
 CONF_WINDOW_ADOPT_MANUAL_CHANGES = "window_adopt_manual_changes"
 CONF_WINDOW_ACTION = "window_action"
@@ -81,39 +73,51 @@ DEFAULT_ROOM_OPEN_DELAY = 15
 DEFAULT_ZONE_OPEN_DELAY = 300
 DEFAULT_CLOSE_DELAY = 30
 
-# Schedule options
-CONF_SCHEDULE_ENTITY = "schedule_entity"
-
-# Service Constants
-SERVICE_SET_SCHEDULE_ENTITY = "set_schedule_entity"
-ATTR_SCHEDULE_ENTITY = "schedule_entity"
-
-# Other options
-CONF_IGNORE_OFF_MEMBERS_SYNC = "ignore_off_members_sync"
-CONF_IGNORE_OFF_MEMBERS_SCHEDULE = "ignore_off_members_schedule"
-CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
-CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
-CONF_EXPOSE_CONFIG = "expose_config"
-CONF_MIN_TEMP_OFF = "min_temp_off"
-
-CONF_RESYNC_INTERVAL = "resync_interval"
-CONF_OVERRIDE_DURATION = "override_duration"
-CONF_PERSIST_CHANGES = "persist_changes"
-CONF_PERSIST_ACTIVE_SCHEDULE = "persist_active_schedule"
-CONF_EXPAND_SECTIONS = "expand_sections"
-
-CONF_UNION_OUT_OF_BOUNDS_ACTION = "union_out_of_bounds_action"
+# Member Offsets
 CONF_MEMBER_TEMP_OFFSETS = "member_temp_offsets"
 
-# Member Isolation options
+# Member Isolation
 CONF_ISOLATION_SENSOR = "isolation_sensor"
 CONF_ISOLATION_ENTITIES = "isolation_entities"
 CONF_ISOLATION_ACTIVATE_DELAY = "isolation_activate_delay"
 CONF_ISOLATION_RESTORE_DELAY = "isolation_restore_delay"
 CONF_ISOLATION_TRIGGER = "isolation_trigger"
 CONF_ISOLATION_TRIGGER_HVAC_MODES = "isolation_trigger_hvac_modes"
-DEFAULT_ISOLATION_ACTIVATE_DELAY = 0
-DEFAULT_ISOLATION_RESTORE_DELAY = 0
+
+# Schedule Automation
+CONF_SCHEDULE_ENTITY = "schedule_entity"
+CONF_RESYNC_INTERVAL = "resync_interval"
+CONF_OVERRIDE_DURATION = "override_duration"
+CONF_PERSIST_CHANGES = "persist_changes"
+CONF_PERSIST_ACTIVE_SCHEDULE = "persist_active_schedule"
+CONF_IGNORE_OFF_MEMBERS_SCHEDULE = "ignore_off_members_schedule"
+
+# Advanced options
+CONF_DEBOUNCE_DELAY = "debounce_delay"
+CONF_RETRY_ATTEMPTS = "retry_attempts"
+CONF_RETRY_DELAY = "retry_delay"
+CONF_MIN_TEMP_OFF = "min_temp_off"
+CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
+CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
+CONF_EXPOSE_CONFIG = "expose_config"
+
+# UI options
+CONF_EXPAND_SECTIONS = "expand_sections"
+
+
+class HvacModeStrategy(StrEnum):
+    """HVAC mode aggregation strategy."""
+
+    AUTO = "auto"
+    NORMAL = "normal"
+    OFF_PRIORITY = "off_priority"
+
+
+class FeatureStrategy(StrEnum):
+    """Feature (temp range, modes) aggregation strategy."""
+
+    INTERSECTION = "intersection"
+    UNION = "union"
 
 
 class UnionOutOfBoundsAction(StrEnum):
@@ -121,8 +125,6 @@ class UnionOutOfBoundsAction(StrEnum):
 
     OFF = "off"
     CLAMP = "clamp"
-
-DEFAULT_UNION_OUT_OF_BOUNDS_ACTION = UnionOutOfBoundsAction.OFF
 
 
 class AverageOption(StrEnum):
@@ -176,7 +178,7 @@ class AdoptManualChanges(StrEnum):
 
 class WindowControlAction(StrEnum):
     """Window control actions."""
-    
+
     OFF = "off"
     TEMPERATURE = "temperature"
 
@@ -190,11 +192,19 @@ class IsolationTrigger(StrEnum):
     MEMBER_OFF = "member_off"
 
 
+# Service Constants
+SERVICE_SET_SCHEDULE_ENTITY = "set_schedule_entity"
+ATTR_SCHEDULE_ENTITY = "schedule_entity"
+
 # Extra attribute keys
 ATTR_ACTIVE_SCHEDULE_ENTITY = "active_schedule_entity"
 ATTR_ASSUMED_STATE = "assumed_state"
+ATTR_BLOCKING_REASON = "blocking_reason"
 ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
+ATTR_ISOLATED_MEMBERS = "isolated_members"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
+ATTR_OOB_MEMBERS = "oob_members"
+ATTR_SCHEDULE_OVERRIDE_ACTIVE = "schedule_override_active"
 
 # Attribute to service call mapping
 ATTR_SERVICE_MAP = {
@@ -224,4 +234,5 @@ SYNC_TARGET_ATTRS = list(ATTR_SERVICE_MAP.keys())
 # Float comparison tolerance for temperature and humidity
 FLOAT_TOLERANCE = 0.05
 
+# Startup phase protection: Delay (s) to prevent initial state flood from overwriting target.
 STARTUP_BLOCK_DELAY = 5.0

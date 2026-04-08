@@ -82,10 +82,9 @@ Beyond basic group control, you can mirror changes bidirectionally, enforce stri
 *   **Mirror:** Two-way sync. Change one device, all others follow.
 *   **Lock:** Enforce group settings. Automatically reverts manual changes on all members.
 *   **Master/Lock:** *(Requires Master Entity)* "Follow the Leader" mode — changes on the Master are mirrored to all members, while manual changes on other members are reverted.
-
 *   **Selective Attribute Sync:** Choose **exactly** which attributes to sync (e.g. sync temperature but allow individual fan control).
 *   **Partial Sync (Respect Off):** Prevents the group from waking up members that are manually turned `off`.
-    *   **Ignore Off Members:** If a member is turned `off`, the group will not force it back on during synchronization (allows "Soft Off").
+    *   **Ignore Off Members:** If a member is turned `off`, the group will not force it back on during synchronization or scheduled changes (allows "Soft Off"). Configurable separately for Sync and Schedule.
     *   **Last Man Standing:** Only when the *last* active member is turned `off`, the Group accepts this change and updates its internal **Target State** to `off`.
 
 ### Window Control
@@ -128,12 +127,13 @@ Temporarily isolate specific group members based on a configurable trigger. Isol
 Integrate native HA `schedule` helpers to automate your climate settings per time slot.
 
 *   **Time Slots:** Set temperature and HVAC mode directly in the schedule's data.
-*   **Dynamic Control:** Switch schedules on the fly via service call (e.g. for "Vacation" or "Guest" modes).
+*   **Dynamic Control:** Switch schedules on the fly via service call (e.g. for "Vacation" or "Guest" modes). Calling the service with no arguments always resets to the configured default and re-applies the current slot — useful as a "return to schedule" command from automations.
 *   **Manual Overrides:** Stay in control. Set an **Override Duration** to automatically return to the schedule after manual adjustments.
 *   **Sticky Override (Persist Changes):** If enabled, schedule changes are ignored while the override is active.
 *   **Periodic Resync:** Force-sync all members every X minutes to ensure they match the target state.
 *   **Schedule Persistence:** Optionally retain a schedule switched via service call across Home Assistant restarts.
 *   **Window Aware:** If a schedule changes while windows are open, the new target is applied immediately when windows close.
+*   **Status Attributes:** `active_schedule_entity` always shows the currently active schedule. `schedule_override_active` appears while a manual override timer is running.
 
 ### Schedule Configuration Example
 
@@ -218,7 +218,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 |--------|-------------|
 | **Sync Mode** | Disabled (One-way), Mirror (Two-way), Lock (Enforced), or Master/Lock *(requires Master Entity)*. |
 | **Selective Sync** | Choose which attributes to enforce (e.g. sync temperature but allow local fan control). |
-| **Ignore Off Members** | Prevent the group from forcing `off` members back on during sync. |
+| **Ignore Off Members (Sync)** | Prevent Lock/Mirror enforcement from forcing `off` members back on. |
 
 ### Window Control
 
@@ -251,6 +251,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Resync Interval** | Force-sync members to the desired group setting every X minutes (0 = disabled). |
 | **Override Duration** | Delay before returning to schedule after manual changes (0 = disabled). |
 | **Sticky Override** | Ignore schedule changes while a manual override is active. |
+| **Ignore Off Members (Schedule)** | Prevent the Schedule from forcing `off` members back on. |
 | **Retain Schedule Override** | Persist the active schedule entity across restarts when changed via `set_schedule_entity` service. Without this, the group always reverts to the configured default on restart. |
 
 ### Availability & Timings
@@ -265,12 +266,12 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 ## Services
 
-### `climate.set_schedule_entity`
+### `climate_group_helper.set_schedule_entity`
 Dynamically change the active schedule entity for a group.
 
 *   **Target:** The Climate Group entity.
 *   **Fields:**
-    *   `schedule_entity` (Optional): The entity ID of the new schedule (e.g. `schedule.vacation_mode`). If omitted or set to `None`, reverts to the configured default entity.
+    *   `schedule_entity` (Optional): The entity ID of the new schedule (e.g. `schedule.vacation_mode`). If omitted or set to `None`, reverts to the configured default entity, cancels any active override timer, and immediately re-applies the current slot.
 
 **Example:**
 ```yaml
