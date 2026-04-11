@@ -43,6 +43,9 @@ class RunState:
     oob_members: frozenset[str] = field(default_factory=frozenset)
     startup_time: float | None = None
     last_active_hvac_mode: str | None = None
+    master_fallback_active: bool = False
+    pre_override_snapshot: TargetState | None = None
+    active_override: str | None = None
 
 
 @dataclass(frozen=True)

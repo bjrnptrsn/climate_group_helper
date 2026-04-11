@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.23.0 - 2026-04-11
+
+### 🌟 New Features
+
+*   **Boost**: A new `climate_group_helper.boost` service temporarily sets the group to a target temperature for a fixed duration. When the time is up, the group automatically returns to the active schedule slot — or, if no schedule is configured, to the state it was in before the boost started.
+
+### 🔧 Fixes
+
+*   **Master Lock — Unavailable Master**: When the Master entity becomes unavailable in `MASTER_LOCK` mode, sync enforcement is now automatically paused and the group falls back to aggregating the remaining members. Enforcement resumes as soon as the Master comes back. A new `master_fallback_active` attribute reflects this state.
+
+*   **Schedule**: Slot transitions now send only the attributes defined in the active slot to member devices. Previously, the full group state was forwarded, which could cause unintended side effects on certain devices (e.g. an implicit mode change triggered by a temperature command).
+
 ## 0.22.1 - 2026-04-08
 
 ### ✨ Improvements

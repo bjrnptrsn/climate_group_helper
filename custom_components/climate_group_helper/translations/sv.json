@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "Synkroniseringsläge",
-            "description": "Hantera synkronisering av manuella ändringar. Välj vilka attribut som ska synkas (t.ex. temp, läge).",
+            "description": "Bestämmer vad som händer när en medlemsenhet ändras direkt (t.ex. via sin egen app eller fysiska knappar) — inte när du styr gruppen. Välj vilka attribut som tillämpas.",
             "data": {
               "sync_mode": "Sync-läge",
               "sync_attributes": "Synkroniserade Attribut",
               "ignore_off_members_sync": "Respektera medlemmars AV-status (Synkronisering)"
             },
             "data_description": {
-              "sync_mode": "Standard: Ingen synk. Spegling: Kopiera ändringar. Lås: Återställ ändringar. Master: Endast mastern styr.",
+              "sync_mode": "Vad som händer när en medlem ändras utanför gruppen. Inaktiverad: ignorera. Spegling: tillämpa ändringen på alla. Lås: återställ medlemmen till gruppmålet. Master/Lås: endast masterns ändringar accepteras.",
               "sync_attributes": "Attribut som valts här kommer att tvingas i Lock/Mirror-lägen. Icke-valda attribut tillåter lokal kontroll (t.ex. synkronisera temperatur men låt användare ändra fläkthastighet lokalt).",
-              "ignore_off_members_sync": "Sync- och Lock/Mirror-lägen kommer INTE att slå på medlemmar som för närvarande är AVSTÄNGDA."
+              "ignore_off_members_sync": "Vid tillämpning av Lock/Mirror hoppas avstängda medlemmar över. Obs: direkta grupkommandon når alltid alla kapabla medlemmar oavsett denna inställning."
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "Schemaenhet",
           "description": "Den nya schemaenheten att använda (t.ex. schedule.holiday). Ange null eller tomt för att återställa standardschemat från konfigurationen."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Ställer tillfälligt in gruppens temperatur till ett målvärde under en angiven tid. När timern löper ut återgår gruppen till det aktiva schemat eller sitt tidigare tillstånd. Ange temperature eller temperature_offset.",
+      "fields": {
+        "temperature": {
+          "name": "Temperatur",
+          "description": "Absolut måltemperatur under boost (t.ex. 24,0). Utesluter temperature_offset."
+        },
+        "temperature_offset": {
+          "name": "Temperaturoffset",
+          "description": "Relativt offset som läggs till den aktuella måltemperaturen (t.ex. +3,0 eller -2,0). Utesluter temperature."
+        },
+        "duration": {
+          "name": "Varaktighet (minuter)",
+          "description": "Hur länge boost ska vara i minuter."
         }
       }
     }

@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "Modalità di sincronizzazione",
-            "description": "Controllo sincronizzazione modifiche manuali. Scegli quali attributi sincronizzare (es. temp, preimpostazione).",
+            "description": "Definisce cosa succede quando un dispositivo membro viene modificato direttamente (es. tramite la propria app o pulsanti fisici) — non quando si controlla il gruppo. Scegli quali attributi vengono applicati.",
             "data": {
               "sync_mode": "Modalità Sync",
               "sync_attributes": "Attributi Sincronizzati",
               "ignore_off_members_sync": "Rispetta lo stato Off dei membri (Sincronizzazione)"
             },
             "data_description": {
-              "sync_mode": "Standard: No sincro. Mirror: Copia modifiche. Blocco: Ripristina stato. Master: Solo il master controlla.",
+              "sync_mode": "Cosa fare quando un membro viene modificato al di fuori del gruppo. Disabilitato: ignora. Specchio: applica la modifica a tutti. Blocco: riporta il membro allo stato target. Master/Blocco: vengono accettati solo i cambiamenti del master.",
               "sync_attributes": "Gli attributi selezionati qui saranno forzati nelle modalità Lock/Mirror. Gli attributi non selezionati consentono il controllo locale (es. sincronizzare la temperatura ma lasciare che gli utenti cambino la velocità del ventilatore localmente).",
-              "ignore_off_members_sync": "Le modalità Sync e Lock/Mirror NON accenderanno i membri attualmente SPENTI."
+              "ignore_off_members_sync": "Nell'applicazione di Lock/Mirror, i membri spenti vengono ignorati. Nota: i comandi diretti al gruppo raggiungono sempre tutti i membri capaci indipendentemente da questa impostazione."
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "Entità programmazione",
           "description": "La nuova entità di programmazione da utilizzare (es. schedule.holiday). Impostare su null o vuoto per ripristinare la programmazione predefinita configurata."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Imposta temporaneamente la temperatura del gruppo a un valore target per una durata specificata. Allo scadere del timer, il gruppo torna alla programmazione attiva o allo stato precedente. Specificare temperature o temperature_offset.",
+      "fields": {
+        "temperature": {
+          "name": "Temperatura",
+          "description": "Temperatura target assoluta durante il boost (es. 24,0). Esclude temperature_offset."
+        },
+        "temperature_offset": {
+          "name": "Offset di temperatura",
+          "description": "Offset relativo aggiunto alla temperatura target attuale (es. +3,0 o -2,0). Esclude temperature."
+        },
+        "duration": {
+          "name": "Durata (minuti)",
+          "description": "Per quanto tempo il boost deve durare in minuti."
         }
       }
     }

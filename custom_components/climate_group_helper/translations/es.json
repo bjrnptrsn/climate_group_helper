@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "Modo de sincronización",
-            "description": "Controla cómo el grupo sincroniza los cambios manuales. Elige qué atributos se sincronizan (ej. temp, preajuste).",
+            "description": "Define qué sucede cuando un dispositivo miembro se cambia directamente (p. ej. desde su propia app o botones físicos) — no cuando controlas el grupo. Elige qué atributos se imponen.",
             "data": {
               "sync_mode": "Modo Sync",
               "sync_attributes": "Atributos Sincronizados",
               "ignore_off_members_sync": "Respetar estado Off de miembros (Sincronización)"
             },
             "data_description": {
-              "sync_mode": "Estándar: Sin sincronización. Espejo: Copiar cambios. Bloqueo: Revertir cambios. Maestro: Solo el maestro controla.",
+              "sync_mode": "Qué hacer cuando un miembro cambia fuera del grupo. Desactivado: ignorar. Espejo: aplicar el cambio a todos. Bloqueo: revertir el miembro al objetivo del grupo. Master/Bloqueo: solo se aceptan cambios del maestro.",
               "sync_attributes": "Los atributos seleccionados aquí se forzarán en modos Lock/Mirror. Los no seleccionados permiten control local (ej. sincronizar temperatura pero dejar que usuarios cambien velocidad de ventilador localmente).",
-              "ignore_off_members_sync": "Los modos Sync y Lock/Mirror NO encenderán los miembros que estén actualmente APAGADOS."
+              "ignore_off_members_sync": "Al imponer Lock/Mirror, se omiten los miembros que estén apagados. Nota: los comandos directos al grupo siempre llegan a todos los miembros capaces independientemente de este ajuste."
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "Entidad de programación",
           "description": "La nueva entidad de programación a utilizar (ej. schedule.holiday). Establecer en nulo o vacío para restaurar la programación predeterminada configurada."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Establece temporalmente la temperatura del grupo en un valor objetivo durante un periodo determinado. Cuando el temporizador expira, el grupo vuelve al horario activo o a su estado anterior. Especifique temperature o temperature_offset.",
+      "fields": {
+        "temperature": {
+          "name": "Temperatura",
+          "description": "Temperatura objetivo absoluta durante el boost (p. ej. 24,0). Excluye temperature_offset."
+        },
+        "temperature_offset": {
+          "name": "Compensación de temperatura",
+          "description": "Compensación relativa añadida a la temperatura objetivo actual (p. ej. +3,0 o -2,0). Excluye temperature."
+        },
+        "duration": {
+          "name": "Duración (minutos)",
+          "description": "Cuánto tiempo debe durar el boost en minutos."
         }
       }
     }

@@ -716,7 +716,7 @@ class BaseServiceCallHandler(ABC):
         if target_value == HVACMode.OFF:
             return False
 
-        # Deadlock Prevention: Don't skip if ALL members are OFF
+        # Deadlock Prevention: Don't skip if ALL members are OFF.
         return any(
             self._hass.states.get(member_id).state != HVACMode.OFF
             for member_id in self._group.climate_entity_ids

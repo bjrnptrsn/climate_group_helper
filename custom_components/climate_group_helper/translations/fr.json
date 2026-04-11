@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "Mode de synchronisation",
-            "description": "Contrôlez la synchronisation des modifications manuelles. Choisissez les attributs synchronisés (ex: temp, préréglage).",
+            "description": "Définit ce qui se passe quand un appareil membre est modifié directement (ex. via son appli ou ses boutons physiques) — pas quand vous contrôlez le groupe. Choisissez les attributs à appliquer.",
             "data": {
               "sync_mode": "Mode Sync",
               "sync_attributes": "Attributs Synchronisés",
               "ignore_off_members_sync": "Respecter l'état Off des membres (Sync)"
             },
             "data_description": {
-              "sync_mode": "Standard : Pas de synchro. Miroir : Copier modifs. Verrouillage : Annuler modifs. Maître : Seul le maître contrôle.",
+              "sync_mode": "Que faire quand un membre est modifié hors du groupe. Désactivé : ignorer. Miroir : appliquer le changement à tous. Verrouillage : remettre le membre à l'état cible. Maître/Verrouillage : seuls les changements du maître sont acceptés.",
               "sync_attributes": "Les attributs sélectionnés ici seront appliqués en modes Lock/Mirror. Les attributs non sélectionnés permettent un contrôle local (ex. synchroniser la température mais laisser les utilisateurs changer la vitesse du ventilateur localement).",
-              "ignore_off_members_sync": "Les modes Sync et Lock/Mirror n'allumeront PAS les membres actuellement ÉTEINTS."
+              "ignore_off_members_sync": "Lors de l'application de Lock/Mirror, les membres éteints sont ignorés. Remarque : les commandes directes du groupe atteignent toujours tous les membres capables quelle que soit cette option."
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "Entité de programmation",
           "description": "La nouvelle entité de programmation à utiliser (par ex. schedule.holiday). Laisser vide ou null pour restaurer la programmation par défaut configurée."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Définit temporairement la température du groupe à une valeur cible pendant une durée déterminée. À l'expiration du minuteur, le groupe revient au programme actif ou à son état précédent. Indiquez temperature ou temperature_offset.",
+      "fields": {
+        "temperature": {
+          "name": "Température",
+          "description": "Température cible absolue pendant le boost (p. ex. 24,0). Exclut temperature_offset."
+        },
+        "temperature_offset": {
+          "name": "Décalage de température",
+          "description": "Décalage relatif ajouté à la température cible actuelle (p. ex. +3,0 ou -2,0). Exclut temperature."
+        },
+        "duration": {
+          "name": "Durée (minutes)",
+          "description": "Combien de temps le boost doit durer en minutes."
         }
       }
     }

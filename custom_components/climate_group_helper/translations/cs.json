@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "Režim synchronizace",
-            "description": "Řízení synchronizace ručních změn. Vyberte synchronizované atributy (např. teplota, předvolba).",
+            "description": "Určuje, co se stane, když je členské zařízení změněno přímo (např. přes vlastní aplikaci nebo fyzická tlačítka) — ne když ovládáte skupinu samotnou. Vyberte, které atributy se budou vynucovat.",
             "data": {
               "sync_mode": "Režim synchronizace",
               "sync_attributes": "Synchronizované Atributy",
               "ignore_off_members_sync": "Respektovat stav Vypnuto členů (Synchronizace)"
             },
             "data_description": {
-              "sync_mode": "Standard: Bez synchronizace. Zrcadlo: Kopírovat změny. Zámek: Vrátit změny. Master: Ovládá pouze master.",
+              "sync_mode": "Co dělat, když je člen změněn mimo skupinu. Vypnuto: ignorovat. Zrcadlo: použít změnu na všechny členy. Zámek: vrátit člena na cíl skupiny. Master/Zámek: přijímají se pouze změny mastera.",
               "sync_attributes": "Atributy vybrané zde budou vynuceny v režimech Lock/Mirror. Nevybrané atributy umožňují lokální ovládání (např. synchronizovat teplotu, ale nechat uživatele měnit rychlost ventilátoru lokálně).",
-              "ignore_off_members_sync": "Synchronizace a režimy Lock/Mirror NEZAPNOU členy, kteří jsou aktuálně VYPNUTÍ."
+              "ignore_off_members_sync": "Při vynucování Lock/Mirror přeskočit členy, kteří jsou aktuálně vypnuti. Poznámka: přímé příkazy skupiny vždy dosáhnou všech schopných členů bez ohledu na toto nastavení."
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "Entita plánu",
           "description": "Nová entita plánu k použití (např. schedule.holiday). Nastavte na null nebo prázdné pro obnovení výchozího plánu z konfigurace."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Dočasně nastaví teplotu skupiny na cílovou hodnotu po zadanou dobu. Po vypršení časovače se skupina vrátí k aktivnímu rozvrhu nebo předchozímu stavu. Zadejte buď temperature, nebo temperature_offset.",
+      "fields": {
+        "temperature": {
+          "name": "Teplota",
+          "description": "Absolutní cílová teplota během boostu (např. 24,0). Nelze kombinovat s temperature_offset."
+        },
+        "temperature_offset": {
+          "name": "Teplotní offset",
+          "description": "Relativní offset přičtený k aktuální cílové teplotě (např. +3,0 nebo -2,0). Nelze kombinovat s temperature."
+        },
+        "duration": {
+          "name": "Doba trvání (minuty)",
+          "description": "Jak dlouho má boost trvat v minutách."
         }
       }
     }

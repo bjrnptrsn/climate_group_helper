@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import fields, replace
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
@@ -15,13 +16,15 @@ from .const import (
     CONF_OVERRIDE_DURATION,
     CONF_PERSIST_CHANGES,
 )
+from .state import ClimateState
 
 
 class ScheduleCaller(StrEnum):
     """Caller identifiers for schedule_listener."""
 
     SLOT = "slot"
-    SERVICE_CALL = "service_call"
+    SERVICE_CALL = "service_call"   # Genuine user command (climate_call_handler)
+    SYNC_CALL = "sync_call"         # Sync enforcement / MIRROR adoption (sync_mode_call_handler)
     RESYNC = "resync"
     OVERRIDE = "override"
     SWITCH = "switch"
@@ -97,16 +100,22 @@ class ScheduleHandler:
         """Subscribe to schedule entity state changes."""
         self._subscribe()
 
-        # Register service call trigger
+        # User commands (group UI / service calls) → may abort boost, start override timer
         self._group.climate_call_handler.register_call_trigger(self.service_call_trigger)
-        self._group.sync_mode_call_handler.register_call_trigger(self.service_call_trigger)
+        # Sync enforcement / MIRROR adoption → MIRROR aborts boost + starts override timer; LOCK does nothing
+        self._group.sync_mode_call_handler.register_call_trigger(self.sync_call_trigger)
 
         _LOGGER.debug("[%s] Schedule handler setup complete (subscribed to: %s)", self._group.entity_id, self._schedule_entity)
 
     @callback
     def service_call_trigger(self) -> None:
-        """Hook called when a service call (e.g. user command) was executed."""
+        """Hook called when a genuine user command was executed (climate_call_handler)."""
         self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.SERVICE_CALL))
+
+    @callback
+    def sync_call_trigger(self) -> None:
+        """Hook called when sync enforcement or MIRROR adoption was executed."""
+        self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.SYNC_CALL))
 
     def async_teardown(self) -> None:
         """Unsubscribe from schedule entity."""
@@ -140,17 +149,25 @@ class ScheduleHandler:
             self._timer = None
             self._active_timer_type = None
 
-    def _start_timer(self, timer_type: ScheduleCaller | None = None) -> None:
-        """Start an Automation Timer (Override or Resync)."""
-        if timer_type == ScheduleCaller.RESYNC:
-            duration = self._resync_interval
+    def _start_timer(self, timer_type: ScheduleCaller | None = None, explicit_duration: float | None = None) -> None:
+        """Start an Automation Timer (Override or Resync).
+
+        Args:
+            timer_type: The type of timer to start.
+            explicit_duration: Override the configured duration (in seconds).
+                               If provided, used directly instead of config-based minutes.
+        """
+        if explicit_duration is not None:
+            duration_seconds = explicit_duration
+        elif timer_type == ScheduleCaller.RESYNC:
+            duration_seconds = self._resync_interval * 60
         elif timer_type == ScheduleCaller.OVERRIDE:
-            duration = self._override_duration
+            duration_seconds = self._override_duration * 60
         else:
             _LOGGER.error("[%s] Invalid timer type: %s", self._group.entity_id, timer_type)
             return
 
-        if duration <= 0:
+        if duration_seconds <= 0:
             return
 
         self._cancel_timer()
@@ -160,17 +177,56 @@ class ScheduleHandler:
             self._hass.async_create_task(self.schedule_listener(caller=timer_type))
 
         self._timer = async_call_later(
-            self._hass, duration * 60, handle_timer_timeout
+            self._hass, duration_seconds, handle_timer_timeout
         )
         self._active_timer_type = timer_type
-        _LOGGER.debug("[%s] %s timer started: %s minutes", self._group.entity_id, timer_type.capitalize(), duration)
+        _LOGGER.debug("[%s] %s timer started: %s seconds", self._group.entity_id, timer_type.capitalize(), duration_seconds)
 
     async def schedule_listener(self, caller: ScheduleCaller):
         """Apply schedule logic to target_state."""
-        if not self._schedule_entity:
-            return
 
         _LOGGER.debug("[%s] Schedule listener triggered by: %s", self._group.entity_id, caller)
+
+        # --- Override timer expired: handle active boost/override ---
+        # Must run BEFORE the schedule_entity guard so boost-without-schedule works.
+        if caller == ScheduleCaller.OVERRIDE and self._group.run_state.active_override:
+            snapshot = self._group.run_state.pre_override_snapshot
+            if snapshot and not self._schedule_entity:
+                # No schedule → restore snapshot
+                restore_kwargs = _snapshot_to_kwargs(snapshot)
+                self.state_manager.update(**restore_kwargs)
+                await self.call_handler.call_immediate()
+            override_name = self._group.run_state.active_override
+            # Clear override state (with schedule: slot-application below handles restore)
+            self._group.run_state = replace(
+                self._group.run_state,
+                pre_override_snapshot=None,
+                active_override=None,
+            )
+            _LOGGER.debug("[%s] '%s' override ended, active_override cleared", self._group.entity_id, override_name)
+            if not self._schedule_entity:
+                self._start_timer(ScheduleCaller.RESYNC)
+                return
+            # With schedule: fall through to apply current slot
+
+        # --- Manual override during boost: abort the boost ---
+        # SERVICE_CALL (direct user command) and SYNC_CALL from MIRROR adoption both count
+        # as intentional overrides. LOCK enforcement (SYNC_CALL, last_source != "sync_mode")
+        # is not a user action and must never abort a boost.
+        is_mirror_adoption = (
+            caller == ScheduleCaller.SYNC_CALL
+            and self.target_state.last_source == "sync_mode"
+        )
+        if (caller == ScheduleCaller.SERVICE_CALL or is_mirror_adoption) and self._group.run_state.active_override:
+            self._group.run_state = replace(
+                self._group.run_state,
+                active_override=None,
+                pre_override_snapshot=None,
+            )
+            _LOGGER.debug("[%s] Manual override during boost — boost aborted", self._group.entity_id)
+
+        if not self._schedule_entity:
+            return
 
         # Sticky Override Check (Persist Changes)
         # If user is in control and a slot transition happens, ignore the slot transition.
@@ -196,15 +252,33 @@ class ScheduleHandler:
         if not filtered_slot:
             return
 
-        if caller != ScheduleCaller.SERVICE_CALL:
+        # SERVICE_CALL and SYNC_CALL skip slot application — they only manage timers below.
+        # (SERVICE_CALL = user command, SYNC_CALL = sync enforcement / MIRROR adoption)
+        if caller not in (ScheduleCaller.SERVICE_CALL, ScheduleCaller.SYNC_CALL):
             current_target = self.target_state.to_dict(attributes=list(filtered_slot.keys()))
             if current_target != filtered_slot:
                 self.state_manager.update(**filtered_slot)
-            await self.call_handler.call_immediate()
+            # SLOT/SWITCH: send only the slot attributes — avoid sending stale target_state
+            # attributes that are not part of this slot (e.g. temperature when slot only sets
+            # hvac_mode). RESYNC/OVERRIDE sync the full target_state intentionally.
+            slot_only = caller in (ScheduleCaller.SLOT, ScheduleCaller.SWITCH)
+            await self.call_handler.call_immediate(filtered_slot if slot_only else None)
+
+        # Never touch the timer while an override (e.g. boost) is active:
+        # the override timer must be allowed to fire undisturbed.
+        if self._group.run_state.active_override:
+            return
+
+        # SYNC_CALL from LOCK enforcement never touches the timer — target_state was not
+        # changed, so there is no "override" to track and no reason to reset the resync timer.
+        # Only MIRROR/MASTER adoptions (last_source == "sync_mode") start an override timer.
+        if caller == ScheduleCaller.SYNC_CALL and self.target_state.last_source != "sync_mode":
+            return
 
         self._start_timer(
             ScheduleCaller.OVERRIDE
-            if caller == ScheduleCaller.SERVICE_CALL and self._override_duration > 0
+            if (caller == ScheduleCaller.SERVICE_CALL and self._override_duration > 0)
+            or (caller == ScheduleCaller.SYNC_CALL and self._override_duration > 0)
             else ScheduleCaller.RESYNC
         )
 
@@ -231,3 +305,55 @@ class ScheduleHandler:
             await self.schedule_listener(caller=ScheduleCaller.SWITCH)
         else:
             self._cancel_timer()
+
+    async def start_boost(self, temperature: float, duration: int) -> None:
+        """Start a boost override for the given duration (minutes).
+
+        Sets the group to the specified temperature and starts a timer.
+        On expiry, reverts to the schedule slot (if available) or the
+        pre-boost snapshot.
+        """
+        # Guard: don't start boost during global block (e.g. window open)
+        if self._group.run_state.blocked:
+            _LOGGER.debug("[%s] Boost rejected: global block active", self._group.entity_id)
+            return
+
+        # Save snapshot only on first boost (preserve original state)
+        if self._group.run_state.active_override is None:
+            self._group.run_state = replace(
+                self._group.run_state,
+                pre_override_snapshot=self._group.shared_target_state,
+            )
+
+        # Set active override
+        self._group.run_state = replace(
+            self._group.run_state,
+            active_override="boost",
+        )
+
+        # Update target_state with boost temperature
+        self._group.climate_state_manager.update(temperature=temperature)
+
+        # Immediately apply to all members
+        await self.call_handler.call_immediate()
+
+        # Start override timer with explicit duration (minutes → seconds)
+        self._start_timer(ScheduleCaller.OVERRIDE, explicit_duration=duration * 60)
+
+        _LOGGER.debug(
+            "[%s] Boost started: temperature=%s, duration=%s min",
+            self._group.entity_id, temperature, duration,
+        )
+
+
+def _snapshot_to_kwargs(snapshot) -> dict:
+    """Extract climate-relevant fields from a TargetState snapshot.
+
+    Excludes metadata (last_source, last_entity, last_timestamp)
+    so the restored state gets fresh provenance from the StateManager.
+    """
+    return {
+        f.name: getattr(snapshot, f.name)
+        for f in fields(ClimateState)
+        if getattr(snapshot, f.name, None) is not None
+    }

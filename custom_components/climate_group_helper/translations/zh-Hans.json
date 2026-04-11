@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "同步模式",
-            "description": "控制组如何同步成员的手动更改。选择同步的属性（如温度、预设等）。",
+            "description": "定义当成员设备被直接修改时（例如通过其自身应用或物理按键）会发生什么——而非控制组本身时。选择要强制执行的属性。",
             "data": {
               "sync_mode": "同步模式",
               "sync_attributes": "同步属性",
               "ignore_off_members_sync": "尊重成员关闭状态（同步）"
             },
             "data_description": {
-              "sync_mode": "标准：无同步。镜像：复制所有更改。锁定：恢复更改。主/锁定：仅主实体可控。",
+              "sync_mode": "当成员在组外被更改时的处理方式。禁用：忽略。镜像：将更改应用到所有成员。锁定：将成员恢复到组目标状态。主控/锁定：仅接受主控实体的更改。",
               "sync_attributes": "在此处选择的属性将在锁定/镜像模式下强制执行。未选择的属性允许本地控制 (例如同步温度但允许用户本地更改风扇速度)。",
-              "ignore_off_members_sync": "同步和锁定/镜像模式不会打开当前处于关闭状态的成员。"
+              "ignore_off_members_sync": "在执行 Lock/Mirror 时，跳过当前处于关闭状态的成员。注意：无论此设置如何，直接组命令始终会到达所有有能力的成员。"
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "日程实体",
           "description": "要使用的新日程实体（例如 schedule.holiday）。设置为空或null以恢复配置的默认日程。"
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost 加热",
+      "description": "将组温度临时设置为目标值，持续指定时间。计时器到期后，组将恢复到活动计划或之前的状态。请指定 temperature 或 temperature_offset。",
+      "fields": {
+        "temperature": {
+          "name": "温度",
+          "description": "Boost 期间的绝对目标温度（例如 24.0）。与 temperature_offset 互斥。"
+        },
+        "temperature_offset": {
+          "name": "温度偏移",
+          "description": "相对于当前目标温度的偏移量（例如 +3.0 或 -2.0）。与 temperature 互斥。"
+        },
+        "duration": {
+          "name": "持续时间（分钟）",
+          "description": "Boost 应持续多少分钟。"
         }
       }
     }

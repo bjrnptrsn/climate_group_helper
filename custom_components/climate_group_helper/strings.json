@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "Sync Mode",
-            "description": "Control how the group synchronizes manual changes made by members. Choose which attributes are synced (e.g. temperature, preset, fan mode).",
+            "description": "Defines what happens when a member device is changed directly (e.g. via its own app or physical buttons) — not when you control the group itself. Choose which attributes are enforced.",
             "data": {
               "sync_mode": "Sync Mode",
               "sync_attributes": "Synced Attributes",
               "ignore_off_members_sync": "Respect Member Off State (Sync)"
             },
             "data_description": {
-              "sync_mode": "Disabled: No sync. Mirror: Copy changes to all. Lock: Revert changes. Master/Lock: Master changes only.",
+              "sync_mode": "What to do when a member is changed outside the group. Disabled: ignore it. Mirror: apply the change to all members. Lock: revert the member back to the group target. Master/Lock: only the master entity's changes are accepted.",
               "sync_attributes": "Attributes selected here will be enforced in Lock/Mirror modes. Unselected attributes allow for local control (e.g. sync temperature but let users change fan speed locally).",
-              "ignore_off_members_sync": "Sync and Lock/Mirror modes will NOT turn on members that are currently Off."
+              "ignore_off_members_sync": "When enforcing Lock/Mirror, skip members that are currently Off. Note: direct group commands always reach all capable members regardless of this setting."
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "Schedule Entity",
           "description": "The new schedule entity to use (e.g. schedule.holiday). Set to null or empty to restore the configured default schedule."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Temporarily sets the group to a target temperature for a specified duration. After the timer expires, the group reverts to the active schedule or its previous state. Specify either temperature or temperature_offset.",
+      "fields": {
+        "temperature": {
+          "name": "Temperature",
+          "description": "Absolute target temperature during the boost (e.g. 24.0). Mutually exclusive with temperature_offset."
+        },
+        "temperature_offset": {
+          "name": "Temperature Offset",
+          "description": "Relative offset added to the current target temperature (e.g. +3.0 or -2.0). Mutually exclusive with temperature."
+        },
+        "duration": {
+          "name": "Duration (minutes)",
+          "description": "How long the boost should last in minutes."
         }
       }
     }

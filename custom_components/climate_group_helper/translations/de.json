@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "Sync-Modus",
-            "description": "Steuerung der Synchronisierung manueller Änderungen. Wähle die zu synchronisierenden Attribute (z.B. Temp, Preset).",
+            "description": "Legt fest, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z.B. über seine eigene App oder physische Tasten) — nicht wenn du die Gruppe selbst steuerst. Wähle aus, welche Attribute erzwungen werden.",
             "data": {
               "sync_mode": "Sync-Modus",
               "sync_attributes": "Synchronisierte Attribute",
               "ignore_off_members_sync": "Respektiere 'Aus'-Status der Mitglieder (Sync)"
             },
             "data_description": {
-              "sync_mode": "Standard: Kein Sync. Mirror: Änderungen kopieren. Lock: Änderungen erzwingen. Master/Lock: Nur Master steuert.",
+              "sync_mode": "Was tun, wenn ein Mitglied außerhalb der Gruppe geändert wird. Deaktiviert: Ignorieren. Mirror: Änderung auf alle Mitglieder anwenden. Lock: Mitglied auf das Gruppen-Ziel zurücksetzen. Master/Lock: Nur Änderungen des Masters werden akzeptiert.",
               "sync_attributes": "Hier ausgewählte Attribute werden im Lock/Mirror-Modus erzwungen. Nicht ausgewählte Attribute erlauben lokale Steuerung (z.B. Temperatur synchronisieren, aber Lüfter lokal steuern lassen).",
-              "ignore_off_members_sync": "Sync- und Lock/Mirror-Modi schalten keine Mitglieder ein, die aktuell ausgeschaltet sind."
+              "ignore_off_members_sync": "Beim Erzwingen von Lock/Mirror werden Mitglieder übersprungen, die aktuell ausgeschaltet sind. Hinweis: Direkte Gruppenbefehle erreichen immer alle fähigen Mitglieder, unabhängig von dieser Einstellung."
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "Zeitplan-Entität",
           "description": "Die neue Zeitplan-Entität (z.B. schedule.urlaub). Leer lassen, um den konfigurierten Standard wiederherzustellen."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Setzt die Gruppentemperatur vorübergehend auf einen Zielwert für eine bestimmte Dauer. Nach Ablauf des Timers kehrt die Gruppe zum aktiven Zeitplan oder ihrem vorherigen Zustand zurück. Entweder temperature oder temperature_offset angeben.",
+      "fields": {
+        "temperature": {
+          "name": "Temperatur",
+          "description": "Absolute Zieltemperatur während des Boosts (z. B. 24,0). Schließt temperature_offset aus."
+        },
+        "temperature_offset": {
+          "name": "Temperatur-Offset",
+          "description": "Relativer Offset zur aktuellen Zieltemperatur (z. B. +3,0 oder -2,0). Schließt temperature aus."
+        },
+        "duration": {
+          "name": "Dauer (Minuten)",
+          "description": "Wie lange der Boost in Minuten dauern soll."
         }
       }
     }

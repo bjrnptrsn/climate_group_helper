@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "Synchronisatiemodus",
-            "description": "Beheer synchronisatie van handmatige wijzigingen. Kies welke attributen worden gesynchroniseerd.",
+            "description": "Bepaalt wat er gebeurt als een lid-apparaat direct wordt gewijzigd (bijv. via zijn eigen app of fysieke knoppen) — niet wanneer je de groep zelf bedient. Kies welke attributen worden afgedwongen.",
             "data": {
               "sync_mode": "Sync-modus",
               "sync_attributes": "Gesynchroniseerde Attributen",
               "ignore_off_members_sync": "Respecteer de UIT-status van leden (Synchronisatie)"
             },
             "data_description": {
-              "sync_mode": "Standaard: Geen sync. Spiegel: Kopieer wijzigingen. Slot: Herstel status. Master: Alleen de master bestuurt.",
+              "sync_mode": "Wat te doen als een lid buiten de groep wordt gewijzigd. Uitgeschakeld: negeren. Spiegel: de wijziging toepassen op alle leden. Slot: het lid terugzetten naar het groepsdoel. Master/Slot: alleen wijzigingen van de master worden geaccepteerd.",
               "sync_attributes": "Hier geselecteerde attributen worden afgedwongen in Lock/Mirror modi. Niet geselecteerde attributen staan lokale controle toe (bijv. temperatuur synchroniseren maar gebruikers lokaal ventilatorsnelheid laten wijzigen).",
-              "ignore_off_members_sync": "Sync- en Lock/Mirror-modi zullen GEEN leden inschakelen die momenteel UIT staan."
+              "ignore_off_members_sync": "Bij het afdwingen van Lock/Mirror worden leden die uitgeschakeld zijn overgeslagen. Opmerking: directe groepopdrachten bereiken altijd alle bekwame leden, ongeacht deze instelling."
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "Schema-entiteit",
           "description": "De nieuwe schema-entiteit om te gebruiken (bijv. schedule.holiday). Laat leeg of null om het geconfigureerde standaardschema te herstellen."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Stelt de groepstemperatuur tijdelijk in op een doelwaarde voor een bepaalde duur. Wanneer de timer afloopt, keert de groep terug naar het actieve schema of de vorige toestand. Geef temperature of temperature_offset op.",
+      "fields": {
+        "temperature": {
+          "name": "Temperatuur",
+          "description": "Absolute doeltemperatuur tijdens de boost (bijv. 24,0). Sluit temperature_offset uit."
+        },
+        "temperature_offset": {
+          "name": "Temperatuuroffset",
+          "description": "Relatieve offset opgeteld bij de huidige doeltemperatuur (bijv. +3,0 of -2,0). Sluit temperature uit."
+        },
+        "duration": {
+          "name": "Duur (minuten)",
+          "description": "Hoe lang de boost moet duren in minuten."
         }
       }
     }

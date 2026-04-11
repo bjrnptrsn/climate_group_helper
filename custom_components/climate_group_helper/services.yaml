@@ -13,3 +13,42 @@ set_schedule_entity:
         entity:
           domain: schedule
       required: false
+
+boost:
+  name: Boost
+  description: Temporarily sets the group to a target temperature for a specified duration, then restores the previous state. Specify either an absolute temperature or a relative offset.
+  target:
+    entity:
+      integration: climate_group_helper
+      domain: climate
+  fields:
+    temperature:
+      name: Temperature
+      description: Absolute target temperature during the boost (e.g. 24.0). Mutually exclusive with temperature_offset.
+      required: false
+      selector:
+        number:
+          min: 5
+          max: 35
+          step: 0.5
+          unit_of_measurement: "°C"
+    temperature_offset:
+      name: Temperature Offset
+      description: Relative offset added to the current target temperature (e.g. +3.0 or -2.0). Mutually exclusive with temperature.
+      required: false
+      selector:
+        number:
+          min: -20
+          max: 20
+          step: 0.5
+          unit_of_measurement: "°C"
+    duration:
+      name: Duration
+      description: How long the boost should last (in minutes).
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 480
+          step: 1
+          unit_of_measurement: "min"

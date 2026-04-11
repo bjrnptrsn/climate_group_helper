@@ -142,6 +142,9 @@ class SyncModeHandler:
 
         # Master/Lock mode: master adopts (MIRROR), non-master reverts (LOCK)
         elif self._group.sync_mode == SyncMode.MASTER_LOCK:
+            if self._group.run_state.master_fallback_active:
+                _LOGGER.debug("[%s] MASTER_LOCK enforcement skipped (master fallback active)", self._group.entity_id)
+                return
             master_id = self._group._master_entity_id
             if master_id and change_entity_id == master_id:
                 if filtered := {key: value for key, value in change_dict.items() if self._filter_state.to_dict().get(key)}:

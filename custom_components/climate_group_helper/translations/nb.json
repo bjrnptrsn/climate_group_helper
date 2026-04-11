@@ -98,16 +98,16 @@
           },
           "sync_section": {
             "name": "Synkroniseringsmodus",
-            "description": "Styr synkronisering av manuelle endringer. Velg hvilke attributter som skal synkroniseres.",
+            "description": "Bestemmer hva som skjer når en medlemsenhet endres direkte (f.eks. via sin egen app eller fysiske knapper) — ikke når du styrer gruppen. Velg hvilke attributter som håndheves.",
             "data": {
               "sync_mode": "Sync-modus",
               "sync_attributes": "Synkroniserte attributter",
               "ignore_off_members_sync": "Respekter medlemmers AV-tilstand (Synk)"
             },
             "data_description": {
-              "sync_mode": "Standard: Ingen synk. Speiling: Kopier endringer. Lås: Tilbakestill endringer. Master: Kun master styrer.",
+              "sync_mode": "Hva som skjer når et medlem endres utenfor gruppen. Deaktivert: ignorer. Speiling: bruk endringen på alle. Lås: sett medlemmet tilbake til gruppmålet. Master/Lås: kun masterens endringer godtas.",
               "sync_attributes": "Attributter valgt her vil bli håndhevet i Lock/Mirror-moduser. Ikke-valgte attributter tillater lokal kontroll (f.eks. synkroniser temperatur, men la brukere endre viftehastighet lokalt).",
-              "ignore_off_members_sync": "Synk- og Lock/Mirror-modi vil IKKE slå på medlemmer som for tiden er AV."
+              "ignore_off_members_sync": "Ved håndhevelse av Lock/Mirror hoppes deaktiverte medlemmer over. Merk: direkte gruppekommandoer når alltid alle egnede medlemmer uavhengig av denne innstillingen."
             }
           },
           "window_section": {
@@ -392,6 +392,24 @@
         "schedule_entity": {
           "name": "Tidsplan-enhet",
           "description": "Den nye tidsplan-enheten som skal brukes (f.eks. schedule.holiday). Sett til null eller tom for å gjenopprette standardplanen fra konfigurasjonen."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Setter midlertidig gruppens temperatur til en målverdi i en bestemt periode. Når timeren utløper, går gruppen tilbake til den aktive timeplanen eller sin forrige tilstand. Angi temperature eller temperature_offset.",
+      "fields": {
+        "temperature": {
+          "name": "Temperatur",
+          "description": "Absolutt måltemperatur under boost (f.eks. 24,0). Utelukker temperature_offset."
+        },
+        "temperature_offset": {
+          "name": "Temperaturforskyvning",
+          "description": "Relativ forskyvning lagt til den gjeldende måltemperaturen (f.eks. +3,0 eller -2,0). Utelukker temperature."
+        },
+        "duration": {
+          "name": "Varighet (minutter)",
+          "description": "Hvor lenge boost skal vare i minutter."
         }
       }
     }

@@ -64,7 +64,7 @@ Designate a single climate member as the **Reference Point** or **Leader** for t
 
 ### External Sensors
 
-Use **multiple external sensors** for temperature and humidity to override the member readings.
+Use **multiple external sensors** for temperature and humidity to override member readings, and optionally write the values back to TRV calibration targets.
 
 ### Device Calibration
 
@@ -72,15 +72,15 @@ Write the external sensor value back to your TRVs to fix their internal temperat
 
 *   **Modes:** Absolute (Standard), Offset (Delta calculation), and Scaled (x100 for Danfoss Ally).
 *   **Heartbeat:** Periodically re-sends the calibration value to prevent sensor timeouts on Zigbee devices.
-*   **Battery Saver (Ignore Off):** Prevent sending constant calibration updates to wireless TRVs that are currently turned `off`. Configured in the Temperature step.
+*   **Battery Saver (Ignore Off):** Prevent sending constant calibration updates to wireless TRVs that are currently turned `off`.
 
 ### Advanced Sync Modes
 
-Beyond basic group control, you can mirror changes bidirectionally, enforce strict settings, or designate a leader.
+Controls what happens when a member device is changed directly (e.g. via its own app or physical buttons) — not when you control the group itself.
 
-*   **Disabled:** Classic one-way control (Group → Members). No enforcement.
-*   **Mirror:** Two-way sync. Change one device, all others follow.
-*   **Lock:** Enforce group settings. Automatically reverts manual changes on all members.
+*   **Disabled:** Member changes are ignored. Only direct group commands apply.
+*   **Mirror:** A change on any member is applied to all other members.
+*   **Lock:** Any manual change on a member is reverted back to the group target.
 *   **Master/Lock:** *(Requires Master Entity)* "Follow the Leader" mode — changes on the Master are mirrored to all members, while manual changes on other members are reverted.
 *   **Selective Attribute Sync:** Choose **exactly** which attributes to sync (e.g. sync temperature but allow individual fan control).
 *   **Partial Sync (Respect Off):** Prevents the group from waking up members that are manually turned `off`.
@@ -91,7 +91,6 @@ Beyond basic group control, you can mirror changes bidirectionally, enforce stri
 
 Binary sensor support to automatically turn off heating when a window opens and restore it when it closes.
 
-*   **Binary Sensors:** Use native HA binary sensors (or groups) for reaction.
 *   **Room + Zone Sensors:** Supports fast-reacting room sensors vs. slow-reacting zone sensors (e.g. for whole floors).
 *   **Configurable Delays:** Set custom reaction times for opening and closing.
 *   **Window Action:** Choose between full `off` or a configurable temperature setpoint.
@@ -115,7 +114,7 @@ Temporarily isolate specific group members based on a configurable trigger. Isol
 **Trigger modes:**
 *   **Binary Sensor:** Isolation activates when a binary sensor turns ON (e.g. a curtain sensor, an occupancy helper). Deactivates when the sensor turns OFF.
 *   **HVAC Mode:** Isolation activates when the group's target mode matches a configured set (e.g. isolate radiators when the group switches to `cool`).
-*   **Member Off:** A member is isolated automatically when it turns `off` manually. Isolation is released and the target state is restored as soon as it turns back on.
+*   **Member Off:** A member is isolated automatically when it turns `off` manually. When it turns back on, isolation is released and the member is restored to the group's target state.
 
 **Optional delays:** Configure an activate delay and a restore delay for Sensor and HVAC Mode triggers.
 
@@ -133,13 +132,14 @@ Integrate native HA `schedule` helpers to automate your climate settings per tim
 *   **Periodic Resync:** Force-sync all members every X minutes to ensure they match the target state.
 *   **Schedule Persistence:** Optionally retain a schedule switched via service call across Home Assistant restarts.
 *   **Window Aware:** If a schedule changes while windows are open, the new target is applied immediately when windows close.
-*   **Status Attributes:** `active_schedule_entity` always shows the currently active schedule. `schedule_override_active` appears while a manual override timer is running.
+*   **Status Attributes:** `active_schedule_entity` always shows the currently active schedule. `schedule_override_active` appears while a manual override timer is running. `active_override` appears while a named override (e.g. Boost) is active.
+*   **Boost:** Temporarily override the group to a target temperature for a set duration. Restores automatically to the active schedule slot or the previous target state when the timer expires.
 
 ### Schedule Configuration Example
 
 1. Create a **Schedule Helper** in Home Assistant (Settings > Devices & Services > Helpers).
 2. Open the schedule and add your time slots.
-3. **Crucial:** You must add **variables** (data) to your schedule slots to tell the group what to do.
+3. **Crucial:** You must add **additional data** to your schedule slots to tell the group what to do.
 
 **Example (Edit Schedule as YAML):**
 ```yaml
@@ -216,9 +216,10 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 
 | Option | Description |
 |--------|-------------|
-| **Sync Mode** | Disabled (One-way), Mirror (Two-way), Lock (Enforced), or Master/Lock *(requires Master Entity)*. |
-| **Selective Sync** | Choose which attributes to enforce (e.g. sync temperature but allow local fan control). |
-| **Ignore Off Members (Sync)** | Prevent Lock/Mirror enforcement from forcing `off` members back on. |
+| **Sync Mode** | What to do when a member is changed outside the group. Disabled: ignore it. Mirror: apply the change to all members. Lock: revert the member back to the group target. Master/Lock *(requires Master Entity)*: only the master entity's changes are accepted. |
+| **Selective Sync** | Attributes enforced in Lock/Mirror modes. Unselected attributes allow local control (e.g. sync temperature but let users change fan speed locally). |
+| **Ignore Off Members (Sync)** | When enforcing Lock/Mirror, skip members that are currently off. Note: direct group commands always reach all capable members regardless of this setting. |
+| **Last Man Standing** | When the *last* active member turns `off`, the group accepts this and updates its target state to `off` — even with Ignore Off Members enabled. |
 
 ### Window Control
 
@@ -251,7 +252,7 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Resync Interval** | Force-sync members to the desired group setting every X minutes (0 = disabled). |
 | **Override Duration** | Delay before returning to schedule after manual changes (0 = disabled). |
 | **Sticky Override** | Ignore schedule changes while a manual override is active. |
-| **Ignore Off Members (Schedule)** | Prevent the Schedule from forcing `off` members back on. |
+| **Ignore Off Members (Schedule)** | When running scheduled changes, skip members that are currently off. |
 | **Retain Schedule Override** | Persist the active schedule entity across restarts when changed via `set_schedule_entity` service. Without this, the group always reverts to the configured default on restart. |
 
 ### Availability & Timings
@@ -265,6 +266,39 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 ---
 
 ## Services
+
+### `climate_group_helper.boost`
+Temporarily set the group to a target temperature for a fixed duration. When the timer expires, the group restores automatically — to the active schedule slot (if configured) or the state before the boost.
+
+*   **Target:** The Climate Group entity.
+*   **Fields:**
+    *   `temperature` *(one of the two is required)*: Absolute target temperature during boost (e.g. `24.0`).
+    *   `temperature_offset` *(one of the two is required)*: Relative offset added to the current target temperature (e.g. `+3.0` or `-2.0`).
+    *   `duration` (Required): Duration in minutes (minimum 1).
+
+A manual change during boost (direct group command or Mirror adoption) aborts the boost. Lock enforcement does not. Boost is ignored while a window is open.
+
+**Example (absolute):**
+```yaml
+service: climate_group_helper.boost
+target:
+  entity_id: climate.my_group
+data:
+  temperature: 24.0
+  duration: 30
+```
+
+**Example (offset):**
+```yaml
+service: climate_group_helper.boost
+target:
+  entity_id: climate.my_group
+data:
+  temperature_offset: 3.0
+  duration: 30
+```
+
+---
 
 ### `climate_group_helper.set_schedule_entity`
 Dynamically change the active schedule entity for a group.

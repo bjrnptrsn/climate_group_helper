@@ -49,6 +49,7 @@ from homeassistant.components.group.util import (
 )
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
@@ -61,19 +62,24 @@ from homeassistant.const import (
 from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, State, callback, Event
 from datetime import timedelta, datetime
-
-from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_state_change_event,
+    async_track_time_interval,
+)
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
+    ATTR_ACTIVE_OVERRIDE,
     ATTR_ACTIVE_SCHEDULE_ENTITY,
     ATTR_ASSUMED_STATE,
     ATTR_BLOCKING_REASON,
     ATTR_CURRENT_HVAC_MODES,
     ATTR_ISOLATED_MEMBERS,
     ATTR_LAST_ACTIVE_HVAC_MODE,
+    ATTR_MASTER_FALLBACK_ACTIVE,
     ATTR_OOB_MEMBERS,
     ATTR_SCHEDULE_OVERRIDE_ACTIVE,
     CONF_DEBOUNCE_DELAY,
@@ -106,6 +112,7 @@ from .const import (
     CONF_PERSIST_ACTIVE_SCHEDULE,
     ATTR_SCHEDULE_ENTITY,
     SERVICE_SET_SCHEDULE_ENTITY,
+    SERVICE_BOOST,
     DOMAIN,
     FLOAT_TOLERANCE,
     AdoptManualChanges,
@@ -274,6 +281,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.current_group_state = CurrentState()
         self.run_state = RunState()
         self.shared_target_state = TargetState()
+        self._grace_period_unsub = None  # Cancel handle for grace period refresh timer
 
         # State managers
         self.climate_state_manager = ClimateStateManager(self)
@@ -400,10 +408,28 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 {vol.Optional(ATTR_SCHEDULE_ENTITY): vol.Any(cv.entity_id, None)},
                 "async_service_set_schedule_entity",
             )
+            self.platform.async_register_entity_service(
+                SERVICE_BOOST,
+                {
+                    vol.Optional("temperature"): vol.Coerce(float),
+                    vol.Optional("temperature_offset"): vol.Coerce(float),
+                    vol.Required("duration"): vol.All(vol.Coerce(int), vol.Range(min=1)),
+                },
+                "async_service_boost",
+            )
 
     async def async_service_set_schedule_entity(self, schedule_entity: str | None = None) -> None:
         """Handle set_schedule_entity service."""
         await self.schedule_handler.update_schedule_entity(schedule_entity)
+
+    async def async_service_boost(self, duration: int, temperature: float | None = None, temperature_offset: float | None = None) -> None:
+        """Handle boost service call."""
+        if (temperature is None) == (temperature_offset is None):
+            raise ServiceValidationError("Exactly one of 'temperature' or 'temperature_offset' must be provided.")
+        if temperature is None:
+            current = self.shared_target_state.temperature or 0.0
+            temperature = current + temperature_offset
+        await self.schedule_handler.start_boost(duration=duration, temperature=temperature)
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
@@ -521,14 +547,34 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         """Determine the group's HVAC mode based on member modes and strategy."""
         
         # Optimistic UI Update (Grace Period)
+        # Shows target_state.hvac_mode immediately after a UI command to prevent
+        # flicker while devices echo their old state back. A one-shot timer fires
+        # async_write_ha_state() at expiry so the display corrects itself even if
+        # no further state event arrives (e.g. device changes mode implicitly).
+        elapsed = time.time() - (self.shared_target_state.last_timestamp or 0)
         if (
             self.shared_target_state.last_source == "ui"
             and self.shared_target_state.last_timestamp
-            and time.time() - self.shared_target_state.last_timestamp < 3.0
+            and elapsed < 3.0
             and self.shared_target_state.hvac_mode is not None
         ):
+            if self._grace_period_unsub is None:
+                remaining = 3.0 - elapsed
+
+                @callback
+                def _grace_period_expired(_now):
+                    self._grace_period_unsub = None
+                    _LOGGER.debug("[%s] Grace period expired, forcing state refresh", self.entity_id)
+                    self.async_defer_or_update_ha_state()
+
+                self._grace_period_unsub = async_call_later(self.hass, remaining, _grace_period_expired)
             _LOGGER.debug("[%s] Applying optimistic state: %s", self.entity_id, self.shared_target_state.hvac_mode)
             return self.shared_target_state.hvac_mode
+
+        # Grace period expired or not active — cancel any pending timer
+        if self._grace_period_unsub is not None:
+            self._grace_period_unsub()
+            self._grace_period_unsub = None
 
         active_hvac_modes = [mode for mode in current_hvac_modes if mode != HVACMode.OFF]
 
@@ -608,6 +654,10 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if self.run_state.oob_members:
             attrs[ATTR_OOB_MEMBERS] = sorted(self.run_state.oob_members)
 
+        # Master fallback active (MASTER_LOCK with unavailable master)
+        if self.run_state.master_fallback_active:
+            attrs[ATTR_MASTER_FALLBACK_ACTIVE] = True
+
         # Expose member entities if configured
         if self._expose_member_entities:
             attrs[ATTR_ENTITY_ID] = self.climate_entity_ids
@@ -615,6 +665,10 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Schedule override status
         if self.schedule_handler.override_active:
             attrs[ATTR_SCHEDULE_OVERRIDE_ACTIVE] = True
+
+        # Active override (e.g. boost)
+        if self.run_state.active_override:
+            attrs[ATTR_ACTIVE_OVERRIDE] = self.run_state.active_override
 
         # Active schedule entity (always shown if configured; also used for RestoreEntity)
         if self.schedule_handler.schedule_entity_id:
@@ -857,6 +911,19 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             else:
                 self.master_state = None
                 self.current_master_state = CurrentState()
+
+        # Dynamic Master Fallback: pause MASTER_LOCK when master is unavailable
+        new_fallback = (
+            self._master_entity_id is not None
+            and self.master_state is None
+            and self.sync_mode == SyncMode.MASTER_LOCK
+        )
+        if new_fallback != self.run_state.master_fallback_active:
+            self.run_state = replace(self.run_state, master_fallback_active=new_fallback)
+            _LOGGER.warning(
+                "[%s] Master entity unavailable — fallback to member average active: %s",
+                self.entity_id, new_fallback,
+            )
 
         # Calculate and store ChangeState
         if self.event:

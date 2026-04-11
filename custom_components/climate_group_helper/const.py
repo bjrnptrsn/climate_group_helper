@@ -194,6 +194,7 @@ class IsolationTrigger(StrEnum):
 
 # Service Constants
 SERVICE_SET_SCHEDULE_ENTITY = "set_schedule_entity"
+SERVICE_BOOST = "boost"
 ATTR_SCHEDULE_ENTITY = "schedule_entity"
 
 # Extra attribute keys
@@ -204,6 +205,8 @@ ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
 ATTR_ISOLATED_MEMBERS = "isolated_members"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
 ATTR_OOB_MEMBERS = "oob_members"
+ATTR_ACTIVE_OVERRIDE = "active_override"
+ATTR_MASTER_FALLBACK_ACTIVE = "master_fallback_active"
 ATTR_SCHEDULE_OVERRIDE_ACTIVE = "schedule_override_active"
 
 # Attribute to service call mapping
