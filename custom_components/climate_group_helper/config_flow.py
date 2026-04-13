@@ -181,7 +181,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         self._min_temp = max(min_temps)
                 except (ValueError, TypeError):
                     pass
-                
+
                 # Max = Lowest maximum
                 try:
                     max_temps = [float(state.attributes.get(ATTR_MAX_TEMP, DEFAULT_MAX_TEMP)) for state in valid_states]
@@ -194,11 +194,17 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         """Normalize and clean up options based on dependencies."""
         # Start with current config and overlay flat inputs
         current_config = {**self._config_entry.options, **user_input}
-        
+
+        # Optional entity selectors return no key when cleared (suggested_value pattern) —
+        # explicitly remove stale values so deletion is not silently ignored
+        for key in [CONF_SCHEDULE_ENTITY, CONF_ROOM_SENSOR, CONF_ZONE_SENSOR]:
+            if key not in user_input:
+                current_config.pop(key, None)
+
         # Master Entity Logic
         # Explicitly check for empty/None in input to allow deletion
         new_master = user_input.get(CONF_MASTER_ENTITY)
-        
+
         if new_master:
             # Auto-add master entity to members if not already included
             entities = list(current_config.get(CONF_ENTITIES, []))
@@ -285,12 +291,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         offset_map[entity_id] = float(val)
                 except IndexError:
                     pass
-            # Backwards compatibility for old temp_offset__ keys during active forms/migrations
-            elif isinstance(key, str) and key.startswith("temp_offset__"):
-                entity_id = key[len("temp_offset__"):]
-                val = current_config.pop(key)
-                if val and val != 0.0:
-                    offset_map[entity_id] = float(val)
         if offset_map:
             current_config[CONF_MEMBER_TEMP_OFFSETS] = offset_map
         else:

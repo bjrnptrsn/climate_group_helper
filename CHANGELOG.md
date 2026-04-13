@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.1 - 2026-04-13
+
+### 🔧 Fixes
+
+*   **Config Flow**: Clearing an optional entity (Schedule Entity, Room Sensor, Zone Sensor) now correctly removes the value — previously the old value was silently retained.
+
 ## 0.23.0 - 2026-04-11
 
 ### 🌟 New Features
