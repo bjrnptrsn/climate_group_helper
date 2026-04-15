@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import asdict, dataclass, field, fields, replace
+from datetime import datetime, timedelta
 from typing import Any, TYPE_CHECKING
 
 from homeassistant.core import Event
@@ -27,18 +28,17 @@ class RunState:
     """Immutable operational status for the climate group.
 
     Centralises all factors that restrict controllability and runtime markers:
-    - blocked: global block (e.g. window open via WindowControl)
+    - blocking_sources: set of active blocking reasons (e.g. "window", "switch_off")
+    - blocked: derived property — True if any blocking source is active
     - isolated_members: per-member isolation (e.g. curtain closed)
     - oob_members: members currently out-of-bounds (union strategy)
-    - blocking_reason: human-readable reason for the global block
     - startup_time: unix timestamp of initialisation completion
     - last_active_hvac_mode: cache of last mode other than OFF
 
     Updates are performed via dataclasses.replace(), consistent with TargetState.
     """
 
-    blocked: bool = False
-    blocking_reason: str | None = None
+    blocking_sources: frozenset[str] = field(default_factory=frozenset)
     isolated_members: frozenset[str] = field(default_factory=frozenset)
     oob_members: frozenset[str] = field(default_factory=frozenset)
     startup_time: float | None = None
@@ -46,6 +46,25 @@ class RunState:
     master_fallback_active: bool = False
     pre_override_snapshot: TargetState | None = None
     active_override: str | None = None
+    active_override_end: datetime | None = None
+
+    @property
+    def blocked(self) -> bool:
+        """True if any blocking source is active."""
+        return bool(self.blocking_sources)
+
+    def set_override(self, name: str, duration_seconds: float) -> RunState:
+        """Return a new RunState with the override set and end time computed."""
+        end = datetime.now() + timedelta(seconds=duration_seconds)
+        return replace(self, active_override=name, active_override_end=end)
+
+    def clear_override(self) -> RunState:
+        """Return a new RunState with active_override and active_override_end cleared."""
+        return replace(self, active_override=None, active_override_end=None)
+
+    def clear_snapshot(self) -> RunState:
+        """Return a new RunState with pre_override_snapshot cleared."""
+        return replace(self, pre_override_snapshot=None)
 
 
 @dataclass(frozen=True)

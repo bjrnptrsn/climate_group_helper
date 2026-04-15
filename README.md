@@ -28,6 +28,7 @@ A comprehensive climate management system for Home Assistant that combines multi
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
   - [Schedule Automation](#schedule-automation)
+  - [Control Switch](#control-switch)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
 - [Installation](#installation)
@@ -121,6 +122,15 @@ Temporarily isolate specific group members based on a configurable trigger. Isol
 *   **Window Control Interaction:** Isolated members are never touched by Window Control — neither on open nor on close. If a window is open when isolation deactivates, the restore is deferred until the window closes.
 *   **Constraints:** At least one member must remain active — you cannot isolate all members. The section is hidden when the group has only one member.
 
+### Control Switch
+
+A dedicated `switch` entity is created alongside each Climate Group Helper. It acts as a **master on/off switch** for the entire group.
+
+*   **Switch OFF:** All members are immediately turned `off`. Any active Boost is aborted. The group stays blocked until the switch is turned back on.
+*   **Switch ON:** All members are restored to the group's current target state.
+
+Useful for heating-free periods (e.g. summer months), extended absences, or any situation where you want the group completely disabled without touching your schedules or target settings. Combine with an automation to drive it from a calendar, a helper, or any other condition.
+
 ### Schedule Automation
 
 Integrate native HA `schedule` helpers to automate your climate settings per time slot.
@@ -132,7 +142,7 @@ Integrate native HA `schedule` helpers to automate your climate settings per tim
 *   **Periodic Resync:** Force-sync all members every X minutes to ensure they match the target state.
 *   **Schedule Persistence:** Optionally retain a schedule switched via service call across Home Assistant restarts.
 *   **Window Aware:** If a schedule changes while windows are open, the new target is applied immediately when windows close.
-*   **Status Attributes:** `active_schedule_entity` always shows the currently active schedule. `schedule_override_active` appears while a manual override timer is running. `active_override` appears while a named override (e.g. Boost) is active.
+*   **Status Attributes:** `active_schedule_entity` always shows the currently active schedule. `active_override` shows the name of the active override (e.g. `boost` or `schedule_override`). `active_override_end` shows the ISO timestamp when the active override expires — useful for dashboard displays.
 *   **Boost:** Temporarily override the group to a target temperature for a set duration. Restores automatically to the active schedule slot or the previous target state when the timer expires.
 
 ### Schedule Configuration Example

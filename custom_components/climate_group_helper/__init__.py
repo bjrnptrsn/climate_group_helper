@@ -147,10 +147,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN].setdefault(entry.entry_id, {})
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS] = set()
 
-    # Set up climate and sensor platforms unconditionally to allow registry cleanup
+    # Set up climate and sensor first — climate.async_setup_entry stores the group
+    # reference in hass.data, which switch.async_setup_entry depends on.
     await hass.config_entries.async_forward_entry_setups(entry, [Platform.CLIMATE, Platform.SENSOR])
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.CLIMATE)
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SENSOR)
+
+    # Set up switch after climate so the group reference is guaranteed to exist.
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SWITCH])
+    hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SWITCH)
 
     # Register update listener for options changes, which will trigger a reload
     entry.async_on_unload(entry.add_update_listener(_update_listener))

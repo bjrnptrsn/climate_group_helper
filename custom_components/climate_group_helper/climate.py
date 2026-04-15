@@ -73,15 +73,15 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     ATTR_ACTIVE_OVERRIDE,
+    ATTR_ACTIVE_OVERRIDE_END,
     ATTR_ACTIVE_SCHEDULE_ENTITY,
     ATTR_ASSUMED_STATE,
-    ATTR_BLOCKING_REASON,
+    ATTR_BLOCKING_SOURCES,
     ATTR_CURRENT_HVAC_MODES,
     ATTR_ISOLATED_MEMBERS,
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_MASTER_FALLBACK_ACTIVE,
     ATTR_OOB_MEMBERS,
-    ATTR_SCHEDULE_OVERRIDE_ACTIVE,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_CONFIG,
     CONF_EXPOSE_MEMBER_ENTITIES,
@@ -124,10 +124,13 @@ from .const import (
     SyncMode,
 )
 from .isolation import MemberIsolationHandler
+from .override import BoostOverrideManager, OverrideHandler, SwitchOverrideManager, WindowOverrideManager
 from .schedule import ScheduleHandler
 from .service_call import (
     ClimateCallHandler,
+    OverrideCallHandler,
     ScheduleCallHandler,
+    SwitchCallHandler,
     SyncCallHandler,
     WindowControlCallHandler,
 )
@@ -187,17 +190,20 @@ async def async_setup_entry(
     registry = er.async_get(hass)
     entities = er.async_validate_entity_ids(registry, config[CONF_ENTITIES])
 
-    async_add_entities(
-        [
-            ClimateGroup(
-                hass=hass,
-                unique_id=config_entry.unique_id,
-                name=config.get(CONF_NAME, config_entry.title),
-                entity_ids=entities,
-                config=config,
-            )
-        ]
+    group = ClimateGroup(
+        hass=hass,
+        unique_id=config_entry.unique_id,
+        name=config.get(CONF_NAME, config_entry.title),
+        entity_ids=entities,
+        config=config,
     )
+
+    # Store reference for other platforms (switch, etc.) to access the group entity
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN].setdefault(config_entry.entry_id, {})
+    hass.data[DOMAIN][config_entry.entry_id]["group"] = group
+
+    async_add_entities([group])
 
 
 class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
@@ -291,12 +297,18 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Call handlers
         self.climate_call_handler = ClimateCallHandler(self)
+        self.override_call_handler = OverrideCallHandler(self)
         self.schedule_call_handler = ScheduleCallHandler(self)
+        self.switch_call_handler = SwitchCallHandler(self)
         self.sync_mode_call_handler = SyncCallHandler(self)
         self.window_control_call_handler = WindowControlCallHandler(self)
 
         # Modules
         self.member_isolation_handler = MemberIsolationHandler(self)
+        self.override_handler = OverrideHandler(self)
+        self.window_override_manager = WindowOverrideManager(self)
+        self.switch_override_manager = SwitchOverrideManager(self)
+        self.boost_override_manager = BoostOverrideManager(self)
         self.schedule_handler = ScheduleHandler(self)
         self.sync_mode_handler = SyncModeHandler(self)
         self.window_control_handler = WindowControlHandler(self)
@@ -392,6 +404,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Setup window control (subscribes to sensor events)
         await self.window_control_handler.async_setup()
 
+        # Setup override handler (registers call triggers for boost abort)
+        self.override_handler.async_setup()
+
         # Setup schedule handler (subscribes to schedule entity and execution hooks)
         await self.schedule_handler.async_setup()
 
@@ -429,7 +444,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if temperature is None:
             current = self.shared_target_state.temperature or 0.0
             temperature = current + temperature_offset
-        await self.schedule_handler.start_boost(duration=duration, temperature=temperature)
+        await self.boost_override_manager.activate(temperature=temperature, duration_seconds=duration * 60)
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
@@ -440,6 +455,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         await self.climate_call_handler.async_cancel_all()
         self.window_control_handler.async_teardown()
         self.schedule_handler.async_teardown()
+        self.override_handler.async_teardown()
         self.member_isolation_handler.async_teardown()
 
     def _restore_state(self, last_state: State) -> None:
@@ -642,9 +658,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
         }
 
-        # Blocking Reason (Window Control / global block)
-        if self.run_state.blocking_reason:
-            attrs[ATTR_BLOCKING_REASON] = self.run_state.blocking_reason
+        # Blocking Sources (Window Control, Control Switch, etc.)
+        if self.run_state.blocking_sources:
+            attrs[ATTR_BLOCKING_SOURCES] = sorted(self.run_state.blocking_sources)
 
         # Isolated members
         if self.run_state.isolated_members:
@@ -662,17 +678,15 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if self._expose_member_entities:
             attrs[ATTR_ENTITY_ID] = self.climate_entity_ids
 
-        # Schedule override status
-        if self.schedule_handler.override_active:
-            attrs[ATTR_SCHEDULE_OVERRIDE_ACTIVE] = True
-
-        # Active override (e.g. boost)
-        if self.run_state.active_override:
-            attrs[ATTR_ACTIVE_OVERRIDE] = self.run_state.active_override
-
         # Active schedule entity (always shown if configured; also used for RestoreEntity)
         if self.schedule_handler.schedule_entity_id:
             attrs[ATTR_ACTIVE_SCHEDULE_ENTITY] = self.schedule_handler.schedule_entity_id
+
+        # Active override — name, end time, and schedule_override flag
+        if self.run_state.active_override:
+            attrs[ATTR_ACTIVE_OVERRIDE] = self.run_state.active_override
+        if self.run_state.active_override_end:
+            attrs[ATTR_ACTIVE_OVERRIDE_END] = self.run_state.active_override_end.isoformat()
 
         # Expose full config if enabled
         if self._expose_config:

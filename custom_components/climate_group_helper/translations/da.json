@@ -356,6 +356,11 @@
           }
         }
       }
+    },
+    "switch": {
+      "main_switch": {
+        "name": "Hovedkontakt"
+      }
     }
   },
   "services": {

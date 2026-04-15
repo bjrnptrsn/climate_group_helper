@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.24.0 - 2026-04-15
+
+### 🌟 New Features
+
+*   **Main Switch**: A dedicated `switch` entity is now created alongside each Climate Group Helper. Turning it off immediately turns all members off and blocks any further commands — useful for heating-free periods, extended absences, or driving the group from external conditions via automation. Turning it back on restores all members to the current target state.
+
+*   **Override End Time**: A new `active_override_end` attribute exposes the exact expiry time (ISO timestamp) of any active override (Boost or schedule override). Use it in your dashboard to display how long a boost has left.
+
+### 🔧 Fixes
+
+*   **Override Enforcement**: When a blocking source (e.g. window) is active and a member deviates, the configured override action (off or window temperature) is now reliably re-applied to the deviating member.
+
 ## 0.23.1 - 2026-04-13
 
 ### 🔧 Fixes

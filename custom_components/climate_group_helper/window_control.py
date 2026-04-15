@@ -3,10 +3,8 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.climate import HVACMode
 from homeassistant.const import STATE_ON, STATE_OPEN
 from homeassistant.core import Event, EventStateChangedData, callback
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
@@ -15,15 +13,12 @@ from .const import (
     CONF_CLOSE_DELAY,
     CONF_ROOM_OPEN_DELAY,
     CONF_ROOM_SENSOR,
-    CONF_WINDOW_ACTION,
-    CONF_WINDOW_TEMPERATURE,
     CONF_WINDOW_MODE,
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
     DEFAULT_CLOSE_DELAY,
     DEFAULT_ROOM_OPEN_DELAY,
     DEFAULT_ZONE_OPEN_DELAY,
-    WindowControlAction,
     WindowControlMode,
 )
 
@@ -48,8 +43,6 @@ class WindowControlHandler:
         self._unsub_listener = None
 
         self._window_control_mode = self._group.config.get(CONF_WINDOW_MODE, WindowControlMode.OFF)
-        self._window_action = self._group.config.get(CONF_WINDOW_ACTION, WindowControlAction.OFF)
-        self._window_temperature = self._group.config.get(CONF_WINDOW_TEMPERATURE)
         self._control_state = WINDOW_CLOSE
 
         # Configuration
@@ -170,34 +163,19 @@ class WindowControlHandler:
             _LOGGER.debug("[%s] Timer cancelled", self._group.entity_id)
 
     async def _execute_action(self, mode: str) -> None:
-        """Execute heating ON/OFF action.
+        """Execute window open/close action.
 
-        Window Control does NOT modify target_state:
-        - OPEN: Forces members OFF via call_immediate, sets blocked=True
-        - CLOSE: Restores members to target_state via call_immediate, clears blocked
+        Delegates entirely to WindowOverrideManager which owns blocking_sources
+        and knows the configured window action (OFF or temperature).
         """
-        # Update control state and run_state
         self._control_state = mode
-        self._group.run_state = replace(
-            self._group.run_state,
-            blocked=(mode == WINDOW_OPEN),
-            blocking_reason="window_open" if mode == WINDOW_OPEN else None,
-        )
 
         if mode == WINDOW_OPEN:
-            if self._window_action == WindowControlAction.TEMPERATURE and self._window_temperature is not None:
-                _LOGGER.debug("[%s] Window opened, setting temperature to %.1f", self._group.entity_id, self._window_temperature)
-                await self.call_handler.call_immediate({"temperature": self._window_temperature})
-            elif self._group.hvac_mode != HVACMode.OFF:
-                _LOGGER.debug("[%s] Window opened, turning HVAC OFF", self._group.entity_id)
-                await self.call_handler.call_immediate({"hvac_mode": HVACMode.OFF})
-            else:
-                _LOGGER.debug("[%s] Window opened, HVAC already OFF in target_state", self._group.entity_id)
-
+            _LOGGER.debug("[%s] Window opened, activating window override", self._group.entity_id)
+            await self._group.window_override_manager.activate()
         elif mode == WINDOW_CLOSE:
-            # Restore target_state via self.call_handler
             _LOGGER.debug("[%s] Window closed, restoring target_state", self._group.entity_id)
-            await self.call_handler.call_immediate()
+            await self._group.window_override_manager.restore()
 
     def _window_control_logic(self) -> tuple[str, float] | None:
         """This method implements the core logic for window control.

@@ -26,7 +26,6 @@ class ScheduleCaller(StrEnum):
     SERVICE_CALL = "service_call"   # Genuine user command (climate_call_handler)
     SYNC_CALL = "sync_call"         # Sync enforcement / MIRROR adoption (sync_mode_call_handler)
     RESYNC = "resync"
-    OVERRIDE = "override"
     SWITCH = "switch"
 
 
@@ -39,11 +38,11 @@ _LOGGER = logging.getLogger(__name__)
 
 class ScheduleHandler:
     """Handles schedule-based state changes using HA Schedule entities.
-    
+
     Architecture (Event-Driven):
     - Observes Schedule Transitions (via HA Entity)
     - Receives Service Call Triggers (User/Sync Hooks)
-    - Manages Automatic Resync & Override Timers
+    - Manages Resync & Manual-Override-Return Timers
     """
 
     def __init__(self, group: ClimateGroup) -> None:
@@ -53,14 +52,14 @@ class ScheduleHandler:
         self._unsub_listener = None
         self._schedule_entity = group.config.get(CONF_SCHEDULE_ENTITY)
 
-        # New Feature Options
+        # Feature Options
         self._resync_interval = group.config.get(CONF_RESYNC_INTERVAL, 0)
         self._override_duration = group.config.get(CONF_OVERRIDE_DURATION, 0)
         self._persist_changes = group.config.get(CONF_PERSIST_CHANGES, False)
 
-        # Timer
+        # Timer (shared slot: either resync or schedule-override, never both)
         self._timer = None
-        self._active_timer_type: ScheduleCaller | None = None
+        self._active_timer_type: str | None = None
 
         _LOGGER.debug("[%s] Schedule initialized: '%s' (Resync: %sm, Override: %sm, Sticky: %s)", 
                       self._group.entity_id, self._schedule_entity, 
@@ -91,18 +90,14 @@ class ScheduleHandler:
         """Return the active schedule entity ID."""
         return self._schedule_entity
 
-    @property
-    def override_active(self) -> bool:
-        """Return True if a manual override timer is currently running."""
-        return self._active_timer_type == ScheduleCaller.OVERRIDE
 
     async def async_setup(self) -> None:
         """Subscribe to schedule entity state changes."""
         self._subscribe()
 
-        # User commands (group UI / service calls) → may abort boost, start override timer
+        # User commands (group UI / service calls) → start override timer
         self._group.climate_call_handler.register_call_trigger(self.service_call_trigger)
-        # Sync enforcement / MIRROR adoption → MIRROR aborts boost + starts override timer; LOCK does nothing
+        # Sync enforcement / MIRROR adoption → MIRROR starts override timer; LOCK does nothing
         self._group.sync_mode_call_handler.register_call_trigger(self.sync_call_trigger)
 
         _LOGGER.debug("[%s] Schedule handler setup complete (subscribed to: %s)", self._group.entity_id, self._schedule_entity)
@@ -143,87 +138,39 @@ class ScheduleHandler:
         )
 
     def _cancel_timer(self) -> None:
-        """Cancel the active timer (if any)."""
+        """Cancel the active timer (resync or schedule-override)."""
         if self._timer:
             self._timer()
             self._timer = None
             self._active_timer_type = None
+            if self._group.run_state.active_override == "schedule_override":
+                self._group.run_state = self._group.run_state.clear_override()
 
-    def _start_timer(self, timer_type: ScheduleCaller | None = None, explicit_duration: float | None = None) -> None:
-        """Start an Automation Timer (Override or Resync).
-
-        Args:
-            timer_type: The type of timer to start.
-            explicit_duration: Override the configured duration (in seconds).
-                               If provided, used directly instead of config-based minutes.
-        """
-        if explicit_duration is not None:
-            duration_seconds = explicit_duration
-        elif timer_type == ScheduleCaller.RESYNC:
-            duration_seconds = self._resync_interval * 60
-        elif timer_type == ScheduleCaller.OVERRIDE:
-            duration_seconds = self._override_duration * 60
-        else:
-            _LOGGER.error("[%s] Invalid timer type: %s", self._group.entity_id, timer_type)
-            return
-
+    def _start_timer(self, timer_type: str) -> None:
+        """Start a schedule timer (resync or override). Both fire schedule_listener(RESYNC)."""
+        duration_seconds = 60 * (self._resync_interval if timer_type == "resync" else self._override_duration)
         if duration_seconds <= 0:
             return
-
         self._cancel_timer()
+
+        if timer_type == "override":
+            self._group.run_state = self._group.run_state.set_override("schedule_override", duration_seconds)
 
         @callback
         def handle_timer_timeout(_now):
-            self._hass.async_create_task(self.schedule_listener(caller=timer_type))
+            self._timer = None
+            self._active_timer_type = None
+            self._group.run_state = self._group.run_state.clear_override()
+            self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.RESYNC))
 
-        self._timer = async_call_later(
-            self._hass, duration_seconds, handle_timer_timeout
-        )
+        self._timer = async_call_later(self._hass, duration_seconds, handle_timer_timeout)
         self._active_timer_type = timer_type
-        _LOGGER.debug("[%s] %s timer started: %s seconds", self._group.entity_id, timer_type.capitalize(), duration_seconds)
+        _LOGGER.debug("[%s] %s timer started: %.0f seconds", self._group.entity_id, timer_type.capitalize(), duration_seconds)
 
     async def schedule_listener(self, caller: ScheduleCaller):
         """Apply schedule logic to target_state."""
 
         _LOGGER.debug("[%s] Schedule listener triggered by: %s", self._group.entity_id, caller)
-
-        # --- Override timer expired: handle active boost/override ---
-        # Must run BEFORE the schedule_entity guard so boost-without-schedule works.
-        if caller == ScheduleCaller.OVERRIDE and self._group.run_state.active_override:
-            snapshot = self._group.run_state.pre_override_snapshot
-            if snapshot and not self._schedule_entity:
-                # No schedule → restore snapshot
-                restore_kwargs = _snapshot_to_kwargs(snapshot)
-                self.state_manager.update(**restore_kwargs)
-                await self.call_handler.call_immediate()
-            override_name = self._group.run_state.active_override
-            # Clear override state (with schedule: slot-application below handles restore)
-            self._group.run_state = replace(
-                self._group.run_state,
-                pre_override_snapshot=None,
-                active_override=None,
-            )
-            _LOGGER.debug("[%s] '%s' override ended, active_override cleared", self._group.entity_id, override_name)
-            if not self._schedule_entity:
-                self._start_timer(ScheduleCaller.RESYNC)
-                return
-            # With schedule: fall through to apply current slot
-
-        # --- Manual override during boost: abort the boost ---
-        # SERVICE_CALL (direct user command) and SYNC_CALL from MIRROR adoption both count
-        # as intentional overrides. LOCK enforcement (SYNC_CALL, last_source != "sync_mode")
-        # is not a user action and must never abort a boost.
-        is_mirror_adoption = (
-            caller == ScheduleCaller.SYNC_CALL
-            and self.target_state.last_source == "sync_mode"
-        )
-        if (caller == ScheduleCaller.SERVICE_CALL or is_mirror_adoption) and self._group.run_state.active_override:
-            self._group.run_state = replace(
-                self._group.run_state,
-                active_override=None,
-                pre_override_snapshot=None,
-            )
-            _LOGGER.debug("[%s] Manual override during boost — boost aborted", self._group.entity_id)
 
         if not self._schedule_entity:
             return
@@ -264,8 +211,7 @@ class ScheduleHandler:
             slot_only = caller in (ScheduleCaller.SLOT, ScheduleCaller.SWITCH)
             await self.call_handler.call_immediate(filtered_slot if slot_only else None)
 
-        # Never touch the timer while an override (e.g. boost) is active:
-        # the override timer must be allowed to fire undisturbed.
+        # Never touch the timer while an external override (e.g. boost) is active.
         if self._group.run_state.active_override:
             return
 
@@ -275,12 +221,14 @@ class ScheduleHandler:
         if caller == ScheduleCaller.SYNC_CALL and self.target_state.last_source != "sync_mode":
             return
 
-        self._start_timer(
-            ScheduleCaller.OVERRIDE
-            if (caller == ScheduleCaller.SERVICE_CALL and self._override_duration > 0)
-            or (caller == ScheduleCaller.SYNC_CALL and self._override_duration > 0)
-            else ScheduleCaller.RESYNC
+        wants_override = (
+            caller in (ScheduleCaller.SERVICE_CALL, ScheduleCaller.SYNC_CALL)
+            and self._override_duration > 0
         )
+        if wants_override:
+            self._start_timer("override")
+        else:
+            self._start_timer("resync")
 
     async def update_schedule_entity(self, new_entity_id: str | None) -> None:
         """Update the active schedule entity.
@@ -299,6 +247,9 @@ class ScheduleHandler:
 
         self._unsubscribe()
         self._schedule_entity = new_entity_id
+
+        # Reset acts as "restore to schedule": cancel any active schedule override timer.
+        self._cancel_timer()
 
         if self._schedule_entity:
             self._subscribe()

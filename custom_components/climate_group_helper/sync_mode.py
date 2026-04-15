@@ -86,6 +86,23 @@ class SyncModeHandler:
         origin_event = getattr(event.context, "origin_event", None)
         change_entity_id = self._group.change_state.entity_id or None
         change_dict = self._group.change_state.attributes()
+        own_echo = is_own_echo(event)
+
+        if not own_echo:
+            # MEMBER_OFF isolation trigger: runs before the DISABLED guard so it works
+            # even when sync enforcement is off.
+            self._maybe_isolate_off_member(change_entity_id)
+
+            # Block enforcement: if any blocking source is active, push deviating members
+            # back to OFF. Runs before the DISABLED guard (same as isolation trigger above)
+            # so blocking is always enforced regardless of sync_mode.
+            if self._group.run_state.blocking_sources:
+                block_task = self._hass.async_create_background_task(
+                    self._group.window_override_manager.enforce_override(),
+                    name="climate_group_block_enforcement",
+                )
+                self._active_sync_tasks.add(block_task)
+                block_task.add_done_callback(self._active_sync_tasks.discard)
 
         if not change_dict:
             return
@@ -97,7 +114,7 @@ class SyncModeHandler:
             return
 
         # Deep Origin Analysis: Did we cause this change?
-        if is_own_echo(event):
+        if own_echo:
             accepted = self._filter_echo_changes(origin_event, change_dict, change_entity_id)
             if accepted:
                 _LOGGER.debug("[%s] Adopting side effects: %s", self._group.entity_id, accepted)
@@ -107,10 +124,6 @@ class SyncModeHandler:
 
         # --- Fresh Event (external change) ---
         _LOGGER.debug("[%s] External change: %s from %s", self._group.entity_id, change_dict, change_entity_id)
-
-        # MEMBER_OFF isolation trigger: runs before the DISABLED guard so it works
-        # even when sync enforcement is off.
-        self._maybe_isolate_off_member(change_entity_id)
 
         if self._group.sync_mode == SyncMode.DISABLED:
             return

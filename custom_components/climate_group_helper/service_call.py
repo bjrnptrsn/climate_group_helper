@@ -851,6 +851,52 @@ class WindowControlCallHandler(BaseServiceCallHandler):
         return entity_id in self._group.run_state.isolated_members
 
 
+class SwitchCallHandler(BaseServiceCallHandler):
+    """Call handler for Control Switch operations (OFF / restore).
+
+    Bypasses all blocking — switch is the master on/off and must always
+    reach all members regardless of blocking_sources or isolated_members.
+    """
+
+    CONTEXT_ID = "switch"
+
+    def __init__(self, group: ClimateGroup):
+        """Initialize the switch call handler."""
+        super().__init__(group)
+
+    def _is_member_blocked(self, entity_id: str) -> bool:  # noqa: ARG002
+        """Bypass all blocking — switch commands always reach every member."""
+        return False
+
+
+class OverrideCallHandler(BaseServiceCallHandler):
+    """Call handler for Override operations (boost).
+
+    Diffing and OOB-blocking like ScheduleCallHandler, but:
+    - context_id="override" (not "schedule")
+    - no _block_all_calls: boost is already guarded in activate_boost()
+    - no _block_unsynced_entity: OFF-member skipping is a future config option
+    """
+
+    CONTEXT_ID = "override"
+
+    def __init__(self, group: ClimateGroup):
+        """Initialize the override call handler."""
+        super().__init__(group)
+
+    def _is_member_blocked(self, entity_id: str) -> bool:
+        """Extend base blocking with OOB check."""
+        return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
+
+    def _should_diff(self) -> bool:
+        """Only update members that actually need it."""
+        return True
+
+    def _get_target_value(self, attr: str, value: Any = None) -> Any:
+        """Read from target_state instead of using the passed value."""
+        return getattr(self.target_state, attr, None)
+
+
 class ScheduleCallHandler(BaseServiceCallHandler):
     """Call handler for Schedule operations."""
 
