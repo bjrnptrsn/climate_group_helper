@@ -14,8 +14,6 @@ A comprehensive climate management system for Home Assistant that combines multi
 > [!TIP]
 > The features **Window Control**, **Scheduling**, and **Device Calibration** can also be used for **single devices**, providing significant added value even without a group.
 
----
-
 ## Table of Contents
 
 - [Core Features](#core-features-zero-config)
@@ -28,14 +26,12 @@ A comprehensive climate management system for Home Assistant that combines multi
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
   - [Schedule Automation](#schedule-automation)
-  - [Control Switch](#control-switch)
+  - [Main Switch](#main-switch)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
 - [Installation](#installation)
 - [Setup](#setup)
 - [Troubleshooting](#troubleshooting)
-
----
 
 ## Core Features (Zero Config)
 
@@ -122,7 +118,7 @@ Temporarily isolate specific group members based on a configurable trigger. Isol
 *   **Window Control Interaction:** Isolated members are never touched by Window Control — neither on open nor on close. If a window is open when isolation deactivates, the restore is deferred until the window closes.
 *   **Constraints:** At least one member must remain active — you cannot isolate all members. The section is hidden when the group has only one member.
 
-### Control Switch
+### Main Switch
 
 A dedicated `switch` entity is created alongside each Climate Group Helper. It acts as a **master on/off switch** for the entire group.
 
@@ -149,28 +145,34 @@ Integrate native HA `schedule` helpers to automate your climate settings per tim
 
 1. Create a **Schedule Helper** in Home Assistant (Settings > Devices & Services > Helpers).
 2. Open the schedule and add your time slots.
-3. **Crucial:** You must add **additional data** to your schedule slots to tell the group what to do.
+3. **Crucial:** Each slot needs **additional data** to tell the group what to do.
+   - Click on a time block to edit it.
+   - Expand **Advanced settings**.
+   - Enter your desired state in the **Additional data** field.
 
-**Example (Edit Schedule as YAML):**
+**Example (Additional data for a single slot):**
 ```yaml
-monday:
-  - from: "06:00:00"
-    to: "08:30:00"
-    data:
-      hvac_mode: "heat"
-      temperature: 21.5
-  - from: "08:30:00"
-    to: "16:00:00"
-    data:
-      hvac_mode: "heat"
-      temperature: 19.0
+hvac_mode: heat
+temperature: 21.5
 ```
 
----
+You can omit attributes you don't need — for example, use only `hvac_mode: "off"` for a slot that turns heating off.
+
+**Supported attributes:**
+
+| Attribute | Example value | Notes |
+|---|---|---|
+| `hvac_mode` | `heat`, `cool`, `off` | Depends on your devices |
+| `temperature` | `21.5` | Single setpoint |
+| `target_temp_low` | `19.0` | Lower bound (dual setpoint) |
+| `target_temp_high` | `24.0` | Upper bound (dual setpoint) |
+| `humidity` | `50` | Target humidity (%) |
+| `preset_mode` | `eco`, `comfort` | Device-specific |
+| `fan_mode` | `auto`, `high` | Device-specific |
+| `swing_mode` | `on`, `off` | Device-specific |
+| `swing_horizontal_mode` | `on`, `off` | Device-specific |
 
 ## Configuration Options
-
-The configuration is organized into a wizard-style flow. Use the **Configure** button on the helper to change these settings.
 
 ### Members & Group Behavior
 
@@ -273,8 +275,6 @@ The configuration is organized into a wizard-style flow. Use the **Configure** b
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
 
----
-
 ## Services
 
 ### `climate_group_helper.boost`
@@ -308,14 +308,12 @@ data:
   duration: 30
 ```
 
----
-
 ### `climate_group_helper.set_schedule_entity`
 Dynamically change the active schedule entity for a group.
 
 *   **Target:** The Climate Group entity.
 *   **Fields:**
-    *   `schedule_entity` (Optional): The entity ID of the new schedule (e.g. `schedule.vacation_mode`). If omitted or set to `None`, reverts to the configured default entity, cancels any active override timer, and immediately re-applies the current slot.
+    *   `schedule_entity` (Optional): The entity ID of the new schedule (e.g. `schedule.vacation_mode`). If omitted or set to `None`, reverts to the configured default entity, cancels any active override timer (including boost), and immediately re-applies the current slot.
 
 **Example:**
 ```yaml
@@ -325,8 +323,6 @@ target:
 data:
   schedule_entity: schedule.guest_mode
 ```
-
----
 
 ## Installation
 
@@ -343,8 +339,6 @@ data:
 2. Copy `custom_components/climate_group_helper` to your `custom_components` folder
 3. **Restart Home Assistant**
 
----
-
 ## Setup
 
 1. Go to **Settings** > **Devices & Services** > **Helpers**
@@ -356,8 +350,6 @@ data:
 1. Find the group in your dashboard or entity list
 2. Click the **⚙️ Settings** icon → **Configure**
 3. Select the configuration category (Members, Temperature, Sync Mode, etc.)
-
----
 
 ## Troubleshooting
 
@@ -390,13 +382,9 @@ logger:
     custom_components.climate_group_helper: debug
 ```
 
----
-
 ## Contributing
 
 Found a bug or have an idea? [Open an issue](https://github.com/bjrnptrsn/climate_group_helper/issues) on GitHub.
-
----
 
 ## License
 

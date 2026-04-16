@@ -248,8 +248,9 @@ class ScheduleHandler:
         self._unsubscribe()
         self._schedule_entity = new_entity_id
 
-        # Reset acts as "restore to schedule": cancel any active schedule override timer.
+        # Reset acts as "restore to schedule": cancel resync/schedule-override timer and abort boost.
         self._cancel_timer()
+        self._group.boost_override_manager.abort()
 
         if self._schedule_entity:
             self._subscribe()

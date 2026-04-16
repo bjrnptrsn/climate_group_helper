@@ -658,7 +658,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
         }
 
-        # Blocking Sources (Window Control, Control Switch, etc.)
+        # Blocking Sources (Window Control, Main Switch, etc.)
         if self.run_state.blocking_sources:
             attrs[ATTR_BLOCKING_SOURCES] = sorted(self.run_state.blocking_sources)
 

@@ -852,7 +852,7 @@ class WindowControlCallHandler(BaseServiceCallHandler):
 
 
 class SwitchCallHandler(BaseServiceCallHandler):
-    """Call handler for Control Switch operations (OFF / restore).
+    """Call handler for Main Switch operations (OFF / restore).
 
     Bypasses all blocking — switch is the master on/off and must always
     reach all members regardless of blocking_sources or isolated_members.

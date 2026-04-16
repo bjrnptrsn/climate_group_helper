@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.24.1 - 2026-04-16
+
+### 🔧 Fixes
+
+*   **Boost + Schedule Reset**: Calling `set_schedule_entity` with no arguments now also aborts any active Boost — previously `active_override` and `active_override_end` remained visible in the attributes even after the group had already returned to the schedule temperature.
+
+*   **Override Enforcement**: When the Main Switch is off and a member turns on manually, it is immediately forced back off. When both a window block and the Main Switch are active simultaneously, the Main Switch takes precedence.
+
 ## 0.24.0 - 2026-04-15
 
 ### 🌟 New Features

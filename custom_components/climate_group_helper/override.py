@@ -201,6 +201,19 @@ class SwitchOverrideManager(BaseOverrideManager):
         if not self._group.run_state.blocking_sources:
             await self.call_handler.call_immediate()
 
+    async def enforce_override(self) -> None:
+        """Push OFF to deviating members when switch_off block is active.
+
+        Uses WindowControlCallHandler (bypasses blocking_sources, respects isolated_members).
+        """
+        if "switch_off" not in self._group.run_state.blocking_sources:
+            return
+        _LOGGER.debug(
+            "[%s] switch enforce_override (sources=%s)",
+            self._group.entity_id, self._group.run_state.blocking_sources,
+        )
+        await self._group.window_control_call_handler.call_debounced({"hvac_mode": HVACMode.OFF})
+
 
 class WindowOverrideManager(BaseOverrideManager):
     """Manages the window blocking source."""
@@ -245,10 +258,12 @@ class WindowOverrideManager(BaseOverrideManager):
     async def enforce_override(self) -> None:
         """Push the active window override state to deviating members.
 
-        Called from SyncModeHandler when a blocking source is active and a member
-        deviates. Uses the same action as activate() — OFF or window temperature.
+        Only runs when 'window' is in blocking_sources — SwitchOverrideManager
+        handles its own enforcement (always OFF via SwitchCallHandler).
         Uses WindowControlCallHandler (bypasses blocking_sources, respects isolated_members).
         """
+        if "window" not in self._group.run_state.blocking_sources:
+            return
         _LOGGER.debug(
             "[%s] enforce_override (sources=%s)",
             self._group.entity_id, self._group.run_state.blocking_sources,

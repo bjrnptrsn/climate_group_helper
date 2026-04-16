@@ -93,16 +93,19 @@ class SyncModeHandler:
             # even when sync enforcement is off.
             self._maybe_isolate_off_member(change_entity_id)
 
-            # Block enforcement: if any blocking source is active, push deviating members
-            # back to OFF. Runs before the DISABLED guard (same as isolation trigger above)
-            # so blocking is always enforced regardless of sync_mode.
+            # Block enforcement: each active blocking source enforces its own state.
+            # Runs before the DISABLED guard so blocking is always enforced regardless
+            # of sync_mode. Each enforce_override() is a no-op if its source is inactive.
             if self._group.run_state.blocking_sources:
-                block_task = self._hass.async_create_background_task(
-                    self._group.window_override_manager.enforce_override(),
-                    name="climate_group_block_enforcement",
-                )
-                self._active_sync_tasks.add(block_task)
-                block_task.add_done_callback(self._active_sync_tasks.discard)
+                for enforce in (
+                    self._group.window_override_manager.enforce_override,
+                    self._group.switch_override_manager.enforce_override,
+                ):
+                    task = self._hass.async_create_background_task(
+                        enforce(), name="climate_group_block_enforcement"
+                    )
+                    self._active_sync_tasks.add(task)
+                    task.add_done_callback(self._active_sync_tasks.discard)
 
         if not change_dict:
             return

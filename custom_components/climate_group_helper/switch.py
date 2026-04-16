@@ -1,4 +1,4 @@
-"""Control Switch platform for Climate Group Helper.
+"""Main Switch platform for Climate Group Helper.
 
 Provides a master on/off switch for each climate group:
 - OFF: group is forced to hvac_mode=off, target_state preserved
@@ -29,7 +29,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the control switch for each climate group."""
+    """Set up the main switch for each climate group."""
     entry_data = hass.data.get(DOMAIN, {}).get(config_entry.entry_id, {})
     group = entry_data.get("group")
 
@@ -44,7 +44,7 @@ async def async_setup_entry(
 
 
 class ControlSwitch(SwitchEntity, RestoreEntity):
-    """Master on/off switch for a climate group.
+    """Main on/off switch for a climate group.
 
     When OFF: group is forced to hvac_mode=off, target_state preserved.
     When ON: group restored to target_state.
@@ -54,7 +54,7 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
     _attr_should_poll = False
 
     def __init__(self, group: ClimateGroup) -> None:
-        """Initialize the control switch."""
+        """Initialize the main switch."""
         self._group = group
         self._is_on = True  # Default: switch is ON
         self._attr_unique_id = f"{group.unique_id}_control_switch"
