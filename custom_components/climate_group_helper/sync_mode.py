@@ -98,8 +98,9 @@ class SyncModeHandler:
             # of sync_mode. Each enforce_override() is a no-op if its source is inactive.
             if self._group.run_state.blocking_sources:
                 for enforce in (
-                    self._group.window_override_manager.enforce_override,
                     self._group.switch_override_manager.enforce_override,
+                    self._group.window_override_manager.enforce_override,
+                    self._group.presence_override_manager.enforce_override,
                 ):
                     task = self._hass.async_create_background_task(
                         enforce(), name="climate_group_block_enforcement"
@@ -111,9 +112,10 @@ class SyncModeHandler:
             return
 
         # Suppress direct echoes: events fired with our own context IDs
-        # (e.g. window_control restore, isolation restore) are not external changes.
-        if event.context.id in ("window_control", "isolation"):
-            _LOGGER.debug("[%s] Ignoring %s echo", self._group.entity_id, event.context.id)
+        # Ignore echoes from blocking operations. These side effects
+        # (e.g. window_control restore, isolation restore, presence override) are not external changes.
+        if event.context.id in ("window_control", "isolation", "presence"):
+            _LOGGER.debug("[%s] Ignoring '%s' echo", self._group.entity_id, event.context.id)
             return
 
         # Deep Origin Analysis: Did we cause this change?

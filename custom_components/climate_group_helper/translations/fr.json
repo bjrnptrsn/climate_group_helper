@@ -136,6 +136,50 @@
               "close_delay": "Temps d'attente après fermeture fenêtres avant restauration."
             }
           },
+          "presence_section": {
+            "name": "Contrôle de présence",
+            "description": "Gérez les paramètres climatiques basés sur la présence. Une fois l'absence détectée pendant la durée configurée, l'action d'absence est déclenchée. Les réglages précédents sont restaurés au retour.",
+            "data": {
+              "presence_mode": "Mode présence",
+              "presence_sensor": "Déclencheur de présence",
+              "presence_action": "Action en absence",
+              "presence_away_offset": "Décalage de température en absence (°C)",
+              "presence_away_temperature": "Température en absence (°C)",
+              "presence_away_preset": "Préréglage en absence",
+              "presence_away_delay": "Délai d'absence (secondes)",
+              "presence_return_delay": "Délai de retour (secondes)"
+            },
+            "data_description": {
+              "presence_mode": "Activer ou désactiver le repli automatique en absence lorsqu'une absence est détectée.",
+              "presence_sensor": "L'entité signalant la présence dans la pièce. L'état 'on' ou 'home' est traité comme présent.",
+              "presence_action": "L'action de repli à effectuer lorsqu'une absence est détectée.",
+              "presence_away_offset": "Décalage par rapport à la cible actuelle en absence (ex. -2° ou +2°). Les changements de planning pendant l'absence sont appliqués automatiquement.",
+              "presence_away_temperature": "Température cible fixe en absence.",
+              "presence_away_preset": "Préréglage en absence (ex. 'eco', 'away').",
+              "presence_away_delay": "Temps d'attente après détection d'absence avant d'activer le mode absence.",
+              "presence_return_delay": "Temps d'attente après détection de présence avant de restaurer l'état précédent."
+            }
+          },
+          "schedule_section": {
+            "name": "Automatisation du planning",
+            "description": "Connectez le planning HA pour automatiser. Définissez la fréquence de resync et la durée de dérogation.",
+            "data": {
+              "schedule_entity": "Entité de Programmation",
+              "resync_interval": "Intervalle de Resync (minutes)",
+              "override_duration": "Durée d'Override (minutes)",
+              "persist_changes": "Dérogation persistante (Sticky)",
+              "persist_active_schedule": "Conserver le forçage du calendrier",
+              "ignore_off_members_schedule": "Respecter l'état Off des membres (Planification)"
+            },
+            "data_description": {
+              "schedule_entity": "Sélectionnez une entité de programmation. Le champ 'Données supplémentaires' peut contenir du YAML avec des attributs comme 'temperature: 20.5' ou 'hvac_mode: heat'.",
+              "resync_interval": "Forcer la synchronisation des membres vers l'état cible toutes les X minutes. Évite les dérives si les appareils manquent une commande ou sont ajustés manuellement. Mettre à 0 pour désactiver.",
+              "override_duration": "La durée des overrides manuels. Après ce temps, le groupe revient automatiquement à la programmation actuelle. Mettre à 0 pour ignorer la période d'override.",
+              "persist_changes": "Les changements de programmation seront ignorés tant qu'un override manuel est actif. Réapplique la programmation actuelle seulement après l'expiration de l'override.",
+              "persist_active_schedule": "Conserve le calendrier actif après un redémarrage s'il a été modifié via le service. Sinon, il revient au calendrier par défaut.",
+              "ignore_off_members_schedule": "La Planification n'allumera PAS les membres actuellement ÉTEINTS."
+            }
+          },
           "temp_offsets_section": {
             "name": "Décalages des membres",
             "description": "Définissez un décalage de température pour chaque membre. L'objectif du groupe est ajusté de cette valeur avant d'être envoyé à chaque appareil. Laissez à 0 pour aucun décalage."
@@ -158,26 +202,6 @@
               "isolation_entities": "Membres du groupe à isoler quand le capteur est actif.",
               "isolation_activate_delay": "(Déclencheur capteur / mode HVAC uniquement) Temps d'attente après l'activation du capteur avant d'isoler les membres.",
               "isolation_restore_delay": "(Déclencheur capteur / mode HVAC uniquement) Temps d'attente après la désactivation avant de restaurer les membres."
-            }
-          },
-          "schedule_section": {
-            "name": "Automatisation du planning",
-            "description": "Connectez le planning HA pour automatiser. Définissez la fréquence de resync et la durée de dérogation.",
-            "data": {
-              "schedule_entity": "Entité de Programmation",
-              "resync_interval": "Intervalle de Resync (minutes)",
-              "override_duration": "Durée d'Override (minutes)",
-              "persist_changes": "Dérogation persistante (Sticky)",
-              "persist_active_schedule": "Conserver le forçage du calendrier",
-              "ignore_off_members_schedule": "Respecter l'état Off des membres (Planification)"
-            },
-            "data_description": {
-              "schedule_entity": "Sélectionnez une entité de programmation. Le champ 'Données supplémentaires' peut contenir du YAML avec des attributs comme 'temperature: 20.5' ou 'hvac_mode: heat'.",
-              "resync_interval": "Forcer la synchronisation des membres vers l'état cible toutes les X minutes. Évite les dérives si les appareils manquent une commande ou sont ajustés manuellement. Mettre à 0 pour désactiver.",
-              "override_duration": "La durée des overrides manuels. Après ce temps, le groupe revient automatiquement à la programmation actuelle. Mettre à 0 pour ignorer la période d'override.",
-              "persist_changes": "Les changements de programmation seront ignorés tant qu'un override manuel est actif. Réapplique la programmation actuelle seulement après l'expiration de l'override.",
-              "persist_active_schedule": "Conserve le calendrier actif après un redémarrage s'il a été modifié via le service. Sinon, il revient au calendrier par défaut.",
-              "ignore_off_members_schedule": "La Planification n'allumera PAS les membres actuellement ÉTEINTS."
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Désactivé – Le contrôle des fenêtres est inactif",
-        "on": "Activé – Le contrôle des fenêtres est actif"
+        "disabled": "Désactivé – Le contrôle des fenêtres est inactif",
+        "enabled": "Activé – Le contrôle des fenêtres est actif"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "Capteur binaire – Isoler quand le capteur est ACTIF",
         "hvac_mode": "Mode HVAC – Isoler quand le mode du groupe correspond",
         "member_off": "Membre éteint – Isoler quand un membre s'éteint manuellement"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Désactivé – contrôle de présence inactif",
+        "enabled": "Activé – Repli en absence"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Éteindre",
+        "away_offset": "Décalage en absence",
+        "away_temperature": "Température en absence",
+        "away_preset": "Préréglage en absence"
       }
     }
   },

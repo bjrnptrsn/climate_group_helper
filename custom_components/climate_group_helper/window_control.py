@@ -42,7 +42,7 @@ class WindowControlHandler:
         self._timer_cancel: Any = None
         self._unsub_listener = None
 
-        self._window_control_mode = self._group.config.get(CONF_WINDOW_MODE, WindowControlMode.OFF)
+        self._window_control_mode = self._group.config.get(CONF_WINDOW_MODE, WindowControlMode.DISABLED)
         self._control_state = WINDOW_CLOSE
 
         # Configuration
@@ -65,6 +65,10 @@ class WindowControlHandler:
     def state_manager(self):
         """Return the specialized state manager for window control (read-only)."""
         return self._group.window_control_state_manager
+
+    @property
+    def override_manager(self):
+        return self._group.window_override_manager
 
     @property
     def call_handler(self):
@@ -92,7 +96,7 @@ class WindowControlHandler:
         """Subscribe to window sensor state changes."""
 
         # Check if window control is enabled
-        if self._window_control_mode == WindowControlMode.OFF:
+        if self._window_control_mode == WindowControlMode.DISABLED:
             _LOGGER.debug("[%s] Window control is disabled (window_mode=%s)", self._group.entity_id, self._window_control_mode)
             return
 
@@ -172,10 +176,10 @@ class WindowControlHandler:
 
         if mode == WINDOW_OPEN:
             _LOGGER.debug("[%s] Window opened, activating window override", self._group.entity_id)
-            await self._group.window_override_manager.activate()
+            await self.override_manager.activate()
         elif mode == WINDOW_CLOSE:
             _LOGGER.debug("[%s] Window closed, restoring target_state", self._group.entity_id)
-            await self._group.window_override_manager.restore()
+            await self.override_manager.restore()
 
     def _window_control_logic(self) -> tuple[str, float] | None:
         """This method implements the core logic for window control.

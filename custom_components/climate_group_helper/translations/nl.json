@@ -136,6 +136,50 @@
               "close_delay": "Wachttijd na sluiten ramen voor herstel."
             }
           },
+          "presence_section": {
+            "name": "Aanwezigheidscontrole",
+            "description": "Beheer klimaatinstellingen op basis van aanwezigheid in de kamer. Nadat afwezigheid gedurende de geconfigureerde tijd is gedetecteerd, wordt de afwezigheidsactie geactiveerd. Vorige instellingen worden hersteld bij terugkeer.",
+            "data": {
+              "presence_mode": "Aanwezigheidsmodus",
+              "presence_sensor": "Aanwezigheidstrigger",
+              "presence_action": "Actie bij afwezigheid",
+              "presence_away_offset": "Afwezigheids-temperatuurverschuiving (°C)",
+              "presence_away_temperature": "Afwezigheids-temperatuur (°C)",
+              "presence_away_preset": "Afwezigheids-voorinstelling",
+              "presence_away_delay": "Afwezigheidsvertraging (seconden)",
+              "presence_return_delay": "Terugkeervertraging (seconden)"
+            },
+            "data_description": {
+              "presence_mode": "Automatische afwezigheids-fallback in- of uitschakelen wanneer afwezigheid wordt gedetecteerd.",
+              "presence_sensor": "De entiteit die aanwezigheid in de kamer rapporteert. De status 'on' of 'home' wordt behandeld als aanwezig.",
+              "presence_action": "De fallback-actie die moet worden uitgevoerd wanneer afwezigheid wordt gedetecteerd.",
+              "presence_away_offset": "Verschil ten opzichte van het huidige doel bij afwezigheid (bijv. -2° of +2°). Schemawijzigingen tijdens afwezigheid worden automatisch toegepast.",
+              "presence_away_temperature": "Vaste doeltemperatuur bij afwezigheid.",
+              "presence_away_preset": "Voorinstelling bij afwezigheid (bijv. 'eco', 'away').",
+              "presence_away_delay": "Wachttijd na afwezigheidsmelding voordat afwezigheidsmodus wordt geactiveerd.",
+              "presence_return_delay": "Wachttijd na aanwezigheidsmelding voordat de vorige toestand wordt hersteld."
+            }
+          },
+          "schedule_section": {
+            "name": "Schema-automatisering",
+            "description": "Koppel HA-schema voor automatisering. Stel resync-frequentie en override-duur in.",
+            "data": {
+              "schedule_entity": "Schema Entiteit",
+              "resync_interval": "Resync Interval (minuten)",
+              "override_duration": "Override Duur (minuten)",
+              "persist_changes": "Persistente Override (Sticky)",
+              "persist_active_schedule": "Schema-overschrijving behouden",
+              "ignore_off_members_schedule": "Respecteer de UIT-status van leden (Planning)"
+            },
+            "data_description": {
+              "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'.",
+              "resync_interval": "Dwing leden elke X minuten naar de doelstatus van de groep. Voorkomt verloop als apparaten een commando missen of handmatig worden aangepast. Stel in op 0 om uit te schakelen.",
+              "override_duration": "De duur van handmatige overrides. Na deze tijd keert de groep automatisch terug naar het schema. Stel in op 0 om de override-periode over te slaan.",
+              "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen.",
+              "persist_active_schedule": "Behoudt het actieve schema na een herstart wanneer gewijzigd via de service. Anders wordt het hersteld naar de standaard.",
+              "ignore_off_members_schedule": "De Planning zal GEEN leden inschakelen die momenteel UIT staan."
+            }
+          },
           "temp_offsets_section": {
             "name": "Leden Offsets",
             "description": "Stel een temperatuuroffset in voor individuele leden. Het groepsdoel wordt met deze waarde aangepast voordat het naar elk apparaat wordt verzonden. Laat op 0 voor geen offset."
@@ -158,26 +202,6 @@
               "isolation_entities": "Groepsleden om te isoleren wanneer de sensor actief is.",
               "isolation_activate_delay": "(Alleen sensor- / HVAC-modus trigger) Wachttijd na sensor ON voordat leden worden geïsoleerd.",
               "isolation_restore_delay": "(Alleen sensor- / HVAC-modus trigger) Wachttijd na sensor OFF voordat leden worden hersteld."
-            }
-          },
-          "schedule_section": {
-            "name": "Schema-automatisering",
-            "description": "Koppel HA-schema voor automatisering. Stel resync-frequentie en override-duur in.",
-            "data": {
-              "schedule_entity": "Schema Entiteit",
-              "resync_interval": "Resync Interval (minuten)",
-              "override_duration": "Override Duur (minuten)",
-              "persist_changes": "Persistente Override (Sticky)",
-              "persist_active_schedule": "Schema-overschrijving behouden",
-              "ignore_off_members_schedule": "Respecteer de UIT-status van leden (Planning)"
-            },
-            "data_description": {
-              "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'.",
-              "resync_interval": "Dwing leden elke X minuten naar de doelstatus van de groep. Voorkomt verloop als apparaten een commando missen of handmatig worden aangepast. Stel in op 0 om uit te schakelen.",
-              "override_duration": "De duur van handmatige overrides. Na deze tijd keert de groep automatisch terug naar het schema. Stel in op 0 om de override-periode over te slaan.",
-              "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen.",
-              "persist_active_schedule": "Behoudt het actieve schema na een herstart wanneer gewijzigd via de service. Anders wordt het hersteld naar de standaard.",
-              "ignore_off_members_schedule": "De Planning zal GEEN leden inschakelen die momenteel UIT staan."
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Uitgeschakeld – Raambediening is inactief",
-        "on": "Ingeschakeld – Raambediening is actief"
+        "disabled": "Uitgeschakeld – Raambediening is inactief",
+        "enabled": "Ingeschakeld – Raambediening is actief"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "Binaire sensor – Isoleer wanneer sensor AAN is",
         "hvac_mode": "HVAC-stand – Isoleer wanneer groepsstand overeenkomt",
         "member_off": "Lid uit – Isoleer wanneer een lid handmatig wordt uitgeschakeld"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Uitgeschakeld – aanwezigheidscontrole inactief",
+        "enabled": "Ingeschakeld – Afwezigheids-fallback"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Uitschakelen",
+        "away_offset": "Afwezigheids-verschuiving",
+        "away_temperature": "Afwezigheids-temperatuur",
+        "away_preset": "Afwezigheids-voorinstelling"
       }
     }
   },

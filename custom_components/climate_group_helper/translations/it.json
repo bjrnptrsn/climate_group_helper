@@ -136,6 +136,50 @@
               "close_delay": "Tempo di attesa dopo chiusura finestre prima del ripristino."
             }
           },
+          "presence_section": {
+            "name": "Controllo presenza",
+            "description": "Gestisci le impostazioni climatiche in base alla presenza nella stanza. Dopo che l'assenza è stata rilevata per la durata configurata, viene attivata l'azione di assenza. Le impostazioni precedenti vengono ripristinate al ritorno.",
+            "data": {
+              "presence_mode": "Modalità presenza",
+              "presence_sensor": "Attivatore di presenza",
+              "presence_action": "Azione in assenza",
+              "presence_away_offset": "Offset temperatura in assenza (°C)",
+              "presence_away_temperature": "Temperatura in assenza (°C)",
+              "presence_away_preset": "Preset in assenza",
+              "presence_away_delay": "Ritardo assenza (secondi)",
+              "presence_return_delay": "Ritardo ritorno (secondi)"
+            },
+            "data_description": {
+              "presence_mode": "Abilita o disabilita il fallback automatico in assenza quando viene rilevata l'assenza.",
+              "presence_sensor": "L'entità che riporta la presenza nella stanza. Lo stato 'on' o 'home' è trattato come presenza.",
+              "presence_action": "L'azione di fallback da eseguire quando viene rilevata l'assenza.",
+              "presence_away_offset": "Scostamento dal target attuale quando si è assenti (es. -2° o +2°). Le variazioni del programma durante l'assenza vengono applicate automaticamente.",
+              "presence_away_temperature": "Temperatura target fissa in assenza.",
+              "presence_away_preset": "Preset in assenza (es. 'eco', 'away').",
+              "presence_away_delay": "Tempo di attesa dopo il rilevamento assenza prima di attivare la modalità assenza.",
+              "presence_return_delay": "Tempo di attesa dopo il rilevamento presenza prima di ripristinare lo stato precedente."
+            }
+          },
+          "schedule_section": {
+            "name": "Automazione programmazione",
+            "description": "Collega programmi HA per automazione. Imposta frequenza di risincronizzazione e durata override.",
+            "data": {
+              "schedule_entity": "Entità Programmazione",
+              "resync_interval": "Intervallo di Resync (minuti)",
+              "override_duration": "Durata Override (minuti)",
+              "persist_changes": "Sovrascrittura persistente (Sticky)",
+              "persist_active_schedule": "Mantieni forzatura programma",
+              "ignore_off_members_schedule": "Rispetta lo stato Off dei membri (Pianificazione)"
+            },
+            "data_description": {
+              "schedule_entity": "Seleziona un'entità di programmazione. Il campo 'Dati aggiuntivi' può contenere YAML con attributi come 'temperature: 20.5' o 'hvac_mode: heat'.",
+              "resync_interval": "Forza la sincronizzazione dei membri allo stato target ogni X minuti. Impedisce derive se i dispositivi perdono un comando o vengono regolati manualmente. Imposta a 0 per disabilitare.",
+              "override_duration": "La durata degli override manuali. Dopo questo tempo, il gruppo torna automaticamente alla programmazione attuale. Imposta a 0 per saltare il periodo di override.",
+              "persist_changes": "Le modifiche alla programmazione stessa saranno ignorate finché un override manuale è attivo. Riapplica la programmazione attuale solo dopo la scadenza dell'override.",
+              "persist_active_schedule": "Mantiene il programma attivo dopo un riavvio quando viene modificato tramite il servizio. In caso contrario, torna a quello predefinito.",
+              "ignore_off_members_schedule": "La Pianificazione NON accenderà i membri attualmente SPENTI."
+            }
+          },
           "temp_offsets_section": {
             "name": "Offset dei membri",
             "description": "Imposta un offset di temperatura per i singoli membri. L'obiettivo del gruppo viene regolato di questo valore prima di essere inviato a ciascun dispositivo. Lascia a 0 per nessun offset."
@@ -158,26 +202,6 @@
               "isolation_entities": "Membri del gruppo da isolare quando il sensore è attivo.",
               "isolation_activate_delay": "(Solo trigger sensore / modalità HVAC) Attesa dopo l'attivazione del sensore prima di isolare i membri.",
               "isolation_restore_delay": "(Solo trigger sensore / modalità HVAC) Attesa dopo la disattivazione prima di ripristinare i membri."
-            }
-          },
-          "schedule_section": {
-            "name": "Automazione programmazione",
-            "description": "Collega programmi HA per automazione. Imposta frequenza di risincronizzazione e durata override.",
-            "data": {
-              "schedule_entity": "Entità Programmazione",
-              "resync_interval": "Intervallo di Resync (minuti)",
-              "override_duration": "Durata Override (minuti)",
-              "persist_changes": "Sovrascrittura persistente (Sticky)",
-              "persist_active_schedule": "Mantieni forzatura programma",
-              "ignore_off_members_schedule": "Rispetta lo stato Off dei membri (Pianificazione)"
-            },
-            "data_description": {
-              "schedule_entity": "Seleziona un'entità di programmazione. Il campo 'Dati aggiuntivi' può contenere YAML con attributi come 'temperature: 20.5' o 'hvac_mode: heat'.",
-              "resync_interval": "Forza la sincronizzazione dei membri allo stato target ogni X minuti. Impedisce derive se i dispositivi perdono un comando o vengono regolati manualmente. Imposta a 0 per disabilitare.",
-              "override_duration": "La durata degli override manuali. Dopo questo tempo, il gruppo torna automaticamente alla programmazione attuale. Imposta a 0 per saltare il periodo di override.",
-              "persist_changes": "Le modifiche alla programmazione stessa saranno ignorate finché un override manuale è attivo. Riapplica la programmazione attuale solo dopo la scadenza dell'override.",
-              "persist_active_schedule": "Mantiene il programma attivo dopo un riavvio quando viene modificato tramite il servizio. In caso contrario, torna a quello predefinito.",
-              "ignore_off_members_schedule": "La Pianificazione NON accenderà i membri attualmente SPENTI."
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Disattivato – Il controllo finestre è inattivo",
-        "on": "Attivato – Il controllo finestre è attivo"
+        "disabled": "Disattivato – Il controllo finestre è inattivo",
+        "enabled": "Attivato – Il controllo finestre è attivo"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "Sensore binario – Isola quando il sensore è ATTIVO",
         "hvac_mode": "Modalità HVAC – Isola quando la modalità del gruppo corrisponde",
         "member_off": "Membro spento – Isola quando un membro si spegne manualmente"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Disabilitato – controllo presenza inattivo",
+        "enabled": "Abilitato – Fallback assenza"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Spegni",
+        "away_offset": "Offset in assenza",
+        "away_temperature": "Temperatura in assenza",
+        "away_preset": "Preset in assenza"
       }
     }
   },

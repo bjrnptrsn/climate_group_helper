@@ -136,6 +136,50 @@
               "close_delay": "Time to wait after all windows close before restoring heating."
             }
           },
+          "presence_section": {
+            "name": "Presence Control",
+            "description": "Manage climate settings based on room presence. After absence is detected for the configured duration, the away action is triggered. Previous settings are restored upon return.",
+            "data": {
+              "presence_mode": "Presence Control Mode",
+              "presence_sensor": "Presence Trigger",
+              "presence_action": "Away Action",
+              "presence_away_offset": "Away Temperature Offset (°C)",
+              "presence_away_temperature": "Away Temperature (°C)",
+              "presence_away_preset": "Away Preset",
+              "presence_away_delay": "Away Delay (seconds)",
+              "presence_return_delay": "Return Delay (seconds)"
+            },
+            "data_description": {
+              "presence_mode": "Enable or disable automatic away-fallback when absence is detected.",
+              "presence_sensor": "The entity reporting room presence. State 'on' or 'home' is treated as present.",
+              "presence_action": "The fallback action to perform when absence is detected.",
+              "presence_away_offset": "Offset from current target when away (e.g. -2° or +2°). Schedule changes during absence are applied automatically.",
+              "presence_away_temperature": "Fixed temperature to set when away.",
+              "presence_away_preset": "Preset mode to activate when away.",
+              "presence_away_delay": "Wait time after sensor reports absence before activating away mode.",
+              "presence_return_delay": "Wait time after sensor reports presence before restoring."
+            }
+          },
+          "schedule_section": {
+            "name": "Schedule Automation",
+            "description": "Connect HA schedule to automate temperatures. Set resync frequency and override duration. You can also use the set_schedule_entity service to switch schedules dynamically.",
+            "data": {
+              "schedule_entity": "Schedule Entity",
+              "resync_interval": "Resync Interval (minutes)",
+              "override_duration": "Override Duration (minutes)",
+              "persist_changes": "Sticky Override",
+              "persist_active_schedule": "Retain Schedule Override",
+              "ignore_off_members_schedule": "Respect Member Off State (Schedule)"
+            },
+            "data_description": {
+              "schedule_entity": "Select a schedule entity. The schedule's 'Additional data' field can contain YAML with attributes like 'temperature: 20.5' or 'hvac_mode: heat'.",
+              "resync_interval": "Force-sync members to the target state every X minutes. Ensures devices stay on schedule even if adjusted manually or commands are missed. Set to 0 to disable.",
+              "override_duration": "The duration for manual overrides. After this time, the group automatically reverts to the current schedule. Set to 0 to skip the override period.",
+              "persist_changes": "Changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires.",
+              "persist_active_schedule": "Retain the active schedule after a restart when changed via service. Otherwise, it resets to the default.",
+              "ignore_off_members_schedule": "The Schedule will NOT turn on members that are currently Off."
+            }
+          },
           "temp_offsets_section": {
             "name": "Member Offsets",
             "description": "Set a temperature offset for individual members. The group target is adjusted by this value before sending to each device. Leave at 0 for no offset."
@@ -158,26 +202,6 @@
               "isolation_entities": "Group members to isolate when the trigger is active.",
               "isolation_activate_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger activates before isolating members.",
               "isolation_restore_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger deactivates before restoring members to the group target state."
-            }
-          },
-          "schedule_section": {
-            "name": "Schedule Automation",
-            "description": "Connect HA schedule to automate temperatures. Set resync frequency and override duration. You can also use the set_schedule_entity service to switch schedules dynamically.",
-            "data": {
-              "schedule_entity": "Schedule Entity",
-              "resync_interval": "Resync Interval (minutes)",
-              "override_duration": "Override Duration (minutes)",
-              "persist_changes": "Sticky Override",
-              "persist_active_schedule": "Retain Schedule Override",
-              "ignore_off_members_schedule": "Respect Member Off State (Schedule)"
-            },
-            "data_description": {
-              "schedule_entity": "Select a schedule entity. The schedule's 'Additional data' field can contain YAML with attributes like 'temperature: 20.5' or 'hvac_mode: heat'.",
-              "resync_interval": "Force-sync members to the target state every X minutes. Ensures devices stay on schedule even if adjusted manually or commands are missed. Set to 0 to disable.",
-              "override_duration": "The duration for manual overrides. After this time, the group automatically reverts to the current schedule. Set to 0 to skip the override period.",
-              "persist_changes": "Changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires.",
-              "persist_active_schedule": "Retain the active schedule after a restart when changed via service. Otherwise, it resets to the default.",
-              "ignore_off_members_schedule": "The Schedule will NOT turn on members that are currently Off."
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Disabled – Window control is inactive",
-        "on": "Enabled – Window control is active"
+        "disabled": "Disabled – Window control is inactive",
+        "enabled": "Enabled – Window control is active"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "Binary Sensor – Isolate when sensor is ON",
         "hvac_mode": "HVAC Mode – Isolate when group mode matches",
         "member_off": "Member Off – Isolate when a member turns off manually"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Disabled – Presence control is inactive",
+        "enabled": "Enabled – Away-fallback"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Turn Off",
+        "away_offset": "Away Offset",
+        "away_temperature": "Away Temperature",
+        "away_preset": "Away Preset"
       }
     }
   },

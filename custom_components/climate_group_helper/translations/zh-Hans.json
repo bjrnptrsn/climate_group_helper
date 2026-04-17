@@ -136,6 +136,50 @@
               "close_delay": "窗口关闭后的恢复等待时间。"
             }
           },
+          "presence_section": {
+            "name": "在场检测",
+            "description": "根据室内是否有人管理气候设置。当传感器在设定的时间内检测到无人时，将触发离开操作。返回时将恢复之前的设置。",
+            "data": {
+              "presence_mode": "在场模式",
+              "presence_sensor": "存在触发器",
+              "presence_action": "离开时操作",
+              "presence_away_offset": "离开温度偏移 (°C)",
+              "presence_away_temperature": "离开温度 (°C)",
+              "presence_away_preset": "离开预设",
+              "presence_away_delay": "离开延迟 (秒)",
+              "presence_return_delay": "返回延迟 (秒)"
+            },
+            "data_description": {
+              "presence_mode": "启用或禁用检测到无人时自动切换至离开模式的功能。",
+              "presence_sensor": "报告室内是否有人存在的实体。“开启”或“在家”状态被视为有人。",
+              "presence_action": "检测到无人时执行的备用操作。",
+              "presence_away_offset": "离开时的当前目标偏移量（例如 -2° 或 +2°）。离开期间的计划更改将自动应用。",
+              "presence_away_temperature": "离开时的固定目标温度。",
+              "presence_away_preset": "离开时的预设模式（如 'eco'、'away'）。",
+              "presence_away_delay": "检测到离开后激活离开模式前的等待时间。",
+              "presence_return_delay": "检测到在场后恢复之前状态前的等待时间。"
+            }
+          },
+          "schedule_section": {
+            "name": "日程自动化",
+            "description": "连接 HA 日程以自动化温度。设置重新同步频率和覆盖持续时间。也可通过服务动态切换日程。",
+            "data": {
+              "schedule_entity": "日程表实体",
+              "resync_interval": "重新同步间隔 (分钟)",
+              "override_duration": "手动覆盖时长 (分钟)",
+              "persist_changes": "保持手动覆盖 (Sticky)",
+              "persist_active_schedule": "保留日程覆盖",
+              "ignore_off_members_schedule": "尊重成员关闭状态（计划）"
+            },
+            "data_description": {
+              "schedule_entity": "选择一个日程表实体。日程表的“附加数据”字段可以包含 YAML 属性，如 'temperature: 20.5' 或 'hvac_mode: heat'。",
+              "resync_interval": "每 X 分钟强制将成员同步到群组的目标状态。防止设备错过命令或由于手动调整而导致的偏离。设置为 0 以禁用。",
+              "override_duration": "手动覆盖的持续时间。在此时间过后，群组将自动恢复到当前日程表。设置为 0 以跳过覆盖期。",
+              "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。",
+              "persist_active_schedule": "通过服务更改日程后，在重启后保留活动日程。否则，它将恢复为配置的默认值。",
+              "ignore_off_members_schedule": "计划不会打开当前处于关闭状态的成员。"
+            }
+          },
           "temp_offsets_section": {
             "name": "成员偏移",
             "description": "为各个成员设置温度偏移。组目标在发送到每个设备前将按此值调整。留 0 表示无偏移。"
@@ -158,26 +202,6 @@
               "isolation_entities": "传感器激活时要隔离的组成员。",
               "isolation_activate_delay": "(仅限传感器 / HVAC 模式触发器) 传感器ON后等待隔离成员的时间。",
               "isolation_restore_delay": "(仅限传感器 / HVAC 模式触发器) 传感器OFF后等待恢复成员的时间。"
-            }
-          },
-          "schedule_section": {
-            "name": "日程自动化",
-            "description": "连接 HA 日程以自动化温度。设置重新同步频率和覆盖持续时间。也可通过服务动态切换日程。",
-            "data": {
-              "schedule_entity": "日程表实体",
-              "resync_interval": "重新同步间隔 (分钟)",
-              "override_duration": "手动覆盖时长 (分钟)",
-              "persist_changes": "保持手动覆盖 (Sticky)",
-              "persist_active_schedule": "保留日程覆盖",
-              "ignore_off_members_schedule": "尊重成员关闭状态（计划）"
-            },
-            "data_description": {
-              "schedule_entity": "选择一个日程表实体。日程表的“附加数据”字段可以包含 YAML 属性，如 'temperature: 20.5' 或 'hvac_mode: heat'。",
-              "resync_interval": "每 X 分钟强制将成员同步到群组的目标状态。防止设备错过命令或由于手动调整而导致的偏离。设置为 0 以禁用。",
-              "override_duration": "手动覆盖的持续时间。在此时间过后，群组将自动恢复到当前日程表。设置为 0 以跳过覆盖期。",
-              "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。",
-              "persist_active_schedule": "通过服务更改日程后，在重启后保留活动日程。否则，它将恢复为配置的默认值。",
-              "ignore_off_members_schedule": "计划不会打开当前处于关闭状态的成员。"
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "已禁用 – 窗口控制未激活",
-        "on": "已启用 – 窗口控制已激活"
+        "disabled": "已禁用 – 窗口控制未激活",
+        "enabled": "已启用 – 窗口控制已激活"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "二进制传感器 – 传感器开启时隔离",
         "hvac_mode": "HVAC 模式 – 组模式匹配时隔离",
         "member_off": "成员关闭 – 当成员手动关闭时进行隔离"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "禁用 – 在场检测未激活",
+        "enabled": "已启用 – 离开模式"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "关闭",
+        "away_offset": "离开偏移",
+        "away_temperature": "离开温度",
+        "away_preset": "离开预设"
       }
     }
   },

@@ -59,6 +59,14 @@ from .const import (
     CONF_CALIBRATION_HEARTBEAT,
     CONF_CALIBRATION_IGNORE_OFF,
     CONF_MIN_TEMP_OFF,
+    CONF_PRESENCE_MODE,
+    CONF_PRESENCE_SENSOR,
+    CONF_PRESENCE_ACTION,
+    CONF_PRESENCE_AWAY_OFFSET,
+    CONF_PRESENCE_AWAY_TEMPERATURE,
+    CONF_PRESENCE_AWAY_PRESET,
+    CONF_PRESENCE_AWAY_DELAY,
+    CONF_PRESENCE_RETURN_DELAY,
     CONF_WINDOW_ACTION,
     CONF_WINDOW_TEMPERATURE,
     CONF_WINDOW_ADOPT_MANUAL_CHANGES,
@@ -85,6 +93,8 @@ from .const import (
     FeatureStrategy,
     HvacModeStrategy,
     IsolationTrigger,
+    PresenceMode,
+    PresenceAction,
     RoundOption,
     SyncMode,
     UnionOutOfBoundsAction,
@@ -101,7 +111,7 @@ from .climate import (
 class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 8
+    VERSION = 9
 
     @staticmethod
     @callback
@@ -197,7 +207,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         # Optional entity selectors return no key when cleared (suggested_value pattern) —
         # explicitly remove stale values so deletion is not silently ignored
-        for key in [CONF_SCHEDULE_ENTITY, CONF_ROOM_SENSOR, CONF_ZONE_SENSOR]:
+        for key in [CONF_SCHEDULE_ENTITY, CONF_ROOM_SENSOR, CONF_ZONE_SENSOR, CONF_ISOLATION_SENSOR, CONF_PRESENCE_SENSOR, CONF_PRESENCE_AWAY_PRESET, CONF_PRESENCE_AWAY_TEMPERATURE, CONF_WINDOW_TEMPERATURE]:
             if key not in user_input:
                 current_config.pop(key, None)
 
@@ -229,7 +239,11 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         # Window Control Logic
         if not current_config.get(CONF_ROOM_SENSOR) and not current_config.get(CONF_ZONE_SENSOR):
-            current_config[CONF_WINDOW_MODE] = WindowControlMode.OFF
+            current_config[CONF_WINDOW_MODE] = WindowControlMode.DISABLED
+
+        # Presence Control Logic
+        if not current_config.get(CONF_PRESENCE_SENSOR):
+            current_config[CONF_PRESENCE_MODE] = PresenceMode.DISABLED
 
         # Isolation Logic
         trigger = current_config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
@@ -275,7 +289,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 current_config.pop(CONF_ISOLATION_ENTITIES, None)
 
         # Clean up empty strings/lists for sensors
-        for key in [CONF_ROOM_SENSOR, CONF_ZONE_SENSOR, CONF_SCHEDULE_ENTITY]:
+        for key in [CONF_ROOM_SENSOR, CONF_ZONE_SENSOR, CONF_SCHEDULE_ENTITY, CONF_PRESENCE_SENSOR]:
             if key in current_config and not current_config[key]:
                 current_config.pop(key, None)
 
@@ -476,7 +490,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         return {
             vol.Required("window_section"): section(
                 vol.Schema({
-                    vol.Required(CONF_WINDOW_MODE, default=config.get(CONF_WINDOW_MODE, WindowControlMode.OFF)): selector.SelectSelector(
+                    vol.Required(CONF_WINDOW_MODE, default=config.get(CONF_WINDOW_MODE, WindowControlMode.DISABLED)): selector.SelectSelector(
                         selector.SelectSelectorConfig(options=[opt.value for opt in WindowControlMode], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="window_mode")
                     ),
                     vol.Required(CONF_WINDOW_ADOPT_MANUAL_CHANGES, default=adopt_val): selector.SelectSelector(
@@ -507,6 +521,74 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(CONF_CLOSE_DELAY, default=config.get(CONF_CLOSE_DELAY, DEFAULT_CLOSE_DELAY)): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
                     ),
+                }),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            )
+        }
+
+    def _section_factory_presence(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Factory for presence control section."""
+        
+        # Determine available presets based on members' supported presets
+        from homeassistant.components.climate import ATTR_PRESET_MODES as _ATTR_PRESET_MODES
+        available_presets: list[str] = []
+        seen: set[str] = set()
+        for entity_id in config.get(CONF_ENTITIES, []):
+            if state := self.hass.states.get(entity_id):
+                for mode in state.attributes.get(_ATTR_PRESET_MODES, []):
+                    if mode not in seen:
+                        seen.add(mode)
+                        available_presets.append(mode)
+
+        return {
+            vol.Required("presence_section"): section(
+                vol.Schema({
+                    vol.Required(CONF_PRESENCE_MODE, default=config.get(CONF_PRESENCE_MODE, PresenceMode.DISABLED)): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=[opt.value for opt in PresenceMode], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_mode")
+                    ),
+                    vol.Optional(CONF_PRESENCE_SENSOR, description={"suggested_value": config.get(CONF_PRESENCE_SENSOR)}): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "device_tracker"])
+                    ),
+                    vol.Required(CONF_PRESENCE_ACTION, default=config.get(CONF_PRESENCE_ACTION, PresenceAction.OFF)): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=[opt.value for opt in PresenceAction], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_action")
+                    ),
+                    vol.Optional(CONF_PRESENCE_AWAY_OFFSET, default=config.get(CONF_PRESENCE_AWAY_OFFSET, 0.0)): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=-10, max=10, step=0.5, unit_of_measurement="°C", mode=selector.NumberSelectorMode.SLIDER)
+                    ),
+                    vol.Optional(CONF_PRESENCE_AWAY_TEMPERATURE, description={"suggested_value": config.get(CONF_PRESENCE_AWAY_TEMPERATURE)}): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=self._min_temp, max=self._max_temp, step=0.5, unit_of_measurement="°C", mode=selector.NumberSelectorMode.SLIDER)
+                    ),
+                    vol.Optional(CONF_PRESENCE_AWAY_PRESET, description={"suggested_value": config.get(CONF_PRESENCE_AWAY_PRESET)}): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=available_presets, mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_away_preset")
+                    ),
+                    vol.Optional(CONF_PRESENCE_AWAY_DELAY, default=config.get(CONF_PRESENCE_AWAY_DELAY, 0)): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
+                    ),
+                    vol.Optional(CONF_PRESENCE_RETURN_DELAY, default=config.get(CONF_PRESENCE_RETURN_DELAY, 0)): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
+                    ),
+                }),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            )
+        }
+
+    def _section_factory_schedule(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Factory for schedule section."""
+        return {
+            vol.Required("schedule_section"): section(
+                vol.Schema({
+                    vol.Optional(CONF_SCHEDULE_ENTITY, description={"suggested_value": config.get(CONF_SCHEDULE_ENTITY)}): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain="schedule")
+                    ),
+                    vol.Optional(CONF_RESYNC_INTERVAL, default=config.get(CONF_RESYNC_INTERVAL, 0)): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
+                    ),
+                    vol.Optional(CONF_OVERRIDE_DURATION, default=config.get(CONF_OVERRIDE_DURATION, 0)): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
+                    ),
+                    vol.Optional(CONF_PERSIST_CHANGES, default=config.get(CONF_PERSIST_CHANGES, False)): bool,
+                    vol.Optional(CONF_PERSIST_ACTIVE_SCHEDULE, default=config.get(CONF_PERSIST_ACTIVE_SCHEDULE, False)): bool,
+                    vol.Optional(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, default=config.get(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, False)): bool,
                 }),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
             )
@@ -602,28 +684,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             )
         }
 
-    def _section_factory_schedule(self, config: dict[str, Any]) -> dict[str, Any]:
-        """Factory for schedule section."""
-        return {
-            vol.Required("schedule_section"): section(
-                vol.Schema({
-                    vol.Optional(CONF_SCHEDULE_ENTITY, description={"suggested_value": config.get(CONF_SCHEDULE_ENTITY)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="schedule")
-                    ),
-                    vol.Optional(CONF_RESYNC_INTERVAL, default=config.get(CONF_RESYNC_INTERVAL, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_OVERRIDE_DURATION, default=config.get(CONF_OVERRIDE_DURATION, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_PERSIST_CHANGES, default=config.get(CONF_PERSIST_CHANGES, False)): bool,
-                    vol.Optional(CONF_PERSIST_ACTIVE_SCHEDULE, default=config.get(CONF_PERSIST_ACTIVE_SCHEDULE, False)): bool,
-                    vol.Optional(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, default=config.get(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, False)): bool,
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
-            )
-        }
-
     def _section_factory_advanced(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for advanced section."""
         return {
@@ -685,6 +745,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     "humidity_section": "master_options_notice",
                     "sync_section": "master_options_notice",
                     "window_section": "master_options_notice",
+                    "presence_section": "master_options_notice",
                 })
 
             # Reset hint marker and save
@@ -717,9 +778,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         schema_dict.update(self._section_factory_humidity(config))
         schema_dict.update(self._section_factory_sync(config))
         schema_dict.update(self._section_factory_window_control(config))
+        schema_dict.update(self._section_factory_presence(config))
+        schema_dict.update(self._section_factory_schedule(config))
         schema_dict.update(self._section_factory_temp_offsets(config))
         schema_dict.update(self._section_factory_isolation(config))
-        schema_dict.update(self._section_factory_schedule(config))
         schema_dict.update(self._section_factory_advanced(config))
 
         schema_dict[vol.Optional(CONF_EXPAND_SECTIONS, default=config.get(CONF_EXPAND_SECTIONS, False))] = bool

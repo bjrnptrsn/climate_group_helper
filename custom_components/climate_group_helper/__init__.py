@@ -30,6 +30,14 @@ from .const import (
     CONF_OVERRIDE_DURATION,
     CONF_PERSIST_ACTIVE_SCHEDULE,
     CONF_PERSIST_CHANGES,
+    CONF_PRESENCE_ACTION,
+    CONF_PRESENCE_AWAY_DELAY,
+    CONF_PRESENCE_AWAY_OFFSET,
+    CONF_PRESENCE_AWAY_PRESET,
+    CONF_PRESENCE_AWAY_TEMPERATURE,
+    CONF_PRESENCE_MODE,
+    CONF_PRESENCE_RETURN_DELAY,
+    CONF_PRESENCE_SENSOR,
     CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
@@ -107,6 +115,15 @@ VALID_CONFIG_KEYS = {
     CONF_ROOM_OPEN_DELAY,
     CONF_ZONE_OPEN_DELAY,
     CONF_CLOSE_DELAY,
+    # Presence control options
+    CONF_PRESENCE_MODE,
+    CONF_PRESENCE_SENSOR,
+    CONF_PRESENCE_ACTION,
+    CONF_PRESENCE_AWAY_OFFSET,
+    CONF_PRESENCE_AWAY_TEMPERATURE,
+    CONF_PRESENCE_AWAY_PRESET,
+    CONF_PRESENCE_AWAY_DELAY,
+    CONF_PRESENCE_RETURN_DELAY,
     # Schedule options
     CONF_SCHEDULE_ENTITY,
     CONF_RESYNC_INTERVAL,
@@ -204,6 +221,19 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.config_entries.async_update_entry(entry, options=old_options, version=8)
 
         _LOGGER.info("[%s] Migration to v8 complete (ignore_off_members → sync=%s, schedule=%s)", entry.title, old_value, old_value)
+
+    if entry.version == 8:
+        _LOGGER.info("[%s] Migrating config entry from version 8 to 9", entry.title)
+
+        old_options = dict(entry.options)
+        if old_options.get(CONF_WINDOW_MODE) == "off":
+            old_options[CONF_WINDOW_MODE] = "disabled"
+        elif old_options.get(CONF_WINDOW_MODE) == "on":
+            old_options[CONF_WINDOW_MODE] = "enabled"
+
+        hass.config_entries.async_update_entry(entry, options=old_options, version=9)
+
+        _LOGGER.info("[%s] Migration to v9 complete (WindowControlMode OFF/ON → DISABLED/ENABLED)", entry.title)
 
     return True
 

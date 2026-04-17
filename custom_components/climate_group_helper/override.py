@@ -9,7 +9,16 @@ from homeassistant.components.climate import HVACMode
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later
 
-from .const import CONF_WINDOW_ACTION, CONF_WINDOW_TEMPERATURE, WindowControlAction
+from .const import (
+    CONF_PRESENCE_ACTION,
+    CONF_PRESENCE_AWAY_OFFSET,
+    CONF_PRESENCE_AWAY_PRESET,
+    CONF_PRESENCE_AWAY_TEMPERATURE,
+    CONF_WINDOW_ACTION,
+    CONF_WINDOW_TEMPERATURE,
+    PresenceAction,
+    WindowControlAction,
+)
 from .schedule import ScheduleCaller
 from .state import ClimateState
 
@@ -30,6 +39,10 @@ class OverrideHandler:
     def __init__(self, group: ClimateGroup) -> None:
         self._group = group
 
+    @property
+    def override_manager(self):
+        return self._group.boost_override_manager
+
     def async_setup(self) -> None:
         """Register call triggers to abort boost on user/mirror events."""
         self._group.climate_call_handler.register_call_trigger(self._on_service_call)
@@ -37,12 +50,12 @@ class OverrideHandler:
 
     def async_teardown(self) -> None:
         """Cancel any active boost timer."""
-        self._group.boost_override_manager._cancel_timer()
+        self.override_manager._cancel_timer()
 
     @callback
     def _on_service_call(self) -> None:
         """Abort boost on any direct user command."""
-        self._group.boost_override_manager.abort()
+        self.override_manager.abort()
 
     @callback
     def _on_sync_call(self) -> None:
@@ -53,7 +66,7 @@ class OverrideHandler:
         unchanged — that's how we distinguish the two.
         """
         if self._group.shared_target_state.last_source == "sync_mode":
-            self._group.boost_override_manager.abort()
+            self.override_manager.abort()
 
 
 class BaseOverrideManager:
@@ -99,6 +112,41 @@ class BaseOverrideManager:
             duration_seconds, self._group.run_state.active_override_end.strftime("%H:%M:%S"),
         )
 
+    def _block(self) -> None:
+        """Add OVERRIDE_NAME to blocking_sources."""
+        self._group.run_state = replace(
+            self._group.run_state,
+            blocking_sources=self._group.run_state.blocking_sources | {self.OVERRIDE_NAME},
+        )
+
+    def _unblock(self) -> None:
+        """Remove OVERRIDE_NAME from blocking_sources."""
+        self._group.run_state = replace(
+            self._group.run_state,
+            blocking_sources=self._group.run_state.blocking_sources - {self.OVERRIDE_NAME},
+        )
+
+    def _save_snapshot(self) -> None:
+        """Save current target_state as pre-override snapshot (only if none exists yet).
+
+        Only saved on the first activation so consecutive overrides preserve the
+        original pre-override state.
+        """
+        if self._group.run_state.active_override is None:
+            self._group.run_state = replace(
+                self._group.run_state,
+                pre_override_snapshot=self._group.shared_target_state,
+            )
+
+    def _restore_snapshot(self) -> None:
+        """Clear active_override, active_override_end, and pre_override_snapshot."""
+        self._group.run_state = self._group.run_state.clear_override().clear_snapshot()
+
+    @property
+    def _snapshot(self):
+        """Return the saved pre-override snapshot, or None."""
+        return self._group.run_state.pre_override_snapshot
+
     def _cancel_timer(self) -> None:
         """Cancel the active timer and clear override name/end via clear_override().
 
@@ -135,12 +183,7 @@ class BoostOverrideManager(BaseOverrideManager):
             )
             return
 
-        if self._group.run_state.active_override is None:
-            self._group.run_state = replace(
-                self._group.run_state,
-                pre_override_snapshot=self._group.shared_target_state,
-            )
-
+        self._save_snapshot()
         self._group.climate_state_manager.update(temperature=temperature)
         await self.call_handler.call_immediate()
         self._start_timer(duration_seconds, self._on_expired)
@@ -154,13 +197,13 @@ class BoostOverrideManager(BaseOverrideManager):
         """Abort active boost without restore (manual override during boost)."""
         if self._group.run_state.active_override == "boost":
             self._cancel_timer()
-            self._group.run_state = self._group.run_state.clear_override().clear_snapshot()
+            self._restore_snapshot()
             _LOGGER.debug("[%s] Boost aborted", self._group.entity_id)
 
     async def _on_expired(self) -> None:
         """Boost timer expired — restore snapshot and apply schedule if active."""
-        snapshot = self._group.run_state.pre_override_snapshot
-        self._group.run_state = self._group.run_state.clear_override().clear_snapshot()
+        snapshot = self._snapshot
+        self._restore_snapshot()
         _LOGGER.debug("[%s] Boost expired, active_override cleared", self._group.entity_id)
 
         schedule = self._group.schedule_handler
@@ -178,7 +221,7 @@ class BoostOverrideManager(BaseOverrideManager):
 
 
 class SwitchOverrideManager(BaseOverrideManager):
-    """Manages the switch_off blocking source."""
+    """Manages the switch blocking source."""
 
     OVERRIDE_NAME = "switch"
 
@@ -186,33 +229,32 @@ class SwitchOverrideManager(BaseOverrideManager):
     def call_handler(self):
         return self._group.switch_call_handler
 
+    @property
+    def enforce_call_handler(self):
+        return self._group.switch_enforce_call_handler
+
     async def activate(self) -> None:
-        """Add 'switch_off' to blocking_sources, abort boost, push members OFF."""
+        """Add 'switch' to blocking_sources, abort boost, push members OFF."""
         self._group.boost_override_manager.abort()
-        sources = self._group.run_state.blocking_sources | {"switch_off"}
-        self._group.run_state = replace(self._group.run_state, blocking_sources=sources)
+        self._block()
         if self._group.hvac_mode != HVACMode.OFF:
             await self.call_handler.call_immediate({"hvac_mode": HVACMode.OFF})
 
     async def restore(self) -> None:
-        """Remove 'switch_off' from blocking_sources; restore members if no other block."""
-        sources = self._group.run_state.blocking_sources - {"switch_off"}
-        self._group.run_state = replace(self._group.run_state, blocking_sources=sources)
+        """Remove 'switch' from blocking_sources; restore members if no other block."""
+        self._unblock()
         if not self._group.run_state.blocking_sources:
             await self.call_handler.call_immediate()
 
     async def enforce_override(self) -> None:
-        """Push OFF to deviating members when switch_off block is active.
+        """Push OFF to deviating members when switch block is active.
 
-        Uses WindowControlCallHandler (bypasses blocking_sources, respects isolated_members).
+        Uses SwitchEnforceCallHandler (bypasses blocking_sources, respects isolated_members).
         """
-        if "switch_off" not in self._group.run_state.blocking_sources:
+        if "switch" not in self._group.run_state.blocking_sources:
             return
-        _LOGGER.debug(
-            "[%s] switch enforce_override (sources=%s)",
-            self._group.entity_id, self._group.run_state.blocking_sources,
-        )
-        await self._group.window_control_call_handler.call_debounced({"hvac_mode": HVACMode.OFF})
+        _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
+        await self.enforce_call_handler.call_debounced({"hvac_mode": HVACMode.OFF})
 
 
 class WindowOverrideManager(BaseOverrideManager):
@@ -241,8 +283,7 @@ class WindowOverrideManager(BaseOverrideManager):
         Sends OFF or the configured window temperature, depending on window_action.
         Skipped if already OFF and action is OFF (no-op guard).
         """
-        sources = self._group.run_state.blocking_sources | {"window"}
-        self._group.run_state = replace(self._group.run_state, blocking_sources=sources)
+        self._block()
         payload = self._active_data()
         if payload.get("hvac_mode") == HVACMode.OFF and self._group.hvac_mode == HVACMode.OFF:
             return
@@ -250,9 +291,9 @@ class WindowOverrideManager(BaseOverrideManager):
 
     async def restore(self) -> None:
         """Remove 'window' from blocking_sources; restore members if no other block."""
-        sources = self._group.run_state.blocking_sources - {"window"}
-        self._group.run_state = replace(self._group.run_state, blocking_sources=sources)
+        self._unblock()
         if not self._group.run_state.blocking_sources:
+            await self.call_handler.async_cancel_all()
             await self.call_handler.call_immediate()
 
     async def enforce_override(self) -> None:
@@ -264,8 +305,68 @@ class WindowOverrideManager(BaseOverrideManager):
         """
         if "window" not in self._group.run_state.blocking_sources:
             return
-        _LOGGER.debug(
-            "[%s] enforce_override (sources=%s)",
-            self._group.entity_id, self._group.run_state.blocking_sources,
-        )
+        _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
+        await self.call_handler.call_debounced(self._active_data())
+
+
+class PresenceOverrideManager(BaseOverrideManager):
+    """Owns the 'presence' blocking source.
+
+    Identical blocking profile to WindowOverrideManager: bypasses run_state.blocked
+    but respects isolated_members. Lower priority than 'window' and 'switch' —
+    enforce_override() is a no-op while either of those is active.
+    """
+
+    OVERRIDE_NAME = "presence"
+
+    def __init__(self, group: ClimateGroup) -> None:
+        super().__init__(group)
+        self._action = group.config.get(CONF_PRESENCE_ACTION, PresenceAction.OFF)
+        self._away_offset = group.config.get(CONF_PRESENCE_AWAY_OFFSET, -2.0)
+        self._away_temperature = group.config.get(CONF_PRESENCE_AWAY_TEMPERATURE)
+        self._away_preset = group.config.get(CONF_PRESENCE_AWAY_PRESET)
+
+    @property
+    def call_handler(self):
+        return self._group.presence_call_handler
+
+    def _active_data(self) -> dict:
+        """Compute the away payload against the current target_state at call time.
+
+        AWAY_OFFSET is intentionally computed here (not at activate time) so that
+        schedule changes during absence are reflected the next time enforce_override
+        pushes the payload to a deviating member.
+        """
+        if self._action == PresenceAction.AWAY_OFFSET:
+            base = self._group.shared_target_state.temperature
+            if base is not None:
+                return {"temperature": round(base + self._away_offset, 1)}
+            return {"hvac_mode": HVACMode.OFF}
+        if self._action == PresenceAction.AWAY_TEMPERATURE and self._away_temperature is not None:
+            return {"temperature": self._away_temperature}
+        if self._action == PresenceAction.AWAY_PRESET and self._away_preset:
+            return {"preset_mode": self._away_preset}
+        return {"hvac_mode": HVACMode.OFF}
+
+    async def activate(self) -> None:
+        self._block()
+        # Window/switch already cover the members — don't send a conflicting command.
+        if {"switch", "window"} & self._group.run_state.blocking_sources:
+            return
+        await self.call_handler.call_immediate(self._active_data())
+
+    async def restore(self) -> None:
+        self._unblock()
+        if not self._group.run_state.blocking_sources:
+            # Cancel any pending debounced enforce call before sending the restore.
+            await self.call_handler.async_cancel_all()
+            await self.call_handler.call_immediate()
+
+    async def enforce_override(self) -> None:
+        if "presence" not in self._group.run_state.blocking_sources:
+            return
+        # Window and switch take precedence — their handlers already cover the members.
+        if {"switch", "window"} & self._group.run_state.blocking_sources:
+            return
+        _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
         await self.call_handler.call_debounced(self._active_data())

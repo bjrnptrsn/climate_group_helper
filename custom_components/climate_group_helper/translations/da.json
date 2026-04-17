@@ -136,6 +136,50 @@
               "close_delay": "Ventetid efter alle vinduer lukkes før varme gendannes."
             }
           },
+          "presence_section": {
+            "name": "Tilstedeværelsesstyring",
+            "description": "Administrer klimaindstillinger baseret på tilstedeværelse i rummet. Når fravær detekteres i den konfigurerede varighed, udløses fraværshandlingen. Tidligere indstillinger gendannes ved retur.",
+            "data": {
+              "presence_mode": "Tilstedeværelsestilstand",
+              "presence_sensor": "Tilstedeværelsesudløser",
+              "presence_action": "Fraværshandling",
+              "presence_away_offset": "Fraværs-temperaturforskydning (°C)",
+              "presence_away_temperature": "Fraværs-temperatur (°C)",
+              "presence_away_preset": "Fraværs-forudindstilling",
+              "presence_away_delay": "Fraværsforsinkelse (sekunder)",
+              "presence_return_delay": "Returforsinkelse (sekunder)"
+            },
+            "data_description": {
+              "presence_mode": "Aktiver eller deaktiver automatisk fraværs-fallback, når fravær detekteres.",
+              "presence_sensor": "Enheden, der rapporterer tilstedeværelse i rummet. Status 'on' eller 'home' behandles som tilstedeværelse.",
+              "presence_action": "Fallback-handlingen, der skal udføres, når fravær detekteres.",
+              "presence_away_offset": "Forskydning fra det aktuelle mål ved fravær (f.eks. -2° eller +2°). Skemaændringer under fravær anvendes automatisk.",
+              "presence_away_temperature": "Fast måltemperatur ved fravær.",
+              "presence_away_preset": "Forudindstilling ved fravær (f.eks. 'eco', 'away').",
+              "presence_away_delay": "Ventetid efter fraværsmelding, før fraværstilstand aktiveres.",
+              "presence_return_delay": "Ventetid efter tilstedeværelsesmelding, før tidligere tilstand gendannes."
+            }
+          },
+          "schedule_section": {
+            "name": "Automatisering af tidsplan",
+            "description": "Forbind HA-tidsplan for automatisering. Indstil resync-frekvens og override-varighed.",
+            "data": {
+              "schedule_entity": "Tidsplan Enhed",
+              "resync_interval": "Resync Interval (minutter)",
+              "override_duration": "Override Varighed (minutter)",
+              "persist_changes": "Vedvarende tilsidesættelse (Sticky)",
+              "persist_active_schedule": "Behold tidsplanoverskrivelse",
+              "ignore_off_members_schedule": "Respekter medlemmers Off-tilstand (Tidsplan)"
+            },
+            "data_description": {
+              "schedule_entity": "Vælg en tidsplan-enhed. Feltet 'Yderligere data' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
+              "resync_interval": "Gennemtving synkronisering af medlemmer til måltilstanden for gruppen hvert X minut. Forhindrer afvigelser, hvis enheder misser en kommando eller justeres manuelt. Sæt til 0 for at deaktivere.",
+              "override_duration": "Varigheden af manuelle overrides. Efter denne tid vender gruppen automatisk tilbage til den nuværende tidsplan. Sæt til 0 for at springe override-perioden over.",
+              "persist_changes": "Vil ændringer i selve tidsplanen blive ignoreret, så længe en manuel override er aktiv. Genanvender kun den nuværende tidsplan, når overriden er udløbet.",
+              "persist_active_schedule": "Beholder den aktive tidsplan efter genstart, når den ændres via tjenesten. Ellers vender den tilbage til standarden.",
+              "ignore_off_members_schedule": "Tidsplanen vil IKKE tænde for medlemmer, der aktuelt er slukket."
+            }
+          },
           "temp_offsets_section": {
             "name": "Medlem Offsets",
             "description": "Indstil en temperaturforskydning for individuelle medlemmer. Gruppens mål justeres med denne værdi, før det sendes til hver enhed. Lad stå på 0 for ingen forskydning."
@@ -158,26 +202,6 @@
               "isolation_entities": "Gruppemedlemmer der skal isoleres når sensoren er aktiv.",
               "isolation_activate_delay": "(Kun sensor / HVAC-tilstand trigger) Ventetid efter sensor ON inden isolering af medlemmer.",
               "isolation_restore_delay": "(Kun sensor / HVAC-tilstand trigger) Ventetid efter sensor OFF inden gendannelse af medlemmer."
-            }
-          },
-          "schedule_section": {
-            "name": "Automatisering af tidsplan",
-            "description": "Forbind HA-tidsplan for automatisering. Indstil resync-frekvens og override-varighed.",
-            "data": {
-              "schedule_entity": "Tidsplan Enhed",
-              "resync_interval": "Resync Interval (minutter)",
-              "override_duration": "Override Varighed (minutter)",
-              "persist_changes": "Vedvarende tilsidesættelse (Sticky)",
-              "persist_active_schedule": "Behold tidsplanoverskrivelse",
-              "ignore_off_members_schedule": "Respekter medlemmers Off-tilstand (Tidsplan)"
-            },
-            "data_description": {
-              "schedule_entity": "Vælg en tidsplan-enhed. Feltet 'Yderligere data' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
-              "resync_interval": "Gennemtving synkronisering af medlemmer til måltilstanden for gruppen hvert X minut. Forhindrer afvigelser, hvis enheder misser en kommando eller justeres manuelt. Sæt til 0 for at deaktivere.",
-              "override_duration": "Varigheden af manuelle overrides. Efter denne tid vender gruppen automatisk tilbage til den nuværende tidsplan. Sæt til 0 for at springe override-perioden over.",
-              "persist_changes": "Vil ændringer i selve tidsplanen blive ignoreret, så længe en manuel override er aktiv. Genanvender kun den nuværende tidsplan, når overriden er udløbet.",
-              "persist_active_schedule": "Beholder den aktive tidsplan efter genstart, når den ændres via tjenesten. Ellers vender den tilbage til standarden.",
-              "ignore_off_members_schedule": "Tidsplanen vil IKKE tænde for medlemmer, der aktuelt er slukket."
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Deaktiveret – Vinduesstyring er inaktiv",
-        "on": "Aktiveret – Vinduesstyring er aktiv"
+        "disabled": "Deaktiveret – Vinduesstyring er inaktiv",
+        "enabled": "Aktiveret – Vinduesstyring er aktiv"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "Binær sensor – Isoler når sensor er TIL",
         "hvac_mode": "HVAC-tilstand – Isoler når gruppetilstand stemmer overens",
         "member_off": "Medlem slukket – Isoler når et medlem slukkes manuelt"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Deaktiveret – tilstedeværelsesstyring inaktiv",
+        "enabled": "Aktiveret – Fraværs-fallback"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Sluk",
+        "away_offset": "Fraværs-forskydning",
+        "away_temperature": "Fraværs-temperatur",
+        "away_preset": "Fraværs-forudindstilling"
       }
     }
   },

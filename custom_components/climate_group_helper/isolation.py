@@ -28,43 +28,6 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-class IsolationCallHandler(BaseServiceCallHandler):
-    """Call handler for Member Isolation operations.
-
-    Always bypasses global blocking (blocked) and member isolation checks —
-    the isolation handler itself must be able to send commands regardless of
-    the current run_state state.
-    """
-
-    CONTEXT_ID = "isolation"
-
-    def __init__(self, group: ClimateGroup, entity_id: str) -> None:
-        """Initialize with a fixed target entity."""
-        super().__init__(group)
-        self._entity_id = entity_id
-
-    def _is_member_blocked(self, entity_id: str) -> bool:  # noqa: ARG002
-        """Never block — isolation handler bypasses all blocking."""
-        return False
-
-    def _get_capable_entities(self, attr: str, value: Any = None) -> list[str]:
-        """Return only the single isolated entity (if capable)."""
-        state = self._hass.states.get(self._entity_id)
-        if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-            return []
-        # For float attrs just check existence; for mode attrs check supported values
-        if attr in MODE_MODES_MAP:
-            supported_modes = state.attributes.get(MODE_MODES_MAP[attr], [])
-            if value is not None and attr != "hvac_mode":
-                if value not in supported_modes:
-                    return []
-            elif attr != "hvac_mode" and not supported_modes:
-                return []
-        elif attr not in state.attributes:
-            return []
-        return [self._entity_id]
-
-
 class MemberIsolationHandler:
     """Monitors an isolation trigger and manages RunState.isolated_members.
 
@@ -298,3 +261,39 @@ class MemberIsolationHandler:
             await handler.call_immediate()
         self._group.async_defer_or_update_ha_state()
 
+
+class IsolationCallHandler(BaseServiceCallHandler):
+    """Call handler for Member Isolation operations.
+
+    Always bypasses global blocking (blocked) and member isolation checks —
+    the isolation handler itself must be able to send commands regardless of
+    the current run_state state.
+    """
+
+    CONTEXT_ID = "isolation"
+
+    def __init__(self, group: ClimateGroup, entity_id: str) -> None:
+        """Initialize with a fixed target entity."""
+        super().__init__(group)
+        self._entity_id = entity_id
+
+    def _is_member_blocked(self, entity_id: str) -> bool:  # noqa: ARG002
+        """Never block — isolation handler bypasses all blocking."""
+        return False
+
+    def _get_capable_entities(self, attr: str, value: Any = None) -> list[str]:
+        """Return only the single isolated entity (if capable)."""
+        state = self._hass.states.get(self._entity_id)
+        if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return []
+        # For float attrs just check existence; for mode attrs check supported values
+        if attr in MODE_MODES_MAP:
+            supported_modes = state.attributes.get(MODE_MODES_MAP[attr], [])
+            if value is not None and attr != "hvac_mode":
+                if value not in supported_modes:
+                    return []
+            elif attr != "hvac_mode" and not supported_modes:
+                return []
+        elif attr not in state.attributes:
+            return []
+        return [self._entity_id]

@@ -136,6 +136,50 @@
               "close_delay": "Tiempo a esperar tras cerrar todas las ventanas antes de restaurar."
             }
           },
+          "presence_section": {
+            "name": "Control de presencia",
+            "description": "Gestiona los ajustes climáticos en función de la presencia en la habitación. Una vez detectada la ausencia durante el tiempo configurado, se activa la acción de ausencia. Los ajustes anteriores se restauran al volver.",
+            "data": {
+              "presence_mode": "Modo de presencia",
+              "presence_sensor": "Activador de presencia",
+              "presence_action": "Acción en ausencia",
+              "presence_away_offset": "Desplazamiento de temperatura en ausencia (°C)",
+              "presence_away_temperature": "Temperatura en ausencia (°C)",
+              "presence_away_preset": "Preset en ausencia",
+              "presence_away_delay": "Retardo de ausencia (segundos)",
+              "presence_return_delay": "Retardo de regreso (segundos)"
+            },
+            "data_description": {
+              "presence_mode": "Activa o desactiva el modo de ausencia automático cuando se detecta la ausencia.",
+              "presence_sensor": "La entidad que informa de la presencia en la habitación. El estado 'on' o 'home' se trata como presencia.",
+              "presence_action": "La acción de respaldo a realizar cuando se detecta la ausencia.",
+              "presence_away_offset": "Desviación del objetivo actual cuando se está fuera (p. ej., -2° o +2°). Los cambios de programación durante la ausencia se aplican automáticamente.",
+              "presence_away_temperature": "Temperatura objetivo fija en ausencia.",
+              "presence_away_preset": "Preset en ausencia (p. ej. 'eco', 'away').",
+              "presence_away_delay": "Tiempo de espera tras detectar ausencia antes de activar el modo de ausencia.",
+              "presence_return_delay": "Tiempo de espera tras detectar presencia antes de restaurar el estado anterior."
+            }
+          },
+          "schedule_section": {
+            "name": "Automatización de horarios",
+            "description": "Conecta el horario de HA para automatizar temperaturas. Establece frecuencia de resincronización y duración del cambio manual.",
+            "data": {
+              "schedule_entity": "Entidad de Programación",
+              "resync_interval": "Intervalo de Resincronización (minutos)",
+              "override_duration": "Duración de Anulación (minutos)",
+              "persist_changes": "Anulación Persistente (Sticky)",
+              "persist_active_schedule": "Mantener anulación de horario",
+              "ignore_off_members_schedule": "Respetar estado Off de miembros (Programación)"
+            },
+            "data_description": {
+              "schedule_entity": "Seleccione una entidad de programación. El campo 'Datos adicionales' puede contener YAML con atributos como 'temperature: 20.5' o 'hvac_mode: heat'.",
+              "resync_interval": "Fuerza la sincronización de los miembros al estado objetivo cada X minutes. Evita desviaciones si los dispositivos pierden un comando o se ajustan manualmente. Establece en 0 para desactivar.",
+              "override_duration": "La duración de las anulaciones manuales. Después de este tiempo, el grupo vuelve automáticamente a la programación actual. Establece en 0 para omitir el periodo de anulación.",
+              "persist_changes": "Los cambios en la programación se ignorarán mientras haya una anulación manual activa. Vuelve a aplicar la programación actual solo tras caducar la anulación.",
+              "persist_active_schedule": "Mantiene el horario activo después de un reinicio cuando se cambia mediante el servicio. De lo contrario, vuelve al valor predeterminado.",
+              "ignore_off_members_schedule": "La Programación NO encenderá los miembros que estén actualmente APAGADOS."
+            }
+          },
           "temp_offsets_section": {
             "name": "Desviaciones de miembros",
             "description": "Establece una desviación de temperatura para miembros individuales. El objetivo del grupo se ajusta por este valor antes de enviarse a cada dispositivo. Deje en 0 para no aplicar desviación."
@@ -158,26 +202,6 @@
               "isolation_entities": "Miembros del grupo a aislar cuando el sensor está activo.",
               "isolation_activate_delay": "(Solo disparador sensor / modo HVAC) Tiempo de espera tras activar el sensor antes de aislar miembros.",
               "isolation_restore_delay": "(Solo disparador sensor / modo HVAC) Tiempo de espera tras desactivar el sensor antes de restaurar miembros."
-            }
-          },
-          "schedule_section": {
-            "name": "Automatización de horarios",
-            "description": "Conecta el horario de HA para automatizar temperaturas. Establece frecuencia de resincronización y duración del cambio manual.",
-            "data": {
-              "schedule_entity": "Entidad de Programación",
-              "resync_interval": "Intervalo de Resincronización (minutos)",
-              "override_duration": "Duración de Anulación (minutos)",
-              "persist_changes": "Anulación Persistente (Sticky)",
-              "persist_active_schedule": "Mantener anulación de horario",
-              "ignore_off_members_schedule": "Respetar estado Off de miembros (Programación)"
-            },
-            "data_description": {
-              "schedule_entity": "Seleccione una entidad de programación. El campo 'Datos adicionales' puede contener YAML con atributos como 'temperature: 20.5' o 'hvac_mode: heat'.",
-              "resync_interval": "Fuerza la sincronización de los miembros al estado objetivo cada X minutes. Evita desviaciones si los dispositivos pierden un comando o se ajustan manualmente. Establece en 0 para desactivar.",
-              "override_duration": "La duración de las anulaciones manuales. Después de este tiempo, el grupo vuelve automáticamente a la programación actual. Establece en 0 para omitir el periodo de anulación.",
-              "persist_changes": "Los cambios en la programación se ignorarán mientras haya una anulación manual activa. Vuelve a aplicar la programación actual solo tras caducar la anulación.",
-              "persist_active_schedule": "Mantiene el horario activo después de un reinicio cuando se cambia mediante el servicio. De lo contrario, vuelve al valor predeterminado.",
-              "ignore_off_members_schedule": "La Programación NO encenderá los miembros que estén actualmente APAGADOS."
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Desactivado – El control de ventanas está inactivo",
-        "on": "Activado – El control de ventanas está activo"
+        "disabled": "Desactivado – El control de ventanas está inactivo",
+        "enabled": "Activado – El control de ventanas está activo"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "Sensor binario – Aislar cuando el sensor está ACTIVO",
         "hvac_mode": "Modo HVAC – Aislar cuando el modo del grupo coincide",
         "member_off": "Miembro apagado – Aislar cuando un miembro se apaga manualmente"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Desactivado – control de presencia inactivo",
+        "enabled": "Activado – Respaldo por ausencia"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Apagar",
+        "away_offset": "Desplazamiento en ausencia",
+        "away_temperature": "Temperatura en ausencia",
+        "away_preset": "Preset en ausencia"
       }
     }
   },

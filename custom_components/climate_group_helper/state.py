@@ -23,12 +23,39 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
+_TRUSTED_CONTEXT_IDS = frozenset(
+    {
+        "service_call",
+        "group",
+        "sync_mode",
+        "schedule",
+        "isolation",
+        "presence",
+        "switch_enforce",
+    }
+)
+
+
+def is_own_echo(event: Event) -> bool:
+    """Return True if the event was caused by one of our own service calls.
+
+    Checks the origin_event context against the set of trusted context IDs
+    that the group uses when dispatching commands to members.
+    """
+    origin_event = getattr(event.context, "origin_event", None)
+    if not origin_event:
+        return False
+    if origin_event.event_type != "call_service" or origin_event.data.get("domain") != "climate":
+        return False
+    return origin_event.context.id in _TRUSTED_CONTEXT_IDS
+
+
 @dataclass(frozen=True)
 class RunState:
     """Immutable operational status for the climate group.
 
     Centralises all factors that restrict controllability and runtime markers:
-    - blocking_sources: set of active blocking reasons (e.g. "window", "switch_off")
+    - blocking_sources: set of active blocking reasons (e.g. "window", "switch")
     - blocked: derived property — True if any blocking source is active
     - isolated_members: per-member isolation (e.g. curtain closed)
     - oob_members: members currently out-of-bounds (union strategy)
@@ -137,23 +164,6 @@ class FilterState(ClimateState):
             if attr in data:
                 data[attr] = True
         return cls(**data)
-
-
-_TRUSTED_CONTEXT_IDS = frozenset({"service_call", "group", "sync_mode", "schedule", "isolation"})
-
-
-def is_own_echo(event: Event) -> bool:
-    """Return True if the event was caused by one of our own service calls.
-
-    Checks the origin_event context against the set of trusted context IDs
-    that the group uses when dispatching commands to members.
-    """
-    origin_event = getattr(event.context, "origin_event", None)
-    if not origin_event:
-        return False
-    if origin_event.event_type != "call_service" or origin_event.data.get("domain") != "climate":
-        return False
-    return origin_event.context.id in _TRUSTED_CONTEXT_IDS
 
 
 @dataclass(frozen=True)

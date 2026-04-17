@@ -136,6 +136,50 @@
               "close_delay": "Czas oczekiwania po zamknięciu okien."
             }
           },
+          "presence_section": {
+            "name": "Kontrola obecności",
+            "description": "Zarządzaj ustawieniami klimatu na podstawie obecności w pomieszczeniu. Po wykryciu nieobecności przez skonfigurowany czas zostanie uruchomiona akcja nieobecności. Poprzednie ustawienia zostaną przywrócone po powrocie.",
+            "data": {
+              "presence_mode": "Tryb obecności",
+              "presence_sensor": "Wyzwalacz obecności",
+              "presence_action": "Akcja przy nieobecności",
+              "presence_away_offset": "Przesunięcie temperatury nieobecności (°C)",
+              "presence_away_temperature": "Temperatura nieobecności (°C)",
+              "presence_away_preset": "Preset nieobecności",
+              "presence_away_delay": "Opóźnienie nieobecności (sekundy)",
+              "presence_return_delay": "Opóźnienie powrotu (sekundy)"
+            },
+            "data_description": {
+              "presence_mode": "Włącz lub wyłącz automatyczne przechodzenie w tryb nieobecności po wykryciu braku osób.",
+              "presence_sensor": "Encja raportująca obecność w pomieszczeniu. Stan 'on' lub 'home' jest traktowany jako obecność.",
+              "presence_action": "Działanie awaryjne wykonywane po wykryciu nieobecności.",
+              "presence_away_offset": "Przesunięcie względem bieżącego celu podczas nieobecności (np. -2° lub +2°). Zmiany harmonogramu podczas nieobecności są stosowane automatycznie.",
+              "presence_away_temperature": "Stała temperatura docelowa przy nieobecności.",
+              "presence_away_preset": "Preset przy nieobecności (np. 'eco', 'away').",
+              "presence_away_delay": "Czas oczekiwania po wykryciu nieobecności przed aktywacją trybu nieobecności.",
+              "presence_return_delay": "Czas oczekiwania po wykryciu obecności przed przywróceniem poprzedniego stanu."
+            }
+          },
+          "schedule_section": {
+            "name": "Automatyzacja harmonogramu",
+            "description": "Połącz harmonogram HA do automatyzacji. Ustaw częstotliwość resynchronizacji i czas nadpisania.",
+            "data": {
+              "schedule_entity": "Encja Harmonogramu",
+              "resync_interval": "Interwał Resync (minuty)",
+              "override_duration": "Czas trwania Override (minuty)",
+              "persist_changes": "Trwałe nadpisanie (Sticky)",
+              "persist_active_schedule": "Zachowaj nadpisanie harmonogramu",
+              "ignore_off_members_schedule": "Respektuj stan WYŁ członków (Harmonogram)"
+            },
+            "data_description": {
+              "schedule_entity": "Wybierz encję harmonogramu. Pole 'Dodatkowe dane' może zawierać YAML z atrybutami takimi jak 'temperature: 20.5' lub 'hvac_mode: heat'.",
+              "resync_interval": "Wymuś synchronizację członków do stanu docelowego co X minut. Zapobiega dryfowaniu, jeśli urządzenia przegapią polecenie lub zostaną ręcznie dostosowane. Ustaw na 0, aby wyłączyć.",
+              "override_duration": "Czas trwania ręcznych override. Po tym czasie grupa automatycznie powraca do aktualnego harmonogramu. Ustaw na 0, aby pominąć okres override.",
+              "persist_changes": "Zmiany w samym harmonogramie będą ignorowane, dopóki aktywny jest ręczny override. Ponownie stosuje aktualny harmonogram dopiero po wygaśnięciu override.",
+              "persist_active_schedule": "Zachowuje aktywny harmonogram po restarcie, jeśli został zmieniony przez usługę. W przeciwnym razie powraca do domyślnego.",
+              "ignore_off_members_schedule": "Harmonogram NIE włączy członków, którzy są obecnie WYŁĄCZENI."
+            }
+          },
           "temp_offsets_section": {
             "name": "Offsety członków",
             "description": "Ustaw przesunięcie temperatury dla poszczególnych członków. Cel grupy jest dostosowywany o tę wartość przed wysłaniem do każdego urządzenia. Pozostaw na 0, aby nie stosować przesunięcia."
@@ -158,26 +202,6 @@
               "isolation_entities": "Członkowie grupy do izolacji gdy czujnik jest aktywny.",
               "isolation_activate_delay": "(Tylko wyzwalacz czujnik / tryb HVAC) Czas oczekiwania po włączeniu czujnika przed izolacją członków.",
               "isolation_restore_delay": "(Tylko wyzwalacz czujnik / tryb HVAC) Czas oczekiwania po wyłączeniu czujnika przed przywróceniem członków."
-            }
-          },
-          "schedule_section": {
-            "name": "Automatyzacja harmonogramu",
-            "description": "Połącz harmonogram HA do automatyzacji. Ustaw częstotliwość resynchronizacji i czas nadpisania.",
-            "data": {
-              "schedule_entity": "Encja Harmonogramu",
-              "resync_interval": "Interwał Resync (minuty)",
-              "override_duration": "Czas trwania Override (minuty)",
-              "persist_changes": "Trwałe nadpisanie (Sticky)",
-              "persist_active_schedule": "Zachowaj nadpisanie harmonogramu",
-              "ignore_off_members_schedule": "Respektuj stan WYŁ członków (Harmonogram)"
-            },
-            "data_description": {
-              "schedule_entity": "Wybierz encję harmonogramu. Pole 'Dodatkowe dane' może zawierać YAML z atrybutami takimi jak 'temperature: 20.5' lub 'hvac_mode: heat'.",
-              "resync_interval": "Wymuś synchronizację członków do stanu docelowego co X minut. Zapobiega dryfowaniu, jeśli urządzenia przegapią polecenie lub zostaną ręcznie dostosowane. Ustaw na 0, aby wyłączyć.",
-              "override_duration": "Czas trwania ręcznych override. Po tym czasie grupa automatycznie powraca do aktualnego harmonogramu. Ustaw na 0, aby pominąć okres override.",
-              "persist_changes": "Zmiany w samym harmonogramie będą ignorowane, dopóki aktywny jest ręczny override. Ponownie stosuje aktualny harmonogram dopiero po wygaśnięciu override.",
-              "persist_active_schedule": "Zachowuje aktywny harmonogram po restarcie, jeśli został zmieniony przez usługę. W przeciwnym razie powraca do domyślnego.",
-              "ignore_off_members_schedule": "Harmonogram NIE włączy członków, którzy są obecnie WYŁĄCZENI."
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Wyłączone – Sterowanie oknami jest nieaktywne",
-        "on": "Włączone – Sterowanie oknami jest aktywne"
+        "disabled": "Wyłączone – Sterowanie oknami jest nieaktywne",
+        "enabled": "Włączone – Sterowanie oknami jest aktywne"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "Czujnik binarny – Izoluj gdy czujnik jest WŁĄCZONY",
         "hvac_mode": "Tryb HVAC – Izoluj gdy tryb grupy pasuje",
         "member_off": "Członek wyłączony – Izoluj, gdy członek zostaje ręcznie wyłączony"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Wyłączony – kontrola obecności nieaktywna",
+        "enabled": "Włączony – Tryb nieobecności"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Wyłącz",
+        "away_offset": "Przesunięcie nieobecności",
+        "away_temperature": "Temperatura nieobecności",
+        "away_preset": "Preset nieobecności"
       }
     }
   },

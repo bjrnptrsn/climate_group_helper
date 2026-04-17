@@ -851,6 +851,24 @@ class WindowControlCallHandler(BaseServiceCallHandler):
         return entity_id in self._group.run_state.isolated_members
 
 
+class PresenceCallHandler(BaseServiceCallHandler):
+    """Call handler for Presence Control away-fallback operations.
+
+    Bypasses member-level blocking so away commands always reach members
+    regardless of run_state.blocked. Identical bypass profile to WindowControlCallHandler.
+    """
+
+    CONTEXT_ID = "presence"
+
+    def __init__(self, group: ClimateGroup):
+        """Initialize the presence call handler."""
+        super().__init__(group)
+
+    def _is_member_blocked(self, entity_id: str) -> bool:
+        """Bypass global block, but still respect per-member isolation."""
+        return entity_id in self._group.run_state.isolated_members
+
+
 class SwitchCallHandler(BaseServiceCallHandler):
     """Call handler for Main Switch operations (OFF / restore).
 
@@ -867,6 +885,23 @@ class SwitchCallHandler(BaseServiceCallHandler):
     def _is_member_blocked(self, entity_id: str) -> bool:  # noqa: ARG002
         """Bypass all blocking — switch commands always reach every member."""
         return False
+
+
+class SwitchEnforceCallHandler(BaseServiceCallHandler):
+    """Call handler for Switch enforcement (deviating member correction).
+
+    Bypass profile: ignores run_state.blocked, respects isolated_members.
+    Distinct from SwitchCallHandler which bypasses everything — enforcement
+    should not reach isolated members.
+    """
+
+    CONTEXT_ID = "switch_enforce"
+
+    def __init__(self, group: ClimateGroup):
+        super().__init__(group)
+
+    def _is_member_blocked(self, entity_id: str) -> bool:
+        return entity_id in self._group.run_state.isolated_members
 
 
 class OverrideCallHandler(BaseServiceCallHandler):

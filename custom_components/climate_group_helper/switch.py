@@ -62,6 +62,10 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         self._attr_icon = "mdi:power"
 
     @property
+    def override_manager(self):
+        return self._group.switch_override_manager
+
+    @property
     def device_info(self) -> dict[str, Any]:
         """Return the device info (same device as the ClimateGroup)."""
         return self._group.device_info
@@ -76,7 +80,7 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
                     "[%s] Restoring control switch OFF state",
                     self._group.entity_id,
                 )
-                await self._group.switch_override_manager.activate()
+                await self.override_manager.activate()
 
     @property
     def is_on(self) -> bool:
@@ -86,11 +90,11 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn switch ON → restore group to target_state."""
         self._is_on = True
-        await self._group.switch_override_manager.restore()
+        await self.override_manager.restore()
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn switch OFF → force group to hvac_mode=off."""
         self._is_on = False
-        await self._group.switch_override_manager.activate()
+        await self.override_manager.activate()
         self.async_write_ha_state()

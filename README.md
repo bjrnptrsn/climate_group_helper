@@ -23,9 +23,10 @@ A comprehensive climate management system for Home Assistant that combines multi
   - [Device Calibration](#device-calibration)
   - [Sync Modes](#advanced-sync-modes)
   - [Window Control](#window-control)
+  - [Presence Control](#presence-control)
+  - [Schedule Automation](#schedule-automation)
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
-  - [Schedule Automation](#schedule-automation)
   - [Main Switch](#main-switch)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
@@ -97,35 +98,16 @@ Binary sensor support to automatically turn off heating when a window opens and 
     *   **All:** Any manual change updates the target state. Applied when windows close.
     *   **Master Only:** *(Requires Master Entity)* Only changes on the Master update the target state.
 
-### Member Offsets
+### Presence Control
 
-Apply a permanent individual offset (±20°C, 0.5°C steps) to each group member, so rooms can run proportionately warmer or cooler than the group's target setting — without changing what you set on the group entity itself.
+Manage climate settings based on room presence. Choose a presence trigger (binary sensor or device tracker), configure an away and a return delay, and specify the fallback action to perform when absence is detected.
 
-*   **Example:** Group target is 21°C. Bedroom has offset −1°C → receives 20°C. Living Room has offset +0.5°C → receives 21.5°C.
-*   **Mirror / Master-Lock aware:** When a member change is adopted back into the group's target state, the offset is reversed so the global target stays consistent.
+*   **Turn Off:** Members are turned `off` while absence is detected (default).
+*   **Away Offset** Target temperature is reduced by a fixed offset (e.g. −2°C). The offset is applied relative to the group's *current target temperature*. If a schedule is active, it automatically tracks schedule changes during absence.
+*   **Away Temperature:** Members are set to a fixed absolute temperature.
+*   **Away Preset:** A preset mode is sent to members that support it.
 
-### Member Isolation
-
-Temporarily isolate specific group members based on a configurable trigger. Isolated members are turned `off` and excluded from all group calculations (temperature averaging, HVAC mode, sync).
-
-**Trigger modes:**
-*   **Binary Sensor:** Isolation activates when a binary sensor turns ON (e.g. a curtain sensor, an occupancy helper). Deactivates when the sensor turns OFF.
-*   **HVAC Mode:** Isolation activates when the group's target mode matches a configured set (e.g. isolate radiators when the group switches to `cool`).
-*   **Member Off:** A member is isolated automatically when it turns `off` manually. When it turns back on, isolation is released and the member is restored to the group's target state.
-
-**Optional delays:** Configure an activate delay and a restore delay for Sensor and HVAC Mode triggers.
-
-*   **Window Control Interaction:** Isolated members are never touched by Window Control — neither on open nor on close. If a window is open when isolation deactivates, the restore is deferred until the window closes.
-*   **Constraints:** At least one member must remain active — you cannot isolate all members. The section is hidden when the group has only one member.
-
-### Main Switch
-
-A dedicated `switch` entity is created alongside each Climate Group Helper. It acts as a **master on/off switch** for the entire group.
-
-*   **Switch OFF:** All members are immediately turned `off`. Any active Boost is aborted. The group stays blocked until the switch is turned back on.
-*   **Switch ON:** All members are restored to the group's current target state.
-
-Useful for heating-free periods (e.g. summer months), extended absences, or any situation where you want the group completely disabled without touching your schedules or target settings. Combine with an automation to drive it from a calendar, a helper, or any other condition.
+When presence is detected again, the group restores all members to the current target state. Window Control and the Main Switch always take priority — Presence Control defers to them if either is active at the same time.
 
 ### Schedule Automation
 
@@ -171,6 +153,36 @@ You can omit attributes you don't need — for example, use only `hvac_mode: "of
 | `fan_mode` | `auto`, `high` | Device-specific |
 | `swing_mode` | `on`, `off` | Device-specific |
 | `swing_horizontal_mode` | `on`, `off` | Device-specific |
+
+### Member Offsets
+
+Apply a permanent individual offset (±20°C, 0.5°C steps) to each group member, so rooms can run proportionately warmer or cooler than the group's target setting — without changing what you set on the group entity itself.
+
+*   **Example:** Group target is 21°C. Bedroom has offset −1°C → receives 20°C. Living Room has offset +0.5°C → receives 21.5°C.
+*   **Mirror / Master-Lock aware:** When a member change is adopted back into the group's target state, the offset is reversed so the global target stays consistent.
+
+### Member Isolation
+
+Temporarily isolate specific group members based on a configurable trigger. Isolated members are turned `off` and excluded from all group calculations (temperature averaging, HVAC mode, sync).
+
+**Trigger modes:**
+*   **Binary Sensor:** Isolation activates when a binary sensor turns ON (e.g. a curtain sensor, an occupancy helper). Deactivates when the sensor turns OFF.
+*   **HVAC Mode:** Isolation activates when the group's target mode matches a configured set (e.g. isolate radiators when the group switches to `cool`).
+*   **Member Off:** A member is isolated automatically when it turns `off` manually. When it turns back on, isolation is released and the member is restored to the group's target state.
+
+**Optional delays:** Configure an activate delay and a restore delay for Sensor and HVAC Mode triggers.
+
+*   **Window Control Interaction:** Isolated members are never touched by Window Control — neither on open nor on close. If a window is open when isolation deactivates, the restore is deferred until the window closes.
+*   **Constraints:** At least one member must remain active — you cannot isolate all members. The section is hidden when the group has only one member.
+
+### Main Switch
+
+A dedicated `switch` entity is created alongside each Climate Group Helper. It acts as a **master on/off switch** for the entire group.
+
+*   **Switch OFF:** All members are immediately turned `off`. Any active Boost is aborted. The group stays blocked until the switch is turned back on.
+*   **Switch ON:** All members are restored to the group's current target state.
+
+Useful for heating-free periods (e.g. summer months), extended absences, or any situation where you want the group completely disabled without touching your schedules or target settings. Combine with an automation to drive it from a calendar, a helper, or any other condition.
 
 ## Configuration Options
 
@@ -218,12 +230,6 @@ You can omit attributes you don't need — for example, use only `hvac_mode: "of
 | **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
 | **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). |
 
-### Member Offsets
-
-| Option | Description |
-|--------|-------------|
-| **Offset per Member** | Individual temperature offset (±20°C, 0.5°C steps) for each group member. Positive values make the room warmer, negative values cooler relative to the group's target. |
-
 ### Sync Mode
 
 | Option | Description |
@@ -245,16 +251,18 @@ You can omit attributes you don't need — for example, use only `hvac_mode: "of
 | **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
 | **Close Delay** | Time before restoring heating after windows close (default: 30s). |
 
-### Member Isolation
+### Presence Control
 
 | Option | Description |
 |--------|-------------|
-| **Trigger Type** | **Binary Sensor** (activates when sensor is ON), **HVAC Mode** (activates when group mode matches), or **Member Off** (isolates each member individually when it turns off manually). |
-| **Isolation Sensor** | *(Sensor trigger)* Binary sensor that triggers isolation when active. |
-| **HVAC Mode Trigger** | *(HVAC Mode trigger)* The group modes that activate isolation. |
-| **Isolated Members** | Which group members to isolate. For Member Off, defaults to all members. |
-| **Activate Delay** | Time to wait after the trigger activates before isolating members. |
-| **Restore Delay** | Time to wait after the trigger deactivates before restoring members. |
+| **Presence Control Mode** | **Disabled** (default) or **Enabled**. |
+| **Presence Trigger** | The entity reporting room presence (e.g. `binary_sensor.living_room_presence`, `person.john`). State 'on' or 'home' is treated as present. |
+| **Away Action** | The fallback action to perform when absence is detected: **Turn Off**, **Away Offset**, **Away Temperature**, or **Away Preset**. |
+| **Away Offset** | *(Away Offset action)* Offset from current target when away (e.g. `−2.0°C` or `+2.0°C`). |
+| **Away Temperature** | *(Away Temperature action)* Fixed temperature to set when away. |
+| **Away Preset** | *(Away Preset action)* Preset mode to activate when away. |
+| **Away Delay** | Wait time (seconds) after sensor reports absence before activating away mode. |
+| **Return Delay** | Wait time (seconds) after sensor reports presence before restoring. |
 
 ### Schedule Automation
 
@@ -266,6 +274,23 @@ You can omit attributes you don't need — for example, use only `hvac_mode: "of
 | **Sticky Override** | Ignore schedule changes while a manual override is active. |
 | **Ignore Off Members (Schedule)** | When running scheduled changes, skip members that are currently off. |
 | **Retain Schedule Override** | Persist the active schedule entity across restarts when changed via `set_schedule_entity` service. Without this, the group always reverts to the configured default on restart. |
+
+### Member Offsets
+
+| Option | Description |
+|--------|-------------|
+| **Offset per Member** | Individual temperature offset (±20°C, 0.5°C steps) for each group member. Positive values make the room warmer, negative values cooler relative to the group's target. |
+
+### Member Isolation
+
+| Option | Description |
+|--------|-------------|
+| **Trigger Type** | **Binary Sensor** (activates when sensor is ON), **HVAC Mode** (activates when group mode matches), or **Member Off** (isolates each member individually when it turns off manually). |
+| **Isolation Sensor** | *(Sensor trigger)* Binary sensor that triggers isolation when active. |
+| **HVAC Mode Trigger** | *(HVAC Mode trigger)* The group modes that activate isolation. |
+| **Isolated Members** | Which group members to isolate. For Member Off, defaults to all members. |
+| **Activate Delay** | Time to wait after the trigger activates before isolating members. |
+| **Restore Delay** | Time to wait after the trigger deactivates before restoring members. |
 
 ### Availability & Timings
 

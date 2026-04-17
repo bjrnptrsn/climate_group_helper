@@ -136,6 +136,50 @@
               "close_delay": "Wartezeit nachdem alle Fenster geschlossen sind, bevor die Heizung wiederhergestellt wird."
             }
           },
+          "presence_section": {
+            "name": "Präsenzerkennung",
+            "description": "Die Klimaregelung passt sich an die Raumbelegung an. Bleibt ein Raum für die festgelegte Dauer unbesetzt, wird die Abwesenheitsfunktion ausgelöst. Bei Rückkehr werden die vorherigen Einstellungen wiederhergestellt.",
+            "data": {
+              "presence_mode": "Präsenzmodus",
+              "presence_sensor": "Präsenz-Trigger",
+              "presence_action": "Abwesenheits-Aktion",
+              "presence_away_offset": "Abwesenheits-Temperaturversatz (°C)",
+              "presence_away_temperature": "Abwesenheits-Temperatur (°C)",
+              "presence_away_preset": "Abwesenheits-Preset",
+              "presence_away_delay": "Abwesenheits-Verzögerung (Sekunden)",
+              "presence_return_delay": "Rückkehr-Verzögerung (Sekunden)"
+            },
+            "data_description": {
+              "presence_mode": "Aktiviert oder deaktiviert den automatischen Abwesenheits-Fallback bei unbelegtem Raum.",
+              "presence_sensor": "Die Entität, die die Raumpräsenz meldet. Der Status 'Ein' oder 'home' wird als anwesend gewertet.",
+              "presence_action": "Was passiert, wenn der Raum unbelegt ist.",
+              "presence_away_offset": "Versatz zum aktuellen Zielwert bei Abwesenheit (z. B. -2° oder +2°). Änderungen am Zeitplan während der Abwesenheit werden automatisch berücksichtigt.",
+              "presence_away_temperature": "Feste Zieltemperatur bei Abwesenheit.",
+              "presence_away_preset": "Preset bei Abwesenheit (z.B. 'eco', 'away').",
+              "presence_away_delay": "Wartezeit nach Abwesenheitsmeldung, bevor der Abwesenheits-Modus aktiviert wird.",
+              "presence_return_delay": "Wartezeit nach Anwesenheitsmeldung, bevor der vorherige Zustand wiederhergestellt wird."
+            }
+          },
+          "schedule_section": {
+            "name": "Zeitplan-Automatisierung",
+            "description": "HA-Zeitpläne koppeln. Resync-Frequenz und Override-Dauer festlegen oder Zeitpläne via Dienst dynamisch wechseln.",
+            "data": {
+              "schedule_entity": "Zeitplan-Entität",
+              "resync_interval": "Resync-Intervall (Minuten)",
+              "override_duration": "Override-Dauer (Minuten)",
+              "persist_changes": "Dauerhafter Override (Sticky)",
+              "persist_active_schedule": "Zeitplan-Überschreibung beibehalten",
+              "ignore_off_members_schedule": "Respektiere 'Aus'-Status der Mitglieder (Zeitplan)"
+            },
+            "data_description": {
+              "schedule_entity": "Wähle eine Zeitplan-Entität. Das Feld 'Zusätzliche Daten' des Zeitplans kann YAML mit Attributen wie 'temperature: 20.5' oder 'hvac_mode: heat' enthalten.",
+              "resync_interval": "Erzwinge alle X Minuten den Zielzustand der Gruppe. Stellt sicher, dass alle Geräte dem Zeitplan folgen. Auf 0 setzen zum Deaktivieren.",
+              "override_duration": "Die Dauer für manuelle Änderungen. Nach dieser Zeit kehrt die Gruppe automatisch zum Zeitplan zurück. Auf 0 setzen, um die Schonfrist zu überspringen.",
+              "persist_changes": "Änderungen am Zeitplan selbst werden ignoriert, solange ein manueller Override aktiv ist. Wendet den aktuellen Zeitplan erst nach Ablauf des Overrides wieder an.",
+              "persist_active_schedule": "Behält den über den Dienst geänderten Zeitplan nach einem Neustart bei. Andernfalls wird auf den konfigurierten Standardzeitplan zurückgesetzt.",
+              "ignore_off_members_schedule": "Der Zeitplan schaltet keine Mitglieder ein, die aktuell ausgeschaltet sind."
+            }
+          },
           "temp_offsets_section": {
             "name": "Geräte-Offsets",
             "description": "Lege einen Temperatur-Offset für einzelne Mitglieder fest. Der Gruppen-Zielwert wird um diesen Wert angepasst, bevor er an jedes Gerät gesendet wird. Auf 0 belassen für keinen Offset."
@@ -158,26 +202,6 @@
               "isolation_entities": "Gruppenmitglieder, die beim aktiven Sensor isoliert werden.",
               "isolation_activate_delay": "(Nur Sensor- / HVAC-Modus-Auslöser) Wartezeit nach Sensor ON, bevor Mitglieder isoliert werden.",
               "isolation_restore_delay": "(Nur Sensor- / HVAC-Modus-Auslöser) Wartezeit nach Sensor OFF, bevor Mitglieder synchronisiert werden."
-            }
-          },
-          "schedule_section": {
-            "name": "Zeitplan-Automatisierung",
-            "description": "HA-Zeitpläne koppeln. Resync-Frequenz und Override-Dauer festlegen oder Zeitpläne via Dienst dynamisch wechseln.",
-            "data": {
-              "schedule_entity": "Zeitplan-Entität",
-              "resync_interval": "Resync-Intervall (Minuten)",
-              "override_duration": "Override-Dauer (Minuten)",
-              "persist_changes": "Dauerhafter Override (Sticky)",
-              "persist_active_schedule": "Zeitplan-Überschreibung beibehalten",
-              "ignore_off_members_schedule": "Respektiere 'Aus'-Status der Mitglieder (Zeitplan)"
-            },
-            "data_description": {
-              "schedule_entity": "Wähle eine Zeitplan-Entität. Das Feld 'Zusätzliche Daten' des Zeitplans kann YAML mit Attributen wie 'temperature: 20.5' oder 'hvac_mode: heat' enthalten.",
-              "resync_interval": "Erzwinge alle X Minuten den Zielzustand der Gruppe. Stellt sicher, dass alle Geräte dem Zeitplan folgen. Auf 0 setzen zum Deaktivieren.",
-              "override_duration": "Die Dauer für manuelle Änderungen. Nach dieser Zeit kehrt die Gruppe automatisch zum Zeitplan zurück. Auf 0 setzen, um die Schonfrist zu überspringen.",
-              "persist_changes": "Änderungen am Zeitplan selbst werden ignoriert, solange ein manueller Override aktiv ist. Wendet den aktuellen Zeitplan erst nach Ablauf des Overrides wieder an.",
-              "persist_active_schedule": "Behält den über den Dienst geänderten Zeitplan nach einem Neustart bei. Andernfalls wird auf den konfigurierten Standardzeitplan zurückgesetzt.",
-              "ignore_off_members_schedule": "Der Zeitplan schaltet keine Mitglieder ein, die aktuell ausgeschaltet sind."
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Deaktiviert – Fenstersteuerung ist inaktiv",
-        "on": "Aktiviert – Fenstersteuerung ist aktiv"
+        "disabled": "Deaktiviert – Fenstersteuerung ist inaktiv",
+        "enabled": "Aktiviert – Fenstersteuerung ist aktiv"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "Binärer Sensor – Isolieren, wenn Sensor AN",
         "hvac_mode": "HVAC-Modus – Isolieren, wenn Gruppenmodus übereinstimmt",
         "member_off": "Mitglied aus – Isolieren, wenn ein Mitglied manuell ausgeschaltet wird"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Deaktiviert – Präsenzerkennung inaktiv",
+        "enabled": "Aktiviert – Abwesenheits-Fallback"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Ausschalten",
+        "away_offset": "Abwesenheits-Versatz",
+        "away_temperature": "Abwesenheits-Temperatur",
+        "away_preset": "Abwesenheits-Preset"
       }
     }
   },

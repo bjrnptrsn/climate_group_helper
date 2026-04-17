@@ -45,6 +45,8 @@ CONF_TEMP_UPDATE_TARGETS = "temp_update_targets"
 CONF_TEMP_CALIBRATION_MODE = "temp_calibration_mode"
 CONF_CALIBRATION_HEARTBEAT = "calibration_heartbeat"
 CONF_CALIBRATION_IGNORE_OFF = "calibration_ignore_off"
+CALIBRATION_DEBOUNCE_DELAY = 3.0   # seconds — collapses rapid sensor ticks into one write
+CALIBRATION_WRITE_DELAY    = 0.5  # seconds — gap between sequential Z2M writes
 
 # Humidity Settings
 CONF_HUMIDITY_TARGET_AVG = "humidity_target_avg"
@@ -72,6 +74,18 @@ CONF_CLOSE_DELAY = "close_delay"
 DEFAULT_ROOM_OPEN_DELAY = 15
 DEFAULT_ZONE_OPEN_DELAY = 300
 DEFAULT_CLOSE_DELAY = 30
+
+# Presence Control
+CONF_PRESENCE_MODE = "presence_mode"
+CONF_PRESENCE_SENSOR = "presence_sensor"
+CONF_PRESENCE_ACTION = "presence_action"
+CONF_PRESENCE_AWAY_OFFSET = "presence_away_offset"
+CONF_PRESENCE_AWAY_TEMPERATURE = "presence_away_temperature"
+CONF_PRESENCE_AWAY_PRESET = "presence_away_preset"
+CONF_PRESENCE_AWAY_DELAY = "presence_away_delay"
+CONF_PRESENCE_RETURN_DELAY = "presence_return_delay"
+DEFAULT_PRESENCE_AWAY_DELAY = 0
+DEFAULT_PRESENCE_RETURN_DELAY = 0
 
 # Member Offsets
 CONF_MEMBER_TEMP_OFFSETS = "member_temp_offsets"
@@ -164,8 +178,8 @@ class SyncMode(StrEnum):
 class WindowControlMode(StrEnum):
     """Window control modes."""
 
-    OFF = "off"
-    ON = "on"
+    DISABLED = "disabled"
+    ENABLED = "enabled"
 
 
 class AdoptManualChanges(StrEnum):
@@ -181,6 +195,22 @@ class WindowControlAction(StrEnum):
 
     OFF = "off"
     TEMPERATURE = "temperature"
+
+
+class PresenceMode(StrEnum):
+    """Presence control modes."""
+
+    DISABLED = "disabled"
+    ENABLED = "enabled"
+
+
+class PresenceAction(StrEnum):
+    """Presence control actions."""
+
+    OFF = "off"
+    AWAY_OFFSET = "away_offset"
+    AWAY_TEMPERATURE = "away_temperature"
+    AWAY_PRESET = "away_preset"
 
 
 class IsolationTrigger(StrEnum):

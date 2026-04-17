@@ -47,7 +47,6 @@ from homeassistant.components.group.util import (
     reduce_attribute,
     states_equal,
 )
-from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.const import (
@@ -61,12 +60,7 @@ from homeassistant.const import (
 )
 from homeassistant.helpers import config_validation as cv
 from homeassistant.core import HomeAssistant, State, callback, Event
-from datetime import timedelta, datetime
-from homeassistant.helpers.event import (
-    async_call_later,
-    async_track_state_change_event,
-    async_track_time_interval,
-)
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -104,9 +98,6 @@ from .const import (
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
     CONF_TEMP_USE_MASTER,
-    CONF_TEMP_CALIBRATION_MODE,
-    CONF_CALIBRATION_HEARTBEAT,
-    CONF_CALIBRATION_IGNORE_OFF,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
     CONF_PERSIST_ACTIVE_SCHEDULE,
@@ -117,20 +108,23 @@ from .const import (
     FLOAT_TOLERANCE,
     AdoptManualChanges,
     AverageOption,
-    CalibrationMode,
     FeatureStrategy,
     HvacModeStrategy,
     RoundOption,
     SyncMode,
 )
+from .calibration import CalibrationHandler
 from .isolation import MemberIsolationHandler
 from .override import BoostOverrideManager, OverrideHandler, SwitchOverrideManager, WindowOverrideManager
+from .presence import PresenceHandler, PresenceOverrideManager
 from .schedule import ScheduleHandler
 from .service_call import (
     ClimateCallHandler,
     OverrideCallHandler,
+    PresenceCallHandler,
     ScheduleCallHandler,
     SwitchCallHandler,
+    SwitchEnforceCallHandler,
     SyncCallHandler,
     WindowControlCallHandler,
 )
@@ -267,12 +261,9 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Per-member temperature offsets
         self._temp_offset_map: dict[str, float] = config.get(CONF_MEMBER_TEMP_OFFSETS, {})
 
-        # Calibration options
-        self._temp_calibration_mode = config.get(CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE)
-        self._calibration_heartbeat = int(config.get(CONF_CALIBRATION_HEARTBEAT, 0))
-        self._calibration_heartbeat_unsub = None
+        # Calibration
         self._member_temp_avg = None
-        self._target_member_map: dict[str, str] = {}
+        self.calibration_handler = CalibrationHandler(self)
 
         # The list of entities to be tracked by GroupEntity
         self._entity_ids = entity_ids.copy()
@@ -298,17 +289,21 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Call handlers
         self.climate_call_handler = ClimateCallHandler(self)
         self.override_call_handler = OverrideCallHandler(self)
+        self.presence_call_handler = PresenceCallHandler(self)
         self.schedule_call_handler = ScheduleCallHandler(self)
         self.switch_call_handler = SwitchCallHandler(self)
+        self.switch_enforce_call_handler = SwitchEnforceCallHandler(self)
         self.sync_mode_call_handler = SyncCallHandler(self)
         self.window_control_call_handler = WindowControlCallHandler(self)
 
         # Modules
         self.member_isolation_handler = MemberIsolationHandler(self)
         self.override_handler = OverrideHandler(self)
+        self.presence_override_manager = PresenceOverrideManager(self)
         self.window_override_manager = WindowOverrideManager(self)
         self.switch_override_manager = SwitchOverrideManager(self)
         self.boost_override_manager = BoostOverrideManager(self)
+        self.presence_handler = PresenceHandler(self)
         self.schedule_handler = ScheduleHandler(self)
         self.sync_mode_handler = SyncModeHandler(self)
         self.window_control_handler = WindowControlHandler(self)
@@ -376,36 +371,17 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             )
         )
 
-        # Build mapping between calibration targets and climate members in the same device
-        registry = er.async_get(self.hass)
-        self._target_member_map = {}
-        for target_id in self._temp_update_target_entity_ids:
-            if (entry := registry.async_get(target_id)) and entry.device_id:
-                # Look for a climate member in the same device
-                for climate_id in self.climate_entity_ids:
-                    if (c_entry := registry.async_get(climate_id)) and c_entry.device_id == entry.device_id:
-                        self._target_member_map[target_id] = climate_id
-                        _LOGGER.debug("[%s] Mapped calibration target %s to member %s via device %s", self.entity_id, target_id, climate_id, entry.device_id)
-                        break
-
-        # Start calibration heartbeat if configured (requires external sensors as reference)
-        if (
-            self._calibration_heartbeat > 0
-            and self._temp_update_target_entity_ids
-            and self._temp_sensor_entity_ids
-        ):
-            _LOGGER.debug("[%s] Starting calibration heartbeat: %s min", self.entity_id, self._calibration_heartbeat)
-            self._calibration_heartbeat_unsub = async_track_time_interval(
-                self.hass,
-                self._device_calibration_heartbeat,
-                timedelta(minutes=self._calibration_heartbeat)
-            )
+        # Setup calibration handler (builds target→member mapping, starts heartbeat)
+        await self.calibration_handler.async_setup()
 
         # Setup window control (subscribes to sensor events)
         await self.window_control_handler.async_setup()
 
         # Setup override handler (registers call triggers for boost abort)
         self.override_handler.async_setup()
+
+        # Setup presence handler (subscribes to sensor events)
+        await self.presence_handler.async_setup()
 
         # Setup schedule handler (subscribes to schedule entity and execution hooks)
         await self.schedule_handler.async_setup()
@@ -448,12 +424,11 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
-        if self._calibration_heartbeat_unsub:
-            self._calibration_heartbeat_unsub()
-            self._calibration_heartbeat_unsub = None
+        self.calibration_handler.async_teardown()
         await super().async_will_remove_from_hass()
         await self.climate_call_handler.async_cancel_all()
         self.window_control_handler.async_teardown()
+        self.presence_handler.async_teardown()
         self.schedule_handler.async_teardown()
         self.override_handler.async_teardown()
         self.member_isolation_handler.async_teardown()
@@ -753,137 +728,6 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         return None
 
     @callback
-    def _device_calibration_heartbeat(self, _now: datetime) -> None:
-        """Force update calibration targets (heartbeat)."""
-        _LOGGER.debug("[%s] Calibration heartbeat triggered", self.entity_id)
-        self._device_calibration(domain="temperature", force=True)
-
-    def _device_calibration(self, domain: str = "temperature", force: bool = False) -> None:
-        """Sync external sensor values to target entities using the configured mode."""
-        if domain == "temperature":
-            entity_ids = self._temp_update_target_entity_ids
-            value = self._attr_current_temperature
-            mode = self._temp_calibration_mode
-        else:
-            entity_ids = self._humidity_update_target_entity_ids
-            value = self._attr_current_humidity
-            mode = CalibrationMode.ABSOLUTE
-
-        if not entity_ids or value is None:
-            return
-
-        if self._event_entity_id and not force:
-            if mode in (CalibrationMode.ABSOLUTE, CalibrationMode.SCALED):
-                if domain == "temperature":
-                    if self._event_entity_id not in self._temp_sensor_entity_ids:
-                        return
-                elif domain == "humidity":
-                    if self._event_entity_id not in self._humidity_sensor_entity_ids:
-                        return
-
-            elif mode == CalibrationMode.OFFSET and domain == "temperature":
-                # If trigger is a member, filter the entity_ids list to only include the mapped target
-                if self._event_entity_id not in self._temp_sensor_entity_ids:
-                    # Check if trigger is a mapped member
-                    if self._event_entity_id not in self._target_member_map.values():
-                        return
-                    
-                    # Filter targets for this member
-                    entity_ids = [
-                        target for target, member in self._target_member_map.items() 
-                        if member == self._event_entity_id
-                    ]
-
-        valid_states, _ = self._get_valid_member_states(entity_ids)
-
-        ignore_off = self.config.get(CONF_CALIBRATION_IGNORE_OFF, False)
-
-        for target_state in valid_states:
-            member_id = self._target_member_map.get(target_state.entity_id)
-            member_state = self.hass.states.get(member_id) if member_id else None
-
-            # Skip calibration for offline devices
-            if member_state and member_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-                _LOGGER.debug("[%s] Skipping calibration update for %s because member %s is unavailable", self.entity_id, target_state.entity_id, member_id)
-                continue
-
-            # Battery Saver Feature
-            if ignore_off and member_state and member_state.state == HVACMode.OFF:
-                _LOGGER.debug("[%s] Skipping calibration update for %s because member %s is OFF (Battery Saver)", self.entity_id, target_state.entity_id, member_id)
-                continue
-
-            try:
-                # Determine Target Value
-                target_val = value
-                if domain == "temperature":
-                    if mode == CalibrationMode.OFFSET:
-                        ref_temp = self._member_temp_avg
-                        if member_state and (member_temp := member_state.attributes.get(ATTR_CURRENT_TEMPERATURE)) is not None:
-                            ref_temp = float(member_temp)
-                        
-                        if ref_temp is None:
-                            continue
-
-                        try:
-                            curr_offset = float(target_state.state)
-                        except (ValueError, TypeError):
-                            curr_offset = 0.0
-                        # Round to nearest 0.1
-                        target_val = value - (ref_temp - curr_offset)
-
-                    elif mode == CalibrationMode.SCALED:
-                        target_val = int(round(value * 100))
-
-                if isinstance(target_val, float):
-                    target_val = round(target_val, 1)
-
-                # Clamp to entity's min/max range
-                try:
-                    entity_min = target_state.attributes.get("min")
-                    entity_max = target_state.attributes.get("max")
-                    clamped = target_val
-                    if entity_min is not None:
-                        clamped = max(float(entity_min), clamped)
-                    if entity_max is not None:
-                        clamped = min(float(entity_max), clamped)
-                    if clamped != target_val:
-                        _LOGGER.warning(
-                            "[%s] Clamped calibration value for %s from %s to %s (entity range: %s–%s)",
-                            self.entity_id, target_state.entity_id, target_val, clamped, entity_min, entity_max,
-                        )
-                        target_val = clamped
-                except (ValueError, TypeError):
-                    pass
-
-                # Determine if Sync is required
-                try:
-                    current_val = float(target_state.state)
-                    if isinstance(target_val, int):
-                        out_of_sync = current_val != target_val
-                    else:
-                        out_of_sync = abs(current_val - target_val) > FLOAT_TOLERANCE
-                except (ValueError, TypeError):
-                    out_of_sync = True # Force sync if current state is not a number
-
-                if not (force or out_of_sync):
-                    continue
-
-                _LOGGER.debug(
-                    "[%s] Updating %s to %s (domain=%s, mode=%s, force=%s)", 
-                    self.entity_id, target_state.entity_id, target_val, domain, mode, force
-                )
-                self.hass.async_create_task(
-                    self.hass.services.async_call(
-                        NUMBER_DOMAIN,
-                        "set_value",
-                        {ATTR_ENTITY_ID: target_state.entity_id, "value": target_val},
-                    )
-                )
-            except Exception as error:
-                _LOGGER.error("[%s] Error updating target entity %s: %s", self.entity_id, target_state.entity_id, error)
-                continue
-
-    @callback
     def _state_change_listener(self, event: Event | None = None) -> None:
         """Handle state changes."""
         self.event = event
@@ -900,8 +744,8 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if not self.run_state.startup_time and all_members_ready:
             self.run_state = replace(self.run_state, startup_time=time.time())
             self.hass.async_create_task(self.schedule_handler.schedule_listener(caller="group"))
-            self._device_calibration("temperature", force=True)
-            self._device_calibration("humidity", force=True)
+            self.calibration_handler.update("temperature", force=True)
+            self.calibration_handler.update("humidity", force=True)
             _LOGGER.debug("[%s] All members ready the first time.", self.entity_id)
 
         # No states available
@@ -1033,7 +877,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 self._temp_sensor_entity_ids, self._temp_current_avg_calc
             )
             if self._attr_current_temperature is not None:
-                self._device_calibration("temperature")
+                self.calibration_handler.update("temperature", self._event_entity_id)
             else:
                 _LOGGER.debug("[%s] External temp sensors unavailable.", self.entity_id)
         else:
@@ -1083,7 +927,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 self._humidity_sensor_entity_ids, self._humidity_current_avg_calc
             )
             if self._attr_current_humidity is not None:
-                self._device_calibration("humidity")
+                self.calibration_handler.update("humidity", self._event_entity_id)
             else:
                 _LOGGER.debug("[%s] External humidity sensors unavailable.", self.entity_id)
         else:

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.25.0 - 2026-04-17
+
+### 🌟 New Features
+
+*   **Presence Control**: Manage climate settings based on room presence. Select a presence trigger (binary sensor or device tracker), configure an away and a return delay, and choose the fallback action:
+    *   **Turn Off** — members are turned off while absence is detected (default).
+    *   **Away Offset** — target temperature is reduced by a configurable offset (e.g. −2°C). The offset is applied relative to the group's *current target temperature*. If a schedule is active, it automatically tracks schedule changes during absence.
+    *   **Away Temperature** — members are set to a fixed absolute temperature.
+    *   **Away Preset** — a preset mode is sent to members that support it.
+
+    When presence is detected again, members are immediately restored to the group's target state. Window Control and the Main Switch always take priority — if either is active while someone is away, Presence Control defers to them.
+
+### 🔧 Fixes
+
+*   **Calibration**: Rapid temperature fluctuations no longer trigger a burst of simultaneous calibration writes. Updates are now batched and sent one at a time, reducing unnecessary radio traffic and preventing overwhelmed devices.
+
 ## 0.24.1 - 2026-04-16
 
 ### 🔧 Fixes

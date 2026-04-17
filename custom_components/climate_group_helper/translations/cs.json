@@ -136,6 +136,50 @@
               "close_delay": "Doba čekání po zavření všech oken před obnovením vytápění."
             }
           },
+          "presence_section": {
+            "name": "Detekce přítomnosti",
+            "description": "Spravujte nastavení klimatu na základě přítomnosti v místnosti. Po zjištění nepřítomnosti po stanovenou dobu se spustí akce při nepřítomnosti. Předchozí nastavení se obnoví po návratu.",
+            "data": {
+              "presence_mode": "Režim přítomnosti",
+              "presence_sensor": "Spouštěč přítomnosti",
+              "presence_action": "Akce při nepřítomnosti",
+              "presence_away_offset": "Teplotní posun při nepřítomnosti (°C)",
+              "presence_away_temperature": "Teplota při nepřítomnosti (°C)",
+              "presence_away_preset": "Předvolba při nepřítomnosti",
+              "presence_away_delay": "Zpoždění nepřítomnosti (sekundy)",
+              "presence_return_delay": "Zpoždění návratu (sekundy)"
+            },
+            "data_description": {
+              "presence_mode": "Povolit nebo zakázat automatický přechod do režimu pryč při zjištění nepřítomnosti.",
+              "presence_sensor": "Entita hlásící přítomnost v místnosti. Stav 'on' nebo 'home' je považován za přítomnost.",
+              "presence_action": "Záložní akce, která se provede při zjištění nepřítomnosti.",
+              "presence_away_offset": "Posun od aktuálního cíle při nepřítomnosti (např. -2° nebo +2°). Změny časového plánu během nepřítomnosti se použijí automaticky.",
+              "presence_away_temperature": "Pevná cílová teplota při nepřítomnosti.",
+              "presence_away_preset": "Předvolba při nepřítomnosti (např. 'eco', 'away').",
+              "presence_away_delay": "Čekací doba po hlášení nepřítomnosti před aktivací režimu nepřítomnosti.",
+              "presence_return_delay": "Čekací doba po hlášení přítomnosti před obnovením předchozího stavu."
+            }
+          },
+          "schedule_section": {
+            "name": "Automatizace plánu",
+            "description": "Připojit plán HA pro automatizaci. Nastavit frekvenci resynchronizace a dobu přebití.",
+            "data": {
+              "schedule_entity": "Entita rozvrhu",
+              "resync_interval": "Interval znovu-synchronizace (minuty)",
+              "override_duration": "Doba trvání přepsání (minuty)",
+              "persist_changes": "Trvalé přepsání (Sticky)",
+              "persist_active_schedule": "Zachovat přepsání rozvrhu",
+              "ignore_off_members_schedule": "Respektovat stav Vypnuto členů (Plánování)"
+            },
+            "data_description": {
+              "schedule_entity": "Vyberte entitu rozvrhu. Pole 'Další data' může obsahovat YAML s atributy jako 'temperature: 20.5' nebo 'hvac_mode: heat'.",
+              "resync_interval": "Vynutit synchronizaci členů na cílový stav skupiny každých X minut. Zabraňuje odchylkám, pokud zařízení zmeškají příkaz nebo jsou ručně upravena. Nastavte na 0 pro deaktivaci.",
+              "override_duration": "Doba trvání manuálních přepsání. Po této době se skupina automaticky vrátí k aktuálnímu rozvrhu. Nastavte na 0 pro přeskočení doby přepsání.",
+              "persist_changes": "Změny v samotném rozvrhu budou ignorovány, dokud je aktivní manuální přepsání. Znovu použije aktuální rozvrh až po vypršení přepsání.",
+              "persist_active_schedule": "Zachová aktivní rozvrh po restartu, pokud byl změněn prostřednictvím služby. V opačném případě se vrátí na výchozí nastavení.",
+              "ignore_off_members_schedule": "Plánování NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ."
+            }
+          },
           "temp_offsets_section": {
             "name": "Posuny členů",
             "description": "Nastavte posun teploty pro jednotlivé členy. Cílová hodnota skupiny je upravena o tuto hodnotu před odesláním do každého zařízení. Ponechte na 0 pro žádný posun."
@@ -158,26 +202,6 @@
               "isolation_entities": "Členové skupiny k izolaci při aktivním senzoru.",
               "isolation_activate_delay": "(Pouze pro spouštěč senzor / režim HVAC) Čekací doba po zapnutí senzoru před izolací členů.",
               "isolation_restore_delay": "(Pouze pro spouštěč senzor / režim HVAC) Čekací doba po vypnutí senzoru před obnovením členů."
-            }
-          },
-          "schedule_section": {
-            "name": "Automatizace plánu",
-            "description": "Připojit plán HA pro automatizaci. Nastavit frekvenci resynchronizace a dobu přebití.",
-            "data": {
-              "schedule_entity": "Entita rozvrhu",
-              "resync_interval": "Interval znovu-synchronizace (minuty)",
-              "override_duration": "Doba trvání přepsání (minuty)",
-              "persist_changes": "Trvalé přepsání (Sticky)",
-              "persist_active_schedule": "Zachovat přepsání rozvrhu",
-              "ignore_off_members_schedule": "Respektovat stav Vypnuto členů (Plánování)"
-            },
-            "data_description": {
-              "schedule_entity": "Vyberte entitu rozvrhu. Pole 'Další data' může obsahovat YAML s atributy jako 'temperature: 20.5' nebo 'hvac_mode: heat'.",
-              "resync_interval": "Vynutit synchronizaci členů na cílový stav skupiny každých X minut. Zabraňuje odchylkám, pokud zařízení zmeškají příkaz nebo jsou ručně upravena. Nastavte na 0 pro deaktivaci.",
-              "override_duration": "Doba trvání manuálních přepsání. Po této době se skupina automaticky vrátí k aktuálnímu rozvrhu. Nastavte na 0 pro přeskočení doby přepsání.",
-              "persist_changes": "Změny v samotném rozvrhu budou ignorovány, dokud je aktivní manuální přepsání. Znovu použije aktuální rozvrh až po vypršení přepsání.",
-              "persist_active_schedule": "Zachová aktivní rozvrh po restartu, pokud byl změněn prostřednictvím služby. V opačném případě se vrátí na výchozí nastavení.",
-              "ignore_off_members_schedule": "Plánování NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ."
             }
           },
           "advanced_section": {
@@ -311,8 +335,8 @@
     },
     "window_mode": {
       "options": {
-        "off": "Deaktivováno – Ovládání oken je neaktivní",
-        "on": "Aktivováno – Ovládání oken je aktivní"
+        "disabled": "Deaktivováno – Ovládání oken je neaktivní",
+        "enabled": "Aktivováno – Ovládání oken je aktivní"
       }
     },
     "window_adopt_manual_changes": {
@@ -340,6 +364,20 @@
         "sensor": "Binární senzor – Izolovat, když je senzor zapnutý",
         "hvac_mode": "Režim HVAC – Izolovat, když režim skupiny odpovídá",
         "member_off": "Člen vypnut – Izolovat, když se člen ručně vypne"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Zakázáno – detekce přítomnosti neaktivní",
+        "enabled": "Povoleno – Záloha při nepřítomnosti"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Vypnout",
+        "away_offset": "Posun při nepřítomnosti",
+        "away_temperature": "Teplota při nepřítomnosti",
+        "away_preset": "Předvolba při nepřítomnosti"
       }
     }
   },
