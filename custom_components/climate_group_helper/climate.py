@@ -6,7 +6,7 @@ from functools import reduce
 import logging
 import time
 from statistics import mean, median
-from typing import Any
+from typing import Any, Awaitable, Callable
 import voluptuous as vol
 
 from homeassistant.components.climate import (
@@ -76,6 +76,9 @@ from .const import (
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_MASTER_FALLBACK_ACTIVE,
     ATTR_OOB_MEMBERS,
+    ATTR_GROUP_OFFSET,
+    ATTR_SCHEDULE_ENTITY,
+    CONF_ADVANCED_MODE,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_CONFIG,
     CONF_EXPOSE_MEMBER_ENTITIES,
@@ -90,8 +93,8 @@ from .const import (
     CONF_MASTER_ENTITY,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
+    CONF_STAGGERED_CALL_DELAY,
     CONF_WINDOW_ADOPT_MANUAL_CHANGES,
-    CONF_SYNC_MODE,
     CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_SENSORS,
     CONF_TEMP_TARGET_AVG,
@@ -99,13 +102,13 @@ from .const import (
     CONF_TEMP_UPDATE_TARGETS,
     CONF_TEMP_USE_MASTER,
     CONF_MEMBER_TEMP_OFFSETS,
+    CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MIN_TEMP_OFF,
     CONF_PERSIST_ACTIVE_SCHEDULE,
-    ATTR_SCHEDULE_ENTITY,
-    SERVICE_SET_SCHEDULE_ENTITY,
-    SERVICE_BOOST,
     DOMAIN,
     FLOAT_TOLERANCE,
+    SERVICE_SET_SCHEDULE_ENTITY,
+    SERVICE_BOOST,
     AdoptManualChanges,
     AverageOption,
     FeatureStrategy,
@@ -115,7 +118,13 @@ from .const import (
 )
 from .calibration import CalibrationHandler
 from .isolation import MemberIsolationHandler
-from .override import BoostOverrideManager, OverrideHandler, SwitchOverrideManager, WindowOverrideManager
+from .override import (
+    BaseOverrideManager,
+    BoostOverrideManager,
+    OverrideHandler,
+    SwitchOverrideManager,
+    WindowOverrideManager,
+)
 from .presence import PresenceHandler, PresenceOverrideManager
 from .schedule import ScheduleHandler
 from .service_call import (
@@ -141,6 +150,7 @@ from .state import (
 )
 from .sync_mode import SyncModeHandler
 from .window_control import WindowControlHandler
+from .meta_processor import SlotMetaProcessor
 
 CALC_TYPES = {
     AverageOption.MIN: min,
@@ -215,17 +225,24 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Home Assistant
         self.hass = hass
-        self._attr_unique_id = unique_id
-        self._attr_name = name
-        self.climate_entity_ids = entity_ids
         self.config = config
+        self.climate_entity_ids = entity_ids
         self.event: Event = None
+        self._attr_name = name
+        self._attr_unique_id = unique_id
         self._event_entity_id: str | None = None
 
+        # Advanced mode
+        self._advanced_mode: bool = config.get(CONF_ADVANCED_MODE, False)
+
+        def _get_adv(key: str, fallback=None) -> Any:
+            """Return config[key] only in advanced mode, else fallback."""
+            return config.get(key, fallback) if self._advanced_mode else fallback
+
         # Master entity
-        self._master_entity_id = config.get(CONF_MASTER_ENTITY)
-        self._temp_use_master = config.get(CONF_TEMP_USE_MASTER, False)
-        self._humidity_use_master = config.get(CONF_HUMIDITY_USE_MASTER, False)
+        self._master_entity_id = _get_adv(CONF_MASTER_ENTITY)
+        self._temp_use_master = _get_adv(CONF_TEMP_USE_MASTER, False)
+        self._humidity_use_master = _get_adv(CONF_HUMIDITY_USE_MASTER, False)
         self.master_state: State | None = None
         self.current_master_state = CurrentState()
         # Temperature calculation options
@@ -244,28 +261,29 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.debounce_delay = config.get(CONF_DEBOUNCE_DELAY, 0)
         self.retry_attempts = int(config.get(CONF_RETRY_ATTEMPTS, 0))
         self.retry_delay = config.get(CONF_RETRY_DELAY, 1)
-        # Sensor entity ids
-        self._temp_sensor_entity_ids = config.get(CONF_TEMP_SENSORS, [])
-        self._temp_update_target_entity_ids = config.get(CONF_TEMP_UPDATE_TARGETS, [])
-        self._humidity_sensor_entity_ids = config.get(CONF_HUMIDITY_SENSORS, [])
-        self._humidity_update_target_entity_ids = config.get(CONF_HUMIDITY_UPDATE_TARGETS, [])
+        self.stagger_delay = config.get(CONF_STAGGERED_CALL_DELAY, 0.0)
+        # Sensor entity ids (calibration — advanced mode only)
+        self._temp_sensor_entity_ids = _get_adv(CONF_TEMP_SENSORS, [])
+        self._temp_update_target_entity_ids = _get_adv(CONF_TEMP_UPDATE_TARGETS, [])
+        self._humidity_sensor_entity_ids = _get_adv(CONF_HUMIDITY_SENSORS, [])
+        self._humidity_update_target_entity_ids = _get_adv(CONF_HUMIDITY_UPDATE_TARGETS, [])
         # Expose member entities
         self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
         self._expose_config = config.get(CONF_EXPOSE_CONFIG, False)
-        # Sync mode
-        self.sync_mode = SyncMode(config.get(CONF_SYNC_MODE, SyncMode.DISABLED))
         # Advanced options
         self.min_temp_off = config.get(CONF_MIN_TEMP_OFF, False)
         # Window control
         self._window_adopt_manual_changes = config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES, AdoptManualChanges.OFF)
         # Per-member temperature offsets
         self._temp_offset_map: dict[str, float] = config.get(CONF_MEMBER_TEMP_OFFSETS, {})
+        self._member_offset_correction: bool = config.get(CONF_MEMBER_OFFSET_CORRECTION, True)
 
         # Calibration
         self._member_temp_avg = None
         self.calibration_handler = CalibrationHandler(self)
 
         # The list of entities to be tracked by GroupEntity
+        # Sensor IDs are only included in advanced mode (calibration sensors)
         self._entity_ids = entity_ids.copy()
         if self._temp_sensor_entity_ids:
             self._entity_ids.extend(self._temp_sensor_entity_ids)
@@ -288,6 +306,8 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Call handlers
         self.climate_call_handler = ClimateCallHandler(self)
+        self.offset_set_callback: Callable[[float], Awaitable[None]] | None = None
+        self.slot_meta_processor = SlotMetaProcessor(self)
         self.override_call_handler = OverrideCallHandler(self)
         self.presence_call_handler = PresenceCallHandler(self)
         self.schedule_call_handler = ScheduleCallHandler(self)
@@ -297,16 +317,17 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self.window_control_call_handler = WindowControlCallHandler(self)
 
         # Modules
+        self.base_override_manager = BaseOverrideManager(self)
+        self.boost_override_manager = BoostOverrideManager(self)
         self.member_isolation_handler = MemberIsolationHandler(self)
         self.override_handler = OverrideHandler(self)
-        self.presence_override_manager = PresenceOverrideManager(self)
-        self.window_override_manager = WindowOverrideManager(self)
-        self.switch_override_manager = SwitchOverrideManager(self)
-        self.boost_override_manager = BoostOverrideManager(self)
         self.presence_handler = PresenceHandler(self)
+        self.presence_override_manager = PresenceOverrideManager(self)
         self.schedule_handler = ScheduleHandler(self)
+        self.switch_override_manager = SwitchOverrideManager(self)
         self.sync_mode_handler = SyncModeHandler(self)
         self.window_control_handler = WindowControlHandler(self)
+        self.window_override_manager = WindowOverrideManager(self)
 
         # Attributes
         self._attr_supported_features = DEFAULT_SUPPORTED_FEATURES
@@ -355,6 +376,11 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             "manufacturer": "Climate Group Helper",
         }
 
+    @property
+    def advanced_mode(self) -> bool:
+        """Return True if the group is in advanced mode."""
+        return self._advanced_mode
+
     async def async_added_to_hass(self) -> None:
         """Restore states before registering listeners."""
 
@@ -371,29 +397,30 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             )
         )
 
-        # Setup calibration handler (builds target→member mapping, starts heartbeat)
-        await self.calibration_handler.async_setup()
+        if self.advanced_mode:
+            # Setup calibration handler (builds target→member mapping, starts heartbeat)
+            await self.calibration_handler.async_setup()
 
-        # Setup window control (subscribes to sensor events)
-        await self.window_control_handler.async_setup()
+            # Setup window control (subscribes to sensor events)
+            await self.window_control_handler.async_setup()
 
-        # Setup override handler (registers call triggers for boost abort)
-        self.override_handler.async_setup()
+            # Setup override handler (registers call triggers for boost abort)
+            self.override_handler.async_setup()
 
-        # Setup presence handler (subscribes to sensor events)
-        await self.presence_handler.async_setup()
+            # Setup presence handler (subscribes to sensor events)
+            await self.presence_handler.async_setup()
 
-        # Setup schedule handler (subscribes to schedule entity and execution hooks)
-        await self.schedule_handler.async_setup()
+            # Setup schedule handler (subscribes to schedule entity and execution hooks)
+            await self.schedule_handler.async_setup()
 
-        # Setup member isolation handler (subscribes to isolation sensor events)
-        await self.member_isolation_handler.async_setup()
+            # Setup member isolation handler (subscribes to isolation sensor events)
+            await self.member_isolation_handler.async_setup()
 
         # Update initial state
         self.async_defer_or_update_ha_state()
 
         # Register services
-        if self.platform:
+        if self.platform and self.advanced_mode:
             self.platform.async_register_entity_service(
                 SERVICE_SET_SCHEDULE_ENTITY,
                 {vol.Optional(ATTR_SCHEDULE_ENTITY): vol.Any(cv.entity_id, None)},
@@ -424,18 +451,24 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
-        self.calibration_handler.async_teardown()
         await super().async_will_remove_from_hass()
         await self.climate_call_handler.async_cancel_all()
-        self.window_control_handler.async_teardown()
-        self.presence_handler.async_teardown()
-        self.schedule_handler.async_teardown()
-        self.override_handler.async_teardown()
-        self.member_isolation_handler.async_teardown()
+        
+        if self.advanced_mode:
+            self.calibration_handler.async_teardown()
+            self.member_isolation_handler.async_teardown()
+            self.override_handler.async_teardown()
+            self.presence_handler.async_teardown()
+            self.schedule_handler.async_teardown()
+            self.window_control_handler.async_teardown()
 
     def _restore_state(self, last_state: State) -> None:
         """Restore state from last known state."""
         last_attrs = last_state.attributes
+
+        # Restore group offset first to ensure it's available for TargetState restoration
+        if (last_offset := last_attrs.get(ATTR_GROUP_OFFSET)) is not None:
+            self.run_state = replace(self.run_state, group_offset=float(last_offset))
 
         # We filter for ClimateState fields to ensure we only store relevant climate attributes
         restored_data = {}
@@ -450,7 +483,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         if restored_data:
             self.shared_target_state = self.shared_target_state.update(**restored_data)
-            _LOGGER.debug("[%s] Restored Persistent Target State: %s", self.entity_id, self.shared_target_state)
+            _LOGGER.debug("[%s] Restored Persistent Target State (offset corrected): %s", self.entity_id, self.shared_target_state)
 
         # Restore modes and features
         if last_state.state in valid_hvac_modes:
@@ -631,6 +664,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             ATTR_ASSUMED_STATE: self._attr_assumed_state,
             ATTR_LAST_ACTIVE_HVAC_MODE: self.run_state.last_active_hvac_mode,
             ATTR_CURRENT_HVAC_MODES: current_hvac_modes,
+            ATTR_GROUP_OFFSET: self.run_state.group_offset,
         }
 
         # Blocking Sources (Window Control, Main Switch, etc.)
@@ -653,6 +687,14 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         if self._expose_member_entities:
             attrs[ATTR_ENTITY_ID] = self.climate_entity_ids
 
+        # Expose full config if enabled
+        if self._expose_config:
+            attrs.update(self.config)
+
+        # Omit advanced attributes in basic mode
+        if not self.advanced_mode:
+            return attrs
+
         # Active schedule entity (always shown if configured; also used for RestoreEntity)
         if self.schedule_handler.schedule_entity_id:
             attrs[ATTR_ACTIVE_SCHEDULE_ENTITY] = self.schedule_handler.schedule_entity_id
@@ -662,10 +704,6 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             attrs[ATTR_ACTIVE_OVERRIDE] = self.run_state.active_override
         if self.run_state.active_override_end:
             attrs[ATTR_ACTIVE_OVERRIDE_END] = self.run_state.active_override_end.isoformat()
-
-        # Expose full config if enabled
-        if self._expose_config:
-            attrs.update(self.config)
 
         return attrs
 
@@ -743,9 +781,10 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Set startup time if all members are ready
         if not self.run_state.startup_time and all_members_ready:
             self.run_state = replace(self.run_state, startup_time=time.time())
-            self.hass.async_create_task(self.schedule_handler.schedule_listener(caller="group"))
-            self.calibration_handler.update("temperature", force=True)
-            self.calibration_handler.update("humidity", force=True)
+            if self.advanced_mode:
+                self.hass.async_create_task(self.schedule_handler.schedule_listener(caller="group"))
+                self.calibration_handler.update("temperature", force=True)
+                self.calibration_handler.update("humidity", force=True)
             _LOGGER.debug("[%s] All members ready the first time.", self.entity_id)
 
         # No states available
@@ -774,7 +813,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         new_fallback = (
             self._master_entity_id is not None
             and self.master_state is None
-            and self.sync_mode == SyncMode.MASTER_LOCK
+            and self.sync_mode_handler.sync_mode == SyncMode.MASTER_LOCK
         )
         if new_fallback != self.run_state.master_fallback_active:
             self.run_state = replace(self.run_state, master_fallback_active=new_fallback)
@@ -853,17 +892,29 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 _LOGGER.debug("[%s] Initialized Persistent Target State from current values: %s", self.entity_id, self.shared_target_state)
 
     def _resolve_master_or_avg(self, use_master: bool, master_value, attr: str, avg_calc) -> float | None:
-        """Return master value if available, otherwise calculate average from members."""
+        """Return the display value for a temperature attribute.
+
+        Priority: master entity → offset-corrected average → raw member average.
+        When member_offset_correction is enabled, each member's per-device offset is
+        subtracted before averaging so the group shows the logical set point (e.g. 20°C)
+        rather than the hardware-adjusted member average (e.g. 23°C with a +3° offset).
+        """
         if use_master and self._master_entity_id and master_value is not None:
             return master_value
-        return reduce_attribute(self.states, attr, reduce=lambda *data: avg_calc(data))
 
-    def get_effective_temperature(self, entity_id: str, target_temp: float | None) -> float | None:
-        """Apply per-member offset to a target temperature."""
-        if target_temp is None:
-            return None
-        offset = self._temp_offset_map.get(entity_id, 0.0)
-        return target_temp + offset
+        if (
+            self._temp_offset_map
+            and self._member_offset_correction
+            and attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+        ):
+            values = [
+                val - self._temp_offset_map.get(s.entity_id, 0.0)
+                for s in self.states
+                if (val := s.attributes.get(attr)) is not None
+            ]
+            return avg_calc(values) if values else None
+
+        return reduce_attribute(self.states, attr, reduce=lambda *data: avg_calc(data))
 
     def _update_temperature_attributes(self) -> None:
         """Calculate and set all temperature-related attributes."""
@@ -872,7 +923,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             self.states, ATTR_CURRENT_TEMPERATURE,
             reduce=lambda *data: self._temp_current_avg_calc(data)
         )
-        if self._temp_sensor_entity_ids:
+        if self._temp_sensor_entity_ids:  # always empty in simple mode
             self._attr_current_temperature = self._get_avg_sensor_value(
                 self._temp_sensor_entity_ids, self._temp_current_avg_calc
             )
@@ -883,24 +934,17 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         else:
             self._attr_current_temperature = self._member_temp_avg
 
-        # Target temperatures
-        if self._temp_offset_map:
-            # Offset active: show the logical group value from target_state
-            self._attr_target_temperature = self.shared_target_state.temperature
-            self._attr_target_temperature_low = self.shared_target_state.target_temp_low
-            self._attr_target_temperature_high = self.shared_target_state.target_temp_high
-        else:
-            # Default: master override or member average
-            master = self.current_master_state
-            self._attr_target_temperature = self._resolve_master_or_avg(
-                self._temp_use_master, master.temperature, ATTR_TEMPERATURE, self._temp_target_avg_calc
-            )
-            self._attr_target_temperature_low = self._resolve_master_or_avg(
-                self._temp_use_master, master.target_temp_low, ATTR_TARGET_TEMP_LOW, self._temp_target_avg_calc
-            )
-            self._attr_target_temperature_high = self._resolve_master_or_avg(
-                self._temp_use_master, master.target_temp_high, ATTR_TARGET_TEMP_HIGH, self._temp_target_avg_calc
-            )
+        # Target temperatures: master override or offset-corrected member average
+        master = self.current_master_state
+        self._attr_target_temperature = self._resolve_master_or_avg(
+            self._temp_use_master, master.temperature, ATTR_TEMPERATURE, self._temp_target_avg_calc
+        )
+        self._attr_target_temperature_low = self._resolve_master_or_avg(
+            self._temp_use_master, master.target_temp_low, ATTR_TARGET_TEMP_LOW, self._temp_target_avg_calc
+        )
+        self._attr_target_temperature_high = self._resolve_master_or_avg(
+            self._temp_use_master, master.target_temp_high, ATTR_TARGET_TEMP_HIGH, self._temp_target_avg_calc
+        )
 
         # Round target values
         for attr in ("_attr_target_temperature", "_attr_target_temperature_low", "_attr_target_temperature_high"):
@@ -922,7 +966,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
     def _update_humidity_attributes(self) -> None:
         """Calculate and set all humidity-related attributes."""
         # Current humidity
-        if self._humidity_sensor_entity_ids:
+        if self._humidity_sensor_entity_ids:  # always empty in simple mode
             self._attr_current_humidity = self._get_avg_sensor_value(
                 self._humidity_sensor_entity_ids, self._humidity_current_avg_calc
             )

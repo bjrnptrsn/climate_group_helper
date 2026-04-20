@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Režim prítomnosti",
               "presence_sensor": "Spúšťač prítomnosti",
+              "presence_zone": "Zóna prítomnosti",
               "presence_action": "Akcia pri neprítomnosti",
               "presence_away_offset": "Teplotný posun pri neprítomnosti (°C)",
               "presence_away_temperature": "Teplota pri neprítomnosti (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Povoliť alebo zakázať automatický prechod do režimu neprítomnosti pri zistení neprítomnosti.",
-              "presence_sensor": "Entita hlásiaca prítomnosť v miestnosti. Stav 'on' alebo 'home' sa považuje za prítomnosť.",
+              "presence_sensor": "Entita hlásiaca prítomnosť v miestnosti. Môžete vybrať viacero senzorov (napr. detektor pohybu a telefón). Stav 'on' alebo 'home' ľubovoľného senzora sa považuje za prítomnosť.",
+              "presence_zone": "(Voliteľné) Vyberte zóny, v ktorých sa prítomnosť počíta. Ak je definované, osoba sa považuje za 'prítomnú' iba vtedy, keď sa nachádza v jednej z týchto zón. Ak je prázdne, osoba je 'prítomná' v akejkoľvek zóne (okrem 'not_home').",
               "presence_action": "Záložná akcia, ktorá sa vykoná pri zistení neprítomnosti.",
               "presence_away_offset": "Posun od aktuálneho cieľa pri neprítomnosti (napr. -2° alebo +2°). Zmeny časového plánu počas neprítomnosti sa použijú automaticky.",
               "presence_away_temperature": "Pevná cieľová teplota pri neprítomnosti.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Odsadenia členov",
-            "description": "Nastavte teplotný posun pre jednotlivých členov. Cieľ skupiny je upravený o túto hodnotu pred odoslaním do každého zariadenia. Ponechajte na 0 pre žiadny posun."
+            "description": "Nastavte teplotný posun pre jednotlivých členov. Cieľ skupiny je upravený o túto hodnotu pred odoslaním do každého zariadenia. Ponechajte na 0 pre žiadny posun.",
+            "data": {
+              "member_offset_correction": "Opraviť posun člena"
+            },
+            "data_description": {
+              "member_offset_correction": "Ak je povolené, posun každého člena sa odčíta pred agregáciou. Pri skupinovom setpointe 20 °C a posune +3,0 °C je setpoint člena 23,0 °C, pričom skutočná hodnota pre skupinu je interne 20 °C."
+            }
           },
           "isolation_section": {
             "name": "Izolácia členov",
@@ -211,6 +219,7 @@
               "debounce_delay": "Debounce oneskorenie (sekundy)",
               "retry_attempts": "Počet opakovaných pokusov",
               "retry_delay": "Oneskorenie opakovania (sekundy)",
+              "staggered_call_delay": "Oneskorenie medzi príkazmi (sekundy)",
               "min_temp_off": "Minimálna teplota pri vypnutí",
               "expose_smart_sensors": "Zobraziť inteligentné senzory",
               "expose_member_entities": "Zobraziť zoznam členov",
@@ -220,6 +229,7 @@
               "debounce_delay": "Čas čakania pred odoslaním príkazov. Vyššie hodnoty zabraňujú 'rýchlopalným' príkazom pri posúvaní ovládacích prvkov.",
               "retry_attempts": "Koľkokrát znovu odoslať príkaz, ak zariadenie nereaguje. Nastavte na 0 pre vypnutie.",
               "retry_delay": "Pauza medzi pokusmi. Dať zariadeniam chvíľu na zotavenie môže zlepšiť spoľahlivosť.",
+              "staggered_call_delay": "Čas čakania medzi jednotlivými príkazmi členom skupiny. Rozloženie príkazov zabraňuje preťaženiu siete v prostredí Zigbee/Matter. Nastavte na 0 pre vypnutie.",
               "min_temp_off": "Pri vypnutí skupiny odošle minimálnu teplotu zariadenia (napr. 5 °C). Tým sa zabezpečí úplné zatvorenie ventilov na ochranu pred mrazom.",
               "expose_smart_sensors": "Vytvorí ďalšie entity senzorov pre teplotu a vlhkosť skupiny (užitočné pre grafy).",
               "expose_member_entities": "Vytvorí atribút so zoznamom všetkých ID entít členov.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Pokročilé funkcie",
           "expand_sections": "Predvolene rozbaliť všetky sekcie"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Cieľový režim HVAC"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Skupinový offset"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Teplota"
+      },
+      "humidity": {
+        "name": "Vlhkosť"
       }
     },
     "switch": {

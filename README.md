@@ -16,8 +16,8 @@ A comprehensive climate management system for Home Assistant that combines multi
 
 ## Table of Contents
 
-- [Core Features](#core-features-zero-config)
-- [Advanced Features](#advanced-features-optional)
+- [Core Capabilities (Simple Mode)](#core-concept-the-unified-foundation)
+- [Advanced Features](#power-user-advanced-features)
   - [Master Entity](#master-entity)
   - [External Sensors](#external-sensors)
   - [Device Calibration](#device-calibration)
@@ -28,29 +28,34 @@ A comprehensive climate management system for Home Assistant that combines multi
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
   - [Main Switch](#main-switch)
+  - [Group Offset](#group-offset)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
 - [Installation](#installation)
 - [Setup](#setup)
 - [Troubleshooting](#troubleshooting)
 
-## Core Features (Zero Config)
+## Core Concept: The Unified Foundation
 
-The "Minimalist Mode": Add your entities, and it just works. No complex setup required.
+The Climate Group Helper provides a robust "Single Source of Truth" for your climate devices. It creates a unified management layer that ensures your devices work together as one cohesive system while maintaining accurate room states.
 
-### Unified Control
+### Core Capabilities (Simple Mode)
 
-Change settings on the group, and all member devices update to match. No more managing 5 thermostats individually.
+These features are active by default and provide a streamlined "Plug & Play" experience:
 
-### Smart Averaging
+*   **Unified Control:** Change settings on the group, and all member devices update to match. No more managing multiple thermostats individually.
+*   **Smart State Aggregation:** The group calculates the **average** of member readings to represent the true room state (Mean, Median, Min, or Max).
+*   **HVAC Strategy:** Intelligent logic to determine the group's state (Normal, Off Priority, or Auto).
+*   **Precision & Rounding:** Round target temperatures to device-compatible steps (0.5° or 1°) to ensure compatibility with all hardware.
 
-The group calculates the **mean** of all member temperatures to represent the true room reading.
-*   **Averaging Method:** Choose between Mean (default), Median, Min, or Max.
-*   **Precision:** Round target temperatures to device-compatible steps (0.5° or 1°). *Default: No rounding.*
+---
 
-## Advanced Features
+## Power User: Advanced Features
 
-Everything below is **optional**. If you don't configure it, the logic remains inactive and efficient.
+Unlock the full potential of your climate system. These specialized features are enabled by toggling **Advanced Features** in the group's configuration. Toggling back to Simple Mode hides these options and puts the features into **hibernation** — they stop running functionally, but your configuration remains intact and will be immediately restored when you switch back.
+
+> [!NOTE]
+> **New groups start in Simple Mode.** Existing groups upgraded from earlier versions keep **Advanced Features** active automatically so nothing breaks.
 
 ### Master Entity
 
@@ -100,14 +105,14 @@ Binary sensor support to automatically turn off heating when a window opens and 
 
 ### Presence Control
 
-Manage climate settings based on room presence. Choose a presence trigger (binary sensor or device tracker), configure an away and a return delay, and specify the fallback action to perform when absence is detected.
+Manage climate settings based on room presence. Select one or more presence triggers (binary sensor, device tracker, or person), configure an away and a return delay, and specify the fallback action to perform when absence is detected. The group is considered occupied if **any** sensor reports presence.
 
 *   **Turn Off:** Members are turned `off` while absence is detected (default).
 *   **Away Offset** Target temperature is reduced by a fixed offset (e.g. −2°C). The offset is applied relative to the group's *current target temperature*. If a schedule is active, it automatically tracks schedule changes during absence.
 *   **Away Temperature:** Members are set to a fixed absolute temperature.
 *   **Away Preset:** A preset mode is sent to members that support it.
 
-When presence is detected again, the group restores all members to the current target state. Window Control and the Main Switch always take priority — Presence Control defers to them if either is active at the same time.
+Optionally restrict presence detection to specific **zones** (e.g. ensuring a person is only counted as present when they are actually in the 'Home' zone, preventing triggers while they are at 'Work' or elsewhere). When presence is detected again, the group restores all members to the current target state. Window Control and the Main Switch always take priority — Presence Control defers to them if either is active at the same time.
 
 ### Schedule Automation
 
@@ -140,7 +145,7 @@ temperature: 21.5
 
 You can omit attributes you don't need — for example, use only `hvac_mode: "off"` for a slot that turns heating off.
 
-**Supported attributes:**
+**Supported climate attributes:**
 
 | Attribute | Example value | Notes |
 |---|---|---|
@@ -154,12 +159,34 @@ You can omit attributes you don't need — for example, use only `hvac_mode: "of
 | `swing_mode` | `on`, `off` | Device-specific |
 | `swing_horizontal_mode` | `on`, `off` | Device-specific |
 
+**Schedule Meta-Keys** — these control the group itself rather than its members, and are active for the entire duration of the slot:
+
+| Key | Possible values | Example | Effect |
+|---|---|---|---|
+| `turn_off` | `true` | `turn_off: true` | Activates the Main Switch block — all members are turned off for the slot duration. Equivalent to toggling the Main Switch off. Members are restored automatically when the slot ends or a new slot without `turn_off` begins. |
+| `sync_mode` | `disabled`, `lock`, `mirror`, `master_lock` | `sync_mode: disabled` | Temporarily overrides the configured Sync Mode for the slot duration. Useful for slots where you want members to be left alone (e.g. a "sleep" slot where manual adjustments are allowed). |
+| `group_offset` | Float −5.0 … 5.0 | `group_offset: 1.5` | Temporarily sets the Group Offset for the slot duration. If you move the offset slider manually while this slot is active, your value takes over and the slot-end reset is skipped. |
+
+**Example — night slot that turns everything off:**
+```yaml
+turn_off: true
+```
+
+**Example — comfort slot that boosts all rooms by 1.5 °C above the preset setpoint and allows local adjustments:**
+```yaml
+preset_mode: comfort
+group_offset: 1.5
+sync_mode: disabled
+```
+The group normally runs in Lock mode. During this slot, `sync_mode: disabled` lets occupants tweak their own device without being reverted — useful when comfort preferences vary.
+
 ### Member Offsets
 
 Apply a permanent individual offset (±20°C, 0.5°C steps) to each group member, so rooms can run proportionately warmer or cooler than the group's target setting — without changing what you set on the group entity itself.
 
 *   **Example:** Group target is 21°C. Bedroom has offset −1°C → receives 20°C. Living Room has offset +0.5°C → receives 21.5°C.
 *   **Mirror / Master-Lock aware:** When a member change is adopted back into the group's target state, the offset is reversed so the global target stays consistent.
+*   **Correct member offset (default: on):** The group subtracts each member's offset before averaging, so the displayed temperature reflects the logical setpoint rather than the hardware-adjusted member average.
 
 ### Member Isolation
 
@@ -179,10 +206,19 @@ Temporarily isolate specific group members based on a configurable trigger. Isol
 
 A dedicated `switch` entity is created alongside each Climate Group Helper. It acts as a **master on/off switch** for the entire group.
 
-*   **Switch OFF:** All members are immediately turned `off`. Any active Boost is aborted. The group stays blocked until the switch is turned back on.
+*   **Switch OFF:** All members are immediately turned `off`. Any active Override is aborted. The group stays blocked until the switch is turned back on.
 *   **Switch ON:** All members are restored to the group's current target state.
 
 Useful for heating-free periods (e.g. summer months), extended absences, or any situation where you want the group completely disabled without touching your schedules or target settings. Combine with an automation to drive it from a calendar, a helper, or any other condition.
+
+### Group Offset
+
+A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongside each Climate Group Helper. Use it to make a room run a little warmer or cooler — without touching your schedule or target settings.
+
+*   **Example:** Your schedule runs 20°C in the morning and 22°C in the evening. You slide the offset to +1.5°C — members now follow 21.5°C and 23.5°C respectively, all day long, without touching the schedule. Slide back to 0 when no longer needed.
+*   **Non-destructive:** The schedule, target state, and Boost temperature are all unaffected. The offset is a layer on top.
+*   **Auto-reset:** Setting a temperature directly on the group (via UI or service) resets the offset to 0 automatically.
+*   **Persisted:** The offset survives Home Assistant restarts.
 
 ## Configuration Options
 
@@ -256,7 +292,8 @@ Useful for heating-free periods (e.g. summer months), extended absences, or any 
 | Option | Description |
 |--------|-------------|
 | **Presence Control Mode** | **Disabled** (default) or **Enabled**. |
-| **Presence Trigger** | The entity reporting room presence (e.g. `binary_sensor.living_room_presence`, `person.john`). State 'on' or 'home' is treated as present. |
+| **Presence Trigger** | One or more entities reporting room presence (binary_sensor, device_tracker, or person). Any 'on' or 'home' state is treated as present. The group is occupied if **any** sensor reports presence. |
+| **Presence Zone** | *(Optional)* One or more `zone` entities. If configured, a person/device_tracker sensor only counts as present when located in one of the listed zones. Leave empty to treat any non-away state as present. |
 | **Away Action** | The fallback action to perform when absence is detected: **Turn Off**, **Away Offset**, **Away Temperature**, or **Away Preset**. |
 | **Away Offset** | *(Away Offset action)* Offset from current target when away (e.g. `−2.0°C` or `+2.0°C`). |
 | **Away Temperature** | *(Away Temperature action)* Fixed temperature to set when away. |
@@ -280,6 +317,13 @@ Useful for heating-free periods (e.g. summer months), extended absences, or any 
 | Option | Description |
 |--------|-------------|
 | **Offset per Member** | Individual temperature offset (±20°C, 0.5°C steps) for each group member. Positive values make the room warmer, negative values cooler relative to the group's target. |
+| **Correct member offset** | When enabled (default), each member's offset is subtracted before averaging so the group displays the logical setpoint. Disable to show the raw member average instead. |
+
+### Group Offset
+
+| Option | Description |
+|--------|-------------|
+| **Group Offset** | A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) that shifts all member temperatures by a fixed global amount. The offset is visible as a `group_offset` attribute and resets automatically when a temperature is set directly on the group. |
 
 ### Member Isolation
 
@@ -299,6 +343,7 @@ Useful for heating-free periods (e.g. summer months), extended absences, or any 
 | **Debounce Delay** | Wait before sending commands. Higher values prevent 'rapid-fire' commands when sliding controls, but feel slower (default: 0.5s). |
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
+| **Staggered Call Delay** | Time to wait between individual commands to group members (0–2s, default: 0). Staggering calls prevents radio flooding in large Zigbee/Matter networks. Also applies to calibration writes. |
 
 ## Services
 
@@ -374,7 +419,8 @@ data:
 **To configure advanced options:**
 1. Find the group in your dashboard or entity list
 2. Click the **⚙️ Settings** icon → **Configure**
-3. Select the configuration category (Members, Temperature, Sync Mode, etc.)
+3. Enable **Advanced Mode** in General Settings to unlock all options
+4. Select the configuration category (Members, Temperature, Sync Mode, etc.)
 
 ## Troubleshooting
 

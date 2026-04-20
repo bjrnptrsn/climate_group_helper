@@ -1,4 +1,4 @@
-"""The Climate Group helper integration."""
+"""The Climate Group Helper integration."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from homeassistant.const import CONF_ENTITIES, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    CONF_ADVANCED_MODE,
     CONF_CLOSE_DELAY,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPAND_SECTIONS,
@@ -38,6 +39,7 @@ from .const import (
     CONF_PRESENCE_MODE,
     CONF_PRESENCE_RETURN_DELAY,
     CONF_PRESENCE_SENSOR,
+    CONF_PRESENCE_ZONE,
     CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
@@ -65,6 +67,7 @@ from .const import (
     CONF_ISOLATION_ACTIVATE_DELAY,
     CONF_ISOLATION_RESTORE_DELAY,
     CONF_MEMBER_TEMP_OFFSETS,
+    CONF_MEMBER_OFFSET_CORRECTION,
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
     DOMAIN,
 )
@@ -73,6 +76,7 @@ from .const import (
 VALID_CONFIG_KEYS = {
     CONF_NAME,
     CONF_ENTITIES,
+    CONF_ADVANCED_MODE,
     # HVAC options
     CONF_HVAC_MODE_STRATEGY,
     CONF_FEATURE_STRATEGY,
@@ -118,6 +122,7 @@ VALID_CONFIG_KEYS = {
     # Presence control options
     CONF_PRESENCE_MODE,
     CONF_PRESENCE_SENSOR,
+    CONF_PRESENCE_ZONE,
     CONF_PRESENCE_ACTION,
     CONF_PRESENCE_AWAY_OFFSET,
     CONF_PRESENCE_AWAY_TEMPERATURE,
@@ -140,10 +145,11 @@ VALID_CONFIG_KEYS = {
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_ACTIVATE_DELAY,
     CONF_ISOLATION_RESTORE_DELAY,
-    # Union OOB options
+    # Union out-of-bounds (OOB) options
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
     # Per-member temperature offsets
     CONF_MEMBER_TEMP_OFFSETS,
+    CONF_MEMBER_OFFSET_CORRECTION,
 }
 
 # Track which platforms have been set up per entry
@@ -153,7 +159,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Climate Group helper from a config entry."""
+    """Set up Climate Group Helper from a config entry."""
 
     # One-time migration for entries that have no options yet, moving all data to options
     if not entry.options:
@@ -170,9 +176,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.CLIMATE)
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SENSOR)
 
-    # Set up switch after climate so the group reference is guaranteed to exist.
-    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SWITCH])
+    # Set up switch and number after climate so the group reference is guaranteed to exist.
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SWITCH, Platform.NUMBER])
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SWITCH)
+    hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.NUMBER)
 
     # Register update listener for options changes, which will trigger a reload
     entry.async_on_unload(entry.add_update_listener(_update_listener))
@@ -184,56 +191,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Migrate old config entries to the current version.
 
-    v<7 → v7: Soft Reset — combine data+options, whitelist-filter, ensure defaults.
-    v7  → v8: Split ignore_off_members; rename SyncMode.STANDARD → DISABLED.
+    v<10 → v10: Soft Reset — combine data+options, apply all historical
+                transformations, whitelist-filter, ensure defaults.
     """
-    if entry.version < 7:
-        _LOGGER.info("[%s] Migrating config entry from version %s to 7 (Soft Reset)", entry.title, entry.version)
+    if entry.version < 10:
+        _LOGGER.info("[%s] Migrating config entry from version %s to 10 (Soft Reset)", entry.title, entry.version)
 
-        # Combine data + options
+        # Combine data + options (covers pre-v7 entries that still used entry.data)
         old_config = {**entry.data, **entry.options}
 
-        # Whitelist Filter: Keep only currently valid keys
+        # v7 → v8: split ignore_off_members; rename SyncMode.STANDARD → DISABLED
+        ignore_off = old_config.pop("ignore_off_members", False)
+        if CONF_IGNORE_OFF_MEMBERS_SYNC not in old_config:
+            old_config[CONF_IGNORE_OFF_MEMBERS_SYNC] = ignore_off
+        if CONF_IGNORE_OFF_MEMBERS_SCHEDULE not in old_config:
+            old_config[CONF_IGNORE_OFF_MEMBERS_SCHEDULE] = ignore_off
+        if old_config.get(CONF_SYNC_MODE) == "standard":
+            old_config[CONF_SYNC_MODE] = "disabled"
+
+        # v8 → v9: WindowControlMode "off"/"on" → "disabled"/"enabled"
+        if old_config.get(CONF_WINDOW_MODE) == "off":
+            old_config[CONF_WINDOW_MODE] = "disabled"
+        elif old_config.get(CONF_WINDOW_MODE) == "on":
+            old_config[CONF_WINDOW_MODE] = "enabled"
+
+        # v9 → v10: CONF_PRESENCE_SENSOR str → list[str]; add CONF_ADVANCED_MODE
+        presence_sensor = old_config.get(CONF_PRESENCE_SENSOR)
+        if isinstance(presence_sensor, str):
+            old_config[CONF_PRESENCE_SENSOR] = [presence_sensor]
+        if CONF_ADVANCED_MODE not in old_config:
+            old_config[CONF_ADVANCED_MODE] = True
+
+        # Whitelist filter: discard all deprecated/renamed keys
         new_options = {key: value for key, value in old_config.items() if key in VALID_CONFIG_KEYS}
 
-        # Ensure default for expand_sections
+        # Ensure defaults for keys added in earlier versions
         if CONF_EXPAND_SECTIONS not in new_options:
             new_options[CONF_EXPAND_SECTIONS] = False
 
-        # Update entry
-        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=7)
+        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=10)
 
-        _LOGGER.info("[%s] Migration complete. %d valid keys preserved.", entry.title, len(new_options))
-
-    if entry.version == 7:
-        _LOGGER.info("[%s] Migrating config entry from version 7 to 8", entry.title)
-
-        old_options = dict(entry.options)
-        old_value = old_options.pop("ignore_off_members", False)
-
-        old_options[CONF_IGNORE_OFF_MEMBERS_SYNC] = old_value
-        old_options[CONF_IGNORE_OFF_MEMBERS_SCHEDULE] = old_value
-
-        # SyncMode.STANDARD was renamed to SyncMode.DISABLED in v0.22.0
-        if old_options.get(CONF_SYNC_MODE) == "standard":
-            old_options[CONF_SYNC_MODE] = "disabled"
-
-        hass.config_entries.async_update_entry(entry, options=old_options, version=8)
-
-        _LOGGER.info("[%s] Migration to v8 complete (ignore_off_members → sync=%s, schedule=%s)", entry.title, old_value, old_value)
-
-    if entry.version == 8:
-        _LOGGER.info("[%s] Migrating config entry from version 8 to 9", entry.title)
-
-        old_options = dict(entry.options)
-        if old_options.get(CONF_WINDOW_MODE) == "off":
-            old_options[CONF_WINDOW_MODE] = "disabled"
-        elif old_options.get(CONF_WINDOW_MODE) == "on":
-            old_options[CONF_WINDOW_MODE] = "enabled"
-
-        hass.config_entries.async_update_entry(entry, options=old_options, version=9)
-
-        _LOGGER.info("[%s] Migration to v9 complete (WindowControlMode OFF/ON → DISABLED/ENABLED)", entry.title)
+        _LOGGER.info("[%s] Migration to v10 complete. %d valid keys preserved.", entry.title, len(new_options))
 
     return True
 

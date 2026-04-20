@@ -15,6 +15,8 @@ from .const import (
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_TRIGGER,
     CONF_SYNC_ATTRS,
+    CONF_SYNC_MODE,
+    META_KEY_SYNC_MODE,
     STARTUP_BLOCK_DELAY,
     SYNC_TARGET_ATTRS,
     IsolationTrigger,
@@ -45,16 +47,26 @@ class SyncModeHandler:
         """Initialize the sync mode handler."""
         self._group = group
         self._hass = group.hass
+        self._sync_mode = SyncMode(
+            self._group.config.get(CONF_SYNC_MODE, SyncMode.DISABLED)
+        ) if self._group.advanced_mode else SyncMode.DISABLED
         self._filter_state = FilterState.from_keys(
             self._group.config.get(CONF_SYNC_ATTRS, SYNC_TARGET_ATTRS)
         )
         _LOGGER.debug(
             "[%s] Initialize sync mode: %s with FilterState: %s",
             self._group.entity_id,
-            self._group.sync_mode,
+            self._sync_mode,
             self._filter_state,
         )
         self._active_sync_tasks: set[asyncio.Task] = set()
+
+    @property
+    def sync_mode(self) -> SyncMode:
+        """Return the effective sync mode (respecting schedule overrides)."""
+        if META_KEY_SYNC_MODE in self._group.run_state.config_overrides:
+            return SyncMode(self._group.run_state.config_overrides[META_KEY_SYNC_MODE])
+        return self._sync_mode
 
     @property
     def state_manager(self):
@@ -130,7 +142,7 @@ class SyncModeHandler:
         # --- Fresh Event (external change) ---
         _LOGGER.debug("[%s] External change: %s from %s", self._group.entity_id, change_dict, change_entity_id)
 
-        if self._group.sync_mode == SyncMode.DISABLED:
+        if self.sync_mode == SyncMode.DISABLED:
             return
 
         # Filter out setpoint values when HVAC is OFF (meaningless frost protection values)
@@ -143,7 +155,7 @@ class SyncModeHandler:
                 return
 
         # Mirror mode: adopt filtered changes into target_state
-        if self._group.sync_mode == SyncMode.MIRROR:
+        if self.sync_mode == SyncMode.MIRROR:
             if filtered := {key: value for key, value in change_dict.items() if self._filter_state.to_dict().get(key)}:
                 self._reverse_offset_temperatures(change_entity_id, filtered)
                 self.state_manager.update(entity_id=change_entity_id, **filtered)
@@ -151,7 +163,7 @@ class SyncModeHandler:
 
         # Lock mode: only accept "Last Man Standing" OFF (Partial Sync)
         elif (
-            self._group.sync_mode == SyncMode.LOCK
+            self.sync_mode == SyncMode.LOCK
             and self._group.config.get(CONF_IGNORE_OFF_MEMBERS_SYNC)
             and change_dict.get("hvac_mode") == HVACMode.OFF
         ):
@@ -159,7 +171,7 @@ class SyncModeHandler:
                 _LOGGER.debug("[%s] Last Man Standing: accepted OFF from %s", self._group.entity_id, change_entity_id)
 
         # Master/Lock mode: master adopts (MIRROR), non-master reverts (LOCK)
-        elif self._group.sync_mode == SyncMode.MASTER_LOCK:
+        elif self.sync_mode == SyncMode.MASTER_LOCK:
             if self._group.run_state.master_fallback_active:
                 _LOGGER.debug("[%s] MASTER_LOCK enforcement skipped (master fallback active)", self._group.entity_id)
                 return
@@ -185,18 +197,22 @@ class SyncModeHandler:
 
     def _reverse_offset_temperatures(self, entity_id: str, data: dict) -> None:
         """Reverse-transform member temperatures to logical group values (in-place).
-
+        
         When adopting a member's temperature in Mirror/Master-Lock mode,
         the member's actual value must be converted back to the group-level
-        value by subtracting the member's offset.
+        value by subtracting both the member's individual offset and the global group offset.
         """
         offset_map = self._group._temp_offset_map
-        if not offset_map or entity_id not in offset_map:
+        global_offset = self._group.run_state.group_offset
+        member_offset = offset_map.get(entity_id, 0.0) if offset_map else 0.0
+
+        total_offset = member_offset + global_offset
+        if total_offset == 0.0:
             return
-        offset = offset_map[entity_id]
+
         for key in ("temperature", "target_temp_low", "target_temp_high"):
             if key in data and data[key] is not None:
-                data[key] = data[key] - offset
+                data[key] = data[key] - total_offset
 
     # --- Echo Detection Helpers ---
 

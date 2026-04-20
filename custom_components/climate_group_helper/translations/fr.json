@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Mode présence",
               "presence_sensor": "Déclencheur de présence",
+              "presence_zone": "Zone de présence",
               "presence_action": "Action en absence",
               "presence_away_offset": "Décalage de température en absence (°C)",
               "presence_away_temperature": "Température en absence (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Activer ou désactiver le repli automatique en absence lorsqu'une absence est détectée.",
-              "presence_sensor": "L'entité signalant la présence dans la pièce. L'état 'on' ou 'home' est traité comme présent.",
+              "presence_sensor": "L'entité signalant la présence dans la pièce. Vous pouvez sélectionner plusieurs capteurs (p. ex. détecteur de mouvement et téléphone). L'état 'on' ou 'home' de n'importe quel capteur est traité comme présent.",
+              "presence_zone": "(Optionnel) Sélectionnez les zones où la présence est comptabilisée. Si défini, une personne n'est considérée comme 'présente' que lorsqu'elle se trouve dans une de ces zones. Si vide, la personne est 'présente' dans n'importe quelle zone (sauf 'not_home').",
               "presence_action": "L'action de repli à effectuer lorsqu'une absence est détectée.",
               "presence_away_offset": "Décalage par rapport à la cible actuelle en absence (ex. -2° ou +2°). Les changements de planning pendant l'absence sont appliqués automatiquement.",
               "presence_away_temperature": "Température cible fixe en absence.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Décalages des membres",
-            "description": "Définissez un décalage de température pour chaque membre. L'objectif du groupe est ajusté de cette valeur avant d'être envoyé à chaque appareil. Laissez à 0 pour aucun décalage."
+            "description": "Définissez un décalage de température pour chaque membre. L'objectif du groupe est ajusté de cette valeur avant d'être envoyé à chaque appareil. Laissez à 0 pour aucun décalage.",
+            "data": {
+              "member_offset_correction": "Corriger le décalage du membre"
+            },
+            "data_description": {
+              "member_offset_correction": "Lorsqu'activé, le décalage de chaque membre est soustrait avant l'agrégation. Avec une consigne de groupe de 20 °C et un décalage de +3,0 °C, la consigne du membre est 23,0 °C, tandis que la valeur réelle du membre pour le groupe est en interne 20 °C."
+            }
           },
           "isolation_section": {
             "name": "Isolation de membres",
@@ -211,6 +219,7 @@
               "debounce_delay": "Délai d'Anti-rebond (secondes)",
               "retry_attempts": "Tentatives de Réessai",
               "retry_delay": "Délai de Réessai (secondes)",
+              "staggered_call_delay": "Délai entre les commandes (secondes)",
               "min_temp_off": "Température minimale à l'arrêt",
               "expose_smart_sensors": "Exposer des capteurs intelligents",
               "expose_member_entities": "Exposer la liste des membres",
@@ -220,6 +229,7 @@
               "debounce_delay": "Temps d'attente avant l'envoi des commandes. Des valeurs plus élevées empêchent les commandes en 'rafale' lors du glissement des curseurs.",
               "retry_attempts": "Combien de fois renvoyer une commande si un appareil ne répond pas. Mettre à 0 pour désactiver.",
               "retry_delay": "Pause entre les tentatives de réessai. Donner un moment aux appareils pour récupérer peut améliorer la fiabilité.",
+              "staggered_call_delay": "Temps d'attente entre les commandes individuelles aux membres du groupe. L'échelonnement des commandes évite la congestion réseau dans les environnements Zigbee/Matter. Mettre à 0 pour désactiver.",
               "min_temp_off": "Envoie la température minimale de l'appareil (ex: 5°C) lors de l'arrêt du groupe. Cela garantit que les vannes sind complètement fermées pour la protection contre le gel.",
               "expose_smart_sensors": "Crée des entités de capteur supplémentaires pour la température et l'humidité du groupe (utile pour les graphiques).",
               "expose_member_entities": "Crée un attribut listant tous les ID d'entité des membres.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Fonctions avancées",
           "expand_sections": "Développer toutes les sections par défaut"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Mode HVAC Cible"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Décalage du groupe"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Température"
+      },
+      "humidity": {
+        "name": "Humidité"
       }
     },
     "switch": {

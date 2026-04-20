@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Presence Control Mode",
               "presence_sensor": "Presence Trigger",
+              "presence_zone": "Presence Zone",
               "presence_action": "Away Action",
               "presence_away_offset": "Away Temperature Offset (°C)",
               "presence_away_temperature": "Away Temperature (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Enable or disable automatic away-fallback when absence is detected.",
-              "presence_sensor": "The entity reporting room presence. State 'on' or 'home' is treated as present.",
+              "presence_sensor": "The entity reporting room presence. You can select multiple sensors (e.g. motion sensor and phone). Any 'on' or 'home' state is treated as present.",
+              "presence_zone": "(Optional) Select zones where presence is counted. If defined, a person is only 'present' when in one of these zones. If empty, the person is 'present' when in any zone (except 'not_home').",
               "presence_action": "The fallback action to perform when absence is detected.",
               "presence_away_offset": "Offset from current target when away (e.g. -2° or +2°). Schedule changes during absence are applied automatically.",
               "presence_away_temperature": "Fixed temperature to set when away.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Member Offsets",
-            "description": "Set a temperature offset for individual members. The group target is adjusted by this value before sending to each device. Leave at 0 for no offset."
+            "description": "Set a temperature offset for individual members. The group target is adjusted by this value before sending to each device. Leave at 0 for no offset.",
+            "data": {
+              "member_offset_correction": "Correct member offset"
+            },
+            "data_description": {
+              "member_offset_correction": "When enabled, the offset of each member is corrected prior to aggregation. With a group setpoint of 20 °C and an offset of +3.0 °C, the member setpoint is 23.0 °C, while the member actual value for the group is internally 20 °C."
+            }
           },
           "isolation_section": {
             "name": "Member Isolation",
@@ -211,6 +219,7 @@
               "debounce_delay": "Debounce Delay (seconds)",
               "retry_attempts": "Retry Attempts",
               "retry_delay": "Retry Delay (seconds)",
+              "staggered_call_delay": "Staggered Call Delay (seconds)",
               "min_temp_off": "Minimum Temperature when Off",
               "expose_smart_sensors": "Expose Smart Sensors",
               "expose_member_entities": "Expose Member List",
@@ -220,6 +229,7 @@
               "debounce_delay": "Time to wait before sending commands. Higher values prevent 'rapid-fire' commands when sliding controls, but feel slower.",
               "retry_attempts": "How many times to resend a command if a device doesn't respond. Set to 0 to disable.",
               "retry_delay": "Pause between retry attempts. Giving devices a moment to recover can improve reliability.",
+              "staggered_call_delay": "Time to wait between individual commands to group members. Staggering calls prevents network congestion in Zigbee/Matter environments. Set to 0 to disable.",
               "min_temp_off": "Sends the device's minimum temperature (e.g. 5°C) when turning the group off. This ensures valves are fully closed for frost protection.",
               "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
               "expose_member_entities": "Creates an attribute listing all member entity IDs.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Advanced Features",
           "expand_sections": "Expand all sections by default"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Target HVAC Mode"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Group Offset"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperature"
+      },
+      "humidity": {
+        "name": "Humidity"
       }
     },
     "switch": {

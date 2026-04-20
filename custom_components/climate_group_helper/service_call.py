@@ -148,7 +148,7 @@ class BaseServiceCallHandler(ABC):
         await self._debouncer.async_call()
 
     async def _execute_calls(self, data: dict[str, Any] | None = None) -> None:
-        """Execute service calls with retry logic."""
+        """Execute service calls with retry and optional stagger logic."""
         attempts = 1 + self._group.retry_attempts
         delay = self._group.retry_delay
         context_id = self.CONTEXT_ID
@@ -170,8 +170,12 @@ class BaseServiceCallHandler(ABC):
                     return
 
                 parent_id = self._get_parent_id()
+                stagger_delay = self._group.stagger_delay
 
-                for call in calls:
+                if stagger_delay:
+                    calls = self._split_calls_by_entity(calls)
+
+                for i, call in enumerate(calls):
                     service = call["service"]
                     service_data = {ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
 
@@ -182,6 +186,10 @@ class BaseServiceCallHandler(ABC):
                         _LOGGER.debug("[%s] Aborting stale call: kwargs=%s no longer match target_state", self._group.entity_id, call["kwargs"])
                         return
 
+                    # Stagger delay between calls (not before first, not after last)
+                    if i > 0 and stagger_delay:
+                        await asyncio.sleep(stagger_delay)
+
                     await self._hass.services.async_call(
                         domain=CLIMATE_DOMAIN,
                         service=service,
@@ -190,7 +198,9 @@ class BaseServiceCallHandler(ABC):
                         context=Context(id=context_id, parent_id=parent_id),
                     )
 
-                    _LOGGER.debug("[%s] Call (%d/%d) '%s' with data: %s, Parent ID: %s", self._group.entity_id, attempt + 1, attempts, service, service_data, parent_id)
+                    _LOGGER.debug("[%s] Call %d/%d (%d/%d) '%s' with data: %s, Parent ID: %s", self._group.entity_id, i + 1, len(calls), attempt + 1, attempts, service, service_data, parent_id)
+
+                await self._after_call_trigger(data)
 
             except Exception as error:
                 error_msg = str(error)
@@ -215,7 +225,7 @@ class BaseServiceCallHandler(ABC):
         - Handles temperature range specially (must be sent in one call)
         - Uses _get_call_entity_ids() for entity selection
         - Routes calls through the processing pipeline:
-          _build_initial_call → _process_min_temp_off → _process_offset → _process_oob_guard
+          _build_initial_call → _process_min_temp_off → _process_member_offset → _process_group_offset → _process_oob_guard
 
         Args:
             data: Dict of attribute values to sync
@@ -251,7 +261,8 @@ class BaseServiceCallHandler(ABC):
                                     "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
                                     "entity_ids": entity_ids}]
                             processed = self._process_min_temp_off(raw)
-                            processed = self._process_offset(processed)
+                            processed = self._process_member_offset(processed)
+                            processed = self._process_group_offset(processed)
                             processed = self._process_oob_guard(processed)
                             calls.extend(processed)
                             temp_range_processed = True
@@ -261,10 +272,11 @@ class BaseServiceCallHandler(ABC):
             if not entity_ids:
                 continue
 
-            # Pipeline: build → process min_temp_off → process OOB guard
+            # Pipeline: build → process min_temp_off → process offsets → process OOB guard
             raw = self._build_initial_call(attr, value, entity_ids)
             processed = self._process_min_temp_off(raw)
-            processed = self._process_offset(processed)
+            processed = self._process_member_offset(processed)
+            processed = self._process_group_offset(processed)
             processed = self._process_oob_guard(processed)
             calls.extend(processed)
 
@@ -278,14 +290,13 @@ class BaseServiceCallHandler(ABC):
         """
         return self._get_filtered_entities(attr, value)
 
-    def _should_diff(self) -> bool:
-        """Whether _get_filtered_entities should filter by value deviation.
-
-        False (default): all capable entities are included regardless of current value.
-        Override to True in handlers that should only update members that actually need it
-        (Sync/Schedule).
-        """
-        return False
+    def _split_calls_by_entity(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Split bundled calls into per-entity calls to allow stagger delays between them."""
+        result = []
+        for call in calls:
+            for entity_id in call["entity_ids"]:
+                result.append({**call, "entity_ids": [entity_id]})
+        return result
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Get the target value for an attribute.
@@ -294,6 +305,15 @@ class BaseServiceCallHandler(ABC):
         Override in Sync/Schedule handlers to read from target_state instead.
         """
         return value
+
+    def _get_target_value_with_offset(self, attr: str, value: Any = None) -> Any:
+        """Read from target_state, with group_offset applied for temperature attributes."""
+        raw = getattr(self.target_state, attr, None)
+        if raw is not None and attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
+            group_offset = self._group.run_state.group_offset
+            if group_offset != 0.0:
+                return round(float(raw) + group_offset, 1)
+        return raw
 
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Check if a specific member should be excluded from service calls.
@@ -329,10 +349,11 @@ class BaseServiceCallHandler(ABC):
 
             min_temp = state.attributes.get("min_temp")
             max_temp = state.attributes.get("max_temp")
-            offset = self._group._temp_offset_map.get(entity_id, 0.0)
+            member_offset = self._group._temp_offset_map.get(entity_id, 0.0)
+            group_offset = self._group.run_state.group_offset
 
             for target_temp in active_temps:
-                effective_tgt = target_temp + offset
+                effective_tgt = target_temp + member_offset + group_offset
                 if (min_temp is not None and effective_tgt < min_temp) or \
                    (max_temp is not None and effective_tgt > max_temp):
                     return True  # Still OOB -> keep blocked
@@ -404,9 +425,9 @@ class BaseServiceCallHandler(ABC):
             if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
 
-            # Apply per-member offset for temperature comparisons
             if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
-                effective_target = self._group.get_effective_temperature(entity_id, target_value)
+                member_offset = self._group._temp_offset_map.get(entity_id, 0.0)
+                effective_target = target_value + member_offset if target_value is not None else None
             else:
                 effective_target = target_value
 
@@ -430,6 +451,15 @@ class BaseServiceCallHandler(ABC):
                 result.append(entity_id)
 
         return result
+
+    def _should_diff(self) -> bool:
+        """Whether _get_filtered_entities should filter by value deviation.
+
+        False (default): all capable entities are included regardless of current value.
+        Override to True in handlers that should only update members that actually need it
+        (Sync/Schedule).
+        """
+        return False
 
     def _get_parent_id(self) -> str:
         """Create a unique Parent ID for echo tracking.
@@ -514,7 +544,7 @@ class BaseServiceCallHandler(ABC):
 
         return result
 
-    def _process_offset(self, calls: list[dict]) -> list[dict]:
+    def _process_member_offset(self, calls: list[dict]) -> list[dict]:
         """Apply per-entity temperature offset.
 
         For calls with temperature kwargs that are not already injected,
@@ -540,15 +570,15 @@ class BaseServiceCallHandler(ABC):
             # Split by offset: batch no-offset entities, per-entity for offset
             no_offset_ids = []
             for entity_id in call["entity_ids"]:
-                offset = self._group._temp_offset_map.get(entity_id, 0.0)
-                if offset == 0.0:
+                member_offset = self._group._temp_offset_map.get(entity_id, 0.0)
+                if member_offset == 0.0:
                     no_offset_ids.append(entity_id)
                     continue
 
                 adjusted_kwargs = dict(kwargs)
                 for attr in transformable:
                     if adjusted_kwargs[attr] is not None:
-                        adjusted_kwargs[attr] = adjusted_kwargs[attr] + offset
+                        adjusted_kwargs[attr] = adjusted_kwargs[attr] + member_offset
 
                 result.append({
                     **call,
@@ -561,6 +591,45 @@ class BaseServiceCallHandler(ABC):
                 result.append({**call, "entity_ids": no_offset_ids})
 
         return result
+
+    def _process_group_offset(self, calls: list[dict]) -> list[dict]:
+        """Shift temperature attributes by the global group offset."""
+        if not self._apply_group_offset():
+            return calls
+
+        group_offset = self._group.run_state.group_offset
+        if group_offset == 0.0:
+            return calls
+
+        result = []
+        temp_attrs = {ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH}
+
+        for call in calls:
+            kwargs = call["kwargs"]
+            injected = set(call.get("injected", []))
+            # Only transform temp attrs that are not already injected
+            transformable = temp_attrs & set(kwargs) - injected
+
+            if not transformable:
+                result.append(call)
+                continue
+
+            adjusted_kwargs = dict(kwargs)
+            for attr in transformable:
+                if adjusted_kwargs[attr] is not None:
+                    adjusted_kwargs[attr] = round(float(adjusted_kwargs[attr]) + group_offset, 1)
+
+            result.append({
+                **call,
+                "kwargs": adjusted_kwargs,
+                "injected": list(injected | transformable)
+            })
+
+        return result
+
+    def _apply_group_offset(self) -> bool:
+        """Whether to apply the global group offset. False by default (direct-command handlers)."""
+        return False
 
     def _process_oob_guard(self, calls: list[dict]) -> list[dict]:
         """OOB guard: check if temperature values are within device range (union only).
@@ -723,6 +792,15 @@ class BaseServiceCallHandler(ABC):
             if (member_state := self._hass.states.get(member_id)) and member_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         )
 
+    async def _after_call_trigger(self, data: dict[str, Any] | None = None) -> None:
+        """Hook called after a successful service call batch. No-op by default.
+
+        Override in handlers that need to react after the call completes
+        (e.g. ClimateCallHandler resets the group offset on manual setpoint changes).
+        Must be async — the base implementation is a no-op coroutine so that all
+        subclasses can be awaited uniformly without 'await None' footguns.
+        """
+        pass
 
 class ClimateCallHandler(BaseServiceCallHandler):
     """Handler for direct user commands (set_hvac_mode, set_temperature, etc.).
@@ -782,6 +860,12 @@ class ClimateCallHandler(BaseServiceCallHandler):
         """Do not block any attributes."""
         return False
 
+    async def _after_call_trigger(self, data: dict[str, Any] | None = None) -> None:
+        """Execute calls and reset group offset if a temperature was explicitly set."""
+        temp_attrs = {ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH}
+        if data and temp_attrs & set(data) and self._group.offset_set_callback:
+            await self._group.offset_set_callback(0.0)
+
 
 class SyncCallHandler(BaseServiceCallHandler):
     """Generates calls based on target_state diff.
@@ -821,8 +905,8 @@ class SyncCallHandler(BaseServiceCallHandler):
         return True
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
-        """Read from target_state instead of using the passed value."""
-        return getattr(self.target_state, attr, None)
+        """Read from target_state with group_offset applied for temperature attributes."""
+        return self._get_target_value_with_offset(attr, value)
 
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
         """Apply Partial Sync: skip OFF members if CONF_IGNORE_OFF_MEMBERS_SYNC is set."""
@@ -831,6 +915,11 @@ class SyncCallHandler(BaseServiceCallHandler):
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block calls if blocking mode is active."""
         return self._group.run_state.blocked
+
+    def _apply_group_offset(self) -> bool:
+        # Suspended during active override (boost/schedule_override): those handlers
+        # send an exact temperature that must land on members unchanged.
+        return self._group.run_state.active_override is None
 
 
 class WindowControlCallHandler(BaseServiceCallHandler):
@@ -850,6 +939,11 @@ class WindowControlCallHandler(BaseServiceCallHandler):
         """Bypass global block, but still respect per-member isolation."""
         return entity_id in self._group.run_state.isolated_members
 
+    def _apply_group_offset(self) -> bool:
+        # Apply offset only during restore (blocking_sources empty = window just closed).
+        # When blocking (window open), explicit override data is sent — offset must not apply.
+        return not self._group.run_state.blocking_sources
+
 
 class PresenceCallHandler(BaseServiceCallHandler):
     """Call handler for Presence Control away-fallback operations.
@@ -867,6 +961,11 @@ class PresenceCallHandler(BaseServiceCallHandler):
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Bypass global block, but still respect per-member isolation."""
         return entity_id in self._group.run_state.isolated_members
+
+    def _apply_group_offset(self) -> bool:
+        # Apply offset only during restore (blocking_sources empty = presence just cleared).
+        # Away payloads (AWAY_OFFSET etc.) already incorporate group_offset via _active_data().
+        return not self._group.run_state.blocking_sources
 
 
 class SwitchCallHandler(BaseServiceCallHandler):
@@ -886,13 +985,18 @@ class SwitchCallHandler(BaseServiceCallHandler):
         """Bypass all blocking — switch commands always reach every member."""
         return False
 
+    def _apply_group_offset(self) -> bool:
+        # Apply offset only during restore (blocking_sources empty = switch just turned on).
+        # Switch-OFF payload {"hvac_mode": "off"} must not be shifted.
+        return not self._group.run_state.blocking_sources
+
 
 class SwitchEnforceCallHandler(BaseServiceCallHandler):
     """Call handler for Switch enforcement (deviating member correction).
 
     Bypass profile: ignores run_state.blocked, respects isolated_members.
-    Distinct from SwitchCallHandler which bypasses everything — enforcement
-    should not reach isolated members.
+    Isolated members were deliberately turned OFF — enforcement must not
+    overwrite that. Distinct from SwitchCallHandler, which bypasses everything.
     """
 
     CONTEXT_ID = "switch_enforce"
@@ -931,6 +1035,11 @@ class OverrideCallHandler(BaseServiceCallHandler):
         """Read from target_state instead of using the passed value."""
         return getattr(self.target_state, attr, None)
 
+    def _apply_group_offset(self) -> bool:
+        # Apply offset only during restore (active_override cleared = boost just expired).
+        # During boost, active_override is set — exact temperature must land unchanged.
+        return self._group.run_state.active_override is None
+
 
 class ScheduleCallHandler(BaseServiceCallHandler):
     """Call handler for Schedule operations."""
@@ -950,8 +1059,8 @@ class ScheduleCallHandler(BaseServiceCallHandler):
         return True
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
-        """Read from target_state instead of using the passed value."""
-        return getattr(self.target_state, attr, None)
+        """Read from target_state with group_offset applied for temperature attributes."""
+        return self._get_target_value_with_offset(attr, value)
 
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
         """Apply Partial Sync: skip OFF members if CONF_IGNORE_OFF_MEMBERS_SCHEDULE is set."""
@@ -960,3 +1069,7 @@ class ScheduleCallHandler(BaseServiceCallHandler):
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block schedule calls if blocking mode is active."""
         return self._group.run_state.blocked
+
+    def _apply_group_offset(self) -> bool:
+        # Suspended during active override (boost/schedule_override): see SyncCallHandler.
+        return self._group.run_state.active_override is None

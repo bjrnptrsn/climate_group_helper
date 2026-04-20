@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "在场模式",
               "presence_sensor": "存在触发器",
+              "presence_zone": "存在区域",
               "presence_action": "离开时操作",
               "presence_away_offset": "离开温度偏移 (°C)",
               "presence_away_temperature": "离开温度 (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "启用或禁用检测到无人时自动切换至离开模式的功能。",
-              "presence_sensor": "报告室内是否有人存在的实体。“开启”或“在家”状态被视为有人。",
+              "presence_sensor": "报告室内是否有人存在的实体。可选择多个传感器（如移动探测器和手机）。任意传感器显示'开启'或'在家'状态均视为有人在场。",
+              "presence_zone": "（可选）选择计入存在状态的区域。如果已定义，则只有当人员位于其中一个区域时，才视为「在场」。如果为空，则人员在任意区域均视为「在场」（\"not_home\"除外）。",
               "presence_action": "检测到无人时执行的备用操作。",
               "presence_away_offset": "离开时的当前目标偏移量（例如 -2° 或 +2°）。离开期间的计划更改将自动应用。",
               "presence_away_temperature": "离开时的固定目标温度。",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "成员偏移",
-            "description": "为各个成员设置温度偏移。组目标在发送到每个设备前将按此值调整。留 0 表示无偏移。"
+            "description": "为各个成员设置温度偏移。组目标在发送到每个设备前将按此值调整。留 0 表示无偏移。",
+            "data": {
+              "member_offset_correction": "修正成员偏移量"
+            },
+            "data_description": {
+              "member_offset_correction": "启用后，每个成员的偏移量在聚合前将被减去。当组设定值为 20 °C、偏移量为 +3.0 °C 时，成员设定值为 23.0 °C，而组内部显示的实际值为 20 °C。"
+            }
           },
           "isolation_section": {
             "name": "成员隔离",
@@ -211,6 +219,7 @@
               "debounce_delay": "防抖延迟 (秒)",
               "retry_attempts": "重试次数",
               "retry_delay": "重试延迟 (秒)",
+              "staggered_call_delay": "命令间延迟（秒）",
               "min_temp_off": "关闭时的最低温度",
               "expose_smart_sensors": "公开智能传感器",
               "expose_member_entities": "公开成员列表",
@@ -220,6 +229,7 @@
               "debounce_delay": "发送命令前的等待时间。较高的值可防止滑动控制时出现“连发”命令。",
               "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
               "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。",
+              "staggered_call_delay": "向组成员发送各条命令之间的等待时间。错开命令可防止 Zigbee/Matter 网络拥塞。设置为 0 可禁用。",
               "min_temp_off": "关闭群组时发送设备的最低温度（例如 5°C）。这可确保阀门完全关闭以进行防冻保护。",
               "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
               "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "高级功能",
           "expand_sections": "默认展开所有部分"
         }
       }
@@ -393,6 +404,19 @@
             "name": "目标 HVAC 模式"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "群组偏移"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "温度"
+      },
+      "humidity": {
+        "name": "湿度"
       }
     },
     "switch": {

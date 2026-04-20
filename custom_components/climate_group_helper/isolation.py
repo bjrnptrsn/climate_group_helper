@@ -58,12 +58,12 @@ class MemberIsolationHandler:
 
         self._trigger: IsolationTrigger = IsolationTrigger(
             group.config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
-        )
-        self._sensor_id: str | None = group.config.get(CONF_ISOLATION_SENSOR)
+        ) if self._group.advanced_mode else IsolationTrigger.DISABLED
+        self._sensor_id: str | None = group.config.get(CONF_ISOLATION_SENSOR) if self._group.advanced_mode else None
         self._trigger_hvac_modes: list[str] = group.config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, [])
         self._isolation_entity_ids: list[str] = group.config.get(CONF_ISOLATION_ENTITIES, [])
-        self._activate_delay: float = group.config.get(CONF_ISOLATION_ACTIVATE_DELAY, 0)
-        self._restore_delay: float = group.config.get(CONF_ISOLATION_RESTORE_DELAY, 0)
+        self._activate_delay: float = group.config.get(CONF_ISOLATION_ACTIVATE_DELAY, 0) if self._group.advanced_mode else 0
+        self._restore_delay: float = group.config.get(CONF_ISOLATION_RESTORE_DELAY, 0) if self._group.advanced_mode else 0
 
         self._unsub_listener = None
         self._pending_timer: Any = None

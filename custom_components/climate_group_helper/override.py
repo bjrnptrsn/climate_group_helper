@@ -80,7 +80,7 @@ class BaseOverrideManager:
     blocking_sources and active_override are owned here via RunState methods.
     """
 
-    OVERRIDE_NAME: str = ""  # RunState active_override value when timer is active
+    OVERRIDE_NAME: str = "base"  # RunState active_override value when timer is active
 
     def __init__(self, group: ClimateGroup) -> None:
         self._group = group
@@ -90,7 +90,7 @@ class BaseOverrideManager:
     @property
     def call_handler(self):
         """Return the call handler for this override manager. Override in subclasses."""
-        raise NotImplementedError
+        return self._group.override_call_handler
 
     def _start_timer(self, duration_seconds: float, on_expired) -> None:
         """Start an override timer. Sets active_override to OVERRIDE_NAME."""
@@ -99,6 +99,7 @@ class BaseOverrideManager:
         self._cancel_timer()
 
         self._group.run_state = self._group.run_state.set_override(self.OVERRIDE_NAME, duration_seconds)
+        _LOGGER.debug("[%s] Setting override: '%s' for %s seconds", self._group.entity_id, self.OVERRIDE_NAME, duration_seconds)
 
         @callback
         def _handle_timeout(_now: Any) -> None:
@@ -166,10 +167,6 @@ class BoostOverrideManager(BaseOverrideManager):
 
     OVERRIDE_NAME = "boost"
 
-    @property
-    def call_handler(self):
-        return self._group.override_call_handler
-
     async def activate(self, temperature: float, duration_seconds: float) -> None:
         """Start boost override: snapshot, temperature, timer.
 
@@ -185,8 +182,8 @@ class BoostOverrideManager(BaseOverrideManager):
 
         self._save_snapshot()
         self._group.climate_state_manager.update(temperature=temperature)
-        await self.call_handler.call_immediate()
         self._start_timer(duration_seconds, self._on_expired)
+        await self.call_handler.call_immediate()
 
         _LOGGER.debug(
             "[%s] Boost started: temperature=%s, duration=%.0fs",
@@ -339,8 +336,9 @@ class PresenceOverrideManager(BaseOverrideManager):
         """
         if self._action == PresenceAction.AWAY_OFFSET:
             base = self._group.shared_target_state.temperature
+            group_offset = self._group.run_state.group_offset
             if base is not None:
-                return {"temperature": round(base + self._away_offset, 1)}
+                return {"temperature": round(base + group_offset + self._away_offset, 1)}
             return {"hvac_mode": HVACMode.OFF}
         if self._action == PresenceAction.AWAY_TEMPERATURE and self._away_temperature is not None:
             return {"temperature": self._away_temperature}

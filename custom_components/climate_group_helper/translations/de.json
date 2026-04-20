@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Climate Group Helper",
+        "title": "Klimagruppen Helfer",
         "description": "Erstelle einen leistungsstarken 'Virtuellen Controller' für deine Klimageräte. Diese Gruppe bündelt Messwerte und synchronisiert Einstellungen über alle Mitglieder hinweg und agiert als eine einzige smarte Einheit.",
         "data": {
           "name": "Gruppenname",
@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Präsenzmodus",
               "presence_sensor": "Präsenz-Trigger",
+              "presence_zone": "Anwesenheitszone",
               "presence_action": "Abwesenheits-Aktion",
               "presence_away_offset": "Abwesenheits-Temperaturversatz (°C)",
               "presence_away_temperature": "Abwesenheits-Temperatur (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Aktiviert oder deaktiviert den automatischen Abwesenheits-Fallback bei unbelegtem Raum.",
-              "presence_sensor": "Die Entität, die die Raumpräsenz meldet. Der Status 'Ein' oder 'home' wird als anwesend gewertet.",
+              "presence_sensor": "Die Entität, die die Raumpräsenz meldet. Es können mehrere Sensoren ausgewählt werden (z.B. Bewegungsmelder und Smartphone). Der Status 'Ein' oder 'home' eines beliebigen Sensors wird als anwesend gewertet.",
+              "presence_zone": "(Optional) Zonen auswählen, in denen Anwesenheit gewertet wird. Wenn definiert, gilt eine Person nur dann als 'anwesend', wenn sie sich in einer dieser Zonen befindet. Wenn leer, gilt die Person in jeder Zone als 'anwesend' (außer 'not_home').",
               "presence_action": "Was passiert, wenn der Raum unbelegt ist.",
               "presence_away_offset": "Versatz zum aktuellen Zielwert bei Abwesenheit (z. B. -2° oder +2°). Änderungen am Zeitplan während der Abwesenheit werden automatisch berücksichtigt.",
               "presence_away_temperature": "Feste Zieltemperatur bei Abwesenheit.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Geräte-Offsets",
-            "description": "Lege einen Temperatur-Offset für einzelne Mitglieder fest. Der Gruppen-Zielwert wird um diesen Wert angepasst, bevor er an jedes Gerät gesendet wird. Auf 0 belassen für keinen Offset."
+            "description": "Lege einen Temperatur-Offset für einzelne Mitglieder fest. Der Gruppen-Zielwert wird um diesen Wert angepasst, bevor er an jedes Gerät gesendet wird. Auf 0 belassen für keinen Offset.",
+            "data": {
+              "member_offset_correction": "Mitglieds-Offset korrigieren"
+            },
+            "data_description": {
+              "member_offset_correction": "Wenn aktiviert, wird der Offset jedes Mitglieds vor der Aggregation abgezogen. Bei einem Gruppen-Sollwert von 20 °C und einem Offset von +3,0 °C beträgt der Geräte-Sollwert 23,0 °C, während der für die Gruppe angezeigte Wert intern 20 °C entspricht."
+            }
           },
           "isolation_section": {
             "name": "Mitglieds-Isolierung",
@@ -211,6 +219,7 @@
               "debounce_delay": "Entprellverzögerung (Sekunden)",
               "retry_attempts": "Wiederholungsversuche",
               "retry_delay": "Wiederholungsverzögerung (Sekunden)",
+              "staggered_call_delay": "Verzögerung zwischen Befehlen (Sekunden)",
               "min_temp_off": "Min. Temp bei 'Aus'",
               "expose_smart_sensors": "Smarte Sensoren bereitstellen",
               "expose_member_entities": "Mitgliederliste bereitstellen",
@@ -220,6 +229,7 @@
               "debounce_delay": "Wartezeit vor dem Senden von Befehlen. Höhere Werte verhindern 'schnell aufeinanderfolgende' Befehle beim Schieben von Reglern, fühlen sich aber langsamer an.",
               "retry_attempts": "Wie oft Befehle erneut gesendet werden, falls ein Gerät nicht antwortet. Auf 0 setzen zum Deaktivieren.",
               "retry_delay": "Pause zwischen Wiederholungsversuchen. Gibt Geräten einen Moment zur Erholung.",
+              "staggered_call_delay": "Wartezeit zwischen einzelnen Befehlen an Gruppenmitglieder. Die gestaffelte Übertragung verhindert Netzwerküberlastung in Zigbee/Matter-Umgebungen. Auf 0 setzen zum Deaktivieren.",
               "min_temp_off": "Sendet die Minimaltemperatur des Geräts (z.B. 5°C) beim Ausschalten der Gruppe. Dies stellt sicher, dass die Ventile zum Frostschutz vollständig geschlossen sind.",
               "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
               "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Erweiterte Funktionen",
           "expand_sections": "Alle Sektionen standardmäßig aufklappen"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Ziel-HVAC-Modus"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Gruppen-Offset"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatur"
+      },
+      "humidity": {
+        "name": "Luftfeuchtigkeit"
       }
     },
     "switch": {

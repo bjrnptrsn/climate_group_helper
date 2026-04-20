@@ -10,7 +10,6 @@ from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_state_change_event, async_call_later
 
 from .const import (
-    ATTR_SERVICE_MAP,
     CONF_SCHEDULE_ENTITY,
     CONF_RESYNC_INTERVAL,
     CONF_OVERRIDE_DURATION,
@@ -50,12 +49,12 @@ class ScheduleHandler:
         self._group = group
         self._hass = group.hass
         self._unsub_listener = None
-        self._schedule_entity = group.config.get(CONF_SCHEDULE_ENTITY)
+        self._schedule_entity = group.config.get(CONF_SCHEDULE_ENTITY) if self._group.advanced_mode else None
 
         # Feature Options
-        self._resync_interval = group.config.get(CONF_RESYNC_INTERVAL, 0)
-        self._override_duration = group.config.get(CONF_OVERRIDE_DURATION, 0)
-        self._persist_changes = group.config.get(CONF_PERSIST_CHANGES, False)
+        self._resync_interval = group.config.get(CONF_RESYNC_INTERVAL, 0) if self._group.advanced_mode else 0
+        self._override_duration = group.config.get(CONF_OVERRIDE_DURATION, 0) if self._group.advanced_mode else 0
+        self._persist_changes = group.config.get(CONF_PERSIST_CHANGES, False) if self._group.advanced_mode else False
 
         # Timer (shared slot: either resync or schedule-override, never both)
         self._timer = None
@@ -146,15 +145,17 @@ class ScheduleHandler:
             if self._group.run_state.active_override == "schedule_override":
                 self._group.run_state = self._group.run_state.clear_override()
 
-    def _start_timer(self, timer_type: str) -> None:
+    def _start_timer(self, timer_type: str, duration_seconds: int | None = None) -> None:
         """Start a schedule timer (resync or override). Both fire schedule_listener(RESYNC)."""
-        duration_seconds = 60 * (self._resync_interval if timer_type == "resync" else self._override_duration)
+        if duration_seconds is None:
+            duration_seconds = 60 * (self._resync_interval if timer_type == "resync" else self._override_duration)
         if duration_seconds <= 0:
             return
         self._cancel_timer()
 
         if timer_type == "override":
             self._group.run_state = self._group.run_state.set_override("schedule_override", duration_seconds)
+            _LOGGER.debug("[%s] Setting override: '%s' for %s seconds", self._group.entity_id, "schedule_override", duration_seconds)
 
         @callback
         def handle_timer_timeout(_now):
@@ -189,19 +190,22 @@ class ScheduleHandler:
         slot_data = {}
         if state := self._hass.states.get(self._schedule_entity):
             if state.state == "on":
-                slot_data = state.attributes
+                slot_data = dict(state.attributes)
 
-        filtered_slot = {
-            key: value for key, value in slot_data.items()
-            if key in list(ATTR_SERVICE_MAP.keys())
-        }
+        # Process Meta-Keys: SlotMetaProcessor owns the full lifecycle (apply + track + cleanup).
+        # It returns only the cleaned climate payload and a flag for the early-return guard.
+        result = await self._group.slot_meta_processor.process(slot_data)
+        filtered_slot = result.climate_payload
 
-        if not filtered_slot:
+        if not filtered_slot and not result.has_meta_keys:
+            # No climate payload and no meta-keys either → nothing to do at all.
+            # A slot with *only* meta-keys passes this guard so the timer logic below
+            # can still run (e.g. to start the resync timer).
             return
 
         # SERVICE_CALL and SYNC_CALL skip slot application — they only manage timers below.
         # (SERVICE_CALL = user command, SYNC_CALL = sync enforcement / MIRROR adoption)
-        if caller not in (ScheduleCaller.SERVICE_CALL, ScheduleCaller.SYNC_CALL):
+        if caller not in (ScheduleCaller.SERVICE_CALL, ScheduleCaller.SYNC_CALL) and filtered_slot:
             current_target = self.target_state.to_dict(attributes=list(filtered_slot.keys()))
             if current_target != filtered_slot:
                 self.state_manager.update(**filtered_slot)
@@ -232,10 +236,11 @@ class ScheduleHandler:
 
     async def update_schedule_entity(self, new_entity_id: str | None) -> None:
         """Update the active schedule entity.
-        
+
         If new_entity_id is None, revert to the configured entity.
         """
-        if not new_entity_id:
+        is_reset = not new_entity_id
+        if is_reset:
             # Revert to config
             new_entity_id = self._group.config.get(CONF_SCHEDULE_ENTITY)
             if new_entity_id:
@@ -252,11 +257,23 @@ class ScheduleHandler:
         self._cancel_timer()
         self._group.boost_override_manager.abort()
 
+        # A full reset (entity_id=None) also clears the group_offset so the schedule temperature
+        # lands on members without the offset skewing the diff check. Without this, members that
+        # were already synced to target+offset after a window-close cycle would show no diff
+        # against the slot data and receive no service call.
+        if is_reset and self._group.run_state.group_offset != 0.0:
+            if self._group.offset_set_callback:
+                await self._group.offset_set_callback(0.0)
+            else:
+                self._group.run_state = replace(self._group.run_state, group_offset=0.0)
+            _LOGGER.debug("[%s] Reset: group_offset cleared to 0.0", self._group.entity_id)
+
         if self._schedule_entity:
             self._subscribe()
             await self.schedule_listener(caller=ScheduleCaller.SWITCH)
         else:
             self._cancel_timer()
+
 
     async def start_boost(self, temperature: float, duration: int) -> None:
         """Start a boost override for the given duration (minutes).
@@ -290,7 +307,7 @@ class ScheduleHandler:
         await self.call_handler.call_immediate()
 
         # Start override timer with explicit duration (minutes → seconds)
-        self._start_timer(ScheduleCaller.OVERRIDE, explicit_duration=duration * 60)
+        self._start_timer(ScheduleCaller.OVERRIDE, duration_seconds=duration * 60)
 
         _LOGGER.debug(
             "[%s] Boost started: temperature=%s, duration=%s min",

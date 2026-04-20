@@ -30,6 +30,7 @@ DOMAIN = "climate_group_helper"
 DEFAULT_NAME = "Climate Group"
 
 # Member & Modes
+CONF_ADVANCED_MODE = "advanced_mode"
 CONF_MASTER_ENTITY = "master_entity"
 CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
 CONF_FEATURE_STRATEGY = "feature_strategy"
@@ -46,7 +47,7 @@ CONF_TEMP_CALIBRATION_MODE = "temp_calibration_mode"
 CONF_CALIBRATION_HEARTBEAT = "calibration_heartbeat"
 CONF_CALIBRATION_IGNORE_OFF = "calibration_ignore_off"
 CALIBRATION_DEBOUNCE_DELAY = 3.0   # seconds — collapses rapid sensor ticks into one write
-CALIBRATION_WRITE_DELAY    = 0.5  # seconds — gap between sequential Z2M writes
+CONF_STAGGERED_CALL_DELAY = "staggered_call_delay"
 
 # Humidity Settings
 CONF_HUMIDITY_TARGET_AVG = "humidity_target_avg"
@@ -78,6 +79,7 @@ DEFAULT_CLOSE_DELAY = 30
 # Presence Control
 CONF_PRESENCE_MODE = "presence_mode"
 CONF_PRESENCE_SENSOR = "presence_sensor"
+CONF_PRESENCE_ZONE = "presence_zone"
 CONF_PRESENCE_ACTION = "presence_action"
 CONF_PRESENCE_AWAY_OFFSET = "presence_away_offset"
 CONF_PRESENCE_AWAY_TEMPERATURE = "presence_away_temperature"
@@ -89,6 +91,7 @@ DEFAULT_PRESENCE_RETURN_DELAY = 0
 
 # Member Offsets
 CONF_MEMBER_TEMP_OFFSETS = "member_temp_offsets"
+CONF_MEMBER_OFFSET_CORRECTION = "member_offset_correction"
 
 # Member Isolation
 CONF_ISOLATION_SENSOR = "isolation_sensor"
@@ -238,6 +241,18 @@ ATTR_OOB_MEMBERS = "oob_members"
 ATTR_ACTIVE_OVERRIDE = "active_override"
 ATTR_MASTER_FALLBACK_ACTIVE = "master_fallback_active"
 ATTR_ACTIVE_OVERRIDE_END = "active_override_end"
+ATTR_GROUP_OFFSET = "group_offset"
+
+# Schedule Meta-Keys (v1 — State-Keys only)
+META_KEY_TURN_OFF = "turn_off"  # no CONF_ mapping
+META_KEY_SYNC_MODE = CONF_SYNC_MODE  # == "sync_mode"
+META_KEY_GROUP_OFFSET = ATTR_GROUP_OFFSET  # RunState field, no CONF_ mapping
+
+META_STATE_KEYS: frozenset[str] = frozenset({
+    META_KEY_TURN_OFF,
+    META_KEY_SYNC_MODE,
+    META_KEY_GROUP_OFFSET,
+})
 
 # Attribute to service call mapping
 ATTR_SERVICE_MAP = {

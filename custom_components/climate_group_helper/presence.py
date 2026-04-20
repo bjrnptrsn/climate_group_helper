@@ -4,8 +4,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from homeassistant.const import STATE_OFF
 from homeassistant.core import callback
+from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 
 from .const import (
@@ -13,6 +13,7 @@ from .const import (
     CONF_PRESENCE_MODE,
     CONF_PRESENCE_RETURN_DELAY,
     CONF_PRESENCE_SENSOR,
+    CONF_PRESENCE_ZONE,
     DEFAULT_PRESENCE_AWAY_DELAY,
     DEFAULT_PRESENCE_RETURN_DELAY,
     PresenceMode,
@@ -36,16 +37,18 @@ class PresenceHandler:
         self._group = group
         self._hass = group.hass
         self._mode = group.config.get(CONF_PRESENCE_MODE, PresenceMode.DISABLED)
-        self._sensor = group.config.get(CONF_PRESENCE_SENSOR)
+        self._sensors = group.config.get(CONF_PRESENCE_SENSOR, [])
+        self._zones = group.config.get(CONF_PRESENCE_ZONE, [])
         self._away_delay = group.config.get(CONF_PRESENCE_AWAY_DELAY, DEFAULT_PRESENCE_AWAY_DELAY)
         self._return_delay = group.config.get(CONF_PRESENCE_RETURN_DELAY, DEFAULT_PRESENCE_RETURN_DELAY)
+
         self._timer_cancel = None
         self._unsub_listener = None
         self._away_active = False
 
         _LOGGER.debug(
-            "[%s] PresenceHandler initialized. sensor=%s, away_delay=%ds, return_delay=%ds",
-            group.entity_id, self._sensor, self._away_delay, self._return_delay,
+            "[%s] PresenceHandler initialized. sensors=%s, zones=%s, away_delay=%ds, return_delay=%ds",
+            group.entity_id, self._sensors, self._zones, self._away_delay, self._return_delay,
         )
 
     @property
@@ -53,19 +56,18 @@ class PresenceHandler:
         return self._group.presence_override_manager
 
     async def async_setup(self) -> None:
-        if self._mode == PresenceMode.DISABLED or not self._sensor:
-            _LOGGER.debug("[%s] Presence control disabled (mode=%s)", self._group.entity_id, self._mode)
+        if self._mode == PresenceMode.DISABLED or not self._sensors:
+            _LOGGER.debug("[%s] Presence control disabled (mode=%s, sensors=%s)", self._group.entity_id, self._mode, self._sensors)
             return
 
         self._unsub_listener = async_track_state_change_event(
-            self._hass, [self._sensor], self._state_change_listener
+            self._hass, self._sensors, self._state_change_listener
         )
-        _LOGGER.debug("[%s] Presence control subscribed to: %s", self._group.entity_id, self._sensor)
+        _LOGGER.debug("[%s] Presence control subscribed to: %s", self._group.entity_id, self._sensors)
 
-        # Check initial sensor state. The 5s startup block only affects SyncModeHandler
-        # (target_state writes) — writing blocking_sources directly is safe here.
-        if (state := self._hass.states.get(self._sensor)) and not self._is_present(state.state):
-            _LOGGER.debug("[%s] Initial sensor state absent — activating away mode immediately", self._group.entity_id)
+        # Check initial collective presence
+        if not self._get_collective_presence():
+            _LOGGER.debug("[%s] Initial collective presence absent — activating away mode immediately", self._group.entity_id)
             await self.override_manager.activate()
             self._away_active = True
 
@@ -75,15 +77,38 @@ class PresenceHandler:
             self._unsub_listener()
             self._unsub_listener = None
 
-    @staticmethod
-    def _is_present(state_str: str) -> bool:
-        """Return True if the sensor indicates presence.
+    def _get_collective_presence(self) -> bool:
+        """Return True if ANY sensor indicates presence.
 
-        Handles binary_sensor / input_boolean (on/off) and device_tracker (home/not_home).
-        Any state that is not explicitly absent is treated as present — unknown sensor
-        states should never trigger away mode.
+        Sensors not yet in the state machine (None) count as present — startup safety.
         """
-        return state_str not in (STATE_OFF, "not_home")
+        for sensor_id in self._sensors:
+            state = self._hass.states.get(sensor_id)
+            if state is None or self._is_present(state.state):
+                return True
+        return False
+
+    def _is_present(self, state_str: str) -> bool:
+        """Return True if the state indicates presence.
+
+        Priority order:
+        1. Definitive absent: off, not_home → False
+        2. Safety net: unknown, unavailable → True (never trigger away on sensor errors)
+        3. Zone whitelist: if zones configured, person must be in one of them
+        4. Fallback: anything else (e.g. "home", "on") → True
+        """
+        if state_str in (STATE_OFF, "not_home"):
+            return False
+        if state_str in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            return True
+        if self._zones:
+            if state_str == "home" and "zone.home" in self._zones:
+                return True
+            for zone_id in self._zones:
+                if (zone_state := self._hass.states.get(zone_id)) and state_str == zone_state.name:
+                    return True
+            return False
+        return True
 
     @callback
     def _state_change_listener(self, event) -> None:
@@ -91,7 +116,7 @@ class PresenceHandler:
         if new_state is None:
             return
 
-        present = self._is_present(new_state.state)
+        present = self._get_collective_presence()
         self._cancel_timer()
 
         if not present and not self._away_active:

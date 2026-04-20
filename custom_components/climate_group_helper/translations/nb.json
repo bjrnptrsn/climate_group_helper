@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Tilstedeværelsesmodus",
               "presence_sensor": "Tilstedeværelsesutløser",
+              "presence_zone": "Tilstedeværelsessone",
               "presence_action": "Fraværshandling",
               "presence_away_offset": "Fraværs-temperaturforskyvning (°C)",
               "presence_away_temperature": "Fraværs-temperatur (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Aktiver eller deaktiver automatisk fraværsmodus når fravær er detektert.",
-              "presence_sensor": "Enheten som rapporterer tilstedeværelse i rommet. Status 'on' oder 'home' behandles som tilstedeværelse.",
+              "presence_sensor": "Enheten som rapporterer tilstedeværelse i rommet. Du kan velge flere sensorer (f.eks. bevegelsessensor og telefon). Status 'on' eller 'home' fra en hvilken som helst sensor behandles som tilstedeværelse.",
+              "presence_zone": "(Valgfritt) Velg soner der tilstedeværelse teller. Hvis definert, er en person bare 'til stede' når de befinner seg i en av disse sonene. Hvis tom, er personen 'til stede' i enhver sone (unntatt 'not_home').",
               "presence_action": "Fallback-handlingen som skal utføres når fravær er detektert.",
               "presence_away_offset": "Forskyvning fra gjeldende mål ved fravær (f.eks. -2° eller +2°). Skemaendringer under fravær brukes automatisk.",
               "presence_away_temperature": "Fast måltemperatur ved fravær.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Medlem Offsets",
-            "description": "Still inn et temperaturavvik for individuelle medlemmer. Gruppemålet justeres med denne verdien før den sendes til hver enhet. La stå på 0 for ingen forskjell."
+            "description": "Still inn et temperaturavvik for individuelle medlemmer. Gruppemålet justeres med denne verdien før den sendes til hver enhet. La stå på 0 for ingen forskjell.",
+            "data": {
+              "member_offset_correction": "Korriger medlems-offset"
+            },
+            "data_description": {
+              "member_offset_correction": "Når aktivert, trekkes hvert medlems offset fra før aggregering. Med et gruppesetpunkt på 20 °C og et offset på +3,0 °C er medlemmets setpunkt 23,0 °C, mens den faktiske verdien for gruppen internt er 20 °C."
+            }
           },
           "isolation_section": {
             "name": "Medlemsisolering",
@@ -211,6 +219,7 @@
               "debounce_delay": "Debounce forsinkelse (sekunder)",
               "retry_attempts": "Forsøk på nytt",
               "retry_delay": "Forsinkelse ved nytt forsøk (sekunder)",
+              "staggered_call_delay": "Forsinkelse mellom kommandoer (sekunder)",
               "min_temp_off": "Minimumstemperatur når av",
               "expose_smart_sensors": "Vis smarte sensorer",
               "expose_member_entities": "Vis medlemsliste",
@@ -220,6 +229,7 @@
               "debounce_delay": "Ventetid før sending av kommandoer. Høyere verdier forhindrer 'raske' kommandoer når du skyver kontrollene.",
               "retry_attempts": "Hvor mange ganger en kommando skal sendes på nytt hvis en enhet ikke svarer. Sett til 0 for å deaktivere.",
               "retry_delay": "Pause mellom forsøk. Å gi enheter et øyeblikk til å komme seg kan forbedre påliteligheten.",
+              "staggered_call_delay": "Ventetid mellom individuelle kommandoer til gruppemedlemmer. Fordeling av kommandoer forhindrer nettverksbelastning i Zigbee/Matter-miljøer. Sett til 0 for å deaktivere.",
               "min_temp_off": "Sender enhetens minimumstemperatur (f.eks. 5°C) når gruppen slås av. Dette sikrer at ventilene er helt lukket for frostbeskyttelse.",
               "expose_smart_sensors": "Oppretter ekstra sensorentiteter for gruppens temperatur og luftfuktighet (nyttig for grafer).",
               "expose_member_entities": "Oppretter en attributt som lister alle medlemsenhets-ID-er.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Avanserte funksjoner",
           "expand_sections": "Utvid alle seksjoner som standard"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Mål HVAC-modus"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Gruppe-offset"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatur"
+      },
+      "humidity": {
+        "name": "Luftfuktighet"
       }
     },
     "switch": {

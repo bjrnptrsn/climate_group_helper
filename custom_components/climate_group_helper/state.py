@@ -5,6 +5,7 @@ import logging
 import time
 from dataclasses import asdict, dataclass, field, fields, replace
 from datetime import datetime, timedelta
+from types import MappingProxyType
 from typing import Any, TYPE_CHECKING
 
 from homeassistant.core import Event
@@ -74,11 +75,28 @@ class RunState:
     pre_override_snapshot: TargetState | None = None
     active_override: str | None = None
     active_override_end: datetime | None = None
+    group_offset: float = 0.0
+    config_overrides: MappingProxyType[str, Any] = field(
+        default_factory=lambda: MappingProxyType({})
+    )
 
     @property
     def blocked(self) -> bool:
         """True if any blocking source is active."""
         return bool(self.blocking_sources)
+
+    def set_config_override(self, key: str, value: Any) -> RunState:
+        """Return a new RunState with a config override added/updated."""
+        new_overrides = dict(self.config_overrides)
+        new_overrides[key] = value
+        return replace(self, config_overrides=MappingProxyType(new_overrides))
+
+    def clear_config_overrides(self, keys: set[str]) -> RunState:
+        """Return a new RunState with specific config overrides removed."""
+        new_overrides = dict(self.config_overrides)
+        for key in keys:
+            new_overrides.pop(key, None)
+        return replace(self, config_overrides=MappingProxyType(new_overrides))
 
     def set_override(self, name: str, duration_seconds: float) -> RunState:
         """Return a new RunState with the override set and end time computed."""

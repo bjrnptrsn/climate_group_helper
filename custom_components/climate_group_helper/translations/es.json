@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Modo de presencia",
               "presence_sensor": "Activador de presencia",
+              "presence_zone": "Zona de presencia",
               "presence_action": "Acción en ausencia",
               "presence_away_offset": "Desplazamiento de temperatura en ausencia (°C)",
               "presence_away_temperature": "Temperatura en ausencia (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Activa o desactiva el modo de ausencia automático cuando se detecta la ausencia.",
-              "presence_sensor": "La entidad que informa de la presencia en la habitación. El estado 'on' o 'home' se trata como presencia.",
+              "presence_sensor": "La entidad que informa de la presencia en la habitación. Puede seleccionar varios sensores (p. ej. sensor de movimiento y teléfono). El estado 'on' o 'home' de cualquier sensor se trata como presencia.",
+              "presence_zone": "(Opcional) Selecciona las zonas donde se cuenta la presencia. Si se define, una persona solo se considera 'presente' cuando está en una de estas zonas. Si está vacío, la persona está 'presente' en cualquier zona (excepto 'not_home').",
               "presence_action": "La acción de respaldo a realizar cuando se detecta la ausencia.",
               "presence_away_offset": "Desviación del objetivo actual cuando se está fuera (p. ej., -2° o +2°). Los cambios de programación durante la ausencia se aplican automáticamente.",
               "presence_away_temperature": "Temperatura objetivo fija en ausencia.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Desviaciones de miembros",
-            "description": "Establece una desviación de temperatura para miembros individuales. El objetivo del grupo se ajusta por este valor antes de enviarse a cada dispositivo. Deje en 0 para no aplicar desviación."
+            "description": "Establece una desviación de temperatura para miembros individuales. El objetivo del grupo se ajusta por este valor antes de enviarse a cada dispositivo. Deje en 0 para no aplicar desviación.",
+            "data": {
+              "member_offset_correction": "Corregir desviación del miembro"
+            },
+            "data_description": {
+              "member_offset_correction": "Cuando está habilitado, el offset de cada miembro se descuenta antes de la agregación. Con un punto de ajuste de grupo de 20 °C y un offset de +3,0 °C, el punto de ajuste del miembro es 23,0 °C, mientras que el valor real del miembro para el grupo es internamente 20 °C."
+            }
           },
           "isolation_section": {
             "name": "Aislamiento de miembros",
@@ -211,6 +219,7 @@
               "debounce_delay": "Retardo de Rebote (segundos)",
               "retry_attempts": "Intentos de Reintento",
               "retry_delay": "Retardo de Reintento (segundos)",
+              "staggered_call_delay": "Retraso entre comandos (segundos)",
               "min_temp_off": "Temperatura mínima al apagar",
               "expose_smart_sensors": "Exponer sensores inteligentes",
               "expose_member_entities": "Exponer lista de miembros",
@@ -220,6 +229,7 @@
               "debounce_delay": "Tiempo de espera antes de enviar comandos. Valores más altos evitan comandos de 'fuego rápido' al deslizar controles.",
               "retry_attempts": "Cuántas veces reenviar un comando si un dispositivo no responde. Poner a 0 para desactivar.",
               "retry_delay": "Pausa entre intentos. Dar un momento a los dispositivos para recuperarse puede mejorar la fiabilidad.",
+              "staggered_call_delay": "Tiempo de espera entre comandos individuales a los miembros del grupo. Escalonar los comandos evita la congestión de red en entornos Zigbee/Matter. Establecer en 0 para desactivar.",
               "min_temp_off": "Envía la temperatura mínima del dispositivo (ej. 5°C) al apagar el grupo. Esto asegura que las válvulas estén completamente cerradas para la protección contra heladas.",
               "expose_smart_sensors": "Crea entidades de sensor adicionales para temperatura y humedad del grupo (útil para gráficos).",
               "expose_member_entities": "Crea un atributo listando todos los IDs de entidades miembro.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Funciones avanzadas",
           "expand_sections": "Expandir todas las secciones por defecto"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Modo HVAC Objetivo"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Offset de grupo"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatura"
+      },
+      "humidity": {
+        "name": "Humedad"
       }
     },
     "switch": {

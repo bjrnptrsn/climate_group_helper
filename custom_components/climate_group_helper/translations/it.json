@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Modalità presenza",
               "presence_sensor": "Attivatore di presenza",
+              "presence_zone": "Zona di presenza",
               "presence_action": "Azione in assenza",
               "presence_away_offset": "Offset temperatura in assenza (°C)",
               "presence_away_temperature": "Temperatura in assenza (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Abilita o disabilita il fallback automatico in assenza quando viene rilevata l'assenza.",
-              "presence_sensor": "L'entità che riporta la presenza nella stanza. Lo stato 'on' o 'home' è trattato come presenza.",
+              "presence_sensor": "L'entità che riporta la presenza nella stanza. È possibile selezionare più sensori (es. sensore di movimento e telefono). Lo stato 'on' o 'home' di qualsiasi sensore è trattato come presenza.",
+              "presence_zone": "(Opzionale) Seleziona le zone in cui viene rilevata la presenza. Se definito, una persona è considerata 'presente' solo quando si trova in una di queste zone. Se vuoto, la persona è 'presente' in qualsiasi zona (tranne 'not_home').",
               "presence_action": "L'azione di fallback da eseguire quando viene rilevata l'assenza.",
               "presence_away_offset": "Scostamento dal target attuale quando si è assenti (es. -2° o +2°). Le variazioni del programma durante l'assenza vengono applicate automaticamente.",
               "presence_away_temperature": "Temperatura target fissa in assenza.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Offset dei membri",
-            "description": "Imposta un offset di temperatura per i singoli membri. L'obiettivo del gruppo viene regolato di questo valore prima di essere inviato a ciascun dispositivo. Lascia a 0 per nessun offset."
+            "description": "Imposta un offset di temperatura per i singoli membri. L'obiettivo del gruppo viene regolato di questo valore prima di essere inviato a ciascun dispositivo. Lascia a 0 per nessun offset.",
+            "data": {
+              "member_offset_correction": "Correggi offset membro"
+            },
+            "data_description": {
+              "member_offset_correction": "Se abilitato, l'offset di ciascun membro viene sottratto prima dell'aggregazione. Con un setpoint di gruppo di 20 °C e un offset di +3,0 °C, il setpoint del membro è 23,0 °C, mentre il valore effettivo del membro per il gruppo è internamente 20 °C."
+            }
           },
           "isolation_section": {
             "name": "Isolamento membri",
@@ -211,6 +219,7 @@
               "debounce_delay": "Ritardo Debounce (secondi)",
               "retry_attempts": "Tentativi Riprova",
               "retry_delay": "Ritardo Riprova (secondi)",
+              "staggered_call_delay": "Ritardo tra i comandi (secondi)",
               "min_temp_off": "Temperatura minima quando spento",
               "expose_smart_sensors": "Esponi sensori intelligenti",
               "expose_member_entities": "Esponi elenco dei membri",
@@ -220,6 +229,7 @@
               "debounce_delay": "Tempo di attesa prima dell'invio dei comandi. Valori più alti impediscono comandi a 'raffica' durante lo scorrimento dei controlli.",
               "retry_attempts": "Quante volte inviare nuovamente un comando se un dispositivo non risponde. Imposta a 0 per disabilitare.",
               "retry_delay": "Pausa tra i tentativi. Dare ai dispositivi un momento per recuperare può migliorare l'affidabilità.",
+              "staggered_call_delay": "Tempo di attesa tra i singoli comandi ai membri del gruppo. Scaglionare i comandi previene la congestione della rete in ambienti Zigbee/Matter. Impostare a 0 per disattivare.",
               "min_temp_off": "Invia la temperatura minima del dispositivo (es. 5°C) allo spegnimento del gruppo. Ciò garantitce che le valvole siano completamente chiuse per la protezione dal gelo.",
               "expose_smart_sensors": "Crea entità sensore aggiuntive per temperatura e umidità del gruppo (utile per i grafici).",
               "expose_member_entities": "Crea un attributo che elenca tutti gli ID delle entità membro.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Funzioni avanzate",
           "expand_sections": "Espandi tutte le sezioni per impostazione predefinita"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Modalità HVAC Target"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Offset del gruppo"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatura"
+      },
+      "humidity": {
+        "name": "Umidità"
       }
     },
     "switch": {

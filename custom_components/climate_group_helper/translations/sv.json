@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Närvaroläge",
               "presence_sensor": "Närvaroutlösare",
+              "presence_zone": "Närvaro-zon",
               "presence_action": "Åtgärd vid frånvaro",
               "presence_away_offset": "Frånvaro-temperaturförskjutning (°C)",
               "presence_away_temperature": "Frånvaro-temperatur (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Aktivera eller inaktivera automatiskt frånvaroläge när frånvaro detekteras.",
-              "presence_sensor": "Entiteten som rapporterar närvaro i rummet. Status 'on' eller 'home' behandlas som närvaro.",
+              "presence_sensor": "Entiteten som rapporterar närvaro i rummet. Du kan välja flera sensorer (t.ex. rörelsesensor och telefon). Status 'on' eller 'home' från valfri sensor behandlas som närvaro.",
+              "presence_zone": "(Valfritt) Välj zoner där närvaro räknas. Om definierat är en person bara 'närvarande' när de befinner sig i en av dessa zoner. Om tomt är personen 'närvarande' i vilken zon som helst (utom 'not_home').",
               "presence_action": "Reservåtgärd som ska utföras när frånvaro detekteras.",
               "presence_away_offset": "Förskjutning från det aktuella målet vid frånvaro (t.ex. -2° eller +2°). Schemaändringar under frånvaro tillämpas automatiskt.",
               "presence_away_temperature": "Fast måltemperatur vid frånvaro.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Medlems Förskjutningar",
-            "description": "Ställ in en temperaturförskjutning för enskilda medlemmar. Gruppens mål justeras med detta värde innan det skickas till varje enhet. Lämna på 0 för ingen förskjutning."
+            "description": "Ställ in en temperaturförskjutning för enskilda medlemmar. Gruppens mål justeras med detta värde innan det skickas till varje enhet. Lämna på 0 för ingen förskjutning.",
+            "data": {
+              "member_offset_correction": "Korrigera medlems-offset"
+            },
+            "data_description": {
+              "member_offset_correction": "När aktiverat dras varje medlems offset av innan aggregering. Med ett grupbörvärde på 20 °C och en offset på +3,0 °C är medlemmets börvärde 23,0 °C, medan det faktiska värdet för gruppen internt är 20 °C."
+            }
           },
           "isolation_section": {
             "name": "Medlemsisolering",
@@ -211,6 +219,7 @@
               "debounce_delay": "Debounce Fördröjning (sekunder)",
               "retry_attempts": "Återförsök",
               "retry_delay": "Återförsöksfördröjning (sekunder)",
+              "staggered_call_delay": "Fördröjning mellan kommandon (sekunder)",
               "min_temp_off": "Lägsta temperatur vid avstängning",
               "expose_smart_sensors": "Visa smarta sensorer",
               "expose_member_entities": "Visa medlemslista",
@@ -220,6 +229,7 @@
               "debounce_delay": "Väntetid innan kommandon skickas. Högre värden förhindrar 'snabba' kommandon när du drar i reglagen.",
               "retry_attempts": "Hur många gånger ett kommando ska skickas om en enhet inte svarar. Sätt till 0 för att inaktivera.",
               "retry_delay": "Paus mellan återförsök. Att ge enheter en stund att återhämta sig kan förbättra tillförlitligheten.",
+              "staggered_call_delay": "Väntetid mellan enskilda kommandon till gruppmedlemmar. Att fördela kommandon förhindrar nätverksbelastning i Zigbee/Matter-miljöer. Ange 0 för att inaktivera.",
               "min_temp_off": "Skickar enhetens minimitemperatur (t.ex. 5°C) när gruppen stängs av. Detta säkerställer att ventilerna är helt stängda för frostskydd.",
               "expose_smart_sensors": "Skapar extra sensorenheter för gruppens temperatur och luftfuktighet (användbart för grafer).",
               "expose_member_entities": "Skapar ett attribut som listar alla medlemsenhets-ID:n.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Avancerade funktioner",
           "expand_sections": "Expandera alla sektioner som standard"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Mål HVAC-läge"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Gruppoffset"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatur"
+      },
+      "humidity": {
+        "name": "Luftfuktighet"
       }
     },
     "switch": {

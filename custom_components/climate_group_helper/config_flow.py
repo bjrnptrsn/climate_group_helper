@@ -1,4 +1,4 @@
-"""Config flow for Climate Group helper integration."""
+"""Config flow for Climate Group Helper integration."""
 
 from __future__ import annotations
 from typing import Any
@@ -21,6 +21,7 @@ from homeassistant.data_entry_flow import section
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_ADVANCED_MODE,
     CONF_CLOSE_DELAY,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPAND_SECTIONS,
@@ -49,6 +50,7 @@ from .const import (
     CONF_SCHEDULE_ENTITY,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
+    CONF_STAGGERED_CALL_DELAY,
     CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_SENSORS,
     CONF_TEMP_TARGET_AVG,
@@ -61,6 +63,7 @@ from .const import (
     CONF_MIN_TEMP_OFF,
     CONF_PRESENCE_MODE,
     CONF_PRESENCE_SENSOR,
+    CONF_PRESENCE_ZONE,
     CONF_PRESENCE_ACTION,
     CONF_PRESENCE_AWAY_OFFSET,
     CONF_PRESENCE_AWAY_TEMPERATURE,
@@ -74,6 +77,7 @@ from .const import (
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
     CONF_MEMBER_TEMP_OFFSETS,
+    CONF_MEMBER_OFFSET_CORRECTION,
     CONF_ISOLATION_SENSOR,
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_ACTIVATE_DELAY,
@@ -111,7 +115,7 @@ from .climate import (
 class ClimateGroupConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 9
+    VERSION = 10
 
     @staticmethod
     @callback
@@ -169,6 +173,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         self._min_temp = DEFAULT_MIN_TEMP
         self._max_temp = DEFAULT_MAX_TEMP
         self._refresh_hint_shown = False
+        self._adv_mode_changed = False
 
     def _update_dynamic_limits(self) -> None:
         """Calculate dynamic temperature limits from member entities."""
@@ -205,11 +210,26 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         # Start with current config and overlay flat inputs
         current_config = {**self._config_entry.options, **user_input}
 
+        new_adv_mode = user_input.get(CONF_ADVANCED_MODE)
+        old_adv_mode = self._config_entry.options.get(CONF_ADVANCED_MODE)
+        advanced_mode = old_adv_mode and new_adv_mode
+
         # Optional entity selectors return no key when cleared (suggested_value pattern) —
         # explicitly remove stale values so deletion is not silently ignored
-        for key in [CONF_SCHEDULE_ENTITY, CONF_ROOM_SENSOR, CONF_ZONE_SENSOR, CONF_ISOLATION_SENSOR, CONF_PRESENCE_SENSOR, CONF_PRESENCE_AWAY_PRESET, CONF_PRESENCE_AWAY_TEMPERATURE, CONF_WINDOW_TEMPERATURE]:
-            if key not in user_input:
-                current_config.pop(key, None)
+        if advanced_mode:
+            for key in [
+                CONF_ISOLATION_SENSOR,
+                CONF_PRESENCE_AWAY_PRESET,
+                CONF_PRESENCE_AWAY_TEMPERATURE,
+                CONF_PRESENCE_SENSOR,
+                CONF_PRESENCE_ZONE,
+                CONF_ROOM_SENSOR,
+                CONF_SCHEDULE_ENTITY,
+                CONF_WINDOW_TEMPERATURE,
+                CONF_ZONE_SENSOR,
+            ]:
+                if key not in user_input or not user_input.get(key):
+                    current_config.pop(key, None)
 
         # Master Entity Logic
         # Explicitly check for empty/None in input to allow deletion
@@ -222,30 +242,30 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 entities.append(new_master)
                 current_config[CONF_ENTITIES] = entities
             current_config[CONF_MASTER_ENTITY] = new_master
-        else:
+        elif advanced_mode:
             # Clean up all master-dependent keys
             current_config.pop(CONF_MASTER_ENTITY, None)
             current_config.pop(CONF_TEMP_USE_MASTER, None)
             current_config.pop(CONF_HUMIDITY_USE_MASTER, None)
             # Downgrade master-dependent settings
             if current_config.get(CONF_SYNC_MODE) == SyncMode.MASTER_LOCK:
-                current_config[CONF_SYNC_MODE] = SyncMode.LOCK
+                current_config[CONF_SYNC_MODE] = SyncMode.LOCK.value
             if current_config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES) == AdoptManualChanges.MASTER_ONLY:
-                current_config[CONF_WINDOW_ADOPT_MANUAL_CHANGES] = AdoptManualChanges.OFF
+                current_config[CONF_WINDOW_ADOPT_MANUAL_CHANGES] = AdoptManualChanges.OFF.value
 
-        # Temperature Calibration Logic
-        if not current_config.get(CONF_TEMP_SENSORS):
+        # Temperature Calibration logic
+        if not current_config.get(CONF_TEMP_SENSORS) and advanced_mode:
             current_config.pop(CONF_TEMP_UPDATE_TARGETS, None)
 
-        # Window Control Logic
-        if not current_config.get(CONF_ROOM_SENSOR) and not current_config.get(CONF_ZONE_SENSOR):
-            current_config[CONF_WINDOW_MODE] = WindowControlMode.DISABLED
+        # Window Control logic
+        if not current_config.get(CONF_ROOM_SENSOR) and not current_config.get(CONF_ZONE_SENSOR) and advanced_mode:
+            current_config[CONF_WINDOW_MODE] = WindowControlMode.DISABLED.value
 
-        # Presence Control Logic
-        if not current_config.get(CONF_PRESENCE_SENSOR):
-            current_config[CONF_PRESENCE_MODE] = PresenceMode.DISABLED
+        # Presence Control logic
+        if not current_config.get(CONF_PRESENCE_SENSOR) and advanced_mode:
+            current_config[CONF_PRESENCE_MODE] = PresenceMode.DISABLED.value
 
-        # Isolation Logic
+        # Isolation logic
         trigger = current_config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
         valid_members = set(current_config.get(CONF_ENTITIES, []))
 
@@ -276,7 +296,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 if eid in valid_members
             ]
             current_config[CONF_ISOLATION_ENTITIES] = pruned or list(valid_members)
-        else:
+        elif advanced_mode:
             # HVAC_MODE trigger: remove sensor key; prune stale entity refs
             current_config.pop(CONF_ISOLATION_SENSOR, None)
             if CONF_ISOLATION_ENTITIES in current_config:
@@ -287,11 +307,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             if not current_config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES):
                 current_config.pop(CONF_ISOLATION_TRIGGER_HVAC_MODES, None)
                 current_config.pop(CONF_ISOLATION_ENTITIES, None)
-
-        # Clean up empty strings/lists for sensors
-        for key in [CONF_ROOM_SENSOR, CONF_ZONE_SENSOR, CONF_SCHEDULE_ENTITY, CONF_PRESENCE_SENSOR]:
-            if key in current_config and not current_config[key]:
-                current_config.pop(key, None)
 
         # Collect per-member temperature offsets from form fields
         offset_map: dict[str, float] = {}
@@ -307,22 +322,29 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     pass
         if offset_map:
             current_config[CONF_MEMBER_TEMP_OFFSETS] = offset_map
-        else:
+        elif advanced_mode:
             current_config.pop(CONF_MEMBER_TEMP_OFFSETS, None)
+
 
         return current_config
 
     def _section_factory_members(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for members section."""
+        master_fields = {}
+        if config.get(CONF_ADVANCED_MODE, False):
+            master_fields = {
+                vol.Optional(CONF_MASTER_ENTITY, description={"suggested_value": config.get(CONF_MASTER_ENTITY)}): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain=CLIMATE_DOMAIN)
+                ),
+            }
+
         return {
             vol.Required("members_section"): section(
                 vol.Schema({
                     vol.Required(CONF_ENTITIES, default=config.get(CONF_ENTITIES, [])): selector.EntitySelector(
                         selector.EntitySelectorConfig(domain=CLIMATE_DOMAIN, multiple=True)
                     ),
-                    vol.Optional(CONF_MASTER_ENTITY, description={"suggested_value": config.get(CONF_MASTER_ENTITY)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=CLIMATE_DOMAIN)
-                    ),
+                    **master_fields,
                     vol.Required(CONF_HVAC_MODE_STRATEGY, default=config.get(CONF_HVAC_MODE_STRATEGY, HvacModeStrategy.NORMAL)): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=[HvacModeStrategy.NORMAL, HvacModeStrategy.OFF_PRIORITY, HvacModeStrategy.AUTO],
@@ -356,7 +378,32 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         """Factory for temperature section."""
         master_fields = {}
         if config.get(CONF_MASTER_ENTITY):
-            master_fields[vol.Optional(CONF_TEMP_USE_MASTER, default=config.get(CONF_TEMP_USE_MASTER, False))] = bool
+            # master_fields[vol.Optional(CONF_TEMP_USE_MASTER, default=config.get(CONF_TEMP_USE_MASTER, False))] = bool
+            master_fields = {
+                vol.Optional(CONF_TEMP_USE_MASTER, default=config.get(CONF_TEMP_USE_MASTER, False)): bool
+            }
+
+        advanced_fields = {}
+        if config.get(CONF_ADVANCED_MODE, False):
+            advanced_fields = {
+                vol.Optional(CONF_TEMP_SENSORS, default=config.get(CONF_TEMP_SENSORS, [])): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain=SENSOR_DOMAIN, multiple=True)
+                ),
+                vol.Optional(CONF_TEMP_UPDATE_TARGETS, default=config.get(CONF_TEMP_UPDATE_TARGETS, [])): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain=NUMBER_DOMAIN, multiple=True)
+                ),
+                vol.Required(CONF_TEMP_CALIBRATION_MODE, default=config.get(CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE)): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[opt.value for opt in CalibrationMode],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="temp_calibration_mode",
+                    )
+                ),
+                vol.Optional(CONF_CALIBRATION_HEARTBEAT, default=config.get(CONF_CALIBRATION_HEARTBEAT, 0)): selector.NumberSelector(
+                    selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
+                ),
+                vol.Optional(CONF_CALIBRATION_IGNORE_OFF, default=config.get(CONF_CALIBRATION_IGNORE_OFF, False)): bool,
+            }
 
         return {
             vol.Required("temperature_section"): section(
@@ -383,23 +430,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                             translation_key="temp_current_avg",
                         )
                     ),
-                    vol.Optional(CONF_TEMP_SENSORS, default=config.get(CONF_TEMP_SENSORS, [])): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=SENSOR_DOMAIN, multiple=True)
-                    ),
-                    vol.Optional(CONF_TEMP_UPDATE_TARGETS, default=config.get(CONF_TEMP_UPDATE_TARGETS, [])): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=NUMBER_DOMAIN, multiple=True)
-                    ),
-                    vol.Required(CONF_TEMP_CALIBRATION_MODE, default=config.get(CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[opt.value for opt in CalibrationMode],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="temp_calibration_mode",
-                        )
-                    ),
-                    vol.Optional(CONF_CALIBRATION_HEARTBEAT, default=config.get(CONF_CALIBRATION_HEARTBEAT, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_CALIBRATION_IGNORE_OFF, default=config.get(CONF_CALIBRATION_IGNORE_OFF, False)): bool,
+                    **advanced_fields,
                 }),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
             )
@@ -409,7 +440,20 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         """Factory for humidity section."""
         master_fields = {}
         if config.get(CONF_MASTER_ENTITY):
-            master_fields[vol.Optional(CONF_HUMIDITY_USE_MASTER, default=config.get(CONF_HUMIDITY_USE_MASTER, False))] = bool
+            master_fields = {
+                vol.Optional(CONF_HUMIDITY_USE_MASTER, default=config.get(CONF_HUMIDITY_USE_MASTER, False)): bool
+            }
+
+        advanced_fields = {}
+        if config.get(CONF_ADVANCED_MODE, False):
+            advanced_fields = {
+                vol.Optional(CONF_HUMIDITY_SENSORS, default=config.get(CONF_HUMIDITY_SENSORS, [])): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain=SENSOR_DOMAIN, multiple=True)
+                ),
+                vol.Optional(CONF_HUMIDITY_UPDATE_TARGETS, default=config.get(CONF_HUMIDITY_UPDATE_TARGETS, [])): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain=NUMBER_DOMAIN, multiple=True)
+                ),
+            }
 
         return {
             vol.Required("humidity_section"): section(
@@ -436,12 +480,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                             translation_key="humidity_current_avg",
                         )
                     ),
-                    vol.Optional(CONF_HUMIDITY_SENSORS, default=config.get(CONF_HUMIDITY_SENSORS, [])): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=SENSOR_DOMAIN, multiple=True)
-                    ),
-                    vol.Optional(CONF_HUMIDITY_UPDATE_TARGETS, default=config.get(CONF_HUMIDITY_UPDATE_TARGETS, [])): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=NUMBER_DOMAIN, multiple=True)
-                    ),
+                    **advanced_fields,
                 }),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
             )
@@ -546,8 +585,11 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     vol.Required(CONF_PRESENCE_MODE, default=config.get(CONF_PRESENCE_MODE, PresenceMode.DISABLED)): selector.SelectSelector(
                         selector.SelectSelectorConfig(options=[opt.value for opt in PresenceMode], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_mode")
                     ),
-                    vol.Optional(CONF_PRESENCE_SENSOR, description={"suggested_value": config.get(CONF_PRESENCE_SENSOR)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "device_tracker"])
+                    vol.Optional(CONF_PRESENCE_SENSOR, default=config.get(CONF_PRESENCE_SENSOR, [])): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "device_tracker", "person"], multiple=True)
+                    ),
+                    vol.Optional(CONF_PRESENCE_ZONE, default=config.get(CONF_PRESENCE_ZONE, [])): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain="zone", multiple=True)
                     ),
                     vol.Required(CONF_PRESENCE_ACTION, default=config.get(CONF_PRESENCE_ACTION, PresenceAction.OFF)): selector.SelectSelector(
                         selector.SelectSelectorConfig(options=[opt.value for opt in PresenceAction], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_action")
@@ -612,6 +654,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             fields[vol.Optional(key, default=offsets.get(entity_id, 0.0))] = selector.NumberSelector(
                 selector.NumberSelectorConfig(min=-20, max=20, step=0.5, unit_of_measurement="°", mode=selector.NumberSelectorMode.SLIDER)
             )
+        fields[vol.Optional(CONF_MEMBER_OFFSET_CORRECTION, default=config.get(CONF_MEMBER_OFFSET_CORRECTION, True))] = bool
         return {
             vol.Required("temp_offsets_section"): section(
                 vol.Schema(fields),
@@ -698,6 +741,9 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(CONF_RETRY_DELAY, default=config.get(CONF_RETRY_DELAY, 2.5)): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=10, step=0.5, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
                     ),
+                    vol.Optional(CONF_STAGGERED_CALL_DELAY, default=config.get(CONF_STAGGERED_CALL_DELAY, 0.0)): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=0, max=2, step=0.1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
+                    ),
                     vol.Optional(CONF_MIN_TEMP_OFF, default=config.get(CONF_MIN_TEMP_OFF, False)): bool,
                     vol.Optional(CONF_EXPOSE_SMART_SENSORS, default=config.get(CONF_EXPOSE_SMART_SENSORS, False)): bool,
                     vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=config.get(CONF_EXPOSE_MEMBER_ENTITIES, True)): bool,
@@ -728,6 +774,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
     ) -> ConfigFlowResult:
         """Manage the climate group options."""
         old_master = self._config_entry.options.get(CONF_MASTER_ENTITY)
+        old_adv_mode = self._config_entry.options.get(CONF_ADVANCED_MODE)
 
         if user_input is not None:
             flattened_input = self._flatten_input(user_input)
@@ -748,9 +795,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     "presence_section": "master_options_notice",
                 })
 
-            # Reset hint marker and save
-            self._refresh_hint_shown = False
-
             # Validate: isolation_entities must be a proper subset of entities
             # (not enforced for MEMBER_OFF — dynamic per-entity trigger has no batch deadlock risk)
             entities = set(flattened_input.get(CONF_ENTITIES, self._config_entry.options.get(CONF_ENTITIES, [])))
@@ -763,6 +807,18 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 })
 
             final_options = self._normalize_options(flattened_input)
+
+            new_adv_mode = flattened_input.get(CONF_ADVANCED_MODE)
+            adv_mode_changed = (CONF_ADVANCED_MODE in flattened_input and new_adv_mode != old_adv_mode)
+            
+            if adv_mode_changed and not self._adv_mode_changed:
+                self._adv_mode_changed = True
+                return await self._show_main_form(final_options)
+
+            # Reset markers and save
+            self._refresh_hint_shown = False
+            self._adv_mode_changed = False
+
             return self.async_create_entry(title="", data=final_options)
 
         return await self._show_main_form(self._config_entry.options)
@@ -770,20 +826,25 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
     async def _show_main_form(self, config: dict[str, Any], form_errors: dict[str, str] | None = None) -> ConfigFlowResult:
         """Show the unified configuration form."""
         self._update_dynamic_limits()
+        
+        advanced_mode = config.get(CONF_ADVANCED_MODE, False)
 
         # Compose schema from factories
         schema_dict = {}
         schema_dict.update(self._section_factory_members(config))
         schema_dict.update(self._section_factory_temperature(config))
         schema_dict.update(self._section_factory_humidity(config))
-        schema_dict.update(self._section_factory_sync(config))
-        schema_dict.update(self._section_factory_window_control(config))
-        schema_dict.update(self._section_factory_presence(config))
-        schema_dict.update(self._section_factory_schedule(config))
-        schema_dict.update(self._section_factory_temp_offsets(config))
-        schema_dict.update(self._section_factory_isolation(config))
-        schema_dict.update(self._section_factory_advanced(config))
 
+        if advanced_mode:
+            schema_dict.update(self._section_factory_sync(config))
+            schema_dict.update(self._section_factory_window_control(config))
+            schema_dict.update(self._section_factory_presence(config))
+            schema_dict.update(self._section_factory_schedule(config))
+            schema_dict.update(self._section_factory_temp_offsets(config))
+            schema_dict.update(self._section_factory_isolation(config))
+            schema_dict.update(self._section_factory_advanced(config))
+
+        schema_dict[vol.Optional(CONF_ADVANCED_MODE, default=advanced_mode)] = bool
         schema_dict[vol.Optional(CONF_EXPAND_SECTIONS, default=config.get(CONF_EXPAND_SECTIONS, False))] = bool
 
         return self.async_show_form(

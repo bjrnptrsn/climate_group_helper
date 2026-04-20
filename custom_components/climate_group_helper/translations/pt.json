@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Modo de presença",
               "presence_sensor": "Ativador de presença",
+              "presence_zone": "Zona de presença",
               "presence_action": "Ação em ausência",
               "presence_away_offset": "Desvio de temperatura na ausência (°C)",
               "presence_away_temperature": "Temperatura na ausência (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Ativar ou desativar o modo de ausência automático quando a ausência é detetada.",
-              "presence_sensor": "A entidade que reporta a presença na divisão. O estado 'on' ou 'home' é tratado como presença.",
+              "presence_sensor": "A entidade que reporta a presença na divisão. Pode selecionar múltiplos sensores (ex.: sensor de movimento e telemóvel). O estado 'on' ou 'home' de qualquer sensor é tratado como presença.",
+              "presence_zone": "(Opcional) Selecione as zonas onde a presença é contabilizada. Se definido, uma pessoa só é considerada 'presente' quando está numa dessas zonas. Se vazio, a pessoa está 'presente' em qualquer zona (exceto 'not_home').",
               "presence_action": "A ação de salvaguarda a realizar quando a ausência é detetada.",
               "presence_away_offset": "Desvio em relação ao objetivo atual quando está ausente (ex. -2° oder +2°). As alterações de programação durante a ausência são aplicadas automaticamente.",
               "presence_away_temperature": "Temperatura alvo fixa na ausência.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Desvios de membros",
-            "description": "Defina um desvio de temperatura para membros individuais. O alvo do grupo é ajustado por este valor antes de ser enviado para cada dispositivo. Deixe em 0 para nenhum desvio."
+            "description": "Defina um desvio de temperatura para membros individuais. O alvo do grupo é ajustado por este valor antes de ser enviado para cada dispositivo. Deixe em 0 para nenhum desvio.",
+            "data": {
+              "member_offset_correction": "Corrigir desvio do membro"
+            },
+            "data_description": {
+              "member_offset_correction": "Quando ativado, o desvio de cada membro é subtraído antes da agregação. Com um setpoint de grupo de 20 °C e um desvio de +3,0 °C, o setpoint do membro é 23,0 °C, enquanto o valor real do membro para o grupo é internamente 20 °C."
+            }
           },
           "isolation_section": {
             "name": "Isolamento de membros",
@@ -211,6 +219,7 @@
               "debounce_delay": "Atraso de Debounce (segundos)",
               "retry_attempts": "Tentativas de Repetição",
               "retry_delay": "Atraso de Repetição (segundos)",
+              "staggered_call_delay": "Atraso entre comandos (segundos)",
               "min_temp_off": "Temperatura mínima ao desligar",
               "expose_smart_sensors": "Expor sensores inteligentes",
               "expose_member_entities": "Expor lista de membros",
@@ -220,6 +229,7 @@
               "debounce_delay": "Tempo de espera antes de enviar comandos. Valores mais altos evitam comandos de 'tiro rápido' ao deslizar controlos.",
               "retry_attempts": "Quantas vezes reenviar um comando se um dispositivo não responder. Definir como 0 para desativar.",
               "retry_delay": "Pausa entre tentativas. Dar um momento aos dispositivos para recuperar pode melhorar a fiabilidade.",
+              "staggered_call_delay": "Tempo de espera entre comandos individuais aos membros do grupo. Escalonar os comandos evita a congestionamento da rede em ambientes Zigbee/Matter. Definir como 0 para desativar.",
               "min_temp_off": "Envia a temperatura mínima do dispositivo (ex: 5°C) ao desligar o grupo. Isto garante que as válvulas fiquem totalmente fechadas para proteção contra geada.",
               "expose_smart_sensors": "Cria entidades de sensor adicionais para a temperatura e humidade do grupo (útil para gráficos).",
               "expose_member_entities": "Cria um atributo listando todos os IDs das entidades membro.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Funcionalidades avançadas",
           "expand_sections": "Expandir todas as secções por defeito"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Modo HVAC Alvo"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Desvio do grupo"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatura"
+      },
+      "humidity": {
+        "name": "Humidade"
       }
     },
     "switch": {

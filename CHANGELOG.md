@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.26.0 - 2026-04-21
+
+> 🎉 **A big one!** Lots of new ground covered in this release — please check the README to get the most out of it. Everything has been tested thoroughly, but with this much happening at once, stay attentive after updating and open an issue if anything feels off!
+
+### 🌟 New Features
+
+*   **Group Offset**: A new `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongside each Climate Group Helper. Use it to shift all member temperatures globally — without touching your schedule, target settings, or Boost temperature. The offset is automatically reset when a temperature is set directly on the group, and survives Home Assistant restarts.
+
+*   **Schedule Meta-Keys**: Schedule slots can now contain special keys that control the group itself — not just its members. Three keys are supported:
+    *   `turn_off` — activates the Main Switch block for the duration of the slot (members are turned off and all commands blocked). On the next slot, the block is lifted and members are restored automatically.
+    *   `sync_mode` — temporarily overrides the configured Sync Mode for the slot. Useful for "quiet hours" slots that should not react to manual changes.
+    *   `group_offset` — sets the Group Offset slider for the slot. If you move the slider manually while the slot is active, your value wins and the slot-end reset is skipped.
+
+    Meta-keys can be combined freely with climate attributes or used alone (e.g. a slot that only sets `turn_off: true` with no temperature).
+
+*   **Advanced Features Mode**: A new top-level toggle separates the integration into **Simple** and **Advanced** tiers.
+    *   **Simple Mode (default for new groups)**: Only Core Capabilities are shown. The configuration UI hides all advanced sections (Sync, Window Control, Presence, Schedule, Isolation, Calibration). No advanced handlers are initialized at runtime, keeping the integration lean.
+    *   **Advanced Features**: Restores the full feature set. Toggle it in the group's General Settings — all your existing configuration is preserved and put into hibernation when you switch back to Simple Mode.
+    *   **Existing groups are unaffected**: Groups upgraded from earlier versions keep **Advanced Features** active automatically.
+
+*   **Presence Control — Multi-Sensor & Zone Support**: The Presence Control feature now accepts multiple sensors of any type (`binary_sensor`, `input_boolean`, `device_tracker`, `person`). The group is considered occupied as soon as **any** sensor reports presence. An optional **Zone** list lets you restrict presence detection to specific HA zones — ensuring a person is only counted as present when they are actually at a relevant location (e.g. 'Home'), preventing false triggers from someone who is in another zone.
+
+*   **Staggered Service Calls**: A new **Staggered Call Delay** option (0–2s, step 0.1s) splits outgoing commands per member device and sends them sequentially with a configurable delay between each. This prevents radio flooding in large Zigbee/Matter networks. The same delay also applies to calibration writes, replacing the former fixed 0.5s calibration delay.
+
+### ✨ Improvements
+
+*   **Correct member offset**: When enabled (default), the group's displayed temperature reflects the logical setpoint rather than the hardware-adjusted member average. Example: group target 20°C, member offset +3°C → member receives 23°C, but the group still displays 20°C. Disable to show the raw average instead.
+
 ## 0.25.0 - 2026-04-17
 
 ### 🌟 New Features

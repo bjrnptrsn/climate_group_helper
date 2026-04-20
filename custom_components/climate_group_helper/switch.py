@@ -34,10 +34,9 @@ async def async_setup_entry(
     group = entry_data.get("group")
 
     if not group:
-        _LOGGER.warning(
-            "[%s] Climate group entity not found for config entry, skipping switch setup",
-            config_entry.title,
-        )
+        _LOGGER.warning("[%s] Climate group entity not found for config entry, skipping switch setup", config_entry.title)
+        return
+    if not group.advanced_mode:
         return
 
     async_add_entities([ControlSwitch(group)])
@@ -51,15 +50,16 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
     Persists state across restarts via RestoreEntity.
     """
 
+    _attr_has_entity_name = True
     _attr_should_poll = False
 
     def __init__(self, group: ClimateGroup) -> None:
         """Initialize the main switch."""
         self._group = group
-        self._is_on = True  # Default: switch is ON
-        self._attr_unique_id = f"{group.unique_id}_control_switch"
-        self._attr_translation_key = "main_switch"
         self._attr_icon = "mdi:power"
+        self._attr_translation_key = "main_switch"
+        self._attr_unique_id = f"{group.unique_id}_control_switch"
+        self._is_on = True  # Default: switch is ON
 
     @property
     def override_manager(self):
@@ -76,10 +76,7 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         if (last := await self.async_get_last_state()) is not None:
             self._is_on = last.state == "on"
             if not self._is_on:
-                _LOGGER.debug(
-                    "[%s] Restoring control switch OFF state",
-                    self._group.entity_id,
-                )
+                _LOGGER.debug("[%s] Restoring control switch OFF state", self._group.entity_id)
                 await self.override_manager.activate()
 
     @property
@@ -89,12 +86,14 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn switch ON → restore group to target_state."""
+        _LOGGER.debug("[%s] Main switch turned ON — restoring group", self._group.entity_id)
         self._is_on = True
         await self.override_manager.restore()
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn switch OFF → force group to hvac_mode=off."""
+        _LOGGER.debug("[%s] Main switch turned OFF — blocking group", self._group.entity_id)
         self._is_on = False
         await self.override_manager.activate()
         self.async_write_ha_state()

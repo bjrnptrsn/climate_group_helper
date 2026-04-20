@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Aanwezigheidsmodus",
               "presence_sensor": "Aanwezigheidstrigger",
+              "presence_zone": "Aanwezigheidszone",
               "presence_action": "Actie bij afwezigheid",
               "presence_away_offset": "Afwezigheids-temperatuurverschuiving (°C)",
               "presence_away_temperature": "Afwezigheids-temperatuur (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Automatische afwezigheids-fallback in- of uitschakelen wanneer afwezigheid wordt gedetecteerd.",
-              "presence_sensor": "De entiteit die aanwezigheid in de kamer rapporteert. De status 'on' of 'home' wordt behandeld als aanwezig.",
+              "presence_sensor": "De entiteit die aanwezigheid in de kamer rapporteert. U kunt meerdere sensoren selecteren (bijv. bewegingssensor en telefoon). De status 'on' of 'home' van een willekeurige sensor wordt behandeld als aanwezig.",
+              "presence_zone": "(Optioneel) Selecteer zones waarin aanwezigheid wordt geteld. Indien gedefinieerd, is een persoon alleen 'aanwezig' wanneer hij/zij zich in een van deze zones bevindt. Indien leeg, is de persoon 'aanwezig' in elke zone (behalve 'not_home').",
               "presence_action": "De fallback-actie die moet worden uitgevoerd wanneer afwezigheid wordt gedetecteerd.",
               "presence_away_offset": "Verschil ten opzichte van het huidige doel bij afwezigheid (bijv. -2° of +2°). Schemawijzigingen tijdens afwezigheid worden automatisch toegepast.",
               "presence_away_temperature": "Vaste doeltemperatuur bij afwezigheid.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Leden Offsets",
-            "description": "Stel een temperatuuroffset in voor individuele leden. Het groepsdoel wordt met deze waarde aangepast voordat het naar elk apparaat wordt verzonden. Laat op 0 voor geen offset."
+            "description": "Stel een temperatuuroffset in voor individuele leden. Het groepsdoel wordt met deze waarde aangepast voordat het naar elk apparaat wordt verzonden. Laat op 0 voor geen offset.",
+            "data": {
+              "member_offset_correction": "Correctie leden-offset"
+            },
+            "data_description": {
+              "member_offset_correction": "Indien ingeschakeld, wordt de offset van elk lid afgetrokken vóór aggregatie. Met een groepsinstellingswaarde van 20 °C en een offset van +3,0 °C is de instellingswaarde van het lid 23,0 °C, terwijl de werkelijke waarde voor de groep intern 20 °C is."
+            }
           },
           "isolation_section": {
             "name": "Ledenisolatie",
@@ -211,6 +219,7 @@
               "debounce_delay": "Debounce Vertraging (seconden)",
               "retry_attempts": "Herhaalpogingen",
               "retry_delay": "Herhaalvertraging (seconden)",
+              "staggered_call_delay": "Vertraging tussen opdrachten (seconden)",
               "min_temp_off": "Minimumtemperatuur bij uit",
               "expose_smart_sensors": "Slimme sensoren weergeven",
               "expose_member_entities": "Ledenlijst weergeven",
@@ -220,6 +229,7 @@
               "debounce_delay": "Wachttijd voor het verzenden van opdrachten. Hogere waarden voorkomen 'snelvuur'-opdrachten bij het schuiven van regelaars.",
               "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
               "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren.",
+              "staggered_call_delay": "Wachttijd tussen afzonderlijke opdrachten aan groepsleden. Gespreide opdrachten voorkomen netwerkcongestie in Zigbee/Matter-omgevingen. Stel in op 0 om te deactiveren.",
               "min_temp_off": "Verzendt de minimumtemperatuur van het apparaat (bijv. 5°C) bij het uitschakelen van de groep. Dit zorgt ervoor dat kranen volledig gesloten zijn voor vorstbescherming.",
               "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
               "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Geavanceerde functies",
           "expand_sections": "Vouw standaard alle secties uit"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Doel HVAC-modus"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Groepsoffset"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatuur"
+      },
+      "humidity": {
+        "name": "Luchtvochtigheid"
       }
     },
     "switch": {

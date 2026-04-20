@@ -142,6 +142,7 @@
             "data": {
               "presence_mode": "Tryb obecności",
               "presence_sensor": "Wyzwalacz obecności",
+              "presence_zone": "Strefa obecności",
               "presence_action": "Akcja przy nieobecności",
               "presence_away_offset": "Przesunięcie temperatury nieobecności (°C)",
               "presence_away_temperature": "Temperatura nieobecności (°C)",
@@ -151,7 +152,8 @@
             },
             "data_description": {
               "presence_mode": "Włącz lub wyłącz automatyczne przechodzenie w tryb nieobecności po wykryciu braku osób.",
-              "presence_sensor": "Encja raportująca obecność w pomieszczeniu. Stan 'on' lub 'home' jest traktowany jako obecność.",
+              "presence_sensor": "Encja raportująca obecność w pomieszczeniu. Można wybrać wiele czujników (np. czujnik ruchu i telefon). Stan 'on' lub 'home' dowolnego czujnika jest traktowany jako obecność.",
+              "presence_zone": "(Opcjonalnie) Wybierz strefy, w których liczy się obecność. Jeśli zdefiniowano, osoba jest uznawana za 'obecną' tylko wtedy, gdy znajduje się w jednej z tych stref. Jeśli puste, osoba jest 'obecna' w dowolnej strefie (z wyjątkiem 'not_home').",
               "presence_action": "Działanie awaryjne wykonywane po wykryciu nieobecności.",
               "presence_away_offset": "Przesunięcie względem bieżącego celu podczas nieobecności (np. -2° lub +2°). Zmiany harmonogramu podczas nieobecności są stosowane automatycznie.",
               "presence_away_temperature": "Stała temperatura docelowa przy nieobecności.",
@@ -182,7 +184,13 @@
           },
           "temp_offsets_section": {
             "name": "Offsety członków",
-            "description": "Ustaw przesunięcie temperatury dla poszczególnych członków. Cel grupy jest dostosowywany o tę wartość przed wysłaniem do każdego urządzenia. Pozostaw na 0, aby nie stosować przesunięcia."
+            "description": "Ustaw przesunięcie temperatury dla poszczególnych członków. Cel grupy jest dostosowywany o tę wartość przed wysłaniem do każdego urządzenia. Pozostaw na 0, aby nie stosować przesunięcia.",
+            "data": {
+              "member_offset_correction": "Koryguj offset członka"
+            },
+            "data_description": {
+              "member_offset_correction": "Gdy włączone, offset każdego członka jest odejmowany przed agregacją. Przy nastawie grupy 20 °C i offsetcie +3,0 °C nastawa członka wynosi 23,0 °C, natomiast wartość rzeczywista dla grupy wewnętrznie wynosi 20 °C."
+            }
           },
           "isolation_section": {
             "name": "Izolacja członków",
@@ -211,6 +219,7 @@
               "debounce_delay": "Opóźnienie Debounce (sekundy)",
               "retry_attempts": "Próby Ponowienia",
               "retry_delay": "Opóźnienie Ponowienia (sekundy)",
+              "staggered_call_delay": "Opóźnienie między poleceniami (sekundy)",
               "min_temp_off": "Minimalna temperatura po wyłączeniu",
               "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
               "expose_member_entities": "Pokaż Listę Członków",
@@ -220,6 +229,7 @@
               "debounce_delay": "Czas oczekiwania przed wysłaniem poleceń. Wyższe wartości zapobiegają poleceniom typu 'szybki ogień' podczas przesuwania suwaków.",
               "retry_attempts": "Ile razy ponownie wysłać polecenie, jeśli urządzenie nie odpowiada. Ustaw na 0, aby wyłączyć.",
               "retry_delay": "Pauza między próbami. Danie urządzeniom chwili na odzyskanie sprawności może poprawić niezawodność.",
+              "staggered_call_delay": "Czas oczekiwania między poszczególnymi poleceniami do członków grupy. Rozłożenie poleceń zapobiega przeciążeniu sieci w środowiskach Zigbee/Matter. Ustaw na 0, aby wyłączyć.",
               "min_temp_off": "Wysyła minimalną temperaturę urządzenia (np. 5°C) podczas wyłączania grupy. Zapewnia to całkowite zamknięcie zaworów w celu ochrony przed zamarzaniem.",
               "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
               "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
@@ -228,6 +238,7 @@
           }
         },
         "data": {
+          "advanced_mode": "Funkcje zaawansowane",
           "expand_sections": "Domyślnie rozwiń wszystkie sekcje"
         }
       }
@@ -393,6 +404,19 @@
             "name": "Docelowy Tryb HVAC"
           }
         }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Przesunięcie grupy"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatura"
+      },
+      "humidity": {
+        "name": "Wilgotność"
       }
     },
     "switch": {

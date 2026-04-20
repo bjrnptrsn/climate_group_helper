@@ -15,7 +15,6 @@ from homeassistant.helpers.event import async_call_later, async_track_time_inter
 
 from .const import (
     CALIBRATION_DEBOUNCE_DELAY,
-    CALIBRATION_WRITE_DELAY,
     CONF_CALIBRATION_HEARTBEAT,
     CONF_CALIBRATION_IGNORE_OFF,
     CONF_HUMIDITY_UPDATE_TARGETS,
@@ -237,14 +236,22 @@ class CalibrationHandler:
             )
 
     async def _flush(self, _now=None) -> None:
-        """Write queued calibration values sequentially to avoid Z2M flooding."""
+        """Write queued calibration values, with optional stagger delay between writes."""
+
         self._debounce_unsub = None
-        for entity_id, value in list(self._pending.items()):
+        stagger_delay = self._group.stagger_delay
+        pending = list(self._pending.items())
+        self._pending.clear()
+
+        for i, (entity_id, value) in enumerate(pending):
+
+            # Stagger delay between calls (not before first, not after last)
+            if i > 0 and stagger_delay:
+                await asyncio.sleep(stagger_delay)
+
             _LOGGER.debug("[%s] Writing calibration %s → %s", self._group.entity_id, entity_id, value)
             await self._hass.services.async_call(
                 NUMBER_DOMAIN,
                 "set_value",
                 {ATTR_ENTITY_ID: entity_id, "value": value},
             )
-            await asyncio.sleep(CALIBRATION_WRITE_DELAY)
-        self._pending.clear()

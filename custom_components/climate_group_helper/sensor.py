@@ -84,6 +84,8 @@ async def async_setup_entry(
 class ClimateGroupBaseSensor(SensorEntity):
     """Base class for a climate group sensor."""
 
+    _attr_has_entity_name = True
+
     def __init__(
         self,
         hass: HomeAssistant,
@@ -93,9 +95,10 @@ class ClimateGroupBaseSensor(SensorEntity):
         """Initialize the sensor."""
         self.hass = hass
         self.config_entry = config_entry
+        self._attr_has_entity_name = True
+        self._attr_should_poll = False
         self._climate_group_entity_id = climate_group_entity_id
         self._climate_group_state = None
-        self._attr_should_poll = False
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks."""
@@ -141,7 +144,7 @@ class ClimateGroupTemperatureSensor(ClimateGroupBaseSensor):
     ):
         """Initialize the sensor."""
         super().__init__(hass, config_entry, climate_group_entity_id)
-        self._attr_name = f"{config_entry.title} Temperature"
+        self._attr_translation_key = "temperature"
         self._attr_unique_id = f"{config_entry.unique_id}_temperature"
         self._attr_native_unit_of_measurement = hass.config.units.temperature_unit
 
@@ -154,7 +157,7 @@ class ClimateGroupTemperatureSensor(ClimateGroupBaseSensor):
         value = self._climate_group_state.attributes.get(ATTR_CURRENT_TEMPERATURE)
         
         if value is not None and not isinstance(value, (int, float)):
-            _LOGGER.debug("[%s] Invalid temperature value for %s: %s", self._attr_name, self.entity_id, value)
+            _LOGGER.debug("[%s] Invalid temperature value for %s: %s", self.entity_id, self.entity_id, value)
             return None
         
         return value
@@ -176,7 +179,7 @@ class ClimateGroupHumiditySensor(ClimateGroupBaseSensor):
     ):
         """Initialize the sensor."""
         super().__init__(hass, config_entry, climate_group_entity_id)
-        self._attr_name = f"{config_entry.title} Humidity"
+        self._attr_translation_key = "humidity"
         self._attr_unique_id = f"{config_entry.unique_id}_humidity"
 
     @property
@@ -188,7 +191,7 @@ class ClimateGroupHumiditySensor(ClimateGroupBaseSensor):
         value = self._climate_group_state.attributes.get(ATTR_CURRENT_HUMIDITY)
         
         if value is not None and not isinstance(value, (int, float)):
-            _LOGGER.debug("[%s] Invalid humidity value for %s: %s", self._attr_name, self.entity_id, value)
+            _LOGGER.debug("[%s] Invalid humidity value for %s: %s", self.entity_id, self.entity_id, value)
             return None
         
         return value
