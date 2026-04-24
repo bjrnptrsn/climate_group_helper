@@ -34,30 +34,33 @@
         "sections": {
           "members_section": {
             "name": "Leden & Modi",
-            "description": "Voeg apparaten toe. Kies hoe functies (presets, ventilator) worden gecombineerd bij verschillen.",
+            "description": "Voeg klimaatapparaten toe en kies hoe functies worden samengevoegd. Geavanceerde functies voegen ondersteuning toe voor een Master-entiteit.",
             "data": {
               "entities": "Klimaatapparaten",
               "master_entity": "Masterentiteit",
               "hvac_mode_strategy": "HVAC Modus Strategie",
               "feature_strategy": "Functiecompatibiliteit",
-              "union_out_of_bounds_action": "Buiten-bereik-actie"
+              "union_out_of_bounds_action": "Buiten-bereik-actie",
+              "union_unsupported_hvac_action": "Actie voor niet-ondersteunde HVAC-modus"
             },
             "data_description": {
               "entities": "Apparaten toevoegen of verwijderen. Verwijderen stopt de besturing door de groep.",
-              "master_entity": "Wijs één apparaat aan als leidende thermostaat. De waarden kunnen groepsberekeningen overschrijven.",
+              "master_entity": "Wijs één lid aan als Master-entiteit (leider). Deze wordt gebruikt voor Master/Lock-synchronisatie en gecentraliseerde doelwaarden.",
               "hvac_mode_strategy": "Strategie voor het berekenen van de groepsstatus vanuit zijn leden (bijv. als één 'heat' en een ander 'off' staat).",
               "feature_strategy": "Bepaalt welke functies (bijv. preset modi, ventilatormodi) beschikbaar zijn in de groep wanneer leden verschillende mogelijkheden hebben.",
-              "union_out_of_bounds_action": "Wat te doen met apparaten die de doeltemperatuur niet kunnen bereiken. Alleen van toepassing wanneer de functiestrategie is ingesteld op Unie."
+              "union_out_of_bounds_action": "Wat te doen met apparaten die de doeltemperatuur niet kunnen bereiken. Alleen van toepassing wanneer de functiestrategie is ingesteld op Unie.",
+              "union_unsupported_hvac_action": "Wat te doen met leden die de doel-HVAC-modus van de groep technisch niet ondersteunen (bijv. AC bij verwarming). Geldt alleen als de functiesstrategie op Unie is ingesteld."
             }
           },
           "temperature_section": {
             "name": "Temperatuurinstellingen",
-            "description": "Bereken temperatuur via leden of gebruik master. Externe sensoren en TRV-kalibratie.",
+            "description": "Configureer temperatuuraggregatie en precisie. Geavanceerde functies voegen ondersteuning toe voor externe sensoren, kalibratie en vorstbescherming.",
             "data": {
               "temp_target_avg": "Doeltemperatuur",
               "temp_use_master": "Gebruik doeltemperatuur van masterentiteit",
               "temp_target_round": "Precisie Doeltemperatuur",
               "temp_current_avg": "Huidige Temperatuur",
+              "min_temp_off": "Minimumtemperatuur bij uit",
               "temp_sensors": "Externe Temperatuursensoren",
               "temp_update_targets": "Schrijf Externe Temp naar Entiteiten",
               "temp_calibration_mode": "Kalibratiemodus",
@@ -69,6 +72,7 @@
               "temp_use_master": "Gebruik het instelpunt van de masterentiteit in plaats van een gemiddelde te berekenen. Valt terug op gemiddelde indien niet beschikbaar.",
               "temp_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
               "temp_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
+              "min_temp_off": "Verzendt de minimumtemperatuur van het apparaat (bijv. 5°C) bij het uitschakelen van de groep. Dit zorgt ervoor dat kranen volledig gesloten zijn voor vorstbescherming.",
               "temp_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de temperatuur van de groep.",
               "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur.",
               "temp_calibration_mode": "Absoluut: Verzend waarde direct. Offset: Verzend verschil (Extern - TRV Intern). Geschaald: Verzend als geheel getal x100 (bijv. 21.5 -> 2150).",
@@ -78,7 +82,7 @@
           },
           "humidity_section": {
             "name": "Luchtvochtigheidsinstellingen",
-            "description": "Bereken vochtigheid via leden of gebruik master. Optionele externe sensoren.",
+            "description": "Configureer vochtigheidsaggregatie en precisie. Geavanceerde functies voegen ondersteuning toe voor externe sensoren.",
             "data": {
               "humidity_target_avg": "Doel Luchtvochtigheid",
               "humidity_use_master": "Gebruik doelvochtigheid van masterentiteit",
@@ -105,7 +109,7 @@
               "ignore_off_members_sync": "Respecteer de UIT-status van leden (Synchronisatie)"
             },
             "data_description": {
-              "sync_mode": "Wat te doen als een lid buiten de groep wordt gewijzigd. Uitgeschakeld: negeren. Spiegel: de wijziging toepassen op alle leden. Slot: het lid terugzetten naar het groepsdoel. Master/Slot: alleen wijzigingen van de master worden geaccepteerd.",
+              "sync_mode": "Wat te doen wanneer een lid buiten de groep wordt gewijzigd. Disabled: negeer het. Mirror: pas de wijziging toe op alle leden. Lock: breng het lid terug naar het groepsdoel. Mirror/Lock: hybride. Master/Lock: alleen de wijzigingen van de master-entiteit worden geaccepteerd.",
               "sync_attributes": "Hier geselecteerde attributen worden afgedwongen in Lock/Mirror modi. Niet geselecteerde attributen staan lokale controle toe (bijv. temperatuur synchroniseren maar gebruikers lokaal ventilatorsnelheid laten wijzigen).",
               "ignore_off_members_sync": "Bij het afdwingen van Lock/Mirror worden leden die uitgeschakeld zijn overgeslagen. Opmerking: directe groepopdrachten bereiken altijd alle bekwame leden, ongeacht deze instelling."
             }
@@ -184,12 +188,12 @@
           },
           "temp_offsets_section": {
             "name": "Leden Offsets",
-            "description": "Stel een temperatuuroffset in voor individuele leden. Het groepsdoel wordt met deze waarde aangepast voordat het naar elk apparaat wordt verzonden. Laat op 0 voor geen offset.",
+            "description": "Pas individuele temperatuur-offsets toe zodat specifieke leden proportioneel warmer of koeler draaien dan het groepsdoel.",
             "data": {
               "member_offset_correction": "Correctie leden-offset"
             },
             "data_description": {
-              "member_offset_correction": "Indien ingeschakeld, wordt de offset van elk lid afgetrokken vóór aggregatie. Met een groepsinstellingswaarde van 20 °C en een offset van +3,0 °C is de instellingswaarde van het lid 23,0 °C, terwijl de werkelijke waarde voor de groep intern 20 °C is."
+              "member_offset_correction": "Indien ingeschakeld, wordt de offset van elk lid afgetrokken voor het middelen, zodat de groep het logische instelpunt weergeeft in plaats van het ruwe gemiddelde."
             }
           },
           "isolation_section": {
@@ -214,13 +218,12 @@
           },
           "advanced_section": {
             "name": "Geavanceerde instellingen",
-            "description": "Debounce, herhaalpogingen, debug-sensoren en minimale temperatuur bij uit (geforceerde klepsluiting).",
+            "description": "Verfijn opdracht-timings, herhaalpogingen en gespreide oproepen. Schakel diagnostische attributen en configuratiesensoren in.",
             "data": {
               "debounce_delay": "Debounce Vertraging (seconden)",
               "retry_attempts": "Herhaalpogingen",
               "retry_delay": "Herhaalvertraging (seconden)",
               "staggered_call_delay": "Vertraging tussen opdrachten (seconden)",
-              "min_temp_off": "Minimumtemperatuur bij uit",
               "expose_smart_sensors": "Slimme sensoren weergeven",
               "expose_member_entities": "Ledenlijst weergeven",
               "expose_config": "Configuratie tonen (Debug)"
@@ -230,7 +233,6 @@
               "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
               "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren.",
               "staggered_call_delay": "Wachttijd tussen afzonderlijke opdrachten aan groepsleden. Gespreide opdrachten voorkomen netwerkcongestie in Zigbee/Matter-omgevingen. Stel in op 0 om te deactiveren.",
-              "min_temp_off": "Verzendt de minimumtemperatuur van het apparaat (bijv. 5°C) bij het uitschakelen van de groep. Dit zorgt ervoor dat kranen volledig gesloten zijn voor vorstbescherming.",
               "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
               "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
               "expose_config": "Voegt alle configuratiewaarden toe aan de entiteitattributen. Handig voor debugging."
@@ -326,9 +328,10 @@
     "sync_mode": {
       "options": {
         "disabled": "Uitgeschakeld – Geen automatische synchronisatie tussen leden",
-        "mirror": "Mirror (Magic Sync - Tweerichtings)",
-        "lock": "Lock (De Baas - Groep Afdwingen)",
-        "master_lock": "Master/Lock – Alleen de master-entiteit kan het doel wijzigen"
+        "mirror": "Mirror – Handmatige wijzigingen op één apparaat worden doorgevoerd naar alle leden",
+        "lock": "Lock – Handmatige wijzigingen worden teruggezet naar de groepsstatus",
+        "mirror_lock": "Mirror/Lock – Geselecteerde attributen worden gespiegeld, andere zijn strikt vergrendeld",
+        "master_lock": "Master/Lock – Alleen de master-entiteit kan het doel van de groep wijzigen"
       }
     },
     "sync_attributes": {
@@ -359,7 +362,7 @@
     },
     "window_action": {
       "options": {
-        "off": "Uitschakelen (Standaard)",
+        "off": "Uitschakelen",
         "temperature": "Temperatuur instellen"
       }
     },
@@ -367,6 +370,12 @@
       "options": {
         "off": "Uitschakelen",
         "clamp": "Beperken tot grenswaarde"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Negeren",
+        "off": "Uitschakelen"
       }
     },
     "isolation_trigger": {
@@ -417,6 +426,9 @@
       },
       "humidity": {
         "name": "Luchtvochtigheid"
+      },
+      "configuration": {
+        "name": "Configuratie"
       }
     },
     "switch": {
@@ -454,7 +466,7 @@
     },
     "set_schedule_entity": {
       "name": "Schema-entiteit instellen",
-      "description": "Wijzigt de actieve schema-entiteit die door de Klimaatgroep wordt gebruikt.",
+      "description": "Wijzig dynamisch de actieve schema-entiteit. Indien weggelaten of op nul gezet, keert de groep terug naar de geconfigureerde standaard.",
       "fields": {
         "schedule_entity": {
           "name": "Schema-entiteit",
@@ -464,7 +476,7 @@
     },
     "boost": {
       "name": "Boost",
-      "description": "Stelt de groepstemperatuur tijdelijk in op een doelwaarde voor een bepaalde duur. Wanneer de timer afloopt, keert de groep terug naar het actieve schema of de vorige toestand. Geef temperature of temperature_offset op.",
+      "description": "Stelt de groep tijdelijk in op een doeltemperatuur. Na afloop keert de groep automatisch terug naar het actieve schema of de vorige staat.",
       "fields": {
         "temperature": {
           "name": "Temperatuur",
@@ -477,6 +489,24 @@
         "duration": {
           "name": "Duur (minuten)",
           "description": "Hoe lang de boost moet duren in minuten."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Configuratie toepassen",
+      "description": "Past een draagbare JSON-configuratie toe op een groep. Handig voor het kopiëren van instellingen of het herstellen van een back-up.",
+      "fields": {
+        "settings": {
+          "name": "Instellingen (JSON)",
+          "description": "Het JSON-configuratieobject dat toegepast moet worden. Gebruik het attribuut 'settings_json' van een configuratiesensor."
+        },
+        "include_member_list": {
+          "name": "Ledenlijst opnemen",
+          "description": "Als waar, worden ook de lijst met ledenentiteiten en isolatie-entiteiten overschreven."
+        },
+        "include_entity_selectors": {
+          "name": "Entiteitsselectors opnemen",
+          "description": "Als waar, worden ook gekoppelde sensoren (temp, vochtigheid, aanwezigheid, raam, enz.) en per-lid-offsets overschreven."
         }
       }
     }

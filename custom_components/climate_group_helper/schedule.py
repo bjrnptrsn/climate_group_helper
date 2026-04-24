@@ -6,6 +6,17 @@ from dataclasses import fields, replace
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from homeassistant.components.climate import (
+    ATTR_FAN_MODE,
+    ATTR_HUMIDITY,
+    ATTR_HVAC_MODE,
+    ATTR_PRESET_MODE,
+    ATTR_SWING_HORIZONTAL_MODE,
+    ATTR_SWING_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
+)
+from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_state_change_event, async_call_later
 
@@ -16,6 +27,20 @@ from .const import (
     CONF_PERSIST_CHANGES,
 )
 from .state import ClimateState
+
+_CLIMATE_MODE_ATTRS: frozenset[str] = frozenset({
+    ATTR_HVAC_MODE,
+    ATTR_FAN_MODE,
+    ATTR_PRESET_MODE,
+    ATTR_SWING_MODE,
+    ATTR_SWING_HORIZONTAL_MODE,
+})
+_CLIMATE_NUMERIC_ATTRS: frozenset[str] = frozenset({
+    ATTR_TEMPERATURE,
+    ATTR_TARGET_TEMP_LOW,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_HUMIDITY,
+})
 
 
 class ScheduleCaller(StrEnum):
@@ -195,7 +220,7 @@ class ScheduleHandler:
         # Process Meta-Keys: SlotMetaProcessor owns the full lifecycle (apply + track + cleanup).
         # It returns only the cleaned climate payload and a flag for the early-return guard.
         result = await self._group.slot_meta_processor.process(slot_data)
-        filtered_slot = result.climate_payload
+        filtered_slot = _validate_climate_payload(self._group.entity_id, result.climate_payload)
 
         if not filtered_slot and not result.has_meta_keys:
             # No climate payload and no meta-keys either → nothing to do at all.
@@ -313,6 +338,30 @@ class ScheduleHandler:
             "[%s] Boost started: temperature=%s, duration=%s min",
             self._group.entity_id, temperature, duration,
         )
+
+
+def _validate_climate_payload(entity_id: str, payload: dict) -> dict:
+    """Validate climate-key values from a schedule slot and warn on type mismatches.
+
+    Mode attributes (hvac_mode, fan_mode, etc.) must be non-empty strings.
+    Numeric attributes (temperature, humidity, etc.) must be convertible to float.
+    Invalid entries are dropped and a WARNING is logged so the user can fix their
+    schedule configuration.
+    """
+    valid = {}
+    for attr, value in payload.items():
+        if attr in _CLIMATE_MODE_ATTRS:
+            if not isinstance(value, str) or not value:
+                _LOGGER.warning("[%s] Schedule slot: '%s' expects a non-empty string, got %r — ignored.", entity_id, attr, value)
+                continue
+        elif attr in _CLIMATE_NUMERIC_ATTRS:
+            try:
+                float(value)
+            except (TypeError, ValueError):
+                _LOGGER.warning("[%s] Schedule slot: '%s' expects a numeric value, got %r — ignored.", entity_id, attr, value)
+                continue
+        valid[attr] = value
+    return valid
 
 
 def _snapshot_to_kwargs(snapshot) -> dict:

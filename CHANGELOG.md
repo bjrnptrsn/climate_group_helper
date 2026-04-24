@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.27.0 - 2026-04-24
+
+### 🌟 New Features
+
+*   **Combined Mirror/Lock Sync Mode**: A powerful new hybrid mode that combines the flexibility of **Mirror** (adopting manual changes for specific attributes) with the strictness of **Lock** (reverting changes for everything else).
+
+*   **Unsupported HVAC Action**: New option for the **Union** strategy. Choose whether to **Ignore** or **Turn Off** members that don't support the requested HVAC mode.
+
+*   **Schedule Meta-Keys**: Added `sync_attributes` support to temporarily override synchronized attributes per schedule slot.
+
+*   **Window Control**: Native support for **Cover entities** as window sensors.
+
+*   **Backup & Migration**: New diagnostic **Configuration Sensor** and `apply_config` service for easy backup, restore, and cloning of group settings.
+
+### ✨ Improvements
+
+*   **Documentation**: Comprehensive revision of the `README.md` to improve clarity and structure.
+
 ## 0.26.0 - 2026-04-21
 
 > 🎉 **A big one!** Lots of new ground covered in this release — please check the README to get the most out of it. Everything has been tested thoroughly, but with this much happening at once, stay attentive after updating and open an issue if anything feels off!

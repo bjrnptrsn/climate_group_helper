@@ -1,18 +1,28 @@
-# Climate Group Helper
+# Climate Group Helper for Home Assistant
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/icon@2x.png" alt="Climate Group Helper Icon" width="192"/>
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/icon@2x.png" alt="Climate Group Helper - Home Assistant Integration for TRVs and ACs" width="192"/>
 </p>
 
 <p align="center">
-  <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Default-orange.svg" alt="HACS"/></a>
+  <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Default-orange.svg" alt="HACS - Home Assistant Community Store"/></a>
   <a href="https://github.com/bjrnptrsn/climate_group_helper/releases"><img src="https://img.shields.io/github/v/release/bjrnptrsn/climate_group_helper" alt="Release"/></a>
 </p>
 
-A comprehensive climate management system for Home Assistant that combines multiple devices into a single, powerful entity. Simplify your dashboard, streamline automations, and ensure perfect comfort across entire rooms or zones.
+<p align="center">
+  <strong>Control multiple climate devices as a single smart entity — with advanced logic and seamless synchronization.</strong>
+</p>
+
+<p align="center">
+  🌡️ <b>TRV Calibration</b> | 🪟 <b>Window Open Detection</b> | 👤 <b>Presence</b> | 📅 <b>Smart Scheduling</b> | 🔒 <b>Sync Modes</b>
+</p>
+
+---
+
+Stop managing thermostats individually in Home Assistant. Climate Group Helper combines your **radiator valves (TRVs), air conditioning units, and heaters** into a single controller. Install via **HACS** in minutes. It brings **external sensor calibration**, **window-open detection**, and **presence-based automation** to your Zigbee, Z-Wave, or Matter devices — all configurable without a single line of YAML.
 
 > [!TIP]
-> The features **Window Control**, **Scheduling**, and **Device Calibration** can also be used for **single devices**, providing significant added value even without a group.
+> **Not just for groups!** Features like **Window Control**, **Scheduling**, and **Device Calibration** provide massive benefits for **single devices** too. Use this integration as a "Logic Layer" to bring premium features to basic thermostats.
 
 ## Table of Contents
 
@@ -25,12 +35,15 @@ A comprehensive climate management system for Home Assistant that combines multi
   - [Window Control](#window-control)
   - [Presence Control](#presence-control)
   - [Schedule Automation](#schedule-automation)
+    - [Schedule Meta-Keys](#schedule-configuration--meta-keys)
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
+- [Management Entities (Switch & Slider)](#management-entities-switch--slider)
   - [Main Switch](#main-switch)
   - [Group Offset](#group-offset)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
+- [Backup & Migration](#backup--migration)
 - [Installation](#installation)
 - [Setup](#setup)
 - [Troubleshooting](#troubleshooting)
@@ -75,60 +88,79 @@ Write the external sensor value back to your TRVs to fix their internal temperat
 
 *   **Modes:** Absolute (Standard), Offset (Delta calculation), and Scaled (x100 for Danfoss Ally).
 *   **Heartbeat:** Periodically re-sends the calibration value to prevent sensor timeouts on Zigbee devices.
-*   **Battery Saver (Ignore Off):** Prevent sending constant calibration updates to wireless TRVs that are currently turned `off`.
+*   **Ignore Off Members:** Prevents sending calibration updates to TRVs that are currently turned `off`, preserving battery life on wireless devices.
 
 ### Advanced Sync Modes
 
 Controls what happens when a member device is changed directly (e.g. via its own app or physical buttons) — not when you control the group itself.
 
-*   **Disabled:** Member changes are ignored. Only direct group commands apply.
-*   **Mirror:** A change on any member is applied to all other members.
-*   **Lock:** Any manual change on a member is reverted back to the group target.
-*   **Master/Lock:** *(Requires Master Entity)* "Follow the Leader" mode — changes on the Master are mirrored to all members, while manual changes on other members are reverted.
-*   **Selective Attribute Sync:** Choose **exactly** which attributes to sync (e.g. sync temperature but allow individual fan control).
-*   **Partial Sync (Respect Off):** Prevents the group from waking up members that are manually turned `off`.
-    *   **Ignore Off Members:** If a member is turned `off`, the group will not force it back on during synchronization or scheduled changes (allows "Soft Off"). Configurable separately for Sync and Schedule.
-    *   **Last Man Standing:** Only when the *last* active member is turned `off`, the Group accepts this change and updates its internal **Target State** to `off`.
+The behavior of each mode depends on whether the changed attribute is listed under **Synced Attributes** in the UI — or not. Think of the two columns as two independent policies the mode applies:
+
+| Mode | Attribute **in** `sync_attributes` | Attribute **not in** `sync_attributes` |
+|---|---|---|
+| **Disabled** | Ignore | Ignore |
+| **Mirror** | Mirror ¹ | Ignore |
+| **Lock** | Revert ¹ | Ignore |
+| **Mirror/Lock** | Mirror ¹ | Revert ¹ |
+| **Master/Lock** | Master: Mirror · Non-master: Revert ¹ | Ignore |
+
+*¹ With **Respect Member Off State (Sync)** enabled: members that are manually turned `off` are left alone — their `off` is neither mirrored nor reverted. Exception: if it is the last active member, the group itself switches to `off`.*
+
+**Glossary**
+- **Mirror** — the group adopts the member's new value as the new group target, then syncs all other members to match.
+- **Revert** — the group ignores the member's change and immediately sends the current group target back to that member.
+- **Ignore** — the group takes no action; the member keeps its locally changed value.
+
+**Synced Attributes** therefore has a different meaning depending on the mode:
+
+| Mode | Role of **Synced Attributes** |
+|---|---|
+| Mirror | Opt-in: only listed attributes are mirrored. Unlisted = local freedom. |
+| Lock | Opt-in: only listed attributes are enforced. Unlisted = local freedom. |
+| **Mirror/Lock** | **Split**: listed = mirrored, unlisted = locked (no attribute is ignored). |
+| Master/Lock | Opt-in for the master: only listed attributes are adopted from the master. |
+
+> [!NOTE]
+> **Mirror/Lock** is the only mode where no attribute is left alone — every change on a member either updates the group or gets corrected. Use it e.g. to allow users to adjust the temperature from any thermostat while preventing them from switching modes or fan speeds.
+
+*   **Respect Member Off State (Sync):** When a member is manually turned `off`, the group neither mirrors that `off` to others nor forces it back on — the member is simply left alone. The one exception: if it is the *last* active member, the group accepts the `off` and its own target switches to `off` as well.
 
 ### Window Control
 
-Binary sensor support to automatically turn off heating when a window opens and restore it when it closes.
+Automatically turn off heating or set a frost-protection temperature when windows or doors are opened, and restore the previous state when they close. While windows are open, manual changes are blocked. Supports binary sensors and cover entities.
 
 *   **Room + Zone Sensors:** Supports fast-reacting room sensors vs. slow-reacting zone sensors (e.g. for whole floors).
 *   **Configurable Delays:** Set custom reaction times for opening and closing.
 *   **Window Action:** Choose between full `off` or a configurable temperature setpoint.
-*   **Blocking:** While windows are open, manual changes are blocked. Schedule changes are accepted internally and applied when windows close.
 *   **Adopt Manual Changes:** Optionally allow passive tracking:
-    *   **Off (Default):** All manual changes are blocked and discarded.
+    *   **Off:** All manual changes are blocked and discarded.
     *   **All:** Any manual change updates the target state. Applied when windows close.
     *   **Master Only:** *(Requires Master Entity)* Only changes on the Master update the target state.
 
 ### Presence Control
 
-Manage climate settings based on room presence. Select one or more presence triggers (binary sensor, device tracker, or person), configure an away and a return delay, and specify the fallback action to perform when absence is detected. The group is considered occupied if **any** sensor reports presence.
+Manage climate settings based on room presence. Select one or more triggers (binary sensor, device tracker, or person), optionally restricted to specific **zones** (e.g. to only trigger when someone is actually at 'Home'). Configure delays and fallback actions for when the room becomes empty. The group is considered occupied if **any** sensor reports presence.
 
 *   **Turn Off:** Members are turned `off` while absence is detected (default).
-*   **Away Offset** Target temperature is reduced by a fixed offset (e.g. −2°C). The offset is applied relative to the group's *current target temperature*. If a schedule is active, it automatically tracks schedule changes during absence.
+*   **Away Offset:** Target temperature is reduced by a fixed offset (e.g. −2°C). The offset is applied relative to the group's *current target temperature*. If a schedule changes during absence, the offset is automatically reapplied to the new scheduled value.
 *   **Away Temperature:** Members are set to a fixed absolute temperature.
 *   **Away Preset:** A preset mode is sent to members that support it.
 
-Optionally restrict presence detection to specific **zones** (e.g. ensuring a person is only counted as present when they are actually in the 'Home' zone, preventing triggers while they are at 'Work' or elsewhere). When presence is detected again, the group restores all members to the current target state. Window Control and the Main Switch always take priority — Presence Control defers to them if either is active at the same time.
+When presence returns, the group restores all members to the current target state. Window Control and the Main Switch always take priority over Presence Control.
 
 ### Schedule Automation
 
-Integrate native HA `schedule` helpers to automate your climate settings per time slot.
+Integrate native HA `schedule` helpers to automate your climate settings per time slot. You can set temperature and HVAC mode directly in the schedule's data, and the group intelligently handles transitions: if a schedule change occurs while **Window Control** is active (e.g. heating is paused), the new target is applied immediately once everything is closed.
 
-*   **Time Slots:** Set temperature and HVAC mode directly in the schedule's data.
-*   **Dynamic Control:** Switch schedules on the fly via service call (e.g. for "Vacation" or "Guest" modes). Calling the service with no arguments always resets to the configured default and re-applies the current slot — useful as a "return to schedule" command from automations.
-*   **Manual Overrides:** Stay in control. Set an **Override Duration** to automatically return to the schedule after manual adjustments.
-*   **Sticky Override (Persist Changes):** If enabled, schedule changes are ignored while the override is active.
+Schedules can be switched on the fly via service (e.g. for "Vacation" or "Guest" modes). Calling the service without an entity resets to the configured default and re-applies the current slot.
+
+*   **Manual Overrides:** Manual adjustments temporarily pause the schedule for a set **Override Duration**. By default, the group returns to the schedule as soon as the timer expires OR the next scheduled slot begins.
+*   **Sticky Override:** Ensures your manual setting persists for the full duration. If enabled, upcoming schedule transitions are ignored while the timer is running. The group only returns to the schedule once the timer actually expires.
 *   **Periodic Resync:** Force-sync all members every X minutes to ensure they match the target state.
-*   **Schedule Persistence:** Optionally retain a schedule switched via service call across Home Assistant restarts.
-*   **Window Aware:** If a schedule changes while windows are open, the new target is applied immediately when windows close.
-*   **Status Attributes:** `active_schedule_entity` always shows the currently active schedule. `active_override` shows the name of the active override (e.g. `boost` or `schedule_override`). `active_override_end` shows the ISO timestamp when the active override expires — useful for dashboard displays.
-*   **Boost:** Temporarily override the group to a target temperature for a set duration. Restores automatically to the active schedule slot or the previous target state when the timer expires.
+*   **Schedule Persistence:** Ensures that a schedule changed via service survives a Home Assistant restart. If disabled, the group always reverts to its configured default schedule after a restart.
+*   **Respect Member Off State (Schedule):** Members that are manually turned `off` are skipped during scheduled changes and periodic resyncs — they are not forced back on.
 
-### Schedule Configuration Example
+### Schedule Configuration & Meta-Keys
 
 1. Create a **Schedule Helper** in Home Assistant (Settings > Devices & Services > Helpers).
 2. Open the schedule and add your time slots.
@@ -166,6 +198,7 @@ You can omit attributes you don't need — for example, use only `hvac_mode: "of
 | `turn_off` | `true` | `turn_off: true` | Activates the Main Switch block — all members are turned off for the slot duration. Equivalent to toggling the Main Switch off. Members are restored automatically when the slot ends or a new slot without `turn_off` begins. |
 | `sync_mode` | `disabled`, `lock`, `mirror`, `master_lock` | `sync_mode: disabled` | Temporarily overrides the configured Sync Mode for the slot duration. Useful for slots where you want members to be left alone (e.g. a "sleep" slot where manual adjustments are allowed). |
 | `group_offset` | Float −5.0 … 5.0 | `group_offset: 1.5` | Temporarily sets the Group Offset for the slot duration. If you move the offset slider manually while this slot is active, your value takes over and the slot-end reset is skipped. |
+| `sync_attributes` | Any subset of: `hvac_mode`, `temperature`, `target_temp_low`, `target_temp_high`, `humidity`, `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode` | `sync_attributes: [hvac_mode]` | Temporarily overrides which attributes are synchronized for the slot duration. Useful for slots where you want to sync only the mode but let members manage their own temperature. Restores to the configured Synced Attributes setting when the slot ends. |
 
 **Example — night slot that turns everything off:**
 ```yaml
@@ -182,43 +215,37 @@ The group normally runs in Lock mode. During this slot, `sync_mode: disabled` le
 
 ### Member Offsets
 
-Apply a permanent individual offset (±20°C, 0.5°C steps) to each group member, so rooms can run proportionately warmer or cooler than the group's target setting — without changing what you set on the group entity itself.
+Apply permanent individual offsets (±20°C) to each group member to account for physical room differences. The group intelligently handles these offsets during averaging and synchronization: for example, if the group is set to 21°C, a bedroom with a −1°C offset receives 20°C while the living room (+0.5°C) receives 21.5°C. Your logical setting remains a consistent 21°C across all group interfaces.
 
-*   **Example:** Group target is 21°C. Bedroom has offset −1°C → receives 20°C. Living Room has offset +0.5°C → receives 21.5°C.
-*   **Mirror / Master-Lock aware:** When a member change is adopted back into the group's target state, the offset is reversed so the global target stays consistent.
-*   **Correct member offset (default: on):** The group subtracts each member's offset before averaging, so the displayed temperature reflects the logical setpoint rather than the hardware-adjusted member average.
+*   **Correct Member Offset:** Subtracts member offsets before averaging to show the room's logical setpoint instead of the raw physical temperature average.
 
 ### Member Isolation
 
-Temporarily isolate specific group members based on a configurable trigger. Isolated members are turned `off` and excluded from all group calculations (temperature averaging, HVAC mode, sync).
+Temporarily isolate specific members from the group using sensors or state triggers. While isolation is active, these devices are turned `off` and excluded from all averaging and synchronization calculations. Window Control and the Main Switch always take priority over Member Isolation. At least one member must always remain active to ensure the group stays operational.
 
-**Trigger modes:**
-*   **Binary Sensor:** Isolation activates when a binary sensor turns ON (e.g. a curtain sensor, an occupancy helper). Deactivates when the sensor turns OFF.
-*   **HVAC Mode:** Isolation activates when the group's target mode matches a configured set (e.g. isolate radiators when the group switches to `cool`).
-*   **Member Off:** A member is isolated automatically when it turns `off` manually. When it turns back on, isolation is released and the member is restored to the group's target state.
+*   **Binary Sensor:** Isolation activates when a binary sensor (e.g. curtain sensor, occupancy helper) turns `on`.
+*   **HVAC Mode:** Isolation activates when the group's target mode matches a configured set (e.g. isolate radiators when switching to `cool`).
+*   **Member Off:** Automatically isolates individual members when they are turned `off` manually. Restoration occurs as soon as the device is turned back `on`.
+*   **Configurable Delays:** Set custom reaction times for activation and restoration (Sensor and HVAC Mode triggers only).
 
-**Optional delays:** Configure an activate delay and a restore delay for Sensor and HVAC Mode triggers.
 
-*   **Window Control Interaction:** Isolated members are never touched by Window Control — neither on open nor on close. If a window is open when isolation deactivates, the restore is deferred until the window closes.
-*   **Constraints:** At least one member must remain active — you cannot isolate all members. The section is hidden when the group has only one member.
+## Management Entities (Switch & Slider)
+
+Alongside the main climate entity, the integration creates additional helper entities to provide direct control points for your dashboards and automations.
 
 ### Main Switch
 
-A dedicated `switch` entity is created alongside each Climate Group Helper. It acts as a **master on/off switch** for the entire group.
+A dedicated `switch` entity acts as a **master on/off toggle** for the entire group. It is useful for summer months, extended absences, or any situation where you want the group completely disabled without touching your schedules or target settings. While the switch is `off`, all manual and automated commands are blocked.
 
-*   **Switch OFF:** All members are immediately turned `off`. Any active Override is aborted. The group stays blocked until the switch is turned back on.
-*   **Switch ON:** All members are restored to the group's current target state.
-
-Useful for heating-free periods (e.g. summer months), extended absences, or any situation where you want the group completely disabled without touching your schedules or target settings. Combine with an automation to drive it from a calendar, a helper, or any other condition.
+*   **Switch OFF:** Immediately turns all members `off` and aborts any active boost. The group remains blocked until the switch is turned back on.
+*   **Switch ON:** Releases the block and restores all members to the group's current target state.
 
 ### Group Offset
 
-A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongside each Climate Group Helper. Use it to make a room run a little warmer or cooler — without touching your schedule or target settings.
+A dedicated `number` entity allows you to apply a global temperature shift (±5.0°C) to all group members. Use it to temporarily adjust the room's comfort level without modifying your underlying schedule or target settings. The offset acts as a non-destructive layer: a +1.5°C offset shifts a 20°C morning setpoint to 21.5°C and automatically follows a schedule transition to 23.5°C in the evening.
 
-*   **Example:** Your schedule runs 20°C in the morning and 22°C in the evening. You slide the offset to +1.5°C — members now follow 21.5°C and 23.5°C respectively, all day long, without touching the schedule. Slide back to 0 when no longer needed.
-*   **Non-destructive:** The schedule, target state, and Boost temperature are all unaffected. The offset is a layer on top.
-*   **Auto-reset:** Setting a temperature directly on the group (via UI or service) resets the offset to 0 automatically.
-*   **Persisted:** The offset survives Home Assistant restarts.
+*   **Auto-reset:** Setting a temperature directly on the group (via UI or service) resets the offset to `0` automatically.
+*   **Persistence:** The offset value survives Home Assistant restarts.
 
 ## Configuration Options
 
@@ -229,6 +256,8 @@ A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongsid
 | **Master Entity** | Designate one member as the group's Leader. Enables Master/Lock sync mode, Master-aware window tracking, and centralized temperature/humidity target. |
 | **HVAC Mode Strategy** | How the group reports its combined mode. See table below. |
 | **Feature Strategy** | Which features the group exposes. See table below. |
+| **Out-of-Bounds Action** | *(Union only)* What to do when a target temperature is outside a member's range. |
+| **Unsupported HVAC Mode Action** | *(Union only)* What to do with members that don't support the requested mode. |
 
 ### HVAC Mode Strategy
 
@@ -252,6 +281,13 @@ A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongsid
 | **Off (Default)** | Member is turned `off` when the target temperature is outside its supported range. Restored automatically when the target moves back in range. |
 | **Clamp** | Member is set to its nearest supported limit (`min_temp` or `max_temp`). |
 
+### Unsupported Mode Action *(Union only)*
+
+| Action | Behavior |
+|--------|----------|
+| **Ignore (Default)** | Member stays in its current mode if it doesn't support the target mode. |
+| **Off** | Member is turned `off` when it doesn't support the target mode (e.g. AC when heating). |
+
 ### Temperature & Humidity Settings
 
 | Option | Description |
@@ -262,7 +298,7 @@ A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongsid
 | **Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
 | **Calibration Targets** | Write calculated temperature to number entities. Supports **Absolute** (Standard), **Offset** (Delta), and **Scaled** (x100) modes. |
 | **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
-| **Ignore Off Members (Calibration)** | Prevents sending calibration updates to devices that are currently `off`, preserving battery life on wireless sensors and TRVs. |
+| **Ignore Off Members** | Prevents sending calibration updates to devices that are currently `off`, preserving battery life on wireless sensors and TRVs. |
 | **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
 | **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). |
 
@@ -270,10 +306,9 @@ A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongsid
 
 | Option | Description |
 |--------|-------------|
-| **Sync Mode** | What to do when a member is changed outside the group. Disabled: ignore it. Mirror: apply the change to all members. Lock: revert the member back to the group target. Master/Lock *(requires Master Entity)*: only the master entity's changes are accepted. |
-| **Selective Sync** | Attributes enforced in Lock/Mirror modes. Unselected attributes allow local control (e.g. sync temperature but let users change fan speed locally). |
-| **Ignore Off Members (Sync)** | When enforcing Lock/Mirror, skip members that are currently off. Note: direct group commands always reach all capable members regardless of this setting. |
-| **Last Man Standing** | When the *last* active member turns `off`, the group accepts this and updates its target state to `off` — even with Ignore Off Members enabled. |
+| **Sync Mode** | What to do when a member is changed outside the group. Disabled: ignore everything. **Mirror**: adopt + propagate listed attributes, ignore the rest. **Lock**: revert listed attributes, ignore the rest. **Mirror** & **Lock**: adopt listed attributes, revert everything else (nothing is ignored). **Master/Lock** *(requires Master Entity)*: adopt listed attributes from the master, revert non-master changes. |
+| **Synced Attributes** | Which attributes the mode acts on. In **Mirror**, **Lock**, **Master/Lock**: listed = active, unlisted = ignored. In **Mirror** & **Lock**: listed = mirrored, unlisted = locked. |
+| **Respect Member Off State (Sync)** | Members that are manually turned `off` are left alone — their `off` is neither mirrored to others nor reverted back to the group target. Exception: if it is the last active member, the group itself switches to `off` (Last Man Standing). Direct group commands always reach all members regardless of this setting. |
 
 ### Window Control
 
@@ -282,8 +317,8 @@ A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongsid
 | **Window Action** | **Turn Off** (Default) or **Set Temperature**. Useful for frost protection. |
 | **Adopt Manual Changes** | **Off** (block all), **All** (passive tracking for all members), or **Master Only** *(requires Master Entity)*. |
 | **Window Temperature** | Target temperature to set when 'Set Temperature' action is selected. |
-| **Room Sensor** | (Optional) Binary sensor for fast reaction (window in the same room). |
-| **Zone Sensor** | (Optional) Binary sensor for slow reaction (e.g. apartment or floor). Room sensor should be part of zone sensor group. Active zone sensor prevents the group from being switched back on. |
+| **Room Sensor** | (Optional) Binary sensor (window/door) or cover entity for fast reaction. Covers are treated as "open" unless they are fully closed. |
+| **Zone Sensor** | (Optional) Binary sensor or cover entity for slow reaction (e.g. apartment or floor). |
 | **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
 | **Close Delay** | Time before restoring heating after windows close (default: 30s). |
 
@@ -309,21 +344,15 @@ A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongsid
 | **Resync Interval** | Force-sync members to the desired group setting every X minutes (0 = disabled). |
 | **Override Duration** | Delay before returning to schedule after manual changes (0 = disabled). |
 | **Sticky Override** | Ignore schedule changes while a manual override is active. |
-| **Ignore Off Members (Schedule)** | When running scheduled changes, skip members that are currently off. |
+| **Respect Member Off State (Schedule)** | Members that are manually turned `off` are skipped during scheduled changes and periodic resyncs — they are not forced back on. Direct group commands always reach all members regardless of this setting. |
 | **Retain Schedule Override** | Persist the active schedule entity across restarts when changed via `set_schedule_entity` service. Without this, the group always reverts to the configured default on restart. |
 
 ### Member Offsets
 
 | Option | Description |
 |--------|-------------|
-| **Offset per Member** | Individual temperature offset (±20°C, 0.5°C steps) for each group member. Positive values make the room warmer, negative values cooler relative to the group's target. |
-| **Correct member offset** | When enabled (default), each member's offset is subtracted before averaging so the group displays the logical setpoint. Disable to show the raw member average instead. |
-
-### Group Offset
-
-| Option | Description |
-|--------|-------------|
-| **Group Offset** | A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) that shifts all member temperatures by a fixed global amount. The offset is visible as a `group_offset` attribute and resets automatically when a temperature is set directly on the group. |
+| **Offset per Member** | Apply individual temperature shifts (±20°C, 0.5°C steps) so specific members run proportionately warmer or cooler than the group's target setpoint. |
+| **Correct member offset (Default)** | Subtracts member offsets before averaging to show the room's logical setpoint instead of the raw physical average. |
 
 ### Member Isolation
 
@@ -348,15 +377,20 @@ A `number` entity (slider −5.0°C to +5.0°C, step 0.5°C) is created alongsid
 ## Services
 
 ### `climate_group_helper.boost`
-Temporarily set the group to a target temperature for a fixed duration. When the timer expires, the group restores automatically — to the active schedule slot (if configured) or the state before the boost.
 
-*   **Target:** The Climate Group entity.
-*   **Fields:**
-    *   `temperature` *(one of the two is required)*: Absolute target temperature during boost (e.g. `24.0`).
-    *   `temperature_offset` *(one of the two is required)*: Relative offset added to the current target temperature (e.g. `+3.0` or `-2.0`).
-    *   `duration` (Required): Duration in minutes (minimum 1).
+Temporarily set the group to a target temperature for a fixed duration. When the timer expires, the group restores automatically to the active schedule slot (if configured) or its previous target state.
 
-A manual change during boost (direct group command or Mirror adoption) aborts the boost. Lock enforcement does not. Boost is ignored while a window is open.
+**Service Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `temperature` | No* | Absolute target temperature during boost (e.g. `24.0`). |
+| `temperature_offset` | No* | Relative offset added to the current target temperature (e.g. `+3.0` or `−2.0`). |
+| `duration` | **Yes** | Duration in minutes (minimum 1). |
+
+*\*Either `temperature` or `temperature_offset` must be provided.*
+
+Manual changes (direct group commands or Mirror adoptions) abort the boost immediately. Lock enforcement does not. Boost is ignored while a group block (like an open window) is active.
 
 **Example (absolute):**
 ```yaml
@@ -379,11 +413,16 @@ data:
 ```
 
 ### `climate_group_helper.set_schedule_entity`
+
 Dynamically change the active schedule entity for a group.
 
-*   **Target:** The Climate Group entity.
-*   **Fields:**
-    *   `schedule_entity` (Optional): The entity ID of the new schedule (e.g. `schedule.vacation_mode`). If omitted or set to `None`, reverts to the configured default entity, cancels any active override timer (including boost), and immediately re-applies the current slot.
+**Service Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `schedule_entity` | No | The entity ID of the new schedule (e.g. `schedule.vacation_mode`). If omitted, the group reverts to its configured default entity. |
+
+Calling this service without an entity resets the group, cancels any active override timers (including boost), and immediately re-applies the current schedule slot.
 
 **Example:**
 ```yaml
@@ -394,57 +433,82 @@ data:
   schedule_entity: schedule.guest_mode
 ```
 
+### `climate_group_helper.apply_config`
+
+Apply a portable JSON configuration to a group. This is useful for copying logic settings between groups or restoring a backup from a configuration sensor.
+
+**Service Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `settings` | **Yes** | A JSON object containing the configuration. Source: `settings_json` attribute from a Configuration Sensor. |
+| `include_member_list` | **Yes** | If `true`, overwrites the list of member and isolation entities. |
+| `include_entity_selectors` | **Yes** | If `true`, overwrites linked sensors and per-member offsets. |
+
+By default, only logic settings (Sync Modes, Window Control, Schedules, etc.) are transferred. Set the two inclusion flags to `true` if you also want to copy the list of members and their linked sensors. The group name is always preserved.
+
+> [!IMPORTANT]
+> **Reload Behavior:** Calling this service triggers a full reload of the group entity. All active, non-persisted timers (e.g., Boost, Window delays) will be reset immediately. This is the same behavior as when making changes through the UI.
+
+## Backup & Migration
+
+The integration provides built-in ways to snapshot, restore, and clone your logic settings.
+
+*   **Configuration Sensor:** Enable **Expose Configuration Sensor** (Advanced Settings) to create a diagnostic `sensor` entity. Its `settings_json` attribute contains a portable snapshot of all logic settings.
+*   **Diagnostics Download:** Click **Download diagnostics** directly in the **Device info** panel (or via the integration's ⋮ menu).
+
+**Example — Copy settings from one group to another:**
+1. Enable the configuration sensor on the **source** group.
+2. Call the `apply_config` service on the **target** group:
+
+```yaml
+service: climate_group_helper.apply_config
+target:
+  entity_id: climate.bedroom_group
+data:
+  settings: "{{ state_attr('sensor.living_room_group_configuration', 'settings_json') }}"
+  include_member_list: false
+  include_entity_selectors: false
+```
+
 ## Installation
 
 ### Via HACS (Recommended)
-
-1. Open **HACS**
-2. Search for **Climate Group Helper**
+1. Open **HACS**.
+2. Search for **Climate Group Helper**.
 3. Click **Download**
-4. **Restart Home Assistant**
+4. **Restart Home Assistant**.
 
 ### Manual
-
-1. Download the [latest release](https://github.com/bjrnptrsn/climate_group_helper/releases)
-2. Copy `custom_components/climate_group_helper` to your `custom_components` folder
-3. **Restart Home Assistant**
+1. Download the [latest release](https://github.com/bjrnptrsn/climate_group_helper/releases).
+2. Copy `custom_components/climate_group_helper` to your `custom_components` folder.
+3. **Restart Home Assistant**.
 
 ## Setup
 
-1. Go to **Settings** > **Devices & Services** > **Helpers**
-2. Click **+ Create Helper**
-3. Choose **Climate Group Helper**
-4. Enter a name and select your climate entities
+1. Go to **Settings** > **Devices & Services** > **Helpers**.
+2. Click **+ Create Helper** > **Climate Group Helper**.
+3. Follow the configuration flow to add your entities.
 
-**To configure advanced options:**
-1. Find the group in your dashboard or entity list
-2. Click the **⚙️ Settings** icon → **Configure**
-3. Enable **Advanced Mode** in General Settings to unlock all options
-4. Select the configuration category (Members, Temperature, Sync Mode, etc.)
+**To unlock all features:** Open the group's **Configuration** menu and enable **Advanced Mode** in General Settings. This will reveal all category-specific options.
 
 ## Troubleshooting
 
 ### Issues after updating?
-If you experience strange behavior after an update (e.g. settings not saving), try re-creating the group. This resolves potential migration issues.
+If you experience strange behavior after an update (e.g. settings not saving), first try restarting Home Assistant. Re-creating the group usually resolves any remaining migration-related problems.
 
 ### Debug Logging
 
-To see more details, enable debug logging:
-
-#### Option 1: Via UI (Recommended)
-This method applies instantly and does not require a restart. However, if the issue occurs during startup (e.g. state restore, initialization), restart Home Assistant after enabling debug logging so the full startup sequence is captured.
-
-1.  Go to **Settings > Devices & Services**.
-2.  Select the **Devices** tab (at the top).
-3.  Search for and select your configured **Climate Group Helper** device from the list.
-4.  In the **Device info** panel, click on the **Climate Group Helper** link.
-5.  On the integration page, click the menu (3 dots) on the left and select **Enable debug logging**.
-6.  *(Optional but recommended for startup issues)* Restart Home Assistant now.
-7.  Reproduce the issue.
-8.  Disable debug logging via the same menu. The log file will be downloaded automatically.
+#### Option 1: Via UI (Instant)
+1. Go to **Settings** > **Devices & Services** > **Devices**.
+2. Search for your **Climate Group** and click it.
+3. In the **Device info** panel, click the **Climate Group Helper** link (next to the icon).
+4. On the integration page, click the **⋮ menu** (top right) and select **Enable debug logging**.
+5. Reproduce the issue, then disable logging. The file will download automatically.
+   *(Note: For startup-related issues, restart HA after enabling logging.)*
 
 #### Option 2: Via YAML (Manual)
-Add the following to your `configuration.yaml` file (requires restart):
+Add this to your `configuration.yaml` (requires restart):
 
 ```yaml
 logger:

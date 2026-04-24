@@ -34,30 +34,33 @@
         "sections": {
           "members_section": {
             "name": "Members & Modes",
-            "description": "Add climate devices. Choose how different capabilities (presets, fan modes) are merged when members vary.",
+            "description": "Add climate devices and choose how capabilities are merged. Advanced Features add support for a Master Entity.",
             "data": {
               "entities": "Climate Devices",
               "master_entity": "Master Entity",
               "hvac_mode_strategy": "HVAC Mode Strategy",
               "feature_strategy": "Feature Compatibility",
-              "union_out_of_bounds_action": "Out-of-Bounds Action"
+              "union_out_of_bounds_action": "Out-of-Bounds Action",
+              "union_unsupported_hvac_action": "Unsupported HVAC Mode Action"
             },
             "data_description": {
               "entities": "Add or remove devices. Removing devices stops them from being controlled by the group.",
-              "master_entity": "Designate one device as the leading thermostat. Its values can override group calculations.",
+              "master_entity": "Designate one member as the Master Entity (Leader). It is used for Master/Lock synchronization and centralized target values.",
               "hvac_mode_strategy": "Strategy for calculating the group's state from its members (e.g. if one is 'heat' and another is 'off').",
               "feature_strategy": "Determines which features (e.g. preset modes, fan modes) are available on the group when members have different capabilities.",
-              "union_out_of_bounds_action": "What to do with members that cannot reach the target temperature. Only applies when Feature Strategy is set to Union."
+              "union_out_of_bounds_action": "What to do with members that cannot reach the target temperature. Only applies when Feature Strategy is set to Union.",
+              "union_unsupported_hvac_action": "What to do with members that technically do not support the group's target HVAC mode (e.g. AC when heating). Only applies when Feature Strategy is set to Union."
             }
           },
           "temperature_section": {
             "name": "Temperature Settings",
-            "description": "Calculate temperature from members or use master. External sensors and TRV calibration.",
+            "description": "Configure temperature aggregation and precision. Advanced Features add support for external sensors, calibration, and frost protection.",
             "data": {
               "temp_target_avg": "Target Temperature",
               "temp_use_master": "Use Master Target Temperature",
               "temp_target_round": "Target Temperature Precision",
               "temp_current_avg": "Current Temperature",
+              "min_temp_off": "Minimum Temperature when Off",
               "temp_sensors": "External Temperature Sensors",
               "temp_update_targets": "Write External Temp to Entities",
               "temp_calibration_mode": "Calibration Mode",
@@ -69,6 +72,7 @@
               "temp_use_master": "Use the master entity's setpoint instead of calculating an average. Falls back to averaging if unavailable.",
               "temp_target_round": "Only applies to values sent to devices, not to current/displayed values.",
               "temp_current_avg": "How the group summarizes sensor readings from its members.",
+              "min_temp_off": "Sends the device's minimum temperature (e.g. 5°C) when turning the group off. This ensures valves are fully closed for frost protection.",
               "temp_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's temperature.",
               "temp_update_targets": "Write the external sensor value to number entities (e.g. TRV calibration offsets). Useful for keeping thermostats aware of actual room temperature.",
               "temp_calibration_mode": "Absolute: Send value directly. Offset: Send delta (External - TRV Internal). Scaled: Send as Integer x100 (e.g. 21.5 -> 2150).",
@@ -78,7 +82,7 @@
           },
           "humidity_section": {
             "name": "Humidity Settings",
-            "description": "Calculate humidity from members or use master. Optional external sensors.",
+            "description": "Configure humidity aggregation and precision. Advanced Features add support for external sensors.",
             "data": {
               "humidity_target_avg": "Target Humidity",
               "humidity_use_master": "Use Master Target Humidity",
@@ -105,7 +109,7 @@
               "ignore_off_members_sync": "Respect Member Off State (Sync)"
             },
             "data_description": {
-              "sync_mode": "What to do when a member is changed outside the group. Disabled: ignore it. Mirror: apply the change to all members. Lock: revert the member back to the group target. Master/Lock: only the master entity's changes are accepted.",
+              "sync_mode": "What to do when a member is changed outside the group. Disabled: ignore it. Mirror: apply the change to all members. Lock: revert the member back to the group target. Mirror/Lock: hybrid. Master/Lock: only the master entity's changes are accepted.",
               "sync_attributes": "Attributes selected here will be enforced in Lock/Mirror modes. Unselected attributes allow for local control (e.g. sync temperature but let users change fan speed locally).",
               "ignore_off_members_sync": "When enforcing Lock/Mirror, skip members that are currently Off. Note: direct group commands always reach all capable members regardless of this setting."
             }
@@ -184,12 +188,12 @@
           },
           "temp_offsets_section": {
             "name": "Member Offsets",
-            "description": "Set a temperature offset for individual members. The group target is adjusted by this value before sending to each device. Leave at 0 for no offset.",
+            "description": "Apply individual temperature offsets so specific members run proportionately warmer or cooler than the group's target setpoint.",
             "data": {
               "member_offset_correction": "Correct member offset"
             },
             "data_description": {
-              "member_offset_correction": "When enabled, the offset of each member is corrected prior to aggregation. With a group setpoint of 20 °C and an offset of +3.0 °C, the member setpoint is 23.0 °C, while the member actual value for the group is internally 20 °C."
+              "member_offset_correction": "When enabled, each member's offset is subtracted before averaging so the group displays the logical setpoint instead of the raw physical average."
             }
           },
           "isolation_section": {
@@ -214,26 +218,24 @@
           },
           "advanced_section": {
             "name": "Advanced Settings",
-            "description": "Debounce, retry behavior, debug sensors, and minimum temperature when off (force valve close).",
+            "description": "Fine-tune command timings, retry behavior, and staggered calls. Toggle diagnostic attributes and configuration sensors.",
             "data": {
               "debounce_delay": "Debounce Delay (seconds)",
               "retry_attempts": "Retry Attempts",
               "retry_delay": "Retry Delay (seconds)",
               "staggered_call_delay": "Staggered Call Delay (seconds)",
-              "min_temp_off": "Minimum Temperature when Off",
               "expose_smart_sensors": "Expose Smart Sensors",
               "expose_member_entities": "Expose Member List",
-              "expose_config": "Expose Configuration (Debug)"
+              "expose_config": "Expose Configuration Sensor"
             },
             "data_description": {
               "debounce_delay": "Time to wait before sending commands. Higher values prevent 'rapid-fire' commands when sliding controls, but feel slower.",
               "retry_attempts": "How many times to resend a command if a device doesn't respond. Set to 0 to disable.",
               "retry_delay": "Pause between retry attempts. Giving devices a moment to recover can improve reliability.",
               "staggered_call_delay": "Time to wait between individual commands to group members. Staggering calls prevents network congestion in Zigbee/Matter environments. Set to 0 to disable.",
-              "min_temp_off": "Sends the device's minimum temperature (e.g. 5°C) when turning the group off. This ensures valves are fully closed for frost protection.",
               "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
               "expose_member_entities": "Creates an attribute listing all member entity IDs.",
-              "expose_config": "Adds all configuration values to the entity attributes. Useful for debugging."
+              "expose_config": "Creates a diagnostic sensor (sensor.*_configuration) that exposes portable settings as a JSON attribute. Useful for copying settings between groups via automations."
             }
           }
         },
@@ -328,6 +330,7 @@
         "disabled": "Disabled – No automatic sync between members",
         "mirror": "Mirror – Manual changes on one device update all members",
         "lock": "Lock – Reverts manual changes to match the group state",
+        "mirror_lock": "Mirror/Lock – Selective attributes are mirrored, others are strictly locked",
         "master_lock": "Master/Lock – Only the master entity can change the group target"
       }
     },
@@ -359,7 +362,7 @@
     },
     "window_action": {
       "options": {
-        "off": "Turn Off (Default)",
+        "off": "Turn Off",
         "temperature": "Set Temperature"
       }
     },
@@ -367,6 +370,12 @@
       "options": {
         "off": "Turn Off",
         "clamp": "Clamp to Limit"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Ignore",
+        "off": "Turn Off"
       }
     },
     "isolation_trigger": {
@@ -417,6 +426,9 @@
       },
       "humidity": {
         "name": "Humidity"
+      },
+      "configuration": {
+        "name": "Configuration"
       }
     },
     "switch": {
@@ -454,7 +466,7 @@
     },
     "set_schedule_entity": {
       "name": "Set Schedule Entity",
-      "description": "Changes the active schedule entity used by the Climate Group.",
+      "description": "Dynamically change the active schedule entity. If omitted or set to null, the group reverts to its configured default and re-applies the current slot.",
       "fields": {
         "schedule_entity": {
           "name": "Schedule Entity",
@@ -464,7 +476,7 @@
     },
     "boost": {
       "name": "Boost",
-      "description": "Temporarily sets the group to a target temperature for a specified duration. After the timer expires, the group reverts to the active schedule or its previous state. Specify either temperature or temperature_offset.",
+      "description": "Temporarily set the group to a target temperature for a fixed duration. When the timer expires, the group restores automatically to the active schedule slot (if configured) or its previous target state.",
       "fields": {
         "temperature": {
           "name": "Temperature",
@@ -477,6 +489,24 @@
         "duration": {
           "name": "Duration (minutes)",
           "description": "How long the boost should last in minutes."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Apply Configuration",
+      "description": "Apply a portable JSON configuration to a group. This is useful for copying logic settings between groups or restoring a backup. Identity keys (name) are protected.",
+      "fields": {
+        "settings": {
+          "name": "Settings (JSON)",
+          "description": "The JSON configuration object to apply. Use the 'settings_json' attribute from a Configuration Sensor."
+        },
+        "include_member_list": {
+          "name": "Include Member List",
+          "description": "If true, also overwrites the list of member entities and isolation entities."
+        },
+        "include_entity_selectors": {
+          "name": "Include Entity Selectors",
+          "description": "If true, also overwrites linked sensors (temp, humidity, presence, window, etc.) and per-member offsets."
         }
       }
     }

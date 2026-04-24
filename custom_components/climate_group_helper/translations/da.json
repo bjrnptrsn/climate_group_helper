@@ -34,30 +34,33 @@
         "sections": {
           "members_section": {
             "name": "Medlemmer & Tilstande",
-            "description": "Tilføj enheder. Vælg hvordan funktioner (forudindstillinger, blæser) kombineres.",
+            "description": "Tilføj klimaenheder og vælg, hvordan funktioner skal flettes. Avancerede funktioner tilføjer understøttelse af en Master-enhed.",
             "data": {
               "entities": "Klimaenheder",
               "master_entity": "Masterenhed",
               "hvac_mode_strategy": "HVAC Tilstandsstrategi",
               "feature_strategy": "Funktionskompatibilitet",
-              "union_out_of_bounds_action": "Handling uden for område"
+              "union_out_of_bounds_action": "Handling uden for område",
+              "union_unsupported_hvac_action": "Handling for ikke-understøttet HVAC-tilstand"
             },
             "data_description": {
               "entities": "Tilføj eller fjern enheder. Fjernelse af enheder stopper dem fra at blive kontrolleret af gruppen.",
-              "master_entity": "Udpeg én enhed som den førende termostat. Dens værdier kan tilsidesætte gruppeberegninger.",
+              "master_entity": "Angiv ét medlem som Master-enhed (leder). Den bruges til Master/Lock-synkronisering og centraliserede målværdier.",
               "hvac_mode_strategy": "Strategi for beregning af gruppens tilstand ud fra dens medlemmer (f.eks. hvis en 'heat' og en anden er 'off').",
               "feature_strategy": "Bestemmer hvilke funktioner (f.eks. forudindstillede tilstande, blæsertilstande) der er tilgængelige på gruppen, når medlemmer har forskellige evner.",
-              "union_out_of_bounds_action": "Hvad der skal ske med enheder, der ikke kan nå måltemperaturen. Gælder kun når funktionsstrategien er indstillet til Union."
+              "union_out_of_bounds_action": "Hvad der skal ske med enheder, der ikke kan nå måltemperaturen. Gælder kun når funktionsstrategien er indstillet til Union.",
+              "union_unsupported_hvac_action": "Hvad skal der ske med medlemmer, der teknisk set ikke understøtter gruppens mål-HVAC-tilstand (f.eks. AC under opvarmning). Gælder kun, når funktionsstrategi er sat til Union."
             }
           },
           "temperature_section": {
             "name": "Temperaturindstillinger",
-            "description": "Beregn temp fra medlemmer eller brug master. Eksterne sensorer og TRV-kalibrering.",
+            "description": "Konfigurer temperaturaggregering og præcision. Avancerede funktioner tilføjer understøttelse af eksterne sensorer, kalibrering og frostsikring.",
             "data": {
               "temp_target_avg": "Mål Temperatur",
               "temp_use_master": "Brug masterenhedens måltemperatur",
               "temp_target_round": "Mål Temperatur Præcision",
               "temp_current_avg": "Nuværende Temperatur",
+              "min_temp_off": "Minimumstemperatur ved sluk",
               "temp_sensors": "Eksterne Temperatursensorer",
               "temp_update_targets": "Skriv Ekstern Temp til Entiteter",
               "temp_calibration_mode": "Kalibreringstilstand",
@@ -69,6 +72,7 @@
               "temp_use_master": "Brug masterenhedens sætpunkt i stedet for at beregne et gennemsnit. Falder tilbage til gennemsnit, hvis utilgængelig.",
               "temp_target_round": "Gælder kun for værdier sendt til enheder, ikke for nuværende/viste værdier.",
               "temp_current_avg": "Hvordan gruppen opsummerer sensormålinger fra dens medlemmer.",
+              "min_temp_off": "Sender enhedens minimumstemperatur (f.eks. 5°C) når gruppen slukkes. Dette sikrer, at ventilerne er helt lukkede for frostbeskyttelse.",
               "temp_sensors": "Brug eksterne sensorer i stedet for medlemsmålinger. Disse bliver den eneste sandhedskilde for gruppens temperatur.",
               "temp_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter (f.eks. TRV kalibrering forskydninger). Nyttigt for at holde termostater opmærksomme på den faktiske stuetemperatur.",
               "temp_calibration_mode": "Absolut: Send værdi direkte. Offset: Send difference (Ekstern - TRV Intern). Skaleret: Send som heltal x100 (f.eks. 21.5 -> 2150).",
@@ -78,7 +82,7 @@
           },
           "humidity_section": {
             "name": "Fugtighedsindstillinger",
-            "description": "Beregn fugtighed fra medlemmer eller brug master. Valgfrie eksterne sensorer.",
+            "description": "Konfigurer fugtighedsaggregering og præcision. Avancerede funktioner tilføjer understøttelse af eksterne sensorer.",
             "data": {
               "humidity_target_avg": "Mål Fugtighed",
               "humidity_use_master": "Brug masterenhedens målfugtighed",
@@ -105,7 +109,7 @@
               "ignore_off_members_sync": "Respekter medlemmers Off-tilstand (Synk)"
             },
             "data_description": {
-              "sync_mode": "Hvad der sker, når et medlem ændres uden for gruppen. Deaktiveret: ignorer. Spejl: anvend ændringen på alle medlemmer. Lås: sæt medlemmet tilbage til gruppemålet. Master/Lås: kun masterens ændringer accepteres.",
+              "sync_mode": "Hvad der skal gøres, når et medlem ændres uden for gruppen. Disabled: ignorer det. Mirror: anvend ændringen på alle medlemmer. Lock: vend medlemmet tilbage til gruppens mål. Mirror/Lock: hybrid. Master/Lock: kun masterenhedens ændringer accepteres.",
               "sync_attributes": "Attributter valgt her vil blive håndhævet i Lock/Mirror tilstande. Ikke-valgte attributter tillader lokal kontrol (f.eks. synkroniser temperatur, men lad brugere ændre blæserhastighed lokalt).",
               "ignore_off_members_sync": "Ved håndhævelse af Lock/Mirror springes medlemmer over, der er slukket. Bemærk: direkte gruppekommandoer når altid alle egnede medlemmer uanset denne indstilling."
             }
@@ -184,12 +188,12 @@
           },
           "temp_offsets_section": {
             "name": "Medlem Offsets",
-            "description": "Indstil en temperaturforskydning for individuelle medlemmer. Gruppens mål justeres med denne værdi, før det sendes til hver enhed. Lad stå på 0 for ingen forskydning.",
+            "description": "Anvend individuelle temperaturforskydninger, så specifikke medlemmer kører forholdsmæssigt varmere eller køligere end gruppens mål.",
             "data": {
               "member_offset_correction": "Korriger medlems-offset"
             },
             "data_description": {
-              "member_offset_correction": "Når aktiveret, trækkes hvert medlems offset fra inden aggregering. Med et gruppesetpunkt på 20 °C og et offset på +3,0 °C er medlemmets setpunkt 23,0 °C, mens den faktiske værdi for gruppen internt er 20 °C."
+              "member_offset_correction": "Når aktiveret, trækkes hvert medlems forskydning fra før gennemsnitsberegning, så gruppen viser det logiske sætpunkt i stedet for det rå gennemsnit."
             }
           },
           "isolation_section": {
@@ -214,13 +218,12 @@
           },
           "advanced_section": {
             "name": "Avancerede indstillinger",
-            "description": "Debounce, forsøg, fejlsøgningssensorer og minimumstemp ved sluk (tvungen ventillukning).",
+            "description": "Finjuster kommandotiming, genforsøgsadfærd og forskudte opkald. Skift mellem diagnosticeringsattributter og konfigurationssensorer.",
             "data": {
               "debounce_delay": "Debounce Forsinkelse (sekunder)",
               "retry_attempts": "Genforsøg Forsøg",
               "retry_delay": "Genforsøg Forsinkelse (sekunder)",
               "staggered_call_delay": "Forsinkelse mellem kommandoer (sekunder)",
-              "min_temp_off": "Minimumstemperatur ved sluk",
               "expose_smart_sensors": "Udstil smarte sensorer",
               "expose_member_entities": "Udstil medlemsliste",
               "expose_config": "Vis konfiguration (Fejlfinding)"
@@ -230,7 +233,6 @@
               "retry_attempts": "Hvor mange gange en kommando skal gensendes, hvis en enhed ikke svarer. Sæt til 0 for at deaktivere.",
               "retry_delay": "Pause mellem genforsøg. At give enheder et øjeblik til at komme sig kan forbedre pålideligheden.",
               "staggered_call_delay": "Ventetid mellem individuelle kommandoer til gruppemedlemmer. Fordeling af kommandoer forhindrer netværksbelastning i Zigbee/Matter-miljøer. Sæt til 0 for at deaktivere.",
-              "min_temp_off": "Sender enhedens minimumstemperatur (f.eks. 5°C) når gruppen slukkes. Dette sikrer, at ventilerne er helt lukkede for frostbeskyttelse.",
               "expose_smart_sensors": "Opretter ekstra sensorenheder for gruppens temperatur og fugtighed (nyttigt til grafer).",
               "expose_member_entities": "Opretter en attribut, der viser alle medlemsenheds-id'er.",
               "expose_config": "Tilføjer alle konfigurationsværdier til entitetsattributterne. Nyttigt til fejlfinding."
@@ -326,9 +328,10 @@
     "sync_mode": {
       "options": {
         "disabled": "Deaktiveret – Ingen automatisk synkronisering mellem medlemmer",
-        "mirror": "Mirror (Magic Sync - To-vejs)",
-        "lock": "Lock (Chefen - Gennemtving Gruppe)",
-        "master_lock": "Master/Lock – Kun master-enhed kan ændre gruppens mål"
+        "mirror": "Mirror – Manuelle ændringer på én enhed opdaterer alle medlemmer",
+        "lock": "Lock – Manuelle ændringer tilbageføres til gruppetilstanden",
+        "mirror_lock": "Mirror/Lock – Valgte attributter spejles, andre er strengt låst",
+        "master_lock": "Master/Lock – Kun master-enheden kan ændre gruppens mål"
       }
     },
     "sync_attributes": {
@@ -359,7 +362,7 @@
     },
     "window_action": {
       "options": {
-        "off": "Sluk (Standard)",
+        "off": "Sluk",
         "temperature": "Indstil temperatur"
       }
     },
@@ -367,6 +370,12 @@
       "options": {
         "off": "Sluk",
         "clamp": "Begræns til grænseværdi"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Ignorer",
+        "off": "Sluk"
       }
     },
     "isolation_trigger": {
@@ -417,6 +426,9 @@
       },
       "humidity": {
         "name": "Luftfugtighed"
+      },
+      "configuration": {
+        "name": "Konfiguration"
       }
     },
     "switch": {
@@ -454,7 +466,7 @@
     },
     "set_schedule_entity": {
       "name": "Indstil tidsplan-enhed",
-      "description": "Ændrer den aktive tidsplan-enhed, der bruges af Climate Group.",
+      "description": "Skift dynamisk den aktive tidsplansentitet. Hvis udeladt eller sat til nul, vender gruppen tilbage til sin konfigurerede standard.",
       "fields": {
         "schedule_entity": {
           "name": "Tidsplan-enhed",
@@ -464,7 +476,7 @@
     },
     "boost": {
       "name": "Boost",
-      "description": "Indstiller midlertidigt gruppens temperatur til en målværdi i en bestemt periode. Når timeren udløber, vender gruppen tilbage til den aktive tidsplan eller dens tidligere tilstand. Angiv enten temperature eller temperature_offset.",
+      "description": "Sætter midlertidigt gruppen til en måltemperatur. Når timeren udløber, vender gruppen automatisk tilbage til den aktive tidsplan eller tidligere tilstand.",
       "fields": {
         "temperature": {
           "name": "Temperatur",
@@ -477,6 +489,24 @@
         "duration": {
           "name": "Varighed (minutter)",
           "description": "Hvor længe boost skal vare i minutter."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Anvend konfiguration",
+      "description": "Anvender en bærbar JSON-konfiguration på en gruppe. Nyttig til at kopiere logikindstillinger mellem grupper eller gendanne en sikkerhedskopi.",
+      "fields": {
+        "settings": {
+          "name": "Indstillinger (JSON)",
+          "description": "JSON-konfigurationsobjektet der skal anvendes. Brug attributten 'settings_json' fra en konfigurationssensor."
+        },
+        "include_member_list": {
+          "name": "Inkluder medlemsliste",
+          "description": "Hvis true, overskrives også listen over medlemsenheder og isolationsenheder."
+        },
+        "include_entity_selectors": {
+          "name": "Inkluder enhedsselektorer",
+          "description": "Hvis true, overskrives også tilknyttede sensorer (temp, fugtighed, tilstedeværelse, vindue osv.) og pr.-medlem-forskydninger."
         }
       }
     }

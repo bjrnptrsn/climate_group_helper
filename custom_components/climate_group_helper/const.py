@@ -24,7 +24,7 @@ from homeassistant.components.climate import (
     SERVICE_SET_SWING_MODE,
     SERVICE_SET_TEMPERATURE,
 )
-from homeassistant.const import ATTR_TEMPERATURE
+from homeassistant.const import ATTR_TEMPERATURE, CONF_ENTITIES, CONF_NAME
 
 DOMAIN = "climate_group_helper"
 DEFAULT_NAME = "Climate Group"
@@ -35,6 +35,7 @@ CONF_MASTER_ENTITY = "master_entity"
 CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
 CONF_FEATURE_STRATEGY = "feature_strategy"
 CONF_UNION_OUT_OF_BOUNDS_ACTION = "union_out_of_bounds_action"
+CONF_UNION_UNSUPPORTED_HVAC_ACTION = "union_unsupported_hvac_action"
 
 # Temperature Settings
 CONF_TEMP_TARGET_AVG = "temp_target_avg"
@@ -144,6 +145,13 @@ class UnionOutOfBoundsAction(StrEnum):
     CLAMP = "clamp"
 
 
+class UnsupportedHvacAction(StrEnum):
+    """How to handle members that don't support the active HVAC mode."""
+
+    IGNORE = "ignore"
+    OFF = "off"
+
+
 class AverageOption(StrEnum):
     """Averaging options for temperature."""
 
@@ -176,6 +184,7 @@ class SyncMode(StrEnum):
     LOCK = "lock"
     MIRROR = "mirror"
     MASTER_LOCK = "master_lock"
+    MIRROR_LOCK = "mirror_lock"
 
 
 class WindowControlMode(StrEnum):
@@ -228,7 +237,12 @@ class IsolationTrigger(StrEnum):
 # Service Constants
 SERVICE_SET_SCHEDULE_ENTITY = "set_schedule_entity"
 SERVICE_BOOST = "boost"
+SERVICE_APPLY_CONFIG = "apply_config"
+
 ATTR_SCHEDULE_ENTITY = "schedule_entity"
+ATTR_SETTINGS = "settings"
+ATTR_INCLUDE_MEMBER_LIST = "include_member_list"
+ATTR_INCLUDE_ENTITY_SELECTORS = "include_entity_selectors"
 
 # Extra attribute keys
 ATTR_ACTIVE_SCHEDULE_ENTITY = "active_schedule_entity"
@@ -242,16 +256,40 @@ ATTR_ACTIVE_OVERRIDE = "active_override"
 ATTR_MASTER_FALLBACK_ACTIVE = "master_fallback_active"
 ATTR_ACTIVE_OVERRIDE_END = "active_override_end"
 ATTR_GROUP_OFFSET = "group_offset"
+ATTR_SETTINGS_JSON = "settings_json"
+
+# Configuration Management Key Groups
+IDENTITY_KEYS: frozenset[str] = frozenset({CONF_NAME})
+
+MEMBER_LIST_KEYS: frozenset[str] = frozenset({
+    CONF_ENTITIES,
+    CONF_ISOLATION_ENTITIES,
+    CONF_MASTER_ENTITY,
+})
+
+ENTITY_SELECTOR_KEYS: frozenset[str] = frozenset({
+    CONF_TEMP_SENSORS,
+    CONF_HUMIDITY_SENSORS,
+    CONF_ROOM_SENSOR,
+    CONF_ZONE_SENSOR,
+    CONF_PRESENCE_SENSOR,
+    CONF_PRESENCE_ZONE,
+    CONF_SCHEDULE_ENTITY,
+    CONF_ISOLATION_SENSOR,
+    CONF_MEMBER_TEMP_OFFSETS,
+})
 
 # Schedule Meta-Keys (v1 — State-Keys only)
 META_KEY_TURN_OFF = "turn_off"  # no CONF_ mapping
 META_KEY_SYNC_MODE = CONF_SYNC_MODE  # == "sync_mode"
 META_KEY_GROUP_OFFSET = ATTR_GROUP_OFFSET  # RunState field, no CONF_ mapping
+META_KEY_SYNC_ATTRS = CONF_SYNC_ATTRS  # == "sync_attributes"
 
 META_STATE_KEYS: frozenset[str] = frozenset({
     META_KEY_TURN_OFF,
     META_KEY_SYNC_MODE,
     META_KEY_GROUP_OFFSET,
+    META_KEY_SYNC_ATTRS,
 })
 
 # Attribute to service call mapping

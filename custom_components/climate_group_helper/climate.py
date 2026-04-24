@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import fields, replace
 from functools import reduce
+import json
 import logging
 import time
 from statistics import mean, median
@@ -80,7 +81,6 @@ from .const import (
     ATTR_SCHEDULE_ENTITY,
     CONF_ADVANCED_MODE,
     CONF_DEBOUNCE_DELAY,
-    CONF_EXPOSE_CONFIG,
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_HUMIDITY_CURRENT_AVG,
@@ -109,6 +109,13 @@ from .const import (
     FLOAT_TOLERANCE,
     SERVICE_SET_SCHEDULE_ENTITY,
     SERVICE_BOOST,
+    SERVICE_APPLY_CONFIG,
+    ATTR_INCLUDE_ENTITY_SELECTORS,
+    ATTR_INCLUDE_MEMBER_LIST,
+    ATTR_SETTINGS,
+    ENTITY_SELECTOR_KEYS,
+    IDENTITY_KEYS,
+    MEMBER_LIST_KEYS,
     AdoptManualChanges,
     AverageOption,
     FeatureStrategy,
@@ -116,6 +123,7 @@ from .const import (
     RoundOption,
     SyncMode,
 )
+from . import VALID_CONFIG_KEYS
 from .calibration import CalibrationHandler
 from .isolation import MemberIsolationHandler
 from .override import (
@@ -225,6 +233,7 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Home Assistant
         self.hass = hass
+        self.entry = None
         self.config = config
         self.climate_entity_ids = entity_ids
         self.event: Event = None
@@ -269,7 +278,6 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         self._humidity_update_target_entity_ids = _get_adv(CONF_HUMIDITY_UPDATE_TARGETS, [])
         # Expose member entities
         self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
-        self._expose_config = config.get(CONF_EXPOSE_CONFIG, False)
         # Advanced options
         self.min_temp_off = config.get(CONF_MIN_TEMP_OFF, False)
         # Window control
@@ -383,6 +391,8 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
 
     async def async_added_to_hass(self) -> None:
         """Restore states before registering listeners."""
+        if self.platform:
+            self.entry = self.platform.config_entry
 
         # Some integrations, such as HomeKit, Google Home, and Alexa
         # require final property lists during the initialization process e.g. hvac_modes.
@@ -436,6 +446,18 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
                 "async_service_boost",
             )
 
+        # Config management service (available in all modes)
+        if self.platform:
+            self.platform.async_register_entity_service(
+                SERVICE_APPLY_CONFIG,
+                {
+                    vol.Required(ATTR_SETTINGS): cv.string,
+                    vol.Optional(ATTR_INCLUDE_MEMBER_LIST, default=False): cv.boolean,
+                    vol.Optional(ATTR_INCLUDE_ENTITY_SELECTORS, default=False): cv.boolean,
+                },
+                "async_service_apply_config",
+            )
+
     async def async_service_set_schedule_entity(self, schedule_entity: str | None = None) -> None:
         """Handle set_schedule_entity service."""
         await self.schedule_handler.update_schedule_entity(schedule_entity)
@@ -448,6 +470,51 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
             current = self.shared_target_state.temperature or 0.0
             temperature = current + temperature_offset
         await self.boost_override_manager.activate(temperature=temperature, duration_seconds=duration * 60)
+
+    async def async_service_apply_config(
+        self,
+        settings: str,
+        include_member_list: bool = False,
+        include_entity_selectors: bool = False,
+    ) -> None:
+        """Handle apply_config service call."""
+        try:
+            new_settings = json.loads(settings)
+        except json.JSONDecodeError as err:
+            raise ServiceValidationError(f"Invalid JSON settings: {err}") from err
+
+        if not isinstance(new_settings, dict):
+            raise ServiceValidationError("Settings must be a JSON object.")
+
+        # Whitelist filter: only valid keys pass
+        filtered = {
+            key: value
+            for key, value in new_settings.items()
+            if key in VALID_CONFIG_KEYS
+        }
+
+        # Protection: always remove identity keys
+        for key in IDENTITY_KEYS:
+            filtered.pop(key, None)
+
+        # Optional: remove non-portable keys if not requested
+        if not include_member_list:
+            for key in MEMBER_LIST_KEYS:
+                filtered.pop(key, None)
+
+        if not include_entity_selectors:
+            for key in ENTITY_SELECTOR_KEYS:
+                filtered.pop(key, None)
+
+        if not filtered:
+            _LOGGER.info("[%s] No valid settings to apply after filtering", self.entity_id)
+            return
+
+        # Merge with existing options
+        merged_options = {**self.entry.options, **filtered}
+
+        _LOGGER.info("[%s] Applying new configuration via service call (reloading...)", self.entity_id)
+        self.hass.config_entries.async_update_entry(self.entry, options=merged_options)
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
@@ -686,10 +753,6 @@ class ClimateGroup(GroupEntity, ClimateEntity, RestoreEntity):
         # Expose member entities if configured
         if self._expose_member_entities:
             attrs[ATTR_ENTITY_ID] = self.climate_entity_ids
-
-        # Expose full config if enabled
-        if self._expose_config:
-            attrs.update(self.config)
 
         # Omit advanced attributes in basic mode
         if not self.advanced_mode:

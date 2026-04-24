@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
+    ATTR_HVAC_MODES,
     ATTR_HUMIDITY,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -31,11 +32,12 @@ from .const import (
     CONF_FEATURE_STRATEGY,
     CONF_IGNORE_OFF_MEMBERS_SYNC,
     CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
-    CONF_SYNC_ATTRS,
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
-    SYNC_TARGET_ATTRS,
+    CONF_UNION_UNSUPPORTED_HVAC_ACTION,
     FeatureStrategy,
+    SyncMode,
     UnionOutOfBoundsAction,
+    UnsupportedHvacAction,
 )
 from .state import FilterState
 
@@ -269,16 +271,22 @@ class BaseServiceCallHandler(ABC):
                 continue
 
             entity_ids = self._get_call_entity_ids(attr, value)
-            if not entity_ids:
+            # hvac_mode proceeds even with no capable entities: _process_unsupported_hvac
+            # may generate OFF calls for members that advertise modes but not this one.
+            if not entity_ids and attr != ATTR_HVAC_MODE:
                 continue
 
-            # Pipeline: build → process min_temp_off → process offsets → process OOB guard
+            # Pipeline: build → process unsupported hvac → process min_temp_off → process offsets → process OOB guard
             raw = self._build_initial_call(attr, value, entity_ids)
-            processed = self._process_min_temp_off(raw)
+            processed = self._process_unsupported_hvac(raw)
+            processed = self._process_min_temp_off(processed)
             processed = self._process_member_offset(processed)
             processed = self._process_group_offset(processed)
             processed = self._process_oob_guard(processed)
             calls.extend(processed)
+
+        # Final filter: prune calls with empty entity_ids (may result from various processing stages)
+        calls = [c for c in calls if c.get("entity_ids")]
 
         return calls
 
@@ -631,6 +639,45 @@ class BaseServiceCallHandler(ABC):
         """Whether to apply the global group offset. False by default (direct-command handlers)."""
         return False
 
+    def _process_unsupported_hvac(self, calls: list[dict]) -> list[dict]:
+        """Union strategy: handle members that don't support the requested HVAC mode.
+
+        If configured (CONF_UNION_UNSUPPORTED_HVAC_ACTION == off), members that
+        support hvac_modes but not the currently requested mode are explicitly
+        turned off to prevent conflicting operations (e.g. AC cooling during heat).
+        """
+        if self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
+            return calls
+        if self._group.config.get(CONF_UNION_UNSUPPORTED_HVAC_ACTION) != UnsupportedHvacAction.OFF:
+            return calls
+
+        # Only the hvac_mode call is relevant — all others pass through unchanged.
+        hvac_call = next((c for c in calls if ATTR_HVAC_MODE in c["kwargs"]), None)
+        if hvac_call is None or hvac_call["kwargs"][ATTR_HVAC_MODE] == HVACMode.OFF:
+            return calls
+
+        target_hvac_mode = hvac_call["kwargs"][ATTR_HVAC_MODE]
+        capable_ids = set(hvac_call.get("entity_ids", []))
+
+        extra_off_calls = []
+        for entity_id in self._group.climate_entity_ids:
+            if entity_id in capable_ids or self._is_member_blocked(entity_id):
+                continue
+            state = self._hass.states.get(entity_id)
+            if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN, HVACMode.OFF):
+                continue
+            supported_modes = state.attributes.get(ATTR_HVAC_MODES, [])
+            if supported_modes and target_hvac_mode not in supported_modes:
+                _LOGGER.debug("[%s] Member %s does not support mode %s -> turning OFF", self._group.entity_id, entity_id, target_hvac_mode)
+                extra_off_calls.append({
+                    "service": SERVICE_SET_HVAC_MODE,
+                    "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
+                    "entity_ids": [entity_id],
+                    "injected": [ATTR_HVAC_MODE],
+                })
+
+        return calls + extra_off_calls
+
     def _process_oob_guard(self, calls: list[dict]) -> list[dict]:
         """OOB guard: check if temperature values are within device range (union only).
 
@@ -884,11 +931,19 @@ class SyncCallHandler(BaseServiceCallHandler):
     def __init__(self, group: ClimateGroup):
         """Initialize the sync call handler."""
         super().__init__(group)
-        self._filter_state = FilterState.from_keys(group.config.get(CONF_SYNC_ATTRS, SYNC_TARGET_ATTRS))
 
     def _generate_calls(self, data: dict[str, Any] | None = None, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
         """Generate calls based on target_state diff."""
-        return super()._generate_calls(data=data, filter_state=self._filter_state)
+        sync_handler = self._group.sync_mode_handler
+        
+        # MIRROR_LOCK enforces all attributes (deviating "locked" attributes are reverted)
+        if sync_handler.sync_mode == SyncMode.MIRROR_LOCK:
+            effective_filter = FilterState()  # All True
+        else:
+            # Dynamic filter state (respects schedule overrides)
+            effective_filter = sync_handler.filter_state
+
+        return super()._generate_calls(data=data, filter_state=effective_filter)
 
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Extend base blocking with OOB check.

@@ -5,7 +5,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.const import STATE_ON, STATE_OPEN
+from homeassistant.const import STATE_CLOSING, STATE_ON, STATE_OPEN, STATE_OPENING
 from homeassistant.core import Event, EventStateChangedData, callback
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 
@@ -198,7 +198,7 @@ class WindowControlHandler:
 
         # If no room sensor is configured, room is always closed
         if self._room_sensor and (state := self._hass.states.get(self._room_sensor)):
-            self._room_open = state.state in (STATE_ON, STATE_OPEN)
+            self._room_open = state.state in (STATE_ON, STATE_OPEN, STATE_OPENING, STATE_CLOSING)
             self._room_last_changed = time.time() - state.last_changed.timestamp()
         else:
             self._room_open = False
@@ -206,7 +206,7 @@ class WindowControlHandler:
 
         # If no zone sensor is configured, use room sensor state
         if self._zone_sensor and (state := self._hass.states.get(self._zone_sensor)):
-            self._zone_open = state.state in (STATE_ON, STATE_OPEN) or self._room_open
+            self._zone_open = state.state in (STATE_ON, STATE_OPEN, STATE_OPENING, STATE_CLOSING) or self._room_open
             self._zone_last_changed = time.time() - state.last_changed.timestamp()
         else:
             self._zone_open = self._room_open

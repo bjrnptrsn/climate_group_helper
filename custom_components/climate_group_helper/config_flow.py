@@ -22,11 +22,13 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_ADVANCED_MODE,
+    CONF_CALIBRATION_HEARTBEAT,
+    CONF_CALIBRATION_IGNORE_OFF,
     CONF_CLOSE_DELAY,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPAND_SECTIONS,
-    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_CONFIG,
+    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
     CONF_HUMIDITY_CURRENT_AVG,
@@ -36,72 +38,72 @@ from .const import (
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HUMIDITY_USE_MASTER,
     CONF_HVAC_MODE_STRATEGY,
-    CONF_IGNORE_OFF_MEMBERS_SYNC,
     CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
+    CONF_IGNORE_OFF_MEMBERS_SYNC,
+    CONF_ISOLATION_ACTIVATE_DELAY,
+    CONF_ISOLATION_ENTITIES,
+    CONF_ISOLATION_RESTORE_DELAY,
+    CONF_ISOLATION_SENSOR,
+    CONF_ISOLATION_TRIGGER,
+    CONF_ISOLATION_TRIGGER_HVAC_MODES,
     CONF_MASTER_ENTITY,
+    CONF_MEMBER_OFFSET_CORRECTION,
+    CONF_MEMBER_TEMP_OFFSETS,
+    CONF_MIN_TEMP_OFF,
     CONF_OVERRIDE_DURATION,
     CONF_PERSIST_ACTIVE_SCHEDULE,
     CONF_PERSIST_CHANGES,
+    CONF_PRESENCE_ACTION,
+    CONF_PRESENCE_AWAY_DELAY,
+    CONF_PRESENCE_AWAY_OFFSET,
+    CONF_PRESENCE_AWAY_PRESET,
+    CONF_PRESENCE_AWAY_TEMPERATURE,
+    CONF_PRESENCE_MODE,
+    CONF_PRESENCE_RETURN_DELAY,
+    CONF_PRESENCE_SENSOR,
+    CONF_PRESENCE_ZONE,
     CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
     CONF_ROOM_SENSOR,
     CONF_SCHEDULE_ENTITY,
+    CONF_STAGGERED_CALL_DELAY,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
-    CONF_STAGGERED_CALL_DELAY,
+    CONF_TEMP_CALIBRATION_MODE,
     CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_SENSORS,
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
     CONF_TEMP_USE_MASTER,
-    CONF_TEMP_CALIBRATION_MODE,
-    CONF_CALIBRATION_HEARTBEAT,
-    CONF_CALIBRATION_IGNORE_OFF,
-    CONF_MIN_TEMP_OFF,
-    CONF_PRESENCE_MODE,
-    CONF_PRESENCE_SENSOR,
-    CONF_PRESENCE_ZONE,
-    CONF_PRESENCE_ACTION,
-    CONF_PRESENCE_AWAY_OFFSET,
-    CONF_PRESENCE_AWAY_TEMPERATURE,
-    CONF_PRESENCE_AWAY_PRESET,
-    CONF_PRESENCE_AWAY_DELAY,
-    CONF_PRESENCE_RETURN_DELAY,
+    CONF_UNION_OUT_OF_BOUNDS_ACTION,
+    CONF_UNION_UNSUPPORTED_HVAC_ACTION,
     CONF_WINDOW_ACTION,
-    CONF_WINDOW_TEMPERATURE,
     CONF_WINDOW_ADOPT_MANUAL_CHANGES,
     CONF_WINDOW_MODE,
+    CONF_WINDOW_TEMPERATURE,
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
-    CONF_MEMBER_TEMP_OFFSETS,
-    CONF_MEMBER_OFFSET_CORRECTION,
-    CONF_ISOLATION_SENSOR,
-    CONF_ISOLATION_ENTITIES,
-    CONF_ISOLATION_ACTIVATE_DELAY,
-    CONF_ISOLATION_RESTORE_DELAY,
-    CONF_ISOLATION_TRIGGER,
-    CONF_ISOLATION_TRIGGER_HVAC_MODES,
     DEFAULT_CLOSE_DELAY,
     DEFAULT_NAME,
     DEFAULT_ROOM_OPEN_DELAY,
     DEFAULT_ZONE_OPEN_DELAY,
     DOMAIN,
     SYNC_TARGET_ATTRS,
-    CONF_UNION_OUT_OF_BOUNDS_ACTION,
     AdoptManualChanges,
     AverageOption,
     CalibrationMode,
     FeatureStrategy,
     HvacModeStrategy,
     IsolationTrigger,
-    PresenceMode,
     PresenceAction,
+    PresenceMode,
     RoundOption,
     SyncMode,
     UnionOutOfBoundsAction,
+    UnsupportedHvacAction,
     WindowControlAction,
     WindowControlMode,
 )
@@ -173,7 +175,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         self._min_temp = DEFAULT_MIN_TEMP
         self._max_temp = DEFAULT_MAX_TEMP
         self._refresh_hint_shown = False
-        self._adv_mode_changed = False
+        self._from_adv_mode: bool = bool(config_entry.options.get(CONF_ADVANCED_MODE, False))
 
     def _update_dynamic_limits(self) -> None:
         """Calculate dynamic temperature limits from member entities."""
@@ -205,17 +207,15 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 except (ValueError, TypeError):
                     pass
 
-    def _normalize_options(self, user_input: dict[str, Any]) -> dict[str, Any]:
+    def _normalize_options(self, user_input: dict[str, Any], refresh: bool = False) -> dict[str, Any]:
         """Normalize and clean up options based on dependencies."""
         # Start with current config and overlay flat inputs
         current_config = {**self._config_entry.options, **user_input}
-
-        new_adv_mode = user_input.get(CONF_ADVANCED_MODE)
-        old_adv_mode = self._config_entry.options.get(CONF_ADVANCED_MODE)
-        advanced_mode = old_adv_mode and new_adv_mode
+        # refresh=True means advanced sections weren't rendered — skip deletion guards.
+        advanced_mode = bool(user_input.get(CONF_ADVANCED_MODE)) and not refresh
 
         # Optional entity selectors return no key when cleared (suggested_value pattern) —
-        # explicitly remove stale values so deletion is not silently ignored
+        # explicitly remove stale values so deletion is not silently ignored.
         if advanced_mode:
             for key in [
                 CONF_ISOLATION_SENSOR,
@@ -369,6 +369,16 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                             translation_key="union_out_of_bounds_action",
                         )
                     ),
+                    vol.Required(
+                        CONF_UNION_UNSUPPORTED_HVAC_ACTION,
+                        default=config.get(CONF_UNION_UNSUPPORTED_HVAC_ACTION, UnsupportedHvacAction.IGNORE),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[UnsupportedHvacAction.IGNORE, UnsupportedHvacAction.OFF],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                            translation_key="union_unsupported_hvac_action",
+                        )
+                    ),
                 }),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
             )
@@ -386,6 +396,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         advanced_fields = {}
         if config.get(CONF_ADVANCED_MODE, False):
             advanced_fields = {
+                vol.Optional(CONF_MIN_TEMP_OFF, default=config.get(CONF_MIN_TEMP_OFF, False)): bool,
                 vol.Optional(CONF_TEMP_SENSORS, default=config.get(CONF_TEMP_SENSORS, [])): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN, multiple=True)
                 ),
@@ -546,10 +557,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         selector.NumberSelectorConfig(min=self._min_temp, max=self._max_temp, step=0.5, unit_of_measurement="°C", mode=selector.NumberSelectorMode.SLIDER)
                     ),
                     vol.Optional(CONF_ROOM_SENSOR, description={"suggested_value": config.get(CONF_ROOM_SENSOR)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
+                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "cover"])
                     ),
                     vol.Optional(CONF_ZONE_SENSOR, description={"suggested_value": config.get(CONF_ZONE_SENSOR)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
+                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "cover"])
                     ),
                     vol.Optional(CONF_ROOM_OPEN_DELAY, default=config.get(CONF_ROOM_OPEN_DELAY, DEFAULT_ROOM_OPEN_DELAY)): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
@@ -744,7 +755,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(CONF_STAGGERED_CALL_DELAY, default=config.get(CONF_STAGGERED_CALL_DELAY, 0.0)): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=2, step=0.1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
                     ),
-                    vol.Optional(CONF_MIN_TEMP_OFF, default=config.get(CONF_MIN_TEMP_OFF, False)): bool,
                     vol.Optional(CONF_EXPOSE_SMART_SENSORS, default=config.get(CONF_EXPOSE_SMART_SENSORS, False)): bool,
                     vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=config.get(CONF_EXPOSE_MEMBER_ENTITIES, True)): bool,
                     vol.Optional(CONF_EXPOSE_CONFIG, default=config.get(CONF_EXPOSE_CONFIG, False)): bool,
@@ -774,15 +784,14 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
     ) -> ConfigFlowResult:
         """Manage the climate group options."""
         old_master = self._config_entry.options.get(CONF_MASTER_ENTITY)
-        old_adv_mode = self._config_entry.options.get(CONF_ADVANCED_MODE)
 
         if user_input is not None:
             flattened_input = self._flatten_input(user_input)
-            
+
             # Suggest a refresh if master changed and hint not yet shown
             new_master = flattened_input.get(CONF_MASTER_ENTITY)
             master_changed = (CONF_MASTER_ENTITY in flattened_input and new_master != old_master)
-            
+
             if master_changed and not self._refresh_hint_shown:
                 self._refresh_hint_shown = True
                 current_config = {**self._config_entry.options, **flattened_input}
@@ -806,18 +815,16 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                     "isolation_section": "isolation_all_selected",
                 })
 
-            final_options = self._normalize_options(flattened_input)
+            new_adv_mode = bool(flattened_input.get(CONF_ADVANCED_MODE))
+            adv_mode_changed = (CONF_ADVANCED_MODE in flattened_input and new_adv_mode != self._from_adv_mode)
 
-            new_adv_mode = flattened_input.get(CONF_ADVANCED_MODE)
-            adv_mode_changed = (CONF_ADVANCED_MODE in flattened_input and new_adv_mode != old_adv_mode)
-            
-            if adv_mode_changed and not self._adv_mode_changed:
-                self._adv_mode_changed = True
+            final_options = self._normalize_options(flattened_input, refresh=adv_mode_changed)
+
+            if adv_mode_changed:
                 return await self._show_main_form(final_options)
 
             # Reset markers and save
             self._refresh_hint_shown = False
-            self._adv_mode_changed = False
 
             return self.async_create_entry(title="", data=final_options)
 
@@ -826,8 +833,9 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
     async def _show_main_form(self, config: dict[str, Any], form_errors: dict[str, str] | None = None) -> ConfigFlowResult:
         """Show the unified configuration form."""
         self._update_dynamic_limits()
-        
+
         advanced_mode = config.get(CONF_ADVANCED_MODE, False)
+        self._from_adv_mode = bool(advanced_mode)
 
         # Compose schema from factories
         schema_dict = {}

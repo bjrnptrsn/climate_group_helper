@@ -34,30 +34,33 @@
         "sections": {
           "members_section": {
             "name": "Membri & Modalità",
-            "description": "Aggiungi dispositivi climatici. Scegli come unire le funzioni (preimpostazioni, ventola) tra i membri.",
+            "description": "Aggiungi dispositivi climatici e scegli come unire le funzioni. Le funzioni avanzate aggiungono il supporto per un'entità Master.",
             "data": {
               "entities": "Dispositivi Climatici",
               "master_entity": "Entità master",
               "hvac_mode_strategy": "Strategia Modalità HVAC",
               "feature_strategy": "Compatibilità Funzionalità",
-              "union_out_of_bounds_action": "Azione fuori intervallo"
+              "union_out_of_bounds_action": "Azione fuori intervallo",
+              "union_unsupported_hvac_action": "Azione per modalità HVAC non supportata"
             },
             "data_description": {
               "entities": "Aggiungi o rimuovi dispositivi. La rimozione dei dispositivi interrompe il loro controllo da parte del gruppo.",
-              "master_entity": "Designa un dispositivo come termostato principale. I suoi valori possono sovrascrivere i calcoli del gruppo.",
+              "master_entity": "Designa un membro come Entità Master (Leader). Viene utilizzata per la sincronizzazione Master/Lock e i valori target centralizzati.",
               "hvac_mode_strategy": "Strategia per calcolare lo stato del gruppo dai suoi membri (es. se uno sta 'heat' e un altro è 'off').",
               "feature_strategy": "Determina quali funzionalità (es. modalità preimpostate, modalità ventilatore) sono disponibili nel gruppo quando i membri hanno capacità diverse.",
-              "union_out_of_bounds_action": "Cosa fare con i dispositivi che non possono raggiungere la temperatura target. Si applica solo quando la strategia delle funzionalità è impostata su Unione."
+              "union_out_of_bounds_action": "Cosa fare con i dispositivi che non possono raggiungere la temperatura target. Si applica solo quando la strategia delle funzionalità è impostata su Unione.",
+              "union_unsupported_hvac_action": "Cosa fare con i membri che tecnicamente non supportano la modalità HVAC target del gruppo (es. AC durante il riscaldamento). Si applica solo se la strategia delle funzionalità è impostata su Unione."
             }
           },
           "temperature_section": {
             "name": "Impostazioni Temperatura",
-            "description": "Calcola la temperatura dai membri o usa il master. Sensori esterni e calibrazione TRV.",
+            "description": "Configura l'aggregazione e la precisione della temperatura. Le funzioni avanzate aggiungono il supporto per sensori esterni, calibrazione e protezione antigelo.",
             "data": {
               "temp_target_avg": "Temperatura Target",
               "temp_use_master": "Usa temperatura target dell'entità master",
               "temp_target_round": "Precisione Temperatura Target",
               "temp_current_avg": "Temperatura Attuale",
+              "min_temp_off": "Temperatura minima quando spento",
               "temp_sensors": "Sensori Temperatura Esterni",
               "temp_update_targets": "Scrivi Temp Esterna su Entità",
               "temp_calibration_mode": "Modalità di Calibrazione",
@@ -69,6 +72,7 @@
               "temp_use_master": "Usa il setpoint dell'entità master invece di calcolare una media. Torna alla media se non disponibile.",
               "temp_target_round": "Si applica solo ai valori inviati ai dispositivi, non ai valori attuali/visualizzati.",
               "temp_current_avg": "Come il gruppo riassume le letture dei sensori dai suoi membri.",
+              "min_temp_off": "Invia la temperatura minima del dispositivo (es. 5°C) allo spegnimento del gruppo. Ciò garantitce che le valvole siano completamente chiuse per la protezione dal gelo.",
               "temp_sensors": "Usa sensori esterni invece delle letture dei membri. Questi diventano l'unica fonte di verità per la temperatura del gruppo.",
               "temp_update_targets": "Scrivi il valore del sensore esterno su entità numeriche (es. offset calibrazione TRV). Utile per mantenere i termostati consapevoli della temperatura reale della stanza.",
               "temp_calibration_mode": "Assoluto: Invia valore diretto. Offset: Invia differenza (Esterno - TRV Interno). Scalato: Invia come intero x100 (es. 21.5 -> 2150).",
@@ -78,7 +82,7 @@
           },
           "humidity_section": {
             "name": "Impostazioni Umidità",
-            "description": "Calcola l'umidità dai membri o usa il master. Sensori esterni opzionali.",
+            "description": "Configura l'aggregazione e la precisione dell'umidità. Le funzioni avanzate aggiungono il supporto per sensori esterni.",
             "data": {
               "humidity_target_avg": "Umidità Target",
               "humidity_use_master": "Usa umidità target dell'entità master",
@@ -105,7 +109,7 @@
               "ignore_off_members_sync": "Rispetta lo stato Off dei membri (Sincronizzazione)"
             },
             "data_description": {
-              "sync_mode": "Cosa fare quando un membro viene modificato al di fuori del gruppo. Disabilitato: ignora. Specchio: applica la modifica a tutti. Blocco: riporta il membro allo stato target. Master/Blocco: vengono accettati solo i cambiamenti del master.",
+              "sync_mode": "Cosa fare quando un membro viene modificato al di fuori del gruppo. Disabled: ignoralo. Mirror: applica la modifica a tutti i membri. Lock: riporta il membro al target del gruppo. Mirror/Lock: ibrido. Master/Lock: vengono accettate solo le modifiche dell'entità master.",
               "sync_attributes": "Gli attributi selezionati qui saranno forzati nelle modalità Lock/Mirror. Gli attributi non selezionati consentono il controllo locale (es. sincronizzare la temperatura ma lasciare che gli utenti cambino la velocità del ventilatore localmente).",
               "ignore_off_members_sync": "Nell'applicazione di Lock/Mirror, i membri spenti vengono ignorati. Nota: i comandi diretti al gruppo raggiungono sempre tutti i membri capaci indipendentemente da questa impostazione."
             }
@@ -184,12 +188,12 @@
           },
           "temp_offsets_section": {
             "name": "Offset dei membri",
-            "description": "Imposta un offset di temperatura per i singoli membri. L'obiettivo del gruppo viene regolato di questo valore prima di essere inviato a ciascun dispositivo. Lascia a 0 per nessun offset.",
+            "description": "Applica offset di temperatura individuali in modo che membri specifici funzionino in modo proporzionalmente più caldo o freddo rispetto al target di gruppo.",
             "data": {
               "member_offset_correction": "Correggi offset membro"
             },
             "data_description": {
-              "member_offset_correction": "Se abilitato, l'offset di ciascun membro viene sottratto prima dell'aggregazione. Con un setpoint di gruppo di 20 °C e un offset di +3,0 °C, il setpoint del membro è 23,0 °C, mentre il valore effettivo del membro per il gruppo è internamente 20 °C."
+              "member_offset_correction": "Se abilitato, l'offset di ogni membro viene sottratto prima della media in modo che il gruppo visualizzi il setpoint logico invece della media fisica grezza."
             }
           },
           "isolation_section": {
@@ -214,13 +218,12 @@
           },
           "advanced_section": {
             "name": "Impostazioni Avanzate",
-            "description": "Debounce, tentativi, sensori di debug e temperatura minima allo spegnimento (chiusura forzata valvola).",
+            "description": "Affina i tempi dei comandi, il comportamento dei tentativi e le chiamate scaglionate. Alterna attributi diagnostici e sensori di configurazione.",
             "data": {
               "debounce_delay": "Ritardo Debounce (secondi)",
               "retry_attempts": "Tentativi Riprova",
               "retry_delay": "Ritardo Riprova (secondi)",
               "staggered_call_delay": "Ritardo tra i comandi (secondi)",
-              "min_temp_off": "Temperatura minima quando spento",
               "expose_smart_sensors": "Esponi sensori intelligenti",
               "expose_member_entities": "Esponi elenco dei membri",
               "expose_config": "Mostra configurazione (Debug)"
@@ -230,7 +233,6 @@
               "retry_attempts": "Quante volte inviare nuovamente un comando se un dispositivo non risponde. Imposta a 0 per disabilitare.",
               "retry_delay": "Pausa tra i tentativi. Dare ai dispositivi un momento per recuperare può migliorare l'affidabilità.",
               "staggered_call_delay": "Tempo di attesa tra i singoli comandi ai membri del gruppo. Scaglionare i comandi previene la congestione della rete in ambienti Zigbee/Matter. Impostare a 0 per disattivare.",
-              "min_temp_off": "Invia la temperatura minima del dispositivo (es. 5°C) allo spegnimento del gruppo. Ciò garantitce che le valvole siano completamente chiuse per la protezione dal gelo.",
               "expose_smart_sensors": "Crea entità sensore aggiuntive per temperatura e umidità del gruppo (utile per i grafici).",
               "expose_member_entities": "Crea un attributo che elenca tutti gli ID delle entità membro.",
               "expose_config": "Aggiunge tutti i valori di configurazione agli attributi dell'entità. Utile per il debug."
@@ -326,9 +328,10 @@
     "sync_mode": {
       "options": {
         "disabled": "Disattivato – Nessuna sincronizzazione automatica tra i membri",
-        "mirror": "Mirror (Magic Sync - Bidirezionale)",
-        "lock": "Lock (Il Capo - Forza Gruppo)",
-        "master_lock": "Master/Lock – Solo l'entità master può cambiare l'obiettivo"
+        "mirror": "Mirror – Le modifiche manuali su un dispositivo vengono applicate a tutti i membri",
+        "lock": "Lock – Le modifiche manuali vengono ripristinate allo stato del gruppo",
+        "mirror_lock": "Mirror/Lock – Gli attributi selezionati vengono sincronizzati, gli altri sono rigorosamente ripristinati",
+        "master_lock": "Master/Lock – Solo l'entità master può modificare l'obiettivo del gruppo"
       }
     },
     "sync_attributes": {
@@ -359,7 +362,7 @@
     },
     "window_action": {
       "options": {
-        "off": "Spegni (Predefinito)",
+        "off": "Spegni",
         "temperature": "Imposta temperatura"
       }
     },
@@ -367,6 +370,12 @@
       "options": {
         "off": "Spegnere",
         "clamp": "Limitare al valore limite"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Ignora",
+        "off": "Spegni"
       }
     },
     "isolation_trigger": {
@@ -417,6 +426,9 @@
       },
       "humidity": {
         "name": "Umidità"
+      },
+      "configuration": {
+        "name": "Configurazione"
       }
     },
     "switch": {
@@ -454,7 +466,7 @@
     },
     "set_schedule_entity": {
       "name": "Imposta entità programmazione",
-      "description": "Modifica l'entità di programmazione attiva utilizzata dal Gruppo Climatico.",
+      "description": "Cambia dinamicamente l'entità della programmazione attiva. Se omessa o impostata su null, il gruppo torna al valore predefinito configurato.",
       "fields": {
         "schedule_entity": {
           "name": "Entità programmazione",
@@ -464,7 +476,7 @@
     },
     "boost": {
       "name": "Boost",
-      "description": "Imposta temporaneamente la temperatura del gruppo a un valore target per una durata specificata. Allo scadere del timer, il gruppo torna alla programmazione attiva o allo stato precedente. Specificare temperature o temperature_offset.",
+      "description": "Imposta temporaneamente il gruppo a una temperatura target. Alla scadenza del timer, il gruppo torna automaticamente alla programmazione attiva o allo stato precedente.",
       "fields": {
         "temperature": {
           "name": "Temperatura",
@@ -477,6 +489,24 @@
         "duration": {
           "name": "Durata (minuti)",
           "description": "Per quanto tempo il boost deve durare in minuti."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Applica configurazione",
+      "description": "Applica una configurazione JSON portatile a un gruppo. Utile per copiare le impostazioni tra i gruppi o ripristinare un backup.",
+      "fields": {
+        "settings": {
+          "name": "Impostazioni (JSON)",
+          "description": "L'oggetto di configurazione JSON da applicare. Usa l'attributo 'settings_json' da un sensore di configurazione."
+        },
+        "include_member_list": {
+          "name": "Includi lista membri",
+          "description": "Se vero, sovrascrive anche l'elenco delle entità membro e delle entità di isolamento."
+        },
+        "include_entity_selectors": {
+          "name": "Includi selettori entità",
+          "description": "Se vero, sovrascrive anche i sensori collegati (temp, umidità, presenza, finestra, ecc.) e gli offset per membro."
         }
       }
     }

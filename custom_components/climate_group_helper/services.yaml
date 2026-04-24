@@ -52,3 +52,32 @@ boost:
           max: 480
           step: 1
           unit_of_measurement: "min"
+
+apply_config:
+  name: Apply Configuration
+  description: Overwrites existing group settings with a JSON configuration template. Identity keys (name) are always protected.
+  target:
+    entity:
+      integration: climate_group_helper
+      domain: climate
+  fields:
+    settings:
+      name: Settings (JSON)
+      description: The JSON configuration object to apply. Use the 'settings_json' attribute from a Configuration Sensor.
+      required: true
+      selector:
+        template:
+    include_member_list:
+      name: Include Member List
+      description: If true, also overwrites the list of member entities and isolation entities.
+      required: true
+      default: false
+      selector:
+        boolean:
+    include_entity_selectors:
+      name: Include Entity Selectors
+      description: If true, also overwrites linked sensors (temp, humidity, presence, window, etc.) and per-member offsets.
+      required: true
+      default: false
+      selector:
+        boolean:

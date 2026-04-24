@@ -34,30 +34,33 @@
         "sections": {
           "members_section": {
             "name": "Členovia a režimy",
-            "description": "Pridať zariadenia. Vyberte, ako kombinovať funkcie (predvoľby, ventilátor), keď sa členovia líšia.",
+            "description": "Pridajte klimatické zariadenia a vyberte, ako sa budú zlučovať funkcie. Pokročilé funkcie pridávajú podporu pre Master entitu.",
             "data": {
               "entities": "Klimatické zariadenia",
               "master_entity": "Hlavné zariadenie",
               "hvac_mode_strategy": "Stratégia režimu HVAC",
               "feature_strategy": "Kompatibilita funkcií",
-              "union_out_of_bounds_action": "Akcia mimo rozsahu"
+              "union_out_of_bounds_action": "Akcia mimo rozsahu",
+              "union_unsupported_hvac_action": "Akcia pre nepodporovaný režim HVAC"
             },
             "data_description": {
               "entities": "Pridajte alebo odoberte zariadenia. Odobranie zariadenia zastaví jeho ovládanie skupinou.",
-              "master_entity": "Určte jedno zariadenie ako hlavný termostat. Jeho hodnoty môžu prepísať skupinové výpočty.",
+              "master_entity": "Určite jedného člena ako Master entitu (vodca). Používa sa pre synchronizáciu Master/Lock a centralizované cieľové hodnoty.",
               "hvac_mode_strategy": "Stratégia pre výpočet stavu skupiny z jej členov (napr. ak jeden je 'heat' a druhý je 'off').",
               "feature_strategy": "Určuje, ktoré funkcie (napr. prednastavené režimy, režimy ventilátora) sú v skupine dostupné, keď majú členovia rôzne možnosti.",
-              "union_out_of_bounds_action": "Čo robiť so zariadeniami, ktoré nemôžu dosiahnuť cieľovú teplotu. Platí iba ak je stratégia funkcií nastavená na Zjednotenie."
+              "union_out_of_bounds_action": "Čo robiť so zariadeniami, ktoré nemôžu dosiahnuť cieľovú teplotu. Platí iba ak je stratégia funkcií nastavená na Zjednotenie.",
+              "union_unsupported_hvac_action": "Čo robiť s členmi, ktorí technicky nepodporujú cieľový režim HVAC skupiny (napr. klimatizácia pri kúrení). Platí iba keď je stratégia funkcií nastavená na Zjednotenie."
             }
           },
           "temperature_section": {
             "name": "Nastavenia teploty",
-            "description": "Výpočet teploty zo členov alebo použitie master. Externé senzory a kalibrácia TRV.",
+            "description": "Nakonfigurujte agregáciu a presnosť teploty. Pokročilé funkcie pridávajú podporu pre externé senzory, kalibráciu a ochranu proti zamrznutiu.",
             "data": {
               "temp_target_avg": "Cieľová teplota",
               "temp_use_master": "Použiť cieľovú teplotu hlavného zariadenia",
               "temp_target_round": "Presnosť cieľovej teploty",
               "temp_current_avg": "Aktuálna teplota",
+              "min_temp_off": "Minimálna teplota pri vypnutí",
               "temp_sensors": "Externé senzory teploty",
               "temp_update_targets": "Zapísať externú teplotu do entít",
               "temp_calibration_mode": "Režim kalibrácie",
@@ -69,6 +72,7 @@
               "temp_use_master": "Použiť hodnotu hlavného zariadenia namiesto výpočtu priemeru. Pri nedostupnosti sa vráti k priemerovaniu.",
               "temp_target_round": "Platí iba pre hodnoty odosielané do zariadení, nie pre aktuálne/zobrazované hodnoty.",
               "temp_current_avg": "Ako skupina sumarizuje údaje zo senzorov svojich členov.",
+              "min_temp_off": "Pri vypnutí skupiny odošle minimálnu teplotu zariadenia (napr. 5 °C). Tým sa zabezpečí úplné zatvorenie ventilov na ochranu pred mrazom.",
               "temp_sensors": "Použiť externé senzory namiesto údajov od členov. Tie sa stanú jediným zdrojom pravdy pre teplotu skupiny.",
               "temp_update_targets": "Zapísať hodnotu externého senzora do číselných entít (napr. kalibračné offsety TRV). Užitočné pre udržanie termostatov v obraze o skutočnej izbovej teplote.",
               "temp_calibration_mode": "Absolútny: Odoslať hodnotu priamo. Offset: Odoslať rozdiel (Externý - TRV interný). Škálovaný: Odoslať ako celé číslo x100 (napr. 21,5 -> 2150).",
@@ -78,7 +82,7 @@
           },
           "humidity_section": {
             "name": "Nastavenia vlhkosti",
-            "description": "Výpočet vlhkosti zo členov alebo použitie master. Voliteľné externé senzory.",
+            "description": "Nakonfigurujte agregáciu a presnosť vlhkosti. Pokročilé funkcie pridávajú podporu pre externé senzory.",
             "data": {
               "humidity_target_avg": "Cieľová vlhkosť",
               "humidity_use_master": "Použiť cieľovú vlhkosť hlavného zariadenia",
@@ -105,7 +109,7 @@
               "ignore_off_members_sync": "Rešpektovať stav Vypnuté u členov (Synchronizácia)"
             },
             "data_description": {
-              "sync_mode": "Čo robiť, keď je člen zmenený mimo skupiny. Vypnuté: ignorovať. Zrkadlo: použiť zmenu na všetkých. Zámok: vrátiť člena na cieľ skupiny. Master/Zámok: akceptujú sa iba zmeny mastera.",
+              "sync_mode": "Čo robiť, keď sa člen zmení mimo skupiny. Disabled: ignorovať. Mirror: aplikovať zmenu na všetkých členov. Lock: vrátiť člena späť na cieľ skupiny. Mirror/Lock: hybridný. Master/Lock: sú akceptované iba zmeny hlavnej entity.",
               "sync_attributes": "Atribúty vybrané tu budú vynútené v režimoch Lock/Mirror. Nevybrané atribúty umožňujú lokálne ovládanie (napr. synchronizovať teplotu, ale nechať používateľov meniť rýchlosť ventilátora lokálne).",
               "ignore_off_members_sync": "Pri vynucovaní Lock/Mirror sa preskočia členovia, ktorí sú aktuálne vypnutí. Poznámka: priame príkazy skupiny vždy dosiahnú všetkých schopných členov bez ohľadu na toto nastavenie."
             }
@@ -184,12 +188,12 @@
           },
           "temp_offsets_section": {
             "name": "Odsadenia členov",
-            "description": "Nastavte teplotný posun pre jednotlivých členov. Cieľ skupiny je upravený o túto hodnotu pred odoslaním do každého zariadenia. Ponechajte na 0 pre žiadny posun.",
+            "description": "Použite individuálne teplotné offsety, aby konkrétni členovia bežali úmerne teplejšie alebo chladnejšie než cieľová hodnota skupiny.",
             "data": {
               "member_offset_correction": "Opraviť posun člena"
             },
             "data_description": {
-              "member_offset_correction": "Ak je povolené, posun každého člena sa odčíta pred agregáciou. Pri skupinovom setpointe 20 °C a posune +3,0 °C je setpoint člena 23,0 °C, pričom skutočná hodnota pre skupinu je interne 20 °C."
+              "member_offset_correction": "Keď je povolené, offset každého člena je odpočítaný pred spriemerovaním, takže skupina zobrazuje logickú žiadanú hodnotu namiesto hrubého priemeru."
             }
           },
           "isolation_section": {
@@ -214,13 +218,12 @@
           },
           "advanced_section": {
             "name": "Pokročilé nastavenia",
-            "description": "Debounce, pokusy, ladiace senzory a minimálna teplota pri vypnutí (vynútené zatvorenie ventilu).",
+            "description": "Doladenie časovania príkazov, pokusov o opakovanie a odložených volaní. Prepínanie diagnostických atribútov a konfiguračných senzorov.",
             "data": {
               "debounce_delay": "Debounce oneskorenie (sekundy)",
               "retry_attempts": "Počet opakovaných pokusov",
               "retry_delay": "Oneskorenie opakovania (sekundy)",
               "staggered_call_delay": "Oneskorenie medzi príkazmi (sekundy)",
-              "min_temp_off": "Minimálna teplota pri vypnutí",
               "expose_smart_sensors": "Zobraziť inteligentné senzory",
               "expose_member_entities": "Zobraziť zoznam členov",
               "expose_config": "Zobraziť konfiguráciu (ladenie)"
@@ -230,7 +233,6 @@
               "retry_attempts": "Koľkokrát znovu odoslať príkaz, ak zariadenie nereaguje. Nastavte na 0 pre vypnutie.",
               "retry_delay": "Pauza medzi pokusmi. Dať zariadeniam chvíľu na zotavenie môže zlepšiť spoľahlivosť.",
               "staggered_call_delay": "Čas čakania medzi jednotlivými príkazmi členom skupiny. Rozloženie príkazov zabraňuje preťaženiu siete v prostredí Zigbee/Matter. Nastavte na 0 pre vypnutie.",
-              "min_temp_off": "Pri vypnutí skupiny odošle minimálnu teplotu zariadenia (napr. 5 °C). Tým sa zabezpečí úplné zatvorenie ventilov na ochranu pred mrazom.",
               "expose_smart_sensors": "Vytvorí ďalšie entity senzorov pre teplotu a vlhkosť skupiny (užitočné pre grafy).",
               "expose_member_entities": "Vytvorí atribút so zoznamom všetkých ID entít členov.",
               "expose_config": "Pridá všetky konfiguračné hodnoty do atribútov entity. Užitočné pre ladenie."
@@ -326,8 +328,9 @@
     "sync_mode": {
       "options": {
         "disabled": "Zakázané – Žiadna automatická synchronizácia medzi členmi",
-        "mirror": "Mirror – Zmeny na jednom zariadení sa skopírujú na všetkých členov",
+        "mirror": "Mirror – Manuálne zmeny na jednom zariadení sa prenesú na všetkých členov",
         "lock": "Lock – Manuálne zmeny sa vrátia na stav skupiny",
+        "mirror_lock": "Mirror/Lock – Vybrané atribúty sú zrkadlené, ostatné sú striktne obnovené",
         "master_lock": "Master/Lock – Iba hlavné zariadenie môže meniť cieľ skupiny"
       }
     },
@@ -359,7 +362,7 @@
     },
     "window_action": {
       "options": {
-        "off": "Vypnúť (predvolené)",
+        "off": "Vypnúť",
         "temperature": "Nastaviť teplotu"
       }
     },
@@ -367,6 +370,12 @@
       "options": {
         "off": "Vypnúť",
         "clamp": "Obmedziť na hraničnú hodnotu"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Ignorovať",
+        "off": "Vypnúť"
       }
     },
     "isolation_trigger": {
@@ -417,6 +426,9 @@
       },
       "humidity": {
         "name": "Vlhkosť"
+      },
+      "configuration": {
+        "name": "Konfigurácia"
       }
     },
     "switch": {
@@ -454,7 +466,7 @@
     },
     "set_schedule_entity": {
       "name": "Nastaviť entitu rozvrhu",
-      "description": "Zmení aktívnu entitu rozvrhu používanú skupinou.",
+      "description": "Dynamicky zmeňte aktívnu entitu plánu. Ak je vynechané alebo nastavené na null, skupina sa vráti k predvolenému nastaveniu.",
       "fields": {
         "schedule_entity": {
           "name": "Entita rozvrhu",
@@ -464,7 +476,7 @@
     },
     "boost": {
       "name": "Boost",
-      "description": "Dočasne nastaví teplotu skupiny na cieľovú hodnotu na zadanú dobu. Po vypršaní časovača sa skupina vráti k aktívnemu rozvrhu alebo predchádzajúcemu stavu. Zadajte temperature alebo temperature_offset.",
+      "description": "Dočasne nastaví skupinu na cieľovú teplotu. Po vypršaní časovača sa skupina automaticky vráti k aktívnemu plánu alebo predchádzajúcemu stavu.",
       "fields": {
         "temperature": {
           "name": "Teplota",
@@ -477,6 +489,24 @@
         "duration": {
           "name": "Trvanie (minúty)",
           "description": "Ako dlho má boost trvať v minútach."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Použiť konfiguráciu",
+      "description": "Použije prenosnú JSON konfiguráciu na skupinu. Užitočné pre kopírovanie nastavení alebo obnovu zálohy.",
+      "fields": {
+        "settings": {
+          "name": "Nastavenia (JSON)",
+          "description": "Konfiguračný objekt JSON, ktorý sa má použiť. Použite atribút 'settings_json' z konfiguračného senzora."
+        },
+        "include_member_list": {
+          "name": "Zahrnúť zoznam členov",
+          "description": "Ak je true, prepíše aj zoznam členských entít a izolačných entít."
+        },
+        "include_entity_selectors": {
+          "name": "Zahrnúť selektory entít",
+          "description": "Ak je true, prepíše aj prepojené senzory (teplota, vlhkosť, prítomnosť, okno atď.) a offsety jednotlivých členov."
         }
       }
     }

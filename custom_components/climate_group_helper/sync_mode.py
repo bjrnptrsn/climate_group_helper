@@ -17,6 +17,7 @@ from .const import (
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
     META_KEY_SYNC_MODE,
+    META_KEY_SYNC_ATTRS,
     STARTUP_BLOCK_DELAY,
     SYNC_TARGET_ATTRS,
     IsolationTrigger,
@@ -82,6 +83,13 @@ class SyncModeHandler:
     def target_state(self):
         """Return the current target state (from central source)."""
         return self.state_manager.target_state
+
+    @property
+    def filter_state(self) -> FilterState:
+        """Return the current filter state (respecting schedule overrides)."""
+        if META_KEY_SYNC_ATTRS in self._group.run_state.config_overrides:
+            return FilterState.from_keys(self._group.run_state.config_overrides[META_KEY_SYNC_ATTRS])
+        return self._filter_state
 
     def resync(self) -> None:
         """Handle changes based on sync mode."""
@@ -154,30 +162,31 @@ class SyncModeHandler:
                 _LOGGER.debug("[%s] Ignoring setpoint changes while OFF", self._group.entity_id)
                 return
 
-        # Mirror mode: adopt filtered changes into target_state
-        if self.sync_mode == SyncMode.MIRROR:
-            if filtered := {key: value for key, value in change_dict.items() if self._filter_state.to_dict().get(key)}:
+        # 1. Mirror mode: adopt filtered changes into target_state
+        if self.sync_mode in (SyncMode.MIRROR, SyncMode.MIRROR_LOCK):
+            if filtered := {key: value for key, value in change_dict.items() if self.filter_state.to_dict().get(key)}:
                 self._reverse_offset_temperatures(change_entity_id, filtered)
                 self.state_manager.update(entity_id=change_entity_id, **filtered)
                 _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
 
-        # Lock mode: only accept "Last Man Standing" OFF (Partial Sync)
-        elif (
-            self.sync_mode == SyncMode.LOCK
-            and self._group.config.get(CONF_IGNORE_OFF_MEMBERS_SYNC)
-            and change_dict.get("hvac_mode") == HVACMode.OFF
-        ):
-            if self.state_manager.update(entity_id=change_entity_id, hvac_mode=HVACMode.OFF):
-                _LOGGER.debug("[%s] Last Man Standing: accepted OFF from %s", self._group.entity_id, change_entity_id)
+        # 2. Lock mode: only accept "Last Man Standing" OFF (Partial Sync)
+        if self.sync_mode in (SyncMode.LOCK, SyncMode.MIRROR_LOCK):
+            if (
+                self._group.config.get(CONF_IGNORE_OFF_MEMBERS_SYNC)
+                and change_dict.get("hvac_mode") == HVACMode.OFF
+                and self.target_state.hvac_mode != HVACMode.OFF
+            ):
+                if self.state_manager.update(entity_id=change_entity_id, hvac_mode=HVACMode.OFF):
+                    _LOGGER.debug("[%s] Last Man Standing: accepted OFF from %s", self._group.entity_id, change_entity_id)
 
-        # Master/Lock mode: master adopts (MIRROR), non-master reverts (LOCK)
-        elif self.sync_mode == SyncMode.MASTER_LOCK:
+        # 3. Master/Lock mode: master adopts (MIRROR), non-master reverts (LOCK)
+        if self.sync_mode == SyncMode.MASTER_LOCK:
             if self._group.run_state.master_fallback_active:
                 _LOGGER.debug("[%s] MASTER_LOCK enforcement skipped (master fallback active)", self._group.entity_id)
                 return
             master_id = self._group._master_entity_id
             if master_id and change_entity_id == master_id:
-                if filtered := {key: value for key, value in change_dict.items() if self._filter_state.to_dict().get(key)}:
+                if filtered := {key: value for key, value in change_dict.items() if self.filter_state.to_dict().get(key)}:
                     self._reverse_offset_temperatures(change_entity_id, filtered)
                     self.state_manager.update(entity_id=change_entity_id, **filtered)
                     _LOGGER.debug("[%s] Master entity change adopted: %s", self._group.entity_id, filtered)

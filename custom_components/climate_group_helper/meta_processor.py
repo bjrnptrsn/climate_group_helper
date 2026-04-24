@@ -9,9 +9,10 @@ is forwarded to members:
                            └── meta-key actions (manager calls, RunState updates)
 
 Supported meta-keys (v1 — State-Keys only):
-    turn_off    : bool      — activates/deactivates the switch override (OFF-all block)
-    sync_mode   : SyncMode  — temporarily shadows the configured sync mode
-    group_offset: float     — temporarily overrides the group temperature offset
+    turn_off       : bool      — activates/deactivates the switch override (OFF-all block)
+    sync_mode      : SyncMode  — temporarily shadows the configured sync mode
+    group_offset   : float     — temporarily overrides the group temperature offset
+    sync_attributes: list[str] — temporarily shadows the synchronized attributes
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ from typing import TYPE_CHECKING, Any
 from .const import (
     ATTR_SERVICE_MAP,
     META_KEY_GROUP_OFFSET,
+    META_KEY_SYNC_ATTRS,
     META_KEY_SYNC_MODE,
     META_KEY_TURN_OFF,
     META_STATE_KEYS,
@@ -48,9 +50,10 @@ _HA_SYSTEM_ATTRS: frozenset[str] = frozenset({
 # which reads run_state.group_offset at that moment.  If the offset were still set to
 # the schedule value, members would receive the wrong temperature on restore.
 #
-# sync_mode is pure config shadowing (no call fired), so its position is irrelevant —
-# placing it first keeps it out of the way.
+# sync_mode and sync_attrs are pure config shadowing (no call fired), so their position
+# is irrelevant — placing them first keeps them out of the way.
 _CLEANUP_ORDER: list[str] = [
+    META_KEY_SYNC_ATTRS,
     META_KEY_SYNC_MODE,
     META_KEY_GROUP_OFFSET,
     META_KEY_TURN_OFF,
@@ -154,12 +157,6 @@ class SlotMetaProcessor:
             _LOGGER.debug("[%s] Meta-Key apply: turn_off=true → switch block ON", self._group.entity_id)
             await self._group.switch_override_manager.activate()
 
-        elif key == META_KEY_SYNC_MODE:
-            # Pure config shadowing: writing to config_overrides (done by the caller) is
-            # the entire effect.  SyncModeHandler.sync_mode reads config_overrides at
-            # call-time and falls back to group.sync_mode when the key is absent.
-            _LOGGER.debug("[%s] Meta-Key apply: sync_mode=%s", self._group.entity_id, value)
-
         elif key == META_KEY_GROUP_OFFSET:
             try:
                 offset_val = float(value)
@@ -175,6 +172,12 @@ class SlotMetaProcessor:
             except (ValueError, TypeError):
                 _LOGGER.warning("[%s] Invalid group_offset in schedule slot: %s", self._group.entity_id, value)
 
+        elif key in (META_KEY_SYNC_MODE, META_KEY_SYNC_ATTRS):
+            # Pure config shadowing: was written during slot processing to config_overrides.
+            # The respective handlers read these overrides at call-time and
+            # fall back to the config baseline when the key is absent.
+            _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
+
     async def _cleanup(self, keys: set[str]) -> None:
         """Execute counter-actions for meta-keys that have left the current slot.
 
@@ -186,18 +189,13 @@ class SlotMetaProcessor:
         _LOGGER.debug("[%s] Meta-Key cleanup: %s", self._group.entity_id, keys)
 
         for key in sorted(
-            keys,
-            key=lambda k: _CLEANUP_ORDER.index(k)
+            keys, key=lambda k: _CLEANUP_ORDER.index(k)
             if k in _CLEANUP_ORDER
-            else len(_CLEANUP_ORDER),
+            else len(_CLEANUP_ORDER)
         ):
             if key == META_KEY_TURN_OFF:
                 _LOGGER.debug("[%s] Meta-Key cleanup: turn_off absent → switch block OFF", self._group.entity_id)
                 await self._group.switch_override_manager.restore()
-
-            elif key == META_KEY_SYNC_MODE:
-                # Pure shadowing — clear_config_overrides (below) is the entire cleanup.
-                _LOGGER.debug("[%s] Meta-Key cleanup: sync_mode absent → config baseline restored", self._group.entity_id)
 
             elif key == META_KEY_GROUP_OFFSET:
                 # Ownership guard: only reset if config_overrides still contains the marker.
@@ -210,5 +208,9 @@ class SlotMetaProcessor:
                         await self._group.offset_set_callback(0.0)
                 else:
                     _LOGGER.debug("[%s] Meta-Key cleanup: group_offset skipped — ownership transferred to user", self._group.entity_id)
+
+            elif key in (META_KEY_SYNC_MODE, META_KEY_SYNC_ATTRS):
+                # Pure shadowing — clear_config_overrides (below) is the entire cleanup.
+                _LOGGER.debug("[%s] Meta-Key cleanup: %s absent → config baseline restored", self._group.entity_id, key)
 
         self._group.run_state = self._group.run_state.clear_config_overrides(keys)

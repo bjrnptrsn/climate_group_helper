@@ -34,30 +34,33 @@
         "sections": {
           "members_section": {
             "name": "成员 & 模式",
-            "description": "添加气候设备。选择当成员功能不同时如何合并功能（预设、风扇模式）。",
+            "description": "添加气候设备并选择合并功能的方式。高级功能增加了对主实体 (Master) 的支持。",
             "data": {
               "entities": "空调设备",
               "master_entity": "主设备",
               "hvac_mode_strategy": "HVAC 模式策略",
               "feature_strategy": "功能兼容性",
-              "union_out_of_bounds_action": "超出范围操作"
+              "union_out_of_bounds_action": "超出范围操作",
+              "union_unsupported_hvac_action": "不支持 HVAC 模式时的操作"
             },
             "data_description": {
               "entities": "添加或删除设备。移除设备将停止组对其的控制。",
-              "master_entity": "指定一个设备作为主温控器。它的值可以覆盖组的计算结果。",
+              "master_entity": "指定一个成员为主实体（领导者）。它用于主/锁定同步和集中目标值。",
               "hvac_mode_strategy": "从成员计算组状态的策略 (例如，如果一个正在 'heat'，另一个已 'off')。",
               "feature_strategy": "确定当成员具有不同能力时，组上可用的功能 (例如预设模式, 风扇模式)。",
-              "union_out_of_bounds_action": "对无法达到目标温度的设备执行的操作。仅在功能策略设置为联合时适用。"
+              "union_out_of_bounds_action": "对无法达到目标温度的设备执行的操作。仅在功能策略设置为联合时适用。",
+              "union_unsupported_hvac_action": "对于技术上不支持群组目标 HVAC 模式的成员（例如供暖时的空调）该如何处理。仅在功能策略设置为“联合”时生效。"
             }
           },
           "temperature_section": {
             "name": "温度设置",
-            "description": "通过成员计算温度或使用主实体。支持外部传感器和 TRV 校准。",
+            "description": "配置温度聚合和精度。高级功能增加了对外部传感器、校准和防冻保护的支持。",
             "data": {
               "temp_target_avg": "目标温度",
               "temp_use_master": "使用主设备目标温度",
               "temp_target_round": "目标温度精度",
               "temp_current_avg": "当前温度",
+              "min_temp_off": "关闭时的最低温度",
               "temp_sensors": "外部温度传感器",
               "temp_update_targets": "将外部温度写入实体",
               "temp_calibration_mode": "校准模式",
@@ -69,6 +72,7 @@
               "temp_use_master": "使用主设备的设定值而不是计算平均值。不可用时回退到平均值。",
               "temp_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
               "temp_current_avg": "组如何汇总成员的传感器读数。",
+              "min_temp_off": "关闭群组时发送设备的最低温度（例如 5°C）。这可确保阀门完全关闭以进行防冻保护。",
               "temp_sensors": "使用外部传感器代替成员读数。这将成为组温度的唯一真实来源。",
               "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。",
               "temp_calibration_mode": "绝对: 直接发送值。偏移: 发送差值 (外部 - TRV 内部)。 缩放: 发送为整数 x100 (例如 21.5 -> 2150)。",
@@ -78,7 +82,7 @@
           },
           "humidity_section": {
             "name": "湿度设置",
-            "description": "通过成员计算湿度或使用主实体。可选外部传感器。",
+            "description": "配置湿度聚合和精度。高级功能增加了对外部传感器的支持。",
             "data": {
               "humidity_target_avg": "目标湿度",
               "humidity_use_master": "使用主设备目标湿度",
@@ -105,7 +109,7 @@
               "ignore_off_members_sync": "尊重成员关闭状态（同步）"
             },
             "data_description": {
-              "sync_mode": "当成员在组外被更改时的处理方式。禁用：忽略。镜像：将更改应用到所有成员。锁定：将成员恢复到组目标状态。主控/锁定：仅接受主控实体的更改。",
+              "sync_mode": "当成员在群组外被更改时该怎么做。Disabled：忽略它。Mirror：将更改应用到所有成员。Lock：将成员恢复为群组目标。Mirror/Lock：混合模式。Master/Lock：仅接受主实体的更改。",
               "sync_attributes": "在此处选择的属性将在锁定/镜像模式下强制执行。未选择的属性允许本地控制 (例如同步温度但允许用户本地更改风扇速度)。",
               "ignore_off_members_sync": "在执行 Lock/Mirror 时，跳过当前处于关闭状态的成员。注意：无论此设置如何，直接组命令始终会到达所有有能力的成员。"
             }
@@ -184,12 +188,12 @@
           },
           "temp_offsets_section": {
             "name": "成员偏移",
-            "description": "为各个成员设置温度偏移。组目标在发送到每个设备前将按此值调整。留 0 表示无偏移。",
+            "description": "应用单独的温度偏移，使特定成员的运行温度按比例高于或低于群组目标。",
             "data": {
               "member_offset_correction": "修正成员偏移量"
             },
             "data_description": {
-              "member_offset_correction": "启用后，每个成员的偏移量在聚合前将被减去。当组设定值为 20 °C、偏移量为 +3.0 °C 时，成员设定值为 23.0 °C，而组内部显示的实际值为 20 °C。"
+              "member_offset_correction": "启用后，在计算平均值之前会减去每个成员的偏移量，以便群组显示逻辑设定点而非原始物理平均值。"
             }
           },
           "isolation_section": {
@@ -214,13 +218,12 @@
           },
           "advanced_section": {
             "name": "高级设置",
-            "description": "去抖动、重试行为、调试传感器和关闭时的最低温度（强制阀门关闭）。",
+            "description": "微调命令时间、重试行为和交错调用。切换诊断属性和配置传感器。",
             "data": {
               "debounce_delay": "防抖延迟 (秒)",
               "retry_attempts": "重试次数",
               "retry_delay": "重试延迟 (秒)",
               "staggered_call_delay": "命令间延迟（秒）",
-              "min_temp_off": "关闭时的最低温度",
               "expose_smart_sensors": "公开智能传感器",
               "expose_member_entities": "公开成员列表",
               "expose_config": "显示配置 (调试)"
@@ -230,7 +233,6 @@
               "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
               "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。",
               "staggered_call_delay": "向组成员发送各条命令之间的等待时间。错开命令可防止 Zigbee/Matter 网络拥塞。设置为 0 可禁用。",
-              "min_temp_off": "关闭群组时发送设备的最低温度（例如 5°C）。这可确保阀门完全关闭以进行防冻保护。",
               "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
               "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
               "expose_config": "将所有配置值添加到实体属性中。用于调试。"
@@ -326,8 +328,9 @@
     "sync_mode": {
       "options": {
         "disabled": "禁用 – 成员之间无自动同步",
-        "mirror": "镜像 (Magic Sync - 双向)",
-        "lock": "锁定 (老板 - 强制组)",
+        "mirror": "Mirror – 在一台设备上的手动更改将应用于所有成员",
+        "lock": "Lock – 手动更改将恢复为组状态",
+        "mirror_lock": "Mirror/Lock – 选定属性会被同步，其他属性则被严格还原",
         "master_lock": "Master/Lock – 仅主实体可以更改组目标"
       }
     },
@@ -359,7 +362,7 @@
     },
     "window_action": {
       "options": {
-        "off": "关闭（默认）",
+        "off": "关闭",
         "temperature": "设置温度"
       }
     },
@@ -367,6 +370,12 @@
       "options": {
         "off": "关闭",
         "clamp": "限制到边界值"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "忽略",
+        "off": "关闭"
       }
     },
     "isolation_trigger": {
@@ -417,6 +426,9 @@
       },
       "humidity": {
         "name": "湿度"
+      },
+      "configuration": {
+        "name": "配置"
       }
     },
     "switch": {
@@ -454,7 +466,7 @@
     },
     "set_schedule_entity": {
       "name": "设置日程实体",
-      "description": "更改气候组使用的活动日程实体。",
+      "description": "动态更改活动的日程实体。如果省略或设置为 null，群组将恢复为其配置的默认值。",
       "fields": {
         "schedule_entity": {
           "name": "日程实体",
@@ -464,7 +476,7 @@
     },
     "boost": {
       "name": "Boost 加热",
-      "description": "将组温度临时设置为目标值，持续指定时间。计时器到期后，组将恢复到活动计划或之前的状态。请指定 temperature 或 temperature_offset。",
+      "description": "在指定时间内临时将群组设置为目标温度。计时器到期后，群组将自动恢复到活动日程或之前的状态。",
       "fields": {
         "temperature": {
           "name": "温度",
@@ -477,6 +489,24 @@
         "duration": {
           "name": "持续时间（分钟）",
           "description": "Boost 应持续多少分钟。"
+        }
+      }
+    },
+    "apply_config": {
+      "name": "应用配置",
+      "description": "将便携式 JSON 配置应用到群组。适用于在群组之间复制逻辑设置或恢复备份。",
+      "fields": {
+        "settings": {
+          "name": "设置 (JSON)",
+          "description": "要应用的 JSON 配置对象。请使用配置传感器的 'settings_json' 属性。"
+        },
+        "include_member_list": {
+          "name": "包含成员列表",
+          "description": "如果为 true，同时覆盖成员实体和隔离实体的列表。"
+        },
+        "include_entity_selectors": {
+          "name": "包含实体选择器",
+          "description": "如果为 true，同时覆盖已关联的传感器（温度、湿度、在场、窗户等）和每个成员的偏移量。"
         }
       }
     }
