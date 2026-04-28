@@ -17,7 +17,7 @@ Supported meta-keys (v1 — State-Keys only):
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from .const import (
@@ -74,6 +74,7 @@ class MetaProcessResult:
     """
 
     climate_payload: dict[str, Any]
+    climate_bypass_payload: dict[str, Any]
     has_meta_keys: bool
 
 
@@ -92,25 +93,26 @@ class SlotMetaProcessor:
         self._group = group
         self._active_keys: set[str] = set()  # meta-keys that were active in the last slot
 
-    async def process(self, slot_data: dict[str, Any]) -> MetaProcessResult:
-        """Process a new slot: clean up stale meta-keys, apply new ones, return the climate payload.
+    async def process(self, basis_data: dict[str, Any], bypass_data: dict[str, Any]) -> MetaProcessResult:
+        """Process basis and bypass slots: merge meta-keys, keep climate payloads separate.
 
-        Called by ScheduleHandler on every slot transition (SLOT, RESYNC, SWITCH callers).
-        Internally maintains _active_keys across calls to detect which keys have been
-        added, retained, or dropped since the previous slot.
-
-        Steps:
-            1. Split slot_data into climate_payload and meta_candidates.
-            2. Identify which META_STATE_KEYS are present in this slot.
-            3. Clean up keys from the previous slot that are absent now (see _cleanup).
-            4. Apply keys that are present (see _apply).
-            5. Update _active_keys for the next call.
+        Called by ScheduleBaseHandler on every slot or bypass transition.
+        bypass_data keys overwrite basis_data keys for meta-processing (last writer wins).
         """
-        # 1. Split: climate attributes go to members, everything else is a meta candidate
-        climate_payload = {k: v for k, v in slot_data.items() if k in ATTR_SERVICE_MAP}
-        meta_candidates = {k: v for k, v in slot_data.items() if k not in ATTR_SERVICE_MAP}
+        # 1. Split: climate attributes remain separate for the caller
+        basis_climate  = {k: v for k, v in basis_data.items()  if k in ATTR_SERVICE_MAP}
+        bypass_climate = {k: v for k, v in bypass_data.items() if k in ATTR_SERVICE_MAP}
+        
+        # Combined view for meta-key processing (bypass wins)
+        combined = {**basis_data, **bypass_data}
 
-        # 2. Identify valid meta-keys; warn on unknown ones (typo guard)
+        # Update the calendar slot title (active_slot_title).
+        slot_message = combined.pop("message", None)
+        self._group.run_state = replace(self._group.run_state, active_slot_title=slot_message)
+
+        meta_candidates = {k: v for k, v in combined.items() if k not in ATTR_SERVICE_MAP}
+
+        # Identify valid meta-keys; warn on unknown ones (typo guard)
         # turn_off=False is semantically identical to the key being absent — it must not
         # enter _active_keys, otherwise the cleanup path would call restore() on a switch
         # that was never activated.
@@ -126,22 +128,28 @@ class SlotMetaProcessor:
                     self._group.entity_id, key, sorted(META_STATE_KEYS)
                 )
 
-        # 3. Keys present in the previous slot but absent now need their counter-actions
+        # Keys present in the previous slot but absent now need their counter-actions
         keys_to_clear = self._active_keys - new_meta_keys
         if keys_to_clear:
             await self._cleanup(keys_to_clear)
 
-        # 4. Apply all keys present in this slot (idempotent for continuing keys)
+        # Apply all keys present in this slot (idempotent for continuing keys)
         for key in new_meta_keys:
             value = meta_candidates[key]
             self._group.run_state = self._group.run_state.set_config_override(key, value)
             await self._apply(key, value)
 
-        # 5. Remember which keys are active so the next call can diff against them
+        # Remember which keys are active so the next call can diff against them
         self._active_keys = new_meta_keys
 
+        # Trigger a state update so that changes to config_overrides or other
+        # RunState fields are immediately visible in HA attributes.
+        if keys_to_clear or new_meta_keys or slot_message:
+            self._group.async_defer_or_update_ha_state()
+
         return MetaProcessResult(
-            climate_payload=climate_payload,
+            climate_payload=basis_climate,
+            climate_bypass_payload=bypass_climate,
             has_meta_keys=bool(new_meta_keys),
         )
 

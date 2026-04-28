@@ -39,7 +39,7 @@
               "entities": "Climate Devices",
               "master_entity": "Master Entity",
               "hvac_mode_strategy": "HVAC Mode Strategy",
-              "feature_strategy": "Feature Compatibility",
+              "feature_strategy": "Feature Strategy",
               "union_out_of_bounds_action": "Out-of-Bounds Action",
               "union_unsupported_hvac_action": "Unsupported HVAC Mode Action"
             },
@@ -105,13 +105,13 @@
             "description": "Defines what happens when a member device is changed directly (e.g. via its own app or physical buttons) — not when you control the group itself. Choose which attributes are enforced.",
             "data": {
               "sync_mode": "Sync Mode",
-              "sync_attributes": "Synced Attributes",
+              "sync_attributes": "Sync Attributes",
               "ignore_off_members_sync": "Respect Member Off State (Sync)"
             },
             "data_description": {
-              "sync_mode": "What to do when a member is changed outside the group. Disabled: ignore it. Mirror: apply the change to all members. Lock: revert the member back to the group target. Mirror/Lock: hybrid. Master/Lock: only the master entity's changes are accepted.",
-              "sync_attributes": "Attributes selected here will be enforced in Lock/Mirror modes. Unselected attributes allow for local control (e.g. sync temperature but let users change fan speed locally).",
-              "ignore_off_members_sync": "When enforcing Lock/Mirror, skip members that are currently Off. Note: direct group commands always reach all capable members regardless of this setting."
+              "sync_mode": "What to do when a member is changed outside the group. Disabled: ignore it. Mirror: mirror changes. Lock: revert changes. Mirror/Lock: mirror selected attributes, revert unselected. Master/Lock: mirror master, revert others.",
+              "sync_attributes": "Defines which attributes the Sync Mode acts on. The handling of selected and unselected attributes (Mirror, Revert, or Ignore) depends on the chosen mode.",
+              "ignore_off_members_sync": "Members that are manually turned Off are left alone. Their state is neither mirrored nor reverted. Note: direct group commands always reach all members regardless of this setting."
             }
           },
           "window_section": {
@@ -168,9 +168,10 @@
           },
           "schedule_section": {
             "name": "Schedule Automation",
-            "description": "Connect HA schedule to automate temperatures. Set resync frequency and override duration. You can also use the set_schedule_entity service to switch schedules dynamically.",
+            "description": "Link a schedule or calendar entity to automate climate settings. Slot data can include climate attributes (temperature, hvac_mode) and meta-keys (turn_off, sync_mode, sync_attributes) to adjust group behavior per slot.",
             "data": {
-              "schedule_entity": "Schedule Entity",
+              "schedule_entity": "Schedule / Calendar Entity",
+              "schedule_bypass_entity": "Bypass Entity",
               "resync_interval": "Resync Interval (minutes)",
               "override_duration": "Override Duration (minutes)",
               "persist_changes": "Sticky Override",
@@ -178,7 +179,8 @@
               "ignore_off_members_schedule": "Respect Member Off State (Schedule)"
             },
             "data_description": {
-              "schedule_entity": "Select a schedule entity. The schedule's 'Additional data' field can contain YAML with attributes like 'temperature: 20.5' or 'hvac_mode: heat'.",
+              "schedule_entity": "Select a schedule.* or calendar.* entity. For schedule entities, slot data is read from the slot's attributes. For calendar entities, slot data is read from the event's description field as YAML. Supported keys: climate attributes and meta-keys.",
+              "schedule_bypass_entity": "Optional higher-priority layer (e.g. a vacation calendar). When active, its slot data overrides the main schedule. Slot data is read the same way: attributes for schedule.* entities, YAML description for calendar.* entities.",
               "resync_interval": "Force-sync members to the target state every X minutes. Ensures devices stay on schedule even if adjusted manually or commands are missed. Set to 0 to disable.",
               "override_duration": "The duration for manual overrides. After this time, the group automatically reverts to the current schedule. Set to 0 to skip the override period.",
               "persist_changes": "Changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires.",
@@ -252,7 +254,8 @@
       "calibration_requires_sensors": "Calibration targets require at least one external temperature sensor.",
       "master_refresh_notice": "Master Entity added. New options available.",
       "master_options_notice": "New Master entity option",
-      "isolation_all_selected": "At least one member must remain outside isolation."
+      "isolation_all_selected": "At least one member must remain outside isolation.",
+      "sensor_loop_protection": "Cannot use a Climate Group Helper sensor as an external sensor — this would create a feedback loop."
     },
     "abort": {
       "no_changes": "No changes detected."
@@ -466,11 +469,21 @@
     },
     "set_schedule_entity": {
       "name": "Set Schedule Entity",
-      "description": "Dynamically change the active schedule entity. If omitted or set to null, the group reverts to its configured default and re-applies the current slot.",
+      "description": "Switch the active schedule or calendar entity at runtime. If omitted or set to null, the group reverts to its configured default and re-applies the current slot.",
       "fields": {
         "schedule_entity": {
-          "name": "Schedule Entity",
-          "description": "The new schedule entity to use (e.g. schedule.holiday). Set to null or empty to restore the configured default schedule."
+          "name": "Schedule / Calendar Entity",
+          "description": "The schedule.* or calendar.* entity to activate (e.g. schedule.holiday or calendar.vacation). Set to null or empty to restore the configured default."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Set Schedule Bypass Entity",
+      "description": "Switch the active bypass entity at runtime (e.g. to swap between different vacation calendars). Set to null to restore the configured default.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Bypass Entity",
+          "description": "The schedule.* or calendar.* entity to use as bypass (e.g. calendar.vacation). Set to null or empty to restore the configured default."
         }
       }
     },

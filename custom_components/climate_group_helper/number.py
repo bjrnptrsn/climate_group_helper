@@ -61,8 +61,13 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         return self._group.device_info
 
     async def async_added_to_hass(self) -> None:
-        """Restore last value on startup."""
+        """Restore state and register ID in group."""
         await super().async_added_to_hass()
+        
+        # Register this entity ID in the group so status.py doesn't have to guess
+        self._group.offset_entity_id = self.entity_id
+        _LOGGER.debug("[%s] Registered offset entity: '%s'", self._group.entity_id, self.entity_id)
+
         self._group.offset_set_callback = self._set_offset
         if (last := await self.async_get_last_number_data()) is not None:
             if last.native_value is not None:
@@ -70,7 +75,7 @@ class OffsetNumber(RestoreNumber, NumberEntity):
                 _LOGGER.debug("[%s] Restored group offset: %s", self._group.entity_id, last.native_value)
 
     async def _set_offset(self, value: float) -> None:
-        """Set group offset and update number entity display."""
+        """Set group offset and update both entities for UI consistency."""
         _LOGGER.debug("[%s] External offset update: %s", self._group.entity_id, value)
         self._group.run_state = replace(self._group.run_state, group_offset=value)
         self.async_write_ha_state()
@@ -89,14 +94,16 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         """
         _LOGGER.debug("[%s] Setting group offset to: %s", self._group.entity_id, value)
         new_run_state = replace(self._group.run_state, group_offset=value)
+
         # Ownership transfer: if a schedule meta-key slot currently controls the offset,
         # release that claim so the slot-end cleanup does not silently reset the user's value.
         if META_KEY_GROUP_OFFSET in new_run_state.config_overrides:
             _LOGGER.debug(
-                "[%s] Offset ownership transferred from schedule to user (manual slider change)",
+                "[%s] Offset ownership transferred from schedule to user (manual change)",
                 self._group.entity_id,
             )
             new_run_state = new_run_state.clear_config_overrides({META_KEY_GROUP_OFFSET})
+
         self._group.run_state = new_run_state
         self._group.async_defer_or_update_ha_state()
 

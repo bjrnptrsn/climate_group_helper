@@ -39,7 +39,7 @@
               "entities": "Klimatické zariadenia",
               "master_entity": "Hlavné zariadenie",
               "hvac_mode_strategy": "Stratégia režimu HVAC",
-              "feature_strategy": "Kompatibilita funkcií",
+              "feature_strategy": "Stratégia funkcií",
               "union_out_of_bounds_action": "Akcia mimo rozsahu",
               "union_unsupported_hvac_action": "Akcia pre nepodporovaný režim HVAC"
             },
@@ -105,13 +105,13 @@
             "description": "Určuje, čo sa stane, keď je členské zariadenie zmenené priamo (napr. cez vlastnú aplikáciu alebo fyzické tlačidlá) — nie keď ovládate skupinu. Vyberte, ktoré atribúty sa budú vynucovať.",
             "data": {
               "sync_mode": "Režim synchronizácie",
-              "sync_attributes": "Synchronizované atribúty",
+              "sync_attributes": "Atribúty synchronizácie",
               "ignore_off_members_sync": "Rešpektovať stav Vypnuté u členov (Synchronizácia)"
             },
             "data_description": {
-              "sync_mode": "Čo robiť, keď sa člen zmení mimo skupiny. Disabled: ignorovať. Mirror: aplikovať zmenu na všetkých členov. Lock: vrátiť člena späť na cieľ skupiny. Mirror/Lock: hybridný. Master/Lock: sú akceptované iba zmeny hlavnej entity.",
-              "sync_attributes": "Atribúty vybrané tu budú vynútené v režimoch Lock/Mirror. Nevybrané atribúty umožňujú lokálne ovládanie (napr. synchronizovať teplotu, ale nechať používateľov meniť rýchlosť ventilátora lokálne).",
-              "ignore_off_members_sync": "Pri vynucovaní Lock/Mirror sa preskočia členovia, ktorí sú aktuálne vypnutí. Poznámka: priame príkazy skupiny vždy dosiahnú všetkých schopných členov bez ohľadu na toto nastavenie."
+              "sync_mode": "Čo robiť, keď sa člen zmení mimo skupiny. Disabled: ignorovať. Mirror: zrkadliť zmeny. Lock: vrátiť zmeny. Mirror/Lock: zrkadliť vybrané, vrátiť nevybrané. Master/Lock: zrkadliť master, vrátiť ostatné.",
+              "sync_attributes": "Definuje, na ktoré atribúty sa režim synchronizácie vzťahuje. Spracovanie vybraných a nevybraných atribútov (Mirror, Revert alebo Ignore) závisí od zvoleného režimu.",
+              "ignore_off_members_sync": "Ručne vypnutí členovia sú ponechaní na pokoji. Ich stav sa nezrkadlí ani nevracia. Poznámka: priame skupinové príkazy vždy zasiahnu všetkých členov."
             }
           },
           "window_section": {
@@ -168,9 +168,10 @@
           },
           "schedule_section": {
             "name": "Automatizácia plánu",
-            "description": "Pripojiť plán HA pre automatizáciu. Nastaviť frekvenciu resynchronizácie a dobu prebitia.",
+            "description": "Prepojte entitu rozvrhu alebo kalendára na automatizáciu nastavení klimatu. Dáta slotu môžu obsahovať klimatické atribúty (temperature, hvac_mode) a meta-kľúče (turn_off, sync_mode, sync_attributes) na úpravu správania skupiny na slot.",
             "data": {
-              "schedule_entity": "Entita rozvrhu",
+              "schedule_entity": "Entita rozvrhu / kalendára",
+              "schedule_bypass_entity": "Obchádzajúca entita",
               "resync_interval": "Interval opätovnej synchronizácie (minúty)",
               "override_duration": "Trvanie prepísania (minúty)",
               "persist_changes": "Trvalé prepísanie (Sticky)",
@@ -178,7 +179,8 @@
               "ignore_off_members_schedule": "Rešpektovať stav Vypnuté u členov (Plán)"
             },
             "data_description": {
-              "schedule_entity": "Vyberte entitu rozvrhu. Pole 'Ďalšie údaje' môže obsahovať YAML s atribútmi ako 'temperature: 20.5' alebo 'hvac_mode: heat'.",
+              "schedule_entity": "Vyberte entitu schedule.* alebo calendar.*. Pre entity rozvrhu sa dáta slotu čítajú z atribútov slotu. Pre entity kalendára sa dáta slotu čítajú ako YAML z poľa popisu udalosti. Podporované kľúče: klimatické atribúty a meta-kľúče.",
+              "schedule_bypass_entity": "Voliteľná prioritná vrstva (napr. kalendár dovolenky). Keď je aktívna, jej dáta slotu prepíšu základný plán. Dáta slotu sa čítajú rovnako: atribúty pre entity schedule.*, YAML popis pre entity calendar.*.",
               "resync_interval": "Vynútiť synchronizáciu členov na cieľový stav každých X minút. Zabezpečí, že zariadenia zostanú podľa rozvrhu aj po manuálnej úprave alebo zmeškání príkazu. Nastavte na 0 pre vypnutie.",
               "override_duration": "Trvanie manuálnych prepísaní. Po uplynutí tejto doby sa skupina automaticky vráti k aktuálnemu rozvrhu. Nastavte na 0 pre preskočenie obdobia prepísania.",
               "persist_changes": "Zmeny samotného rozvrhu budú ignorované, kým je aktívne manuálne prepísanie. Aktuálny rozvrh sa znovu použije až po vypršaní prepísania.",
@@ -252,7 +254,8 @@
       "calibration_requires_sensors": "Kalibračné ciele vyžadujú aspoň jeden externý teplotný senzor.",
       "master_refresh_notice": "Pridaná Hlavná entita (Master). Dostupné nové možnosti.",
       "master_options_notice": "Nová možnosť Hlavnej entity",
-      "isolation_all_selected": "Aspoň jeden člen musí zostať mimo izolácie."
+      "isolation_all_selected": "Aspoň jeden člen musí zostať mimo izolácie.",
+      "sensor_loop_protection": "Senzor Climate Group Helper nie je možné použiť ako externý senzor — spôsobilo by to spätnú väzbu."
     },
     "abort": {
       "no_changes": "Neboli zistené žiadne zmeny."
@@ -466,11 +469,21 @@
     },
     "set_schedule_entity": {
       "name": "Nastaviť entitu rozvrhu",
-      "description": "Dynamicky zmeňte aktívnu entitu plánu. Ak je vynechané alebo nastavené na null, skupina sa vráti k predvolenému nastaveniu.",
+      "description": "Prepne aktívnu entitu rozvrhu alebo kalendára za behu. Ak je vynechané alebo nastavené na null, skupina sa vráti k predvolenej nakonfigurovanej entite a znova použije aktuálny slot.",
       "fields": {
         "schedule_entity": {
-          "name": "Entita rozvrhu",
-          "description": "Nová entita rozvrhu na použitie (napr. schedule.holiday). Nastavte na null alebo prázdne pre obnovenie predvoleného rozvrhu z konfigurácie."
+          "name": "Entita rozvrhu / kalendára",
+          "description": "Entita schedule.* alebo calendar.* na aktiváciu (napr. schedule.holiday alebo calendar.vacation). Nastavte na null alebo prázdne pre obnovenie nakonfigurovanej predvolenej hodnoty."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Nastaviť obchádzajúcu entitu",
+      "description": "Prepne aktívnu obchádzajúcu entitu za behu (napr. pre prepínanie medzi rôznymi kalendármi dovolenky). Null obnoví nakonfigurovanú predvolenú hodnotu.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Obchádzajúca entita",
+          "description": "Entita schedule.* alebo calendar.* použitá ako bypass (napr. calendar.vacation). Nastavte na null alebo prázdne pre obnovenie nakonfigurovanej predvolenej hodnoty."
         }
       }
     },

@@ -39,7 +39,7 @@
               "entities": "空调设备",
               "master_entity": "主设备",
               "hvac_mode_strategy": "HVAC 模式策略",
-              "feature_strategy": "功能兼容性",
+              "feature_strategy": "功能策略",
               "union_out_of_bounds_action": "超出范围操作",
               "union_unsupported_hvac_action": "不支持 HVAC 模式时的操作"
             },
@@ -109,9 +109,9 @@
               "ignore_off_members_sync": "尊重成员关闭状态（同步）"
             },
             "data_description": {
-              "sync_mode": "当成员在群组外被更改时该怎么做。Disabled：忽略它。Mirror：将更改应用到所有成员。Lock：将成员恢复为群组目标。Mirror/Lock：混合模式。Master/Lock：仅接受主实体的更改。",
-              "sync_attributes": "在此处选择的属性将在锁定/镜像模式下强制执行。未选择的属性允许本地控制 (例如同步温度但允许用户本地更改风扇速度)。",
-              "ignore_off_members_sync": "在执行 Lock/Mirror 时，跳过当前处于关闭状态的成员。注意：无论此设置如何，直接组命令始终会到达所有有能力的成员。"
+              "sync_mode": "当成员在组外更改时该怎么办。禁用：忽略。镜像：镜像更改。锁定：恢复更改。镜像/锁定：镜像所选，恢复未选。大师/锁定：镜像大师，恢复其他。",
+              "sync_attributes": "定义同步模式作用于哪些属性。所选和未选属性的处理方式（镜像、恢复或忽略）取决于所选模式。",
+              "ignore_off_members_sync": "手动关闭的成员将被忽略。它们的状态既不会被镜像也不会被恢复。注意：直接群组命令始终会到达所有成员。"
             }
           },
           "window_section": {
@@ -168,9 +168,10 @@
           },
           "schedule_section": {
             "name": "日程自动化",
-            "description": "连接 HA 日程以自动化温度。设置重新同步频率和覆盖持续时间。也可通过服务动态切换日程。",
+            "description": "链接日程或日历实体以自动化气候设置。时段数据可以包含气候属性（temperature、hvac_mode）和 meta-keys（turn_off、sync_mode、sync_attributes）以按时段调整群组行为。",
             "data": {
-              "schedule_entity": "日程表实体",
+              "schedule_entity": "日程 / 日历实体",
+              "schedule_bypass_entity": "旁路实体",
               "resync_interval": "重新同步间隔 (分钟)",
               "override_duration": "手动覆盖时长 (分钟)",
               "persist_changes": "保持手动覆盖 (Sticky)",
@@ -178,7 +179,8 @@
               "ignore_off_members_schedule": "尊重成员关闭状态（计划）"
             },
             "data_description": {
-              "schedule_entity": "选择一个日程表实体。日程表的“附加数据”字段可以包含 YAML 属性，如 'temperature: 20.5' 或 'hvac_mode: heat'。",
+              "schedule_entity": "选择一个 schedule.* 或 calendar.* 实体。对于日程实体，时段数据从时段属性中读取。对于日历实体，时段数据从事件描述字段中以 YAML 格式读取。支持的键：气候属性和 meta-keys。",
+              "schedule_bypass_entity": "可选的高优先级层（例如假期日历）。当激活时，其时段数据将覆盖基础日程。时段数据的读取方式相同：schedule.* 实体使用属性，calendar.* 实体使用 YAML 描述。",
               "resync_interval": "每 X 分钟强制将成员同步到群组的目标状态。防止设备错过命令或由于手动调整而导致的偏离。设置为 0 以禁用。",
               "override_duration": "手动覆盖的持续时间。在此时间过后，群组将自动恢复到当前日程表。设置为 0 以跳过覆盖期。",
               "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。",
@@ -252,7 +254,8 @@
       "calibration_requires_sensors": "校准目标需要至少一个外部温度传感器。",
       "master_refresh_notice": "已添加主实体。新选项可用。",
       "master_options_notice": "新的主实体选项",
-      "isolation_all_selected": "至少一个成员必须保留在隔离之外。"
+      "isolation_all_selected": "至少一个成员必须保留在隔离之外。",
+      "sensor_loop_protection": "不能将 Climate Group Helper 传感器用作外部传感器——这会产生反馈回路。"
     },
     "abort": {
       "no_changes": "未检测到更改。"
@@ -466,11 +469,21 @@
     },
     "set_schedule_entity": {
       "name": "设置日程实体",
-      "description": "动态更改活动的日程实体。如果省略或设置为 null，群组将恢复为其配置的默认值。",
+      "description": "在运行时切换活动的日程或日历实体。如果省略或设置为 null，群组将恢复为配置的默认实体并重新应用当前时段。",
       "fields": {
         "schedule_entity": {
-          "name": "日程实体",
-          "description": "要使用的新日程实体（例如 schedule.holiday）。设置为空或null以恢复配置的默认日程。"
+          "name": "日程 / 日历实体",
+          "description": "要激活的 schedule.* 或 calendar.* 实体（例如 schedule.holiday 或 calendar.vacation）。设置为 null 或空以恢复配置的默认值。"
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "设置旁路实体",
+      "description": "在运行时切换活动的旁路实体（例如在不同假期日历之间切换）。设置为 null 将恢复配置的默认值。",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "旁路实体",
+          "description": "用作旁路的 schedule.* 或 calendar.* 实体（例如 calendar.vacation）。设置为 null 或空以恢复配置的默认值。"
         }
       }
     },

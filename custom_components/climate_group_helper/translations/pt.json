@@ -39,7 +39,7 @@
               "entities": "Dispositivos Climáticos",
               "master_entity": "Entidade principal",
               "hvac_mode_strategy": "Estratégia de Modo HVAC",
-              "feature_strategy": "Compatibilidade de Funcionalidades",
+              "feature_strategy": "Estratégia de funções",
               "union_out_of_bounds_action": "Ação fora do intervalo",
               "union_unsupported_hvac_action": "Ação para modo HVAC não suportado"
             },
@@ -105,13 +105,13 @@
             "description": "Define o que acontece quando um dispositivo membro é alterado diretamente (ex. pela sua própria app ou botões físicos) — não quando controla o grupo. Escolha os atributos a aplicar.",
             "data": {
               "sync_mode": "Modo de Sincronização",
-              "sync_attributes": "Atributos Sincronizados",
+              "sync_attributes": "Atributos de sincronização",
               "ignore_off_members_sync": "Respeitar estado Off dos membros (Sincronização)"
             },
             "data_description": {
-              "sync_mode": "O que fazer quando um membro é alterado fora do grupo. Disabled: ignorá-lo. Mirror: aplicar a alteração a todos os membros. Lock: reverter o membro de volta para o alvo do grupo. Mirror/Lock: híbrido. Master/Lock: apenas as alterações da entidade mestre são aceites.",
-              "sync_attributes": "Os atributos selecionados aqui serão forçados em modos Lock/Mirror. Os não selecionados permitem controlo local (ex. sincronizar temperatura mas deixar os utilizadores mudar a velocidade da ventoinha localmente).",
-              "ignore_off_members_sync": "Ao aplicar Lock/Mirror, os membros que estão desligados são ignorados. Nota: os comandos diretos do grupo chegam sempre a todos os membros capazes independentemente desta definição."
+              "sync_mode": "O que fazer quando um membro muda fora do grupo. Disabled: ignorar. Mirror: refletir mudanças. Lock: reverter mudanças. Mirror/Lock: refletir selecionados, reverter não selecionados. Master/Lock: refletir mestre, reverter outros.",
+              "sync_attributes": "Define sobre quais atributos o modo de sincronização atua. O tratamento dos atributos selecionados e não selecionados (Mirror, Revert ou Ignore) depende do modo escolhido.",
+              "ignore_off_members_sync": "Os membros desligados manualmente são deixados em paz. O seu estado não é refletido nem revertido. Nota: os comandos directos do grupo chegam sempre a todos os membros."
             }
           },
           "window_section": {
@@ -168,9 +168,10 @@
           },
           "schedule_section": {
             "name": "Automação de agendamento",
-            "description": "Ligar agendamento HA para automação. Definir frequência de resync e duração da sobreposição.",
+            "description": "Ligue uma entidade de agendamento ou calendário para automatizar as definições climáticas. Os dados do slot podem incluir atributos climáticos (temperature, hvac_mode) e meta-keys (turn_off, sync_mode, sync_attributes) para ajustar o comportamento do grupo por slot.",
             "data": {
-              "schedule_entity": "Entidade de Agenda",
+              "schedule_entity": "Entidade de agendamento / calendário",
+              "schedule_bypass_entity": "Entidade de bypass",
               "resync_interval": "Intervalo de Resync (minutos)",
               "override_duration": "Duração do Override (minutos)",
               "persist_changes": "Override Persistente (Sticky)",
@@ -178,7 +179,8 @@
               "ignore_off_members_schedule": "Respeitar estado Off dos membros (Agendamento)"
             },
             "data_description": {
-              "schedule_entity": "Selecione uma entidade de agenda. O campo 'Dados adicionais' pode conter YAML com atributos como 'temperature: 20.5' ou 'hvac_mode: heat'.",
+              "schedule_entity": "Selecione uma entidade schedule.* ou calendar.*. Para entidades de agendamento, os dados do slot são lidos dos atributos do slot. Para entidades de calendário, os dados do slot são lidos como YAML do campo de descrição do evento. Chaves suportadas: atributos climáticos e meta-keys.",
+              "schedule_bypass_entity": "Camada de prioridade opcional (ex. um calendário de férias). Quando ativa, os seus dados de slot substituem o agendamento principal. Os dados do slot são lidos da mesma forma: atributos para entidades schedule.*, descrição YAML para entidades calendar.*.",
               "resync_interval": "Sincroniza forçadamente os membros com o estado alvo a cada X minutos. Evita desvios se os dispositivos perderem um comando ou forem ajustados manualmente. Definir como 0 para desativar.",
               "override_duration": "A duração dos overrides manuais. Após este tempo, o grupo regressa automaticamente à agenda atual. Definir como 0 para saltar o período de override.",
               "persist_changes": "As alterações na agenda serão ignoradas enquanto um override manual estiver ativo. Reaplica a agenda atual apenas após a expiração do override.",
@@ -252,7 +254,8 @@
       "calibration_requires_sensors": "Os alvos de calibração requerem pelo menos um sensor de temperatura externo.",
       "master_refresh_notice": "Entidade Mestre adicionada. Novas opções disponíveis.",
       "master_options_notice": "Nova opção de entidade Mestre",
-      "isolation_all_selected": "Pelo menos um membro deve permanecer fora do isolamento."
+      "isolation_all_selected": "Pelo menos um membro deve permanecer fora do isolamento.",
+      "sensor_loop_protection": "Não é possível usar um sensor do Climate Group Helper como sensor externo — isso criaria um ciclo de retroalimentação."
     },
     "abort": {
       "no_changes": "Nenhuma alteração detectada."
@@ -466,11 +469,21 @@
     },
     "set_schedule_entity": {
       "name": "Definir entidade de agendamento",
-      "description": "Altere dinamicamente a entidade de agendamento ativa. Se omitido ou definido como nulo, o grupo regressa ao seu valor predefinido configurado.",
+      "description": "Muda a entidade de agendamento ou calendário ativa em tempo de execução. Se omitido ou definido como null, o grupo reverte para a entidade predefinida configurada e reaaplica o slot atual.",
       "fields": {
         "schedule_entity": {
-          "name": "Entidade de agendamento",
-          "description": "A nova entidade de agendamento a ser usada (ex: schedule.holiday). Defina como nulo ou vazio para restaurar o agendamento padrão configurado."
+          "name": "Entidade de agendamento / calendário",
+          "description": "A entidade schedule.* ou calendar.* a ativar (ex. schedule.holiday ou calendar.vacation). Defina como null ou vazio para restaurar o valor predefinido configurado."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Definir entidade de bypass",
+      "description": "Muda a entidade de bypass ativa em tempo de execução (ex. para alternar entre diferentes calendários de férias). Null restaura o valor predefinido configurado.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Entidade de bypass",
+          "description": "A entidade schedule.* ou calendar.* a usar como bypass (ex. calendar.vacation). Defina como null ou vazio para restaurar o valor predefinido configurado."
         }
       }
     },

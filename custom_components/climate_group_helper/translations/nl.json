@@ -39,7 +39,7 @@
               "entities": "Klimaatapparaten",
               "master_entity": "Masterentiteit",
               "hvac_mode_strategy": "HVAC Modus Strategie",
-              "feature_strategy": "Functiecompatibiliteit",
+              "feature_strategy": "Functiestrategie",
               "union_out_of_bounds_action": "Buiten-bereik-actie",
               "union_unsupported_hvac_action": "Actie voor niet-ondersteunde HVAC-modus"
             },
@@ -105,13 +105,13 @@
             "description": "Bepaalt wat er gebeurt als een lid-apparaat direct wordt gewijzigd (bijv. via zijn eigen app of fysieke knoppen) — niet wanneer je de groep zelf bedient. Kies welke attributen worden afgedwongen.",
             "data": {
               "sync_mode": "Sync-modus",
-              "sync_attributes": "Gesynchroniseerde Attributen",
+              "sync_attributes": "Sync-attributen",
               "ignore_off_members_sync": "Respecteer de UIT-status van leden (Synchronisatie)"
             },
             "data_description": {
-              "sync_mode": "Wat te doen wanneer een lid buiten de groep wordt gewijzigd. Disabled: negeer het. Mirror: pas de wijziging toe op alle leden. Lock: breng het lid terug naar het groepsdoel. Mirror/Lock: hybride. Master/Lock: alleen de wijzigingen van de master-entiteit worden geaccepteerd.",
-              "sync_attributes": "Hier geselecteerde attributen worden afgedwongen in Lock/Mirror modi. Niet geselecteerde attributen staan lokale controle toe (bijv. temperatuur synchroniseren maar gebruikers lokaal ventilatorsnelheid laten wijzigen).",
-              "ignore_off_members_sync": "Bij het afdwingen van Lock/Mirror worden leden die uitgeschakeld zijn overgeslagen. Opmerking: directe groepopdrachten bereiken altijd alle bekwame leden, ongeacht deze instelling."
+              "sync_mode": "Wat te doen als een lid buiten de groep wordt gewijzigd. Disabled: negeren. Mirror: wijzigingen spiegelen. Lock: wijzigingen herstellen. Mirror/Lock: geselecteerde spiegelen, niet-geselecteerde herstellen. Master/Lock: master spiegelen, andere herstellen.",
+              "sync_attributes": "Bepaalt op welke attributen de synchronisatiemodus werkt. De verwerking van geselecteerde en niet-geselecteerde attributen (Mirror, Revert of Ignore) hangt af van de gekozen modus.",
+              "ignore_off_members_sync": "Handmatig uitgeschakelde leden worden met rust gelaten. Hun status wordt niet gespiegelt of herstelt. Opmerking: directe groepsopdrachten bereiken altijd alle leden."
             }
           },
           "window_section": {
@@ -168,9 +168,10 @@
           },
           "schedule_section": {
             "name": "Schema-automatisering",
-            "description": "Koppel HA-schema voor automatisering. Stel resync-frequentie en override-duur in.",
+            "description": "Koppel een schema- of kalender-entiteit om klimaatinstellingen te automatiseren. Slot-gegevens kunnen klimaatkenmerken (temperature, hvac_mode) en meta-sleutels (turn_off, sync_mode, sync_attributes) bevatten om het groepsgedrag per slot aan te passen.",
             "data": {
-              "schedule_entity": "Schema Entiteit",
+              "schedule_entity": "Schema- / kalender-entiteit",
+              "schedule_bypass_entity": "Bypass-entiteit",
               "resync_interval": "Resync Interval (minuten)",
               "override_duration": "Override Duur (minuten)",
               "persist_changes": "Persistente Override (Sticky)",
@@ -178,7 +179,8 @@
               "ignore_off_members_schedule": "Respecteer de UIT-status van leden (Planning)"
             },
             "data_description": {
-              "schedule_entity": "Selecteer een schema-entiteit. Het veld 'Extra gegevens' kan YAML bevatten met attributen zoals 'temperature: 20.5' of 'hvac_mode: heat'.",
+              "schedule_entity": "Selecteer een schedule.*- of calendar.*-entiteit. Voor schema-entiteiten worden slot-gegevens gelezen uit de slot-attributen. Voor kalender-entiteiten worden slot-gegevens als YAML gelezen uit het beschrijvingsveld van de gebeurtenis. Ondersteunde sleutels: klimaatkenmerken en meta-sleutels.",
+              "schedule_bypass_entity": "Optionele prioriteitslaag (bijv. een vakantiekalender). Wanneer actief overschrijven de slot-gegevens het basisschema. Slot-gegevens worden op dezelfde manier gelezen: attributen voor schedule.*-, YAML-beschrijving voor calendar.*-entiteiten.",
               "resync_interval": "Dwing leden elke X minuten naar de doelstatus van de groep. Voorkomt verloop als apparaten een commando missen of handmatig worden aangepast. Stel in op 0 om uit te schakelen.",
               "override_duration": "De duur van handmatige overrides. Na deze tijd keert de groep automatisch terug naar het schema. Stel in op 0 om de override-periode over te slaan.",
               "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen.",
@@ -252,7 +254,8 @@
       "calibration_requires_sensors": "Kalibratiedoelen vereisen minimaal één externe temperatuursensor.",
       "master_refresh_notice": "Master-entiteit toegevoegd. Nieuwe opties beschikbaar.",
       "master_options_notice": "Nieuwe Master-entiteit optie",
-      "isolation_all_selected": "Ten minste één lid moet buiten de isolatie blijven."
+      "isolation_all_selected": "Ten minste één lid moet buiten de isolatie blijven.",
+      "sensor_loop_protection": "Een Climate Group Helper-sensor kan niet als externe sensor worden gebruikt — dit zou een feedbacklus veroorzaken."
     },
     "abort": {
       "no_changes": "Geen wijzigingen gedetecteerd."
@@ -466,11 +469,21 @@
     },
     "set_schedule_entity": {
       "name": "Schema-entiteit instellen",
-      "description": "Wijzig dynamisch de actieve schema-entiteit. Indien weggelaten of op nul gezet, keert de groep terug naar de geconfigureerde standaard.",
+      "description": "Wisselt de actieve schema- of kalender-entiteit tijdens uitvoering. Indien weggelaten of op null ingesteld, keert de groep terug naar de geconfigureerde standaard en past de huidige slot opnieuw toe.",
       "fields": {
         "schedule_entity": {
-          "name": "Schema-entiteit",
-          "description": "De nieuwe schema-entiteit om te gebruiken (bijv. schedule.holiday). Laat leeg of null om het geconfigureerde standaardschema te herstellen."
+          "name": "Schema- / kalender-entiteit",
+          "description": "De te activeren schedule.*- of calendar.*-entiteit (bijv. schedule.holiday of calendar.vacation). Laat leeg of stel in op null om de geconfigureerde standaard te herstellen."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Bypass-entiteit instellen",
+      "description": "Wisselt de actieve bypass-entiteit tijdens uitvoering (bijv. om te wisselen tussen verschillende vakantiekalenders). Null herstelt de geconfigureerde standaard.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Bypass-entiteit",
+          "description": "De schedule.*- of calendar.*-entiteit die als bypass wordt gebruikt (bijv. calendar.vacation). Laat leeg of stel in op null om de geconfigureerde standaard te herstellen."
         }
       }
     },

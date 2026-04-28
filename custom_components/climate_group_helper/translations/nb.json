@@ -39,7 +39,7 @@
               "entities": "Klimaenheter",
               "master_entity": "Masterenhet",
               "hvac_mode_strategy": "HVAC Modusstrategi",
-              "feature_strategy": "Funksjonskompatibilitet",
+              "feature_strategy": "Funksjonsstrategi",
               "union_out_of_bounds_action": "Handling utenfor område",
               "union_unsupported_hvac_action": "Handling for ikke-støttet HVAC-modus"
             },
@@ -105,13 +105,13 @@
             "description": "Bestemmer hva som skjer når en medlemsenhet endres direkte (f.eks. via sin egen app eller fysiske knapper) — ikke når du styrer gruppen. Velg hvilke attributter som håndheves.",
             "data": {
               "sync_mode": "Sync-modus",
-              "sync_attributes": "Synkroniserte attributter",
+              "sync_attributes": "Sync-attributter",
               "ignore_off_members_sync": "Respekter medlemmers AV-tilstand (Synk)"
             },
             "data_description": {
-              "sync_mode": "Hva du skal gjøre når et medlem endres utenfor gruppen. Disabled: ignorer det. Mirror: bruk endringen på alle medlemmer. Lock: tilbakestill medlemmet til gruppemålet. Mirror/Lock: hybrid. Master/Lock: bare masterenhetens endringer aksepteres.",
-              "sync_attributes": "Attributter valgt her vil bli håndhevet i Lock/Mirror-moduser. Ikke-valgte attributter tillater lokal kontroll (f.eks. synkroniser temperatur, men la brukere endre viftehastighet lokalt).",
-              "ignore_off_members_sync": "Ved håndhevelse av Lock/Mirror hoppes deaktiverte medlemmer over. Merk: direkte gruppekommandoer når alltid alle egnede medlemmer uavhengig av denne innstillingen."
+              "sync_mode": "Hva som skal gjøres når et medlem endres utenfor gruppen. Disabled: ignorer. Mirror: speile endringer. Lock: tilbakestill endringer. Mirror/Lock: speile valgte, tilbakestill ikke-valgte. Master/Lock: speile master, tilbakestill andre.",
+              "sync_attributes": "Definerer hvilke attributter synkroniseringsmodusen virker på. Håndteringen av valgte og ikke-valgte attributter (Mirror, Revert eller Ignore) avhenger av valgt modus.",
+              "ignore_off_members_sync": "Manuelt avstengte medlemmer blir latt være i fred. Deres tilstand blir verken speilet eller tilbakestilt. Merk: direkte gruppekommandoer når alltid alle medlemmer."
             }
           },
           "window_section": {
@@ -168,9 +168,10 @@
           },
           "schedule_section": {
             "name": "Tidsplan-automatisering",
-            "description": "Koble til HA-plan for automatisering. Still inn resync-frekvens og overstyringsvarighet.",
+            "description": "Koble til en tidsplan- eller kalenderenhet for å automatisere klimainnstillinger. Slot-data kan inkludere klimaattributter (temperature, hvac_mode) og meta-nøkler (turn_off, sync_mode, sync_attributes) for å justere gruppens atferd per slot.",
             "data": {
-              "schedule_entity": "Tidsplan Enhet",
+              "schedule_entity": "Tidsplan- / kalenderenhet",
+              "schedule_bypass_entity": "Bypass-enhet",
               "resync_interval": "Resync-intervall (minutter)",
               "override_duration": "Varighet for overstyring (minutter)",
               "persist_changes": "Vedvarende overstyring (Sticky)",
@@ -178,7 +179,8 @@
               "ignore_off_members_schedule": "Respekter medlemmers AV-tilstand (Tidsplan)"
             },
             "data_description": {
-              "schedule_entity": "Velg en tidsplan-enhet. Feltet 'Tilleggsdata' kan indeholde YAML med attributter som 'temperature: 20.5' eller 'hvac_mode: heat'.",
+              "schedule_entity": "Velg en schedule.*- eller calendar.*-enhet. For tidsplanenheter leses slot-data fra slot-attributtene. For kalenderenheter leses slot-data som YAML fra begivenhetens beskrivelsesfelt. Støttede nøkler: klimaattributter og meta-nøkler.",
+              "schedule_bypass_entity": "Valgfritt prioritetslag (f.eks. en feriekalender). Når aktiv, overstyrer dens slot-data basisplanen. Slot-data leses på samme måte: attributter for schedule.*-, YAML-beskrivelse for calendar.*-enheter.",
               "resync_interval": "Tvinge synkronisering av medlemmer til gruppens måltilstand hvert X minutt. Forhindrer avvik hvis enheter går glipp av en kommando eller justeres manuelt. Sett til 0 for å deaktivere.",
               "override_duration": "Varigheten av manuelle overstyringer. Etter denne tiden går gruppen automatisk tilbake til gjeldende tidsplan. Sett til 0 for å hoppe over overstyringsperioden.",
               "persist_changes": "Vil endringer i selve tidsplanen bli ignorert så lenge en manuell overstyring er aktiv. Bruker gjeldende tidsplan på nytt først etter at overstyringen er utløpt.",
@@ -252,7 +254,8 @@
       "calibration_requires_sensors": "Kalibreringsmål krever minst én ekstern temperatursensor.",
       "master_refresh_notice": "Master-enhet lagt til. Nye alternativer tilgjengelig.",
       "master_options_notice": "Nytt valg for master-enhet",
-      "isolation_all_selected": "Minst ett medlem må forbli utenfor isolasjonen."
+      "isolation_all_selected": "Minst ett medlem må forbli utenfor isolasjonen.",
+      "sensor_loop_protection": "Kan ikke bruke en Climate Group Helper-sensor som ekstern sensor — dette ville skape en tilbakemeldingssløyfe."
     },
     "abort": {
       "no_changes": "Ingen endringer oppdaget."
@@ -466,11 +469,21 @@
     },
     "set_schedule_entity": {
       "name": "Angi tidsplan-enhet",
-      "description": "Bytt dynamisk den aktive tidsplanentiteten. Hvis utelatt eller satt til null, går gruppen tilbake til sin konfigurerte standard.",
+      "description": "Bytter den aktive tidsplan- eller kalenderenheten ved kjøretid. Hvis utelatt eller satt til null, går gruppen tilbake til sin konfigurerte standardenhet og anvender gjeldende slot på nytt.",
       "fields": {
         "schedule_entity": {
-          "name": "Tidsplan-enhet",
-          "description": "Den nye tidsplan-enheten som skal brukes (f.eks. schedule.holiday). Sett til null eller tom for å gjenopprette standardplanen fra konfigurasjonen."
+          "name": "Tidsplan- / kalenderenhet",
+          "description": "Den schedule.*- eller calendar.*-enheten som skal aktiveres (f.eks. schedule.holiday eller calendar.vacation). Sett til null eller tom for å gjenopprette den konfigurerte standarden."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Angi bypass-enhet",
+      "description": "Bytter den aktive bypass-enheten ved kjøretid (f.eks. for å veksle mellom ulike feriekalendere). Null gjenoppretter den konfigurerte standarden.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Bypass-enhet",
+          "description": "Den schedule.*- eller calendar.*-enheten som brukes som bypass (f.eks. calendar.vacation). Sett til null eller tom for å gjenopprette den konfigurerte standarden."
         }
       }
     },

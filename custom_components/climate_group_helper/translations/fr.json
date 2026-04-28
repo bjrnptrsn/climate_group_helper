@@ -39,7 +39,7 @@
               "entities": "Appareils Climatiques",
               "master_entity": "Entité maître",
               "hvac_mode_strategy": "Stratégie du Mode HVAC",
-              "feature_strategy": "Compatibilité des Fonctionnalités",
+              "feature_strategy": "Stratégie des fonctionnalités",
               "union_out_of_bounds_action": "Action hors plage",
               "union_unsupported_hvac_action": "Action pour mode HVAC non pris en charge"
             },
@@ -105,13 +105,13 @@
             "description": "Définit ce qui se passe quand un appareil membre est modifié directement (ex. via son appli ou ses boutons physiques) — pas quand vous contrôlez le groupe. Choisissez les attributs à appliquer.",
             "data": {
               "sync_mode": "Mode Sync",
-              "sync_attributes": "Attributs Synchronisés",
+              "sync_attributes": "Attributs de synchronisation",
               "ignore_off_members_sync": "Respecter l'état Off des membres (Sync)"
             },
             "data_description": {
-              "sync_mode": "Que faire lorsqu'un membre est modifié en dehors du groupe. Disabled : l'ignorer. Mirror : appliquer la modification à tous les membres. Lock : rétablir le membre sur la cible du groupe. Mirror/Lock : hybride. Master/Lock : seules les modifications de l'entité maître sont acceptées.",
-              "sync_attributes": "Les attributs sélectionnés ici seront appliqués en modes Lock/Mirror. Les attributs non sélectionnés permettent un contrôle local (ex. synchroniser la température mais laisser les utilisateurs changer la vitesse du ventilateur localement).",
-              "ignore_off_members_sync": "Lors de l'application de Lock/Mirror, les membres éteints sont ignorés. Remarque : les commandes directes du groupe atteignent toujours tous les membres capables quelle que soit cette option."
+              "sync_mode": "Que faire quand un membre change hors du groupe. Disabled : ignorer. Mirror : refléter les changements. Lock : annuler les changements. Mirror/Lock : refléter sélectionnés, annuler non sélectionnés. Master/Lock : refléter maître, annuler autres.",
+              "sync_attributes": "Définit les attributs sur lesquels agit le mode de synchronisation. Le traitement des attributs sélectionnés et non sélectionnés (Mirror, Revert ou Ignore) dépend du mode choisi.",
+              "ignore_off_members_sync": "Les membres éteints manuellement sont laissés tranquilles. Leur état n'est ni reflété ni annulé. Note : les commandes directes du groupe atteignent toujours tous les membres."
             }
           },
           "window_section": {
@@ -168,9 +168,10 @@
           },
           "schedule_section": {
             "name": "Automatisation du planning",
-            "description": "Connectez le planning HA pour automatiser. Définissez la fréquence de resync et la durée de dérogation.",
+            "description": "Liez une entité de programmation ou de calendrier pour automatiser les réglages climatiques. Les données du créneau peuvent inclure des attributs climatiques (temperature, hvac_mode) et des méta-clés (turn_off, sync_mode, sync_attributes) pour ajuster le comportement du groupe par créneau.",
             "data": {
-              "schedule_entity": "Entité de Programmation",
+              "schedule_entity": "Entité de programmation / calendrier",
+              "schedule_bypass_entity": "Entité de contournement",
               "resync_interval": "Intervalle de Resync (minutes)",
               "override_duration": "Durée d'Override (minutes)",
               "persist_changes": "Dérogation persistante (Sticky)",
@@ -178,7 +179,8 @@
               "ignore_off_members_schedule": "Respecter l'état Off des membres (Planification)"
             },
             "data_description": {
-              "schedule_entity": "Sélectionnez une entité de programmation. Le champ 'Données supplémentaires' peut contenir du YAML avec des attributs comme 'temperature: 20.5' ou 'hvac_mode: heat'.",
+              "schedule_entity": "Sélectionnez une entité schedule.* ou calendar.*. Pour les entités de programmation, les données du créneau sont lues dans les attributs du créneau. Pour les entités de calendrier, les données du créneau sont lues en YAML depuis le champ de description de l'événement. Clés supportées : attributs climatiques et méta-clés.",
+              "schedule_bypass_entity": "Couche de priorité optionnelle (ex. un calendrier de vacances). Lorsqu'elle est active, ses données de créneau remplacent le programme de base. Les données du créneau sont lues de la même façon : attributs pour les entités schedule.*, description YAML pour les entités calendar.*.",
               "resync_interval": "Forcer la synchronisation des membres vers l'état cible toutes les X minutes. Évite les dérives si les appareils manquent une commande ou sont ajustés manuellement. Mettre à 0 pour désactiver.",
               "override_duration": "La durée des overrides manuels. Après ce temps, le groupe revient automatiquement à la programmation actuelle. Mettre à 0 pour ignorer la période d'override.",
               "persist_changes": "Les changements de programmation seront ignorés tant qu'un override manuel est actif. Réapplique la programmation actuelle seulement après l'expiration de l'override.",
@@ -252,7 +254,8 @@
       "calibration_requires_sensors": "Les cibles de calibration nécessitent au moins un capteur de température externe.",
       "master_refresh_notice": "Entité Maître ajoutée. Nouvelles options disponibles.",
       "master_options_notice": "Nouvelle option d'entité Maître",
-      "isolation_all_selected": "Au moins un membre doit rester en dehors de l'isolation."
+      "isolation_all_selected": "Au moins un membre doit rester en dehors de l'isolation.",
+      "sensor_loop_protection": "Impossible d'utiliser un capteur Climate Group Helper comme capteur externe — cela créerait une boucle de rétroaction."
     },
     "abort": {
       "no_changes": "Aucun changement détecté."
@@ -466,11 +469,21 @@
     },
     "set_schedule_entity": {
       "name": "Définir l'entité de programmation",
-      "description": "Modifiez dynamiquement l'entité de planification active. Si omis ou défini sur nul, le groupe revient à sa valeur par défaut configurée.",
+      "description": "Change l'entité de programmation ou de calendrier active à l'exécution. Si omis ou défini sur null, le groupe revient à son entité par défaut configurée et réapplique le créneau actuel.",
       "fields": {
         "schedule_entity": {
-          "name": "Entité de programmation",
-          "description": "La nouvelle entité de programmation à utiliser (par ex. schedule.holiday). Laisser vide ou null pour restaurer la programmation par défaut configurée."
+          "name": "Entité de programmation / calendrier",
+          "description": "L'entité schedule.* ou calendar.* à activer (ex. schedule.holiday ou calendar.vacation). Définir sur null ou vide pour restaurer la valeur par défaut configurée."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Définir l'entité de contournement",
+      "description": "Change l'entité de contournement active à l'exécution (ex. pour alterner entre différents calendriers de vacances). Null restaure la valeur par défaut configurée.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Entité de contournement",
+          "description": "L'entité schedule.* ou calendar.* à utiliser comme contournement (ex. calendar.vacation). Définir sur null ou vide pour restaurer la valeur par défaut configurée."
         }
       }
     },

@@ -47,7 +47,6 @@ CONF_TEMP_UPDATE_TARGETS = "temp_update_targets"
 CONF_TEMP_CALIBRATION_MODE = "temp_calibration_mode"
 CONF_CALIBRATION_HEARTBEAT = "calibration_heartbeat"
 CONF_CALIBRATION_IGNORE_OFF = "calibration_ignore_off"
-CALIBRATION_DEBOUNCE_DELAY = 3.0   # seconds — collapses rapid sensor ticks into one write
 CONF_STAGGERED_CALL_DELAY = "staggered_call_delay"
 
 # Humidity Settings
@@ -104,6 +103,7 @@ CONF_ISOLATION_TRIGGER_HVAC_MODES = "isolation_trigger_hvac_modes"
 
 # Schedule Automation
 CONF_SCHEDULE_ENTITY = "schedule_entity"
+CONF_SCHEDULE_BYPASS_ENTITY = "schedule_bypass_entity"
 CONF_RESYNC_INTERVAL = "resync_interval"
 CONF_OVERRIDE_DURATION = "override_duration"
 CONF_PERSIST_CHANGES = "persist_changes"
@@ -236,27 +236,46 @@ class IsolationTrigger(StrEnum):
 
 # Service Constants
 SERVICE_SET_SCHEDULE_ENTITY = "set_schedule_entity"
+SERVICE_SET_SCHEDULE_BYPASS_ENTITY = "set_schedule_bypass_entity"
 SERVICE_BOOST = "boost"
 SERVICE_APPLY_CONFIG = "apply_config"
 
 ATTR_SCHEDULE_ENTITY = "schedule_entity"
+ATTR_SCHEDULE_BYPASS_ENTITY = "schedule_bypass_entity"
 ATTR_SETTINGS = "settings"
 ATTR_INCLUDE_MEMBER_LIST = "include_member_list"
 ATTR_INCLUDE_ENTITY_SELECTORS = "include_entity_selectors"
 
 # Extra attribute keys
+ATTR_ACTIVE_OVERRIDE = "active_override"
+ATTR_ACTIVE_OVERRIDE_END = "active_override_end"
+ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY = "active_schedule_bypass_entity"
 ATTR_ACTIVE_SCHEDULE_ENTITY = "active_schedule_entity"
+ATTR_ACTIVE_SCHEDULE_SLOT_TITLE = "active_schedule_slot_title"
 ATTR_ASSUMED_STATE = "assumed_state"
 ATTR_BLOCKING_SOURCES = "blocking_sources"
+ATTR_CONFIG_OVERRIDES = "config_overrides"
 ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
+ATTR_GROUP_OFFSET = "group_offset"
 ATTR_ISOLATED_MEMBERS = "isolated_members"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
-ATTR_OOB_MEMBERS = "oob_members"
-ATTR_ACTIVE_OVERRIDE = "active_override"
 ATTR_MASTER_FALLBACK_ACTIVE = "master_fallback_active"
-ATTR_ACTIVE_OVERRIDE_END = "active_override_end"
-ATTR_GROUP_OFFSET = "group_offset"
+ATTR_OOB_MEMBERS = "oob_members"
 ATTR_SETTINGS_JSON = "settings_json"
+# Configured features (for UI — which icons to show at all)
+ATTR_ENABLED_FEATURES = "enabled_features"
+# Source information
+ATTR_LAST_SOURCE = "last_source"
+ATTR_LAST_CHANGED = "last_changed"
+ATTR_LAST_ENTITY = "last_entity"
+# Analytics
+ATTR_ACTIVE_MEMBER_COUNT = "active_member_count"
+ATTR_TOTAL_MEMBER_COUNT = "total_member_count"
+# Fallback flags
+ATTR_PRESENCE_FALLBACK = "presence_fallback"
+# Effective config
+ATTR_EFFECTIVE_SYNC_MODE = "effective_sync_mode"
+ATTR_EFFECTIVE_SYNC_ATTRIBUTES = "effective_sync_attributes"
 
 # Configuration Management Key Groups
 IDENTITY_KEYS: frozenset[str] = frozenset({CONF_NAME})
@@ -275,6 +294,7 @@ ENTITY_SELECTOR_KEYS: frozenset[str] = frozenset({
     CONF_PRESENCE_SENSOR,
     CONF_PRESENCE_ZONE,
     CONF_SCHEDULE_ENTITY,
+    CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_ISOLATION_SENSOR,
     CONF_MEMBER_TEMP_OFFSETS,
 })

@@ -12,21 +12,31 @@ from homeassistant.components.climate import HVACMode
 
 from .const import (
     CONF_IGNORE_OFF_MEMBERS_SYNC,
-    CONF_ISOLATION_ENTITIES,
-    CONF_ISOLATION_TRIGGER,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
     META_KEY_SYNC_MODE,
     META_KEY_SYNC_ATTRS,
     STARTUP_BLOCK_DELAY,
     SYNC_TARGET_ATTRS,
-    IsolationTrigger,
     SyncMode,
 )
-from .state import FilterState, is_own_echo
+from .state import FilterState
 
 if TYPE_CHECKING:
     from .climate import ClimateGroup
+
+_TRUSTED_CONTEXT_IDS = frozenset(
+    {
+        "service_call",
+        "group",
+        "sync_mode",
+        "schedule",
+        "isolation",
+        "presence",
+        "switch_enforce",
+        "window_control",
+    }
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -106,12 +116,12 @@ class SyncModeHandler:
         origin_event = getattr(event.context, "origin_event", None)
         change_entity_id = self._group.change_state.entity_id or None
         change_dict = self._group.change_state.attributes()
-        own_echo = is_own_echo(event)
+        own_echo = self._is_own_echo(event)
 
         if not own_echo:
             # MEMBER_OFF isolation trigger: runs before the DISABLED guard so it works
             # even when sync enforcement is off.
-            self._maybe_isolate_off_member(change_entity_id)
+            self._group.member_isolation_handler.check_member_off_isolation()
 
             # Block enforcement: each active blocking source enforces its own state.
             # Runs before the DISABLED guard so blocking is always enforced regardless
@@ -237,41 +247,28 @@ class SyncModeHandler:
                 pass
         return ""
 
-    def _maybe_isolate_off_member(self, entity_id: str | None) -> None:
-        """Activate or release MEMBER_OFF isolation for a single member.
+    def _is_own_echo(self, event: Event) -> bool:
+        """Return True if the event was caused by one of our own service calls.
 
-        Only runs when isolation_trigger == MEMBER_OFF and the entity is in the
-        configured watch list (or all members if the list is empty).
+        Two detection paths:
+        1. Direct context ID: test mocks and some HA paths write state with the
+           call's context directly (no origin_event chain). Check event.context.id
+           against blocking-source IDs that are never external changes.
+        2. Deep origin analysis: production HA wraps the state_changed event in an
+           origin_event chain. Check origin_event.context.id against all trusted IDs.
         """
-        if not entity_id:
-            return
-        trigger = self._group.config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
-        if trigger != IsolationTrigger.MEMBER_OFF:
-            return
+        if event.context.id in _TRUSTED_CONTEXT_IDS:
+            return True
 
-        watch_list = self._group.config.get(CONF_ISOLATION_ENTITIES, [])
-        if entity_id not in watch_list:
-            return
+        origin_event = getattr(event.context, "origin_event", None)
+        if (
+            origin_event
+            and origin_event.event_type == "call_service"
+            and origin_event.data.get("domain") == "climate"
+        ):
+            return origin_event.context.id in _TRUSTED_CONTEXT_IDS
 
-        # Read the member's actual current state directly — change_dict only contains
-        # deviations from target_state and may omit hvac_mode when it matches the target.
-        member_state = self._hass.states.get(entity_id)
-        if member_state is None:
-            return
-        actual_hvac_mode = member_state.state
-
-        isolation_handler = self._group.member_isolation_handler
-
-        if actual_hvac_mode == HVACMode.OFF:
-            # Synchronously update run_state so the subsequent LOCK enforcement sees
-            # the member as isolated and skips it — avoids a send→echo→re-isolate loop.
-            isolation_handler.isolate_member_sync(entity_id)
-        else:
-            # Member switched to an active mode → release isolation synchronously,
-            # then send restore call async.
-            if entity_id in self._group.run_state.isolated_members:
-                isolation_handler.release_member_sync(entity_id)
-                self._hass.async_create_task(isolation_handler.send_restore_call(entity_id))
+        return False
 
     def _filter_echo_changes(self, origin_event: Event, change_dict: dict, change_entity_id: str | None) -> dict:
         """Filter echo changes, returning only accepted side effects.
@@ -297,4 +294,3 @@ class SyncModeHandler:
                     _LOGGER.debug("[%s] Dirty echo ignored: %s=%s (ordered %s)", self._group.entity_id, attr, new_value, service_data[attr])
 
         return accepted
-

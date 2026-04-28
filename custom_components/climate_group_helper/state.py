@@ -24,33 +24,6 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-_TRUSTED_CONTEXT_IDS = frozenset(
-    {
-        "service_call",
-        "group",
-        "sync_mode",
-        "schedule",
-        "isolation",
-        "presence",
-        "switch_enforce",
-    }
-)
-
-
-def is_own_echo(event: Event) -> bool:
-    """Return True if the event was caused by one of our own service calls.
-
-    Checks the origin_event context against the set of trusted context IDs
-    that the group uses when dispatching commands to members.
-    """
-    origin_event = getattr(event.context, "origin_event", None)
-    if not origin_event:
-        return False
-    if origin_event.event_type != "call_service" or origin_event.data.get("domain") != "climate":
-        return False
-    return origin_event.context.id in _TRUSTED_CONTEXT_IDS
-
-
 @dataclass(frozen=True)
 class RunState:
     """Immutable operational status for the climate group.
@@ -66,19 +39,20 @@ class RunState:
     Updates are performed via dataclasses.replace(), consistent with TargetState.
     """
 
-    blocking_sources: frozenset[str] = field(default_factory=frozenset)
-    isolated_members: frozenset[str] = field(default_factory=frozenset)
-    oob_members: frozenset[str] = field(default_factory=frozenset)
-    startup_time: float | None = None
-    last_active_hvac_mode: str | None = None
-    master_fallback_active: bool = False
-    pre_override_snapshot: TargetState | None = None
     active_override: str | None = None
     active_override_end: datetime | None = None
-    group_offset: float = 0.0
+    active_slot_title: str | None = None
+    blocking_sources: frozenset[str] = field(default_factory=frozenset)
     config_overrides: MappingProxyType[str, Any] = field(
         default_factory=lambda: MappingProxyType({})
     )
+    group_offset: float = 0.0
+    isolated_members: frozenset[str] = field(default_factory=frozenset)
+    last_active_hvac_mode: str | None = None
+    master_fallback_active: bool = False
+    oob_members: frozenset[str] = field(default_factory=frozenset)
+    startup_time: float | None = None
+    target_state_snapshot: TargetState | None = None
 
     @property
     def blocked(self) -> bool:
@@ -108,8 +82,8 @@ class RunState:
         return replace(self, active_override=None, active_override_end=None)
 
     def clear_snapshot(self) -> RunState:
-        """Return a new RunState with pre_override_snapshot cleared."""
-        return replace(self, pre_override_snapshot=None)
+        """Return a new RunState with target_state_snapshot cleared."""
+        return replace(self, target_state_snapshot=None)
 
 
 @dataclass(frozen=True)
@@ -149,7 +123,7 @@ class ClimateState:
 
 @dataclass(frozen=True)
 class TargetState(ClimateState):
-    """Current target state of the group with provenance metadata."""
+    """Current target state of the group with source metadata."""
     last_source: str | None = None
     last_entity: str | None = None
     last_timestamp: float | None = None
@@ -298,7 +272,7 @@ class BaseStateManager:
         if not self._filter_update(entity_id, kwargs):
             return False
 
-        # Inject provenance metadata (source, entity, timestamp)
+        # Inject source metadata (source, entity, timestamp)
         context = self._group._context
         if self.SOURCE == "group" and bool(context and context.user_id and not context.parent_id):
             kwargs["last_source"] = "ui"
@@ -426,7 +400,10 @@ class SyncModeStateManager(BaseStateManager):
     def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
         """Apply sync-mode specific filters."""
         if entity_id and entity_id in self._group.run_state.isolated_members:
-            _LOGGER.debug("[%s] TargetState update blocked: %s is isolated", self._group.entity_id, entity_id)
+            _LOGGER.debug(
+                "[%s] TargetState update blocked: %s is isolated. Current set: %s",
+                self._group.entity_id, entity_id, list(self._group.run_state.isolated_members)
+            )
             return False
 
         # 1. Blocking Mode Filter
@@ -473,4 +450,15 @@ class ScheduleStateManager(BaseStateManager):
 
     def __init__(self, group: ClimateGroup):
         """Initialize the schedule state manager."""
+        super().__init__(group)
+
+
+class IsolationStateManager(BaseStateManager):
+    """State Manager for Isolation updates.
+    """
+
+    SOURCE = "isolation"
+
+    def __init__(self, group: ClimateGroup):
+        """Initialize the isolation state manager."""
         super().__init__(group)

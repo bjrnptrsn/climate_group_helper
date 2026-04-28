@@ -128,30 +128,30 @@ class BaseOverrideManager:
         )
 
     def _save_snapshot(self) -> None:
-        """Save current target_state as pre-override snapshot (only if none exists yet).
+        """Save current target_state as target_state snapshot (only if none exists yet).
 
         Only saved on the first activation so consecutive overrides preserve the
-        original pre-override state.
+        original target_state state.
         """
         if self._group.run_state.active_override is None:
             self._group.run_state = replace(
                 self._group.run_state,
-                pre_override_snapshot=self._group.shared_target_state,
+                target_state_snapshot=self._group.shared_target_state,
             )
 
     def _restore_snapshot(self) -> None:
-        """Clear active_override, active_override_end, and pre_override_snapshot."""
+        """Clear active_override, active_override_end, and target_state_snapshot."""
         self._group.run_state = self._group.run_state.clear_override().clear_snapshot()
 
     @property
     def _snapshot(self):
-        """Return the saved pre-override snapshot, or None."""
-        return self._group.run_state.pre_override_snapshot
+        """Return the saved target_state snapshot, or None."""
+        return self._group.run_state.target_state_snapshot
 
     def _cancel_timer(self) -> None:
         """Cancel the active timer and clear override name/end via clear_override().
 
-        pre_override_snapshot is preserved — consecutive boosts keep the original
+        target_state_snapshot is preserved — consecutive boosts keep the original
         snapshot. Full teardown (including snapshot) is done by the caller via
         clear_snapshot().
         """

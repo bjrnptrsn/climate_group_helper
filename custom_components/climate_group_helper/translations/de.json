@@ -39,7 +39,7 @@
               "entities": "Klimageräte",
               "master_entity": "Master-Gerät",
               "hvac_mode_strategy": "HVAC-Modus-Strategie",
-              "feature_strategy": "Funktionskompatibilität",
+              "feature_strategy": "Funktionsstrategie",
               "union_out_of_bounds_action": "Außerhalb-Bereich-Aktion",
               "union_unsupported_hvac_action": "Aktion bei nicht unterstütztem HVAC-Modus"
             },
@@ -105,13 +105,13 @@
             "description": "Legt fest, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z.B. über seine eigene App oder physische Tasten) — nicht wenn du die Gruppe selbst steuerst. Wähle aus, welche Attribute erzwungen werden.",
             "data": {
               "sync_mode": "Sync-Modus",
-              "sync_attributes": "Synchronisierte Attribute",
+              "sync_attributes": "Sync-Attribute",
               "ignore_off_members_sync": "Respektiere 'Aus'-Status der Mitglieder (Sync)"
             },
             "data_description": {
-              "sync_mode": "Was tun, wenn ein Mitglied außerhalb der Gruppe geändert wird. Deaktiviert: Ignorieren. Mirror: Änderung auf alle Mitglieder anwenden. Lock: Mitglied auf das Gruppen-Ziel zurücksetzen. Mirror/Lock: Hybrid. Master/Lock: Nur Änderungen des Masters werden akzeptiert.",
-              "sync_attributes": "Hier ausgewählte Attribute werden im Lock/Mirror-Modus erzwungen. Nicht ausgewählte Attribute erlauben lokale Steuerung (z.B. Temperatur synchronisieren, aber Lüfter lokal steuern lassen).",
-              "ignore_off_members_sync": "Beim Erzwingen von Lock/Mirror werden Mitglieder übersprungen, die aktuell ausgeschaltet sind. Hinweis: Direkte Gruppenbefehle erreichen immer alle fähigen Mitglieder, unabhängig von dieser Einstellung."
+              "sync_mode": "Was geschieht, wenn ein Mitglied außerhalb der Gruppe geändert wird. Disabled: Ignorieren. Mirror: Änderungen spiegeln. Lock: Änderungen zurücksetzen. Mirror/Lock: Ausgewählte spiegeln, nicht ausgewählte zurücksetzen. Master/Lock: Master spiegeln, andere zurücksetzen.",
+              "sync_attributes": "Legt fest, auf welche Attribute der Sync-Modus wirkt. Die Behandlung ausgewählter und nicht ausgewählter Attribute (Mirror, Revert oder Ignore) hängt vom gewählten Modus ab.",
+              "ignore_off_members_sync": "Manuell ausgeschaltete Mitglieder werden ignoriert. Ihr Zustand wird weder gespiegelt noch zurückgesetzt. Hinweis: Direkte Gruppenbefehle erreichen immer alle Mitglieder."
             }
           },
           "window_section": {
@@ -168,9 +168,10 @@
           },
           "schedule_section": {
             "name": "Zeitplan-Automatisierung",
-            "description": "HA-Zeitpläne koppeln. Resync-Frequenz und Override-Dauer festlegen oder Zeitpläne via Dienst dynamisch wechseln.",
+            "description": "Verknüpfe eine Zeitplan- oder Kalender-Entität, um Klimaeinstellungen zu automatisieren. Slot-Daten können Klima-Attribute (temperature, hvac_mode) und Meta-Keys (turn_off, sync_mode, sync_attributes) enthalten, um das Gruppenverhalten pro Slot anzupassen.",
             "data": {
-              "schedule_entity": "Zeitplan-Entität",
+              "schedule_entity": "Zeitplan- / Kalender-Entität",
+              "schedule_bypass_entity": "Bypass-Entität",
               "resync_interval": "Resync-Intervall (Minuten)",
               "override_duration": "Override-Dauer (Minuten)",
               "persist_changes": "Dauerhafter Override (Sticky)",
@@ -178,7 +179,8 @@
               "ignore_off_members_schedule": "Respektiere 'Aus'-Status der Mitglieder (Zeitplan)"
             },
             "data_description": {
-              "schedule_entity": "Wähle eine Zeitplan-Entität. Das Feld 'Zusätzliche Daten' des Zeitplans kann YAML mit Attributen wie 'temperature: 20.5' oder 'hvac_mode: heat' enthalten.",
+              "schedule_entity": "Wähle eine schedule.*- oder calendar.*-Entität. Bei Zeitplan-Entitäten werden die Slot-Daten aus den Slot-Attributen gelesen. Bei Kalender-Entitäten werden die Slot-Daten als YAML aus dem Beschreibungsfeld des Ereignisses gelesen. Unterstützte Schlüssel: Klima-Attribute und Meta-Keys.",
+              "schedule_bypass_entity": "Optionale Prioritätsebene (z.B. ein Urlaubskalender). Wenn aktiv, überschreiben ihre Slot-Daten den Basisplan. Slot-Daten werden gleich gelesen: Attribute für schedule.*-, YAML-Beschreibung für calendar.*-Entitäten.",
               "resync_interval": "Erzwinge alle X Minuten den Zielzustand der Gruppe. Stellt sicher, dass alle Geräte dem Zeitplan folgen. Auf 0 setzen zum Deaktivieren.",
               "override_duration": "Die Dauer für manuelle Änderungen. Nach dieser Zeit kehrt die Gruppe automatisch zum Zeitplan zurück. Auf 0 setzen, um die Schonfrist zu überspringen.",
               "persist_changes": "Änderungen am Zeitplan selbst werden ignoriert, solange ein manueller Override aktiv ist. Wendet den aktuellen Zeitplan erst nach Ablauf des Overrides wieder an.",
@@ -252,7 +254,8 @@
       "calibration_requires_sensors": "Kalibrierungsziele erfordern mindestens einen externen Temperatursensor.",
       "master_refresh_notice": "Master-Entität hinzugefügt. Neue Optionen verfügbar.",
       "master_options_notice": "Neue Master-Entitäts-Option",
-      "isolation_all_selected": "Mindestens ein Mitglied muss außerhalb der Isolierung bleiben."
+      "isolation_all_selected": "Mindestens ein Mitglied muss außerhalb der Isolierung bleiben.",
+      "sensor_loop_protection": "Ein Climate Group Helper-Sensor kann nicht als externer Sensor verwendet werden — das würde eine Rückkopplungsschleife erzeugen."
     },
     "abort": {
       "no_changes": "Keine Änderungen erkannt."
@@ -466,11 +469,21 @@
     },
     "set_schedule_entity": {
       "name": "Zeitplan-Entität setzen",
-      "description": "Die aktive Schedule-Entität dynamisch ändern. Wenn weggelassen oder auf null gesetzt, kehrt die Gruppe zum konfigurierten Standard zurück.",
+      "description": "Wechselt die aktive Zeitplan- oder Kalender-Entität zur Laufzeit. Wenn weggelassen oder auf null gesetzt, kehrt die Gruppe zur konfigurierten Standard-Entität zurück und wendet den aktuellen Slot neu an.",
       "fields": {
         "schedule_entity": {
-          "name": "Zeitplan-Entität",
-          "description": "Die neue Zeitplan-Entität (z.B. schedule.urlaub). Leer lassen, um den konfigurierten Standard wiederherzustellen."
+          "name": "Zeitplan- / Kalender-Entität",
+          "description": "Die zu aktivierende schedule.*- oder calendar.*-Entität (z.B. schedule.urlaub oder calendar.ferien). Leer lassen oder null, um den konfigurierten Standard wiederherzustellen."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Bypass-Entität setzen",
+      "description": "Wechselt die aktive Bypass-Entität zur Laufzeit (z.B. zwischen verschiedenen Urlaubskalendern). Null setzt auf den konfigurierten Standard zurück.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Bypass-Entität",
+          "description": "Die zu verwendende schedule.*- oder calendar.*-Entität als Bypass (z.B. calendar.urlaub). Leer lassen oder null, um den konfigurierten Standard wiederherzustellen."
         }
       }
     },

@@ -10,6 +10,8 @@ from homeassistant.components.climate import (
     DOMAIN as CLIMATE_DOMAIN,
     ATTR_MIN_TEMP,
     ATTR_MAX_TEMP,
+    ATTR_PRESET_MODES,
+    ATTR_HVAC_MODES,
     HVACMode,
 )
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
@@ -67,6 +69,7 @@ from .const import (
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
     CONF_ROOM_SENSOR,
+    CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_ENTITY,
     CONF_STAGGERED_CALL_DELAY,
     CONF_SYNC_ATTRS,
@@ -111,6 +114,7 @@ from .const import (
 from .climate import (
     DEFAULT_MIN_TEMP,
     DEFAULT_MAX_TEMP,
+    _filter_cgh_sensors,
 )
 
 
@@ -224,6 +228,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                 CONF_PRESENCE_SENSOR,
                 CONF_PRESENCE_ZONE,
                 CONF_ROOM_SENSOR,
+                CONF_SCHEDULE_BYPASS_ENTITY,
                 CONF_SCHEDULE_ENTITY,
                 CONF_WINDOW_TEMPERATURE,
                 CONF_ZONE_SENSOR,
@@ -580,12 +585,11 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         """Factory for presence control section."""
         
         # Determine available presets based on members' supported presets
-        from homeassistant.components.climate import ATTR_PRESET_MODES as _ATTR_PRESET_MODES
         available_presets: list[str] = []
         seen: set[str] = set()
         for entity_id in config.get(CONF_ENTITIES, []):
             if state := self.hass.states.get(entity_id):
-                for mode in state.attributes.get(_ATTR_PRESET_MODES, []):
+                for mode in state.attributes.get(ATTR_PRESET_MODES, []):
                     if mode not in seen:
                         seen.add(mode)
                         available_presets.append(mode)
@@ -597,7 +601,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         selector.SelectSelectorConfig(options=[opt.value for opt in PresenceMode], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_mode")
                     ),
                     vol.Optional(CONF_PRESENCE_SENSOR, default=config.get(CONF_PRESENCE_SENSOR, [])): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "device_tracker", "person"], multiple=True)
+                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "device_tracker", "person", "calendar"], multiple=True)
                     ),
                     vol.Optional(CONF_PRESENCE_ZONE, default=config.get(CONF_PRESENCE_ZONE, [])): selector.EntitySelector(
                         selector.EntitySelectorConfig(domain="zone", multiple=True)
@@ -615,10 +619,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
                         selector.SelectSelectorConfig(options=available_presets, mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_away_preset")
                     ),
                     vol.Optional(CONF_PRESENCE_AWAY_DELAY, default=config.get(CONF_PRESENCE_AWAY_DELAY, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
+                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
                     ),
                     vol.Optional(CONF_PRESENCE_RETURN_DELAY, default=config.get(CONF_PRESENCE_RETURN_DELAY, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
+                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
                     ),
                 }),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
@@ -631,7 +635,10 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             vol.Required("schedule_section"): section(
                 vol.Schema({
                     vol.Optional(CONF_SCHEDULE_ENTITY, description={"suggested_value": config.get(CONF_SCHEDULE_ENTITY)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="schedule")
+                        selector.EntitySelectorConfig(domain=["schedule", "calendar"])
+                    ),
+                    vol.Optional(CONF_SCHEDULE_BYPASS_ENTITY, description={"suggested_value": config.get(CONF_SCHEDULE_BYPASS_ENTITY)}): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain=["schedule", "calendar"])
                     ),
                     vol.Optional(CONF_RESYNC_INTERVAL, default=config.get(CONF_RESYNC_INTERVAL, 0)): selector.NumberSelector(
                         selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
@@ -684,12 +691,11 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
         member_options = [{"value": eid, "label": eid} for eid in members]
 
         # Collect available HVAC modes from member states (for HVAC_MODE trigger selector)
-        from homeassistant.components.climate import ATTR_HVAC_MODES as _ATTR_HVAC_MODES
         available_hvac_modes: list[str] = []
         seen: set[str] = set()
         for entity_id in members:
             if state := self.hass.states.get(entity_id):
-                for mode in state.attributes.get(_ATTR_HVAC_MODES, []):
+                for mode in state.attributes.get(ATTR_HVAC_MODES, []):
                     if mode not in seen:
                         seen.add(mode)
                         available_hvac_modes.append(mode)
@@ -787,6 +793,7 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
         if user_input is not None:
             flattened_input = self._flatten_input(user_input)
+            current_config = {**self._config_entry.options, **flattened_input}
 
             # Suggest a refresh if master changed and hint not yet shown
             new_master = flattened_input.get(CONF_MASTER_ENTITY)
@@ -794,7 +801,6 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
 
             if master_changed and not self._refresh_hint_shown:
                 self._refresh_hint_shown = True
-                current_config = {**self._config_entry.options, **flattened_input}
                 return await self._show_main_form(current_config, form_errors={
                     "base": "master_refresh_notice",
                     "temperature_section": "master_options_notice",
@@ -809,11 +815,21 @@ class ClimateGroupOptionsFlow(config_entries.OptionsFlow):
             entities = set(flattened_input.get(CONF_ENTITIES, self._config_entry.options.get(CONF_ENTITIES, [])))
             isolation_trigger = flattened_input.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
             isolation_entities = set(flattened_input.get(CONF_ISOLATION_ENTITIES, []))
-            if isolation_trigger not in (IsolationTrigger.DISABLED, IsolationTrigger.MEMBER_OFF) and isolation_entities and isolation_entities >= entities:
-                current_config = {**self._config_entry.options, **flattened_input}
+            if (
+                isolation_trigger not in (IsolationTrigger.DISABLED, IsolationTrigger.MEMBER_OFF)
+                and isolation_entities and isolation_entities >= entities
+            ):
                 return await self._show_main_form(current_config, form_errors={
                     "isolation_section": "isolation_all_selected",
                 })
+
+            # Validate: own CGH sensors must not be used as external sensors (feedback loop)
+            for conf_key in (CONF_TEMP_SENSORS, CONF_HUMIDITY_SENSORS):
+                selected = flattened_input.get(conf_key, [])
+                if len(_filter_cgh_sensors(self.hass, selected, "")) < len(selected):
+                    return await self._show_main_form(current_config, form_errors={
+                        "calibration_section": "sensor_loop_protection",
+                    })
 
             new_adv_mode = bool(flattened_input.get(CONF_ADVANCED_MODE))
             adv_mode_changed = (CONF_ADVANCED_MODE in flattened_input and new_adv_mode != self._from_adv_mode)

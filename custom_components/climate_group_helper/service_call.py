@@ -92,14 +92,14 @@ class BaseServiceCallHandler(ABC):
         if self._active_tasks:
             await asyncio.gather(*self._active_tasks, return_exceptions=True)
 
-    async def call_immediate(self, data: dict[str, Any] | None = None) -> None:
-        """Execute a service call immediately without debouncing."""
-        await self._execute_calls(data)
-
     def register_call_trigger(self, callback: Callable[[], Any]) -> None:
         """Register a callback to be called after successful execution."""
         if callback not in self._call_triggers:
             self._call_triggers.append(callback)
+
+    async def call_immediate(self, data: dict[str, Any] | None = None) -> None:
+        """Execute a service call immediately without debouncing."""
+        await self._execute_calls(data)
 
     def _call_trigger(self) -> None:
         """Trigger all registered execution callbacks."""
@@ -138,7 +138,7 @@ class BaseServiceCallHandler(ABC):
         if not self._debouncer:
             self._debouncer = Debouncer(
                 self._hass,
-                _LOGGER,
+                logger=_LOGGER,
                 cooldown=self._group.debounce_delay,
                 immediate=False,
                 function=debounce_func,
@@ -640,43 +640,45 @@ class BaseServiceCallHandler(ABC):
         return False
 
     def _process_unsupported_hvac(self, calls: list[dict]) -> list[dict]:
-        """Union strategy: handle members that don't support the requested HVAC mode.
-
-        If configured (CONF_UNION_UNSUPPORTED_HVAC_ACTION == off), members that
-        support hvac_modes but not the currently requested mode are explicitly
-        turned off to prevent conflicting operations (e.g. AC cooling during heat).
-        """
-        if self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
-            return calls
-        if self._group.config.get(CONF_UNION_UNSUPPORTED_HVAC_ACTION) != UnsupportedHvacAction.OFF:
+        """Union strategy: handle members that don't support the requested HVAC mode."""
+        if (self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION or
+            self._group.config.get(CONF_UNION_UNSUPPORTED_HVAC_ACTION) != UnsupportedHvacAction.OFF):
             return calls
 
-        # Only the hvac_mode call is relevant — all others pass through unchanged.
+        # Determine target mode: from call (if present) or current target_state
         hvac_call = next((c for c in calls if ATTR_HVAC_MODE in c["kwargs"]), None)
-        if hvac_call is None or hvac_call["kwargs"][ATTR_HVAC_MODE] == HVACMode.OFF:
+        target_mode = hvac_call["kwargs"][ATTR_HVAC_MODE] if hvac_call else self.target_state.hvac_mode
+
+        if not target_mode or target_mode == HVACMode.OFF:
             return calls
 
-        target_hvac_mode = hvac_call["kwargs"][ATTR_HVAC_MODE]
-        capable_ids = set(hvac_call.get("entity_ids", []))
+        # Identify members that technically do not support the target mode
+        unsupported = {
+            eid for eid in self._group.climate_entity_ids
+            if (state := self._hass.states.get(eid)) and 
+               (modes := state.attributes.get(ATTR_HVAC_MODES, [])) and 
+               target_mode not in modes
+        }
 
-        extra_off_calls = []
-        for entity_id in self._group.climate_entity_ids:
-            if entity_id in capable_ids or self._is_member_blocked(entity_id):
-                continue
-            state = self._hass.states.get(entity_id)
-            if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN, HVACMode.OFF):
-                continue
-            supported_modes = state.attributes.get(ATTR_HVAC_MODES, [])
-            if supported_modes and target_hvac_mode not in supported_modes:
-                _LOGGER.debug("[%s] Member %s does not support mode %s -> turning OFF", self._group.entity_id, entity_id, target_hvac_mode)
-                extra_off_calls.append({
-                    "service": SERVICE_SET_HVAC_MODE,
-                    "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
-                    "entity_ids": [entity_id],
-                    "injected": [ATTR_HVAC_MODE],
-                })
+        # Filter unsupported members out of all existing calls (e.g. temperature)
+        filtered = [
+            {**call, "entity_ids": [eid for eid in call["entity_ids"] if eid not in unsupported]}
+            for call in calls
+        ]
 
-        return calls + extra_off_calls
+        # For explicit HVAC_MODE changes, turn unsupported members OFF
+        if hvac_call:
+            for entity_id in unsupported:
+                state = self._hass.states.get(entity_id)
+                if state and state.state != HVACMode.OFF and not self._is_member_blocked(entity_id):
+                    filtered.append({
+                        "service": SERVICE_SET_HVAC_MODE,
+                        "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
+                        "entity_ids": [entity_id],
+                        "injected": [ATTR_HVAC_MODE],
+                    })
+
+        return [call for call in filtered if call["entity_ids"]]
 
     def _process_oob_guard(self, calls: list[dict]) -> list[dict]:
         """OOB guard: check if temperature values are within device range (union only).
@@ -790,13 +792,27 @@ class BaseServiceCallHandler(ABC):
         return self._block_wakeup_calls(data, attr)
 
     def _block_wakeup_calls(self, data: dict[str, Any], attr: str) -> bool:
-        """Block calls that would wake up devices.
+        """Block calls for specific attributes based on target HVAC mode.
 
-        Prevent setpoint changes if target HVAC mode is OFF.
-        The min_temp_when_off temperature is now part of the HVAC_MODE call
-        via _process_min_temp_off, so no exception needed here.
+        1. Prevent all setpoint changes if target HVAC mode is OFF (Wake-up prevention).
+        2. Prevent single setpoint changes if target HVAC mode is AUTO or HEAT_COOL
+           (Dynamic modes where single setpoints are often irrelevant or stale).
+        3. Prevent range setpoint changes if target HVAC mode is AUTO.
         """
-        return data.get(ATTR_HVAC_MODE) == HVACMode.OFF and attr != ATTR_HVAC_MODE
+        if attr == ATTR_HVAC_MODE:
+            return False
+
+        target_hvac_mode = data.get(ATTR_HVAC_MODE)
+        if target_hvac_mode == HVACMode.OFF:
+            return True
+
+        if target_hvac_mode == HVACMode.AUTO:
+            return attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+
+        if target_hvac_mode == HVACMode.HEAT_COOL:
+            return attr == ATTR_TEMPERATURE
+
+        return False
 
     # Stale call guard hook
     def _is_stale_call(self, call: dict[str, Any]) -> bool:
@@ -1023,6 +1039,40 @@ class PresenceCallHandler(BaseServiceCallHandler):
         return not self._group.run_state.blocking_sources
 
 
+class ScheduleCallHandler(BaseServiceCallHandler):
+    """Call handler for Schedule operations."""
+
+    CONTEXT_ID = "schedule"
+
+    def __init__(self, group: ClimateGroup):
+        """Initialize the schedule call handler."""
+        super().__init__(group)
+
+    def _is_member_blocked(self, entity_id: str) -> bool:
+        """Extend base blocking with OOB check (same as SyncCallHandler)."""
+        return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
+
+    def _should_diff(self) -> bool:
+        """Only update members that actually need it."""
+        return True
+
+    def _get_target_value(self, attr: str, value: Any = None) -> Any:
+        """Read from target_state with group_offset applied for temperature attributes."""
+        return self._get_target_value_with_offset(attr, value)
+
+    def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
+        """Apply Partial Sync: skip OFF members if CONF_IGNORE_OFF_MEMBERS_SCHEDULE is set."""
+        return self._skip_off_member(state=state, target_value=target_value, conf_key=CONF_IGNORE_OFF_MEMBERS_SCHEDULE)
+
+    def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
+        """Block schedule calls if blocking mode is active."""
+        return self._group.run_state.blocked
+
+    def _apply_group_offset(self) -> bool:
+        # Suspended during active override (boost/schedule_override): see SyncCallHandler.
+        return self._group.run_state.active_override is None
+
+
 class SwitchCallHandler(BaseServiceCallHandler):
     """Call handler for Main Switch operations (OFF / restore).
 
@@ -1095,36 +1145,3 @@ class OverrideCallHandler(BaseServiceCallHandler):
         # During boost, active_override is set — exact temperature must land unchanged.
         return self._group.run_state.active_override is None
 
-
-class ScheduleCallHandler(BaseServiceCallHandler):
-    """Call handler for Schedule operations."""
-
-    CONTEXT_ID = "schedule"
-
-    def __init__(self, group: ClimateGroup):
-        """Initialize the schedule call handler."""
-        super().__init__(group)
-
-    def _is_member_blocked(self, entity_id: str) -> bool:
-        """Extend base blocking with OOB check (same as SyncCallHandler)."""
-        return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
-
-    def _should_diff(self) -> bool:
-        """Only update members that actually need it."""
-        return True
-
-    def _get_target_value(self, attr: str, value: Any = None) -> Any:
-        """Read from target_state with group_offset applied for temperature attributes."""
-        return self._get_target_value_with_offset(attr, value)
-
-    def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
-        """Apply Partial Sync: skip OFF members if CONF_IGNORE_OFF_MEMBERS_SCHEDULE is set."""
-        return self._skip_off_member(state=state, target_value=target_value, conf_key=CONF_IGNORE_OFF_MEMBERS_SCHEDULE)
-
-    def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
-        """Block schedule calls if blocking mode is active."""
-        return self._group.run_state.blocked
-
-    def _apply_group_offset(self) -> bool:
-        # Suspended during active override (boost/schedule_override): see SyncCallHandler.
-        return self._group.run_state.active_override is None

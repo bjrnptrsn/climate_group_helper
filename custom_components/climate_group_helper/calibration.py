@@ -11,15 +11,13 @@ from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.event import async_call_later, async_track_time_interval
+from homeassistant.helpers.debounce import Debouncer
+from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
-    CALIBRATION_DEBOUNCE_DELAY,
     CONF_CALIBRATION_HEARTBEAT,
     CONF_CALIBRATION_IGNORE_OFF,
-    CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_TEMP_CALIBRATION_MODE,
-    CONF_TEMP_UPDATE_TARGETS,
     FLOAT_TOLERANCE,
     CalibrationMode,
 )
@@ -34,8 +32,10 @@ class CalibrationHandler:
     """Syncs external sensor readings to TRV calibration number entities.
 
     Supports three modes: ABSOLUTE (direct value), OFFSET (delta calculation),
-    and SCALED (×100 integer, e.g. Danfoss Ally). Writes are debounced to avoid
-    Z2M flooding; force=True (heartbeat, startup) bypasses the debounce.
+    and SCALED (×100 integer, e.g. Danfoss Ally). Writes are batched via a
+    Debouncer to prevent Z2M flooding from rapid sensor updates. force_sync=True
+    (startup, heartbeat) skips the out-of-sync check so all targets are written
+    regardless of their current state.
     """
 
     def __init__(self, group: ClimateGroup) -> None:
@@ -43,13 +43,13 @@ class CalibrationHandler:
         self._group = group
         self._hass = group.hass
         self._climate_entity_ids = group.climate_entity_ids
-        self._temp_sensor_entity_ids = group._temp_sensor_entity_ids
-        self._humidity_sensor_entity_ids = group._humidity_sensor_entity_ids
+        self._temp_sensor_entity_ids = group.temp_sensor_entity_ids
+        self._humidity_sensor_entity_ids = group.humidity_sensor_entity_ids
         self._get_valid_member_states = group._get_valid_member_states
 
         # Configuration
-        self._temp_update_target_entity_ids: list[str] = group.config.get(CONF_TEMP_UPDATE_TARGETS, [])
-        self._humidity_update_target_entity_ids: list[str] = group.config.get(CONF_HUMIDITY_UPDATE_TARGETS, [])
+        self._temp_update_target_entity_ids: list[str] = self._group.temp_update_target_entity_ids
+        self._humidity_update_target_entity_ids: list[str] = self._group.humidity_update_target_entity_ids
         self._ignore_off: bool = group.config.get(CONF_CALIBRATION_IGNORE_OFF, False)
         self._temp_calibration_mode = CalibrationMode(group.config.get(CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE))
         self._calibration_heartbeat = int(group.config.get(CONF_CALIBRATION_HEARTBEAT, 0))
@@ -57,7 +57,7 @@ class CalibrationHandler:
         # Runtime state
         self._heartbeat_unsub = None
         self._pending: dict[str, float | int] = {}
-        self._debounce_unsub = None
+        self._debouncer: Debouncer | None = None
         # Built in async_setup via device registry: target_entity_id → climate_member_id
         self._target_member_map: dict[str, str] = {}
 
@@ -92,37 +92,44 @@ class CalibrationHandler:
         if self._heartbeat_unsub:
             self._heartbeat_unsub()
             self._heartbeat_unsub = None
-        if self._debounce_unsub:
-            self._debounce_unsub()
-            self._debounce_unsub = None
+        if self._debouncer:
+            self._debouncer.async_cancel()
+            self._debouncer = None
         self._pending.clear()
 
     @callback
-    def _heartbeat(self, _now=None) -> None:
+    def _heartbeat(self, _now) -> None:
         _LOGGER.debug("[%s] Calibration heartbeat triggered", self._group.entity_id)
-        self.update("temperature", force=True)
+        self.update("temperature", force_sync=True)
 
-    def update(self, domain: str, event_entity_id: str | None = None, force: bool = False) -> None:
+    def update(self, domain: str, event_entity_id: str | None = None, force_sync: bool = False) -> None:
         """Queue calibration writes for all target entities in the given domain.
 
-        Smart-filtering: without force=True, only reacts to triggers from the
-        configured sensor entities (or, in OFFSET mode, from mapped climate members).
-        Writes are debounced; force=True (heartbeat, startup) flushes immediately.
+        event_entity_id: the entity that triggered the update (used for smart-filtering).
+          - None → always runs (startup, heartbeat).
+          - sensor entity → updates all targets (ABSOLUTE/SCALED) or all targets (OFFSET).
+          - member entity → OFFSET only: updates only the target mapped to that member.
+          - anything else → skipped (irrelevant trigger).
+
+        force_sync=True skips the out-of-sync check so all targets are written even
+        if their current state already matches. Used by startup and heartbeat.
         """
         if domain == "temperature":
             entity_ids = self._temp_update_target_entity_ids
             value = self._group._attr_current_temperature
             mode = self._temp_calibration_mode
-        else:
+        elif domain == "humidity":
             entity_ids = self._humidity_update_target_entity_ids
             value = self._group._attr_current_humidity
-            mode = CalibrationMode.ABSOLUTE  # humidity is always absolute
+            mode = CalibrationMode.ABSOLUTE
+        else:
+            return
 
         if not entity_ids or value is None:
             return
 
         # Smart-filtering: skip unless the triggering entity is relevant
-        if event_entity_id and not force:
+        if event_entity_id:
             if domain == "temperature":
                 if mode == CalibrationMode.OFFSET:
                     # Sensor trigger → all targets; member trigger → only its mapped target
@@ -203,14 +210,12 @@ class CalibrationHandler:
                 # Skip if already in sync
                 try:
                     current_val = float(target_state.state)
-                    if isinstance(target_val, int):
-                        out_of_sync = current_val != target_val
-                    else:
-                        out_of_sync = abs(current_val - target_val) > FLOAT_TOLERANCE
+                    tolerance = FLOAT_TOLERANCE * 100 if isinstance(target_val, int) else FLOAT_TOLERANCE
+                    out_of_sync = abs(current_val - target_val) > tolerance
                 except (ValueError, TypeError):
                     out_of_sync = True  # force sync if current state is not a number
 
-                if not (force or out_of_sync):
+                if not (force_sync or out_of_sync):
                     continue
 
                 self._pending[target_state.entity_id] = target_val
@@ -222,23 +227,22 @@ class CalibrationHandler:
             return
 
         _LOGGER.debug(
-            "[%s] Queued %d calibration updates (domain=%s, mode=%s, force=%s)",
-            self._group.entity_id, len(self._pending), domain, mode, force,
+            "[%s] Queued %d calibration updates (domain=%s, mode=%s, force_sync=%s, trigger=%s)",
+            self._group.entity_id, len(self._pending), domain, mode, force_sync, event_entity_id,
         )
 
-        if force:
-            self._hass.async_create_task(self._flush())
-        else:
-            if self._debounce_unsub:
-                self._debounce_unsub()
-            self._debounce_unsub = async_call_later(
-                self._hass, CALIBRATION_DEBOUNCE_DELAY, self._flush
+        if not self._debouncer:
+            self._debouncer = Debouncer(
+                hass=self._hass,
+                logger=_LOGGER,
+                cooldown=self._group.debounce_delay,
+                immediate=False,
+                function=self._flush,
             )
+        self._hass.async_create_task(self._debouncer.async_call())
 
-    async def _flush(self, _now=None) -> None:
+    async def _flush(self) -> None:
         """Write queued calibration values, with optional stagger delay between writes."""
-
-        self._debounce_unsub = None
         stagger_delay = self._group.stagger_delay
         pending = list(self._pending.items())
         self._pending.clear()
@@ -251,7 +255,6 @@ class CalibrationHandler:
 
             _LOGGER.debug("[%s] Writing calibration %s → %s", self._group.entity_id, entity_id, value)
             await self._hass.services.async_call(
-                NUMBER_DOMAIN,
-                "set_value",
+                NUMBER_DOMAIN, "set_value",
                 {ATTR_ENTITY_ID: entity_id, "value": value},
             )

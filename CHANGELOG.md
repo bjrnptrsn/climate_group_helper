@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.28.0 - 2026-04-28
+
+### 🌟 New Features
+
+*   **Calendar Support for Schedules**: Schedule entities now accept both `schedule.*` and `calendar.*` entities.
+
+*   **Schedule Bypass Layer**: A second `schedule.*` or `calendar.*` entity can be configured as a priority layer on top of your base schedule. When a bypass slot is active, its attributes override the base schedule. A new `set_schedule_bypass_entity` service lets you switch the bypass entity at runtime.
+
+### 🔧 Fixes
+
+*   **Member Isolation**: Fixed several edge cases with the **Member Off** trigger (e.g., "Last Man Standing" and wakeup blind spot).
+
+*   **Window Control**: Fixed a bug where opening a window could incorrectly set the group target to `off` in certain configurations.
+
+*   **Wakeup Prevention**: Fixed two scenarios where devices received commands they should not have — unsupported mode members in Union groups, and temperature setpoints in `auto`/`heat_cool` mode.
+
+*   **Smart Sensors**: Temperature and humidity sensors are now always available, even before the group has reported its first state.
+
+*   **Calibration Flood Prevention**: Fixed several edge cases where rapid sensor changes or startup could trigger unnecessary or duplicate calibration writes.
+
 ## 0.27.0 - 2026-04-24
 
 ### 🌟 New Features

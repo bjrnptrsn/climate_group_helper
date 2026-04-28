@@ -39,7 +39,7 @@
               "entities": "Klimatenheter",
               "master_entity": "Masterenhet",
               "hvac_mode_strategy": "HVAC Lägesstrategi",
-              "feature_strategy": "Funktionskompatibilitet",
+              "feature_strategy": "Funktionsstrategi",
               "union_out_of_bounds_action": "Åtgärd utanför intervall",
               "union_unsupported_hvac_action": "Åtgärd för ej stött HVAC-läge"
             },
@@ -105,13 +105,13 @@
             "description": "Bestämmer vad som händer när en medlemsenhet ändras direkt (t.ex. via sin egen app eller fysiska knappar) — inte när du styr gruppen. Välj vilka attribut som tillämpas.",
             "data": {
               "sync_mode": "Sync-läge",
-              "sync_attributes": "Synkroniserade Attribut",
+              "sync_attributes": "Sync-attribut",
               "ignore_off_members_sync": "Respektera medlemmars AV-status (Synkronisering)"
             },
             "data_description": {
-              "sync_mode": "Vad som ska göras när en medlem ändras utanför gruppen. Disabled: ignorera det. Mirror: tillämpa ändringen på alla medlemmar. Lock: återställ medlemmen till gruppens mål. Mirror/Lock: hybrid. Master/Lock: endast master-entitetens ändringar accepteras.",
-              "sync_attributes": "Attribut som valts här kommer att tvingas i Lock/Mirror-lägen. Icke-valda attribut tillåter lokal kontroll (t.ex. synkronisera temperatur men låt användare ändra fläkthastighet lokalt).",
-              "ignore_off_members_sync": "Vid tillämpning av Lock/Mirror hoppas avstängda medlemmar över. Obs: direkta grupkommandon når alltid alla kapabla medlemmar oavsett denna inställning."
+              "sync_mode": "Vad man ska göra när en medlem ändras utanför gruppen. Disabled: ignorera. Mirror: spegla ändringar. Lock: återställ ändringar. Mirror/Lock: spegla valda, återställ ovalda. Master/Lock: spegla master, återställ övriga.",
+              "sync_attributes": "Definierar vilka attribut synkroniseringsläget verkar på. Hanteringen av valda och ovalda attribut (Mirror, Revert eller Ignore) beror på det valda läget.",
+              "ignore_off_members_sync": "Manuellt avstängda medlemmar lämnas ifred. Deras tillstånd varken speglas eller återställs. Obs: direkta gruppkommandon når alltid alla medlemmar."
             }
           },
           "window_section": {
@@ -168,9 +168,10 @@
           },
           "schedule_section": {
             "name": "Schema-automatisering",
-            "description": "Koppla HA-schema för automatisering. Ställ in resync-intervall och varaktighet för manuell styrning.",
+            "description": "Länka en schema- eller kalenderenhet för att automatisera klimatinställningar. Slot-data kan inkludera klimatattribut (temperature, hvac_mode) och meta-nycklar (turn_off, sync_mode, sync_attributes) för att justera gruppens beteende per slot.",
             "data": {
-              "schedule_entity": "Schema Enhet",
+              "schedule_entity": "Schema- / kalenderenhet",
+              "schedule_bypass_entity": "Bypass-enhet",
               "resync_interval": "Resync Intervall (minuter)",
               "override_duration": "Override Varaktighet (minuter)",
               "persist_changes": "Bestående åsidosättning (Sticky)",
@@ -178,7 +179,8 @@
               "ignore_off_members_schedule": "Respektera medlemmars AV-status (Schema)"
             },
             "data_description": {
-              "schedule_entity": "Välj en schema-enhet. Fältet 'Ytterligare data' kann innehålla YAML med attribut som 'temperature: 20.5' eller 'hvac_mode: heat'.",
+              "schedule_entity": "Välj en schedule.*- eller calendar.*-enhet. För schemaenheter läses slot-data från slot-attributen. För kalenderenheter läses slot-data som YAML från händelsens beskrivelsfält. Stödda nycklar: klimatattribut och meta-nycklar.",
+              "schedule_bypass_entity": "Valfritt prioritetslager (t.ex. en semesterkalender). När aktivt ersätter dess slot-data basschemat. Slot-data läses på samma sätt: attribut för schedule.*-, YAML-beskrivning för calendar.*-enheter.",
               "resync_interval": "Tvinga synkronisering av medlemmar till måltillståndet var X minut. Förhindrar avvikelser om enheter missar ett kommando eller justeras manuellt. Sätt till 0 för att inaktivera.",
               "override_duration": "Varaktigheten för manuella overrides. Efter denna tid återgår gruppen automatiskt till det aktuella schemat. Sätt till 0 för att hoppa över override-perioden.",
               "persist_changes": "Om aktiverat kommer ändringar i schemat att ignoreras så länge en manuell override är aktiv. Återaktiverar det aktuella schemat först efter att overriden har gått ut.",
@@ -252,7 +254,8 @@
       "calibration_requires_sensors": "Kalibreringsmål kräver minst en extern temperatursensor.",
       "master_refresh_notice": "Master-enhet tillagd. Nya alternativ tillgängliga.",
       "master_options_notice": "Nytt alternativ för master-enhet",
-      "isolation_all_selected": "Minst en medlem måste förbli utanför isoleringen."
+      "isolation_all_selected": "Minst en medlem måste förbli utanför isoleringen.",
+      "sensor_loop_protection": "Kan inte använda en Climate Group Helper-sensor som extern sensor — det skulle skapa en återkopplingsslinga."
     },
     "abort": {
       "no_changes": "Inga ändringar upptäcktes."
@@ -466,11 +469,21 @@
     },
     "set_schedule_entity": {
       "name": "Ställ in schemaenhet",
-      "description": "Ändra dynamiskt den aktiva schemaentiteten. Om den utelämnas eller sätts till null återgår gruppen till sin konfigurerade standard.",
+      "description": "Byter den aktiva schema- eller kalenderenheten under körning. Om den utelämnas eller sätts till null återgår gruppen till den konfigurerade standardenheten och tillämpar den aktuella sloten igen.",
       "fields": {
         "schedule_entity": {
-          "name": "Schemaenhet",
-          "description": "Den nya schemaenheten att använda (t.ex. schedule.holiday). Ange null eller tomt för att återställa standardschemat från konfigurationen."
+          "name": "Schema- / kalenderenhet",
+          "description": "Den schedule.*- eller calendar.*-enhet som ska aktiveras (t.ex. schedule.holiday eller calendar.vacation). Ange null eller tomt för att återställa den konfigurerade standarden."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Ställ in bypass-enhet",
+      "description": "Byter den aktiva bypass-enheten under körning (t.ex. för att växla mellan olika semesterkalendrar). Null återställer den konfigurerade standarden.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Bypass-enhet",
+          "description": "Den schedule.*- eller calendar.*-enhet som används som bypass (t.ex. calendar.vacation). Ange null eller tomt för att återställa den konfigurerade standarden."
         }
       }
     },

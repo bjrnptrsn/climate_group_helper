@@ -23,6 +23,8 @@ from .const import (
     ATTR_SETTINGS_JSON,
     CONF_EXPOSE_CONFIG,
     CONF_EXPOSE_SMART_SENSORS,
+    CONF_HUMIDITY_SENSORS,
+    CONF_TEMP_SENSORS,
     DOMAIN,
     ENTITY_SELECTOR_KEYS,
     IDENTITY_KEYS,
@@ -57,43 +59,21 @@ async def async_setup_entry(
                 entity_registry.async_remove(entity_id)
                 _LOGGER.debug("[%s] Removed disabled sensor %s", config_entry.title, entity_id)
     else:
-        # Keep track of already added sensors
-        added_sensors = set()
+        # Create each sensor only if the group already exposes that value or external sensors are
+        # configured for it. Avoids creating a humidity sensor for groups that have no humidity data.
+        group_state = hass.states.get(climate_group_entity_id)
 
-        @callback
-        def async_add_sensors(state):
-            """Check climate group state and add sensors if not added yet."""
-            if not state:
-                return
+        if (
+            bool(config_entry.options.get(CONF_TEMP_SENSORS))
+            or (group_state is not None and group_state.attributes.get(ATTR_CURRENT_TEMPERATURE) is not None)
+        ):
+            new_entities.append(ClimateGroupTemperatureSensor(hass, config_entry, climate_group_entity_id))
 
-            dynamic_sensors = []
-
-            # Add temperature sensor
-            if ("temperature" not in added_sensors and state.attributes.get(ATTR_CURRENT_TEMPERATURE) is not None):
-                dynamic_sensors.append(ClimateGroupTemperatureSensor(hass, config_entry, climate_group_entity_id))
-                added_sensors.add("temperature")
-                _LOGGER.debug("[%s] Adding temperature sensor", config_entry.title)
-
-            # Add humidity sensor
-            if ("humidity" not in added_sensors and state.attributes.get(ATTR_CURRENT_HUMIDITY) is not None):
-                dynamic_sensors.append(ClimateGroupHumiditySensor(hass, config_entry, climate_group_entity_id))
-                added_sensors.add("humidity")
-                _LOGGER.debug("[%s] Adding humidity sensor", config_entry.title)
-
-            if dynamic_sensors:
-                async_add_entities(dynamic_sensors)
-
-        # Initial check
-        async_add_sensors(hass.states.get(climate_group_entity_id))
-
-        # Listen for state changes to add sensors later
-        config_entry.async_on_unload(
-            async_track_state_change_event(
-                hass,
-                climate_group_entity_id,
-                lambda event: async_add_sensors(event.data.get("new_state")),
-            )
-        )
+        if (
+            bool(config_entry.options.get(CONF_HUMIDITY_SENSORS))
+            or (group_state is not None and group_state.attributes.get(ATTR_CURRENT_HUMIDITY) is not None)
+        ):
+            new_entities.append(ClimateGroupHumiditySensor(hass, config_entry, climate_group_entity_id))
 
     # Handle Configuration Sensor lifecycle
     if config_entry.options.get(CONF_EXPOSE_CONFIG, False):

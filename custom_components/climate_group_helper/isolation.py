@@ -78,6 +78,16 @@ class MemberIsolationHandler:
             self._isolation_entity_ids, self._activate_delay, self._restore_delay,
         )
 
+    @property
+    def state_manager(self):
+        """Return the state manager for sync mode operations."""
+        return self._group.isolation_state_manager    
+
+    @property
+    def target_state(self):
+        """Return the current target state (from central source)."""
+        return self.state_manager.target_state
+
     async def async_setup(self) -> None:
         """Subscribe to the configured trigger."""
         if self._trigger == IsolationTrigger.DISABLED:
@@ -114,7 +124,7 @@ class MemberIsolationHandler:
             # HVAC_MODE: no state listener — climate.py calls on_target_hvac_mode_changed() on every update.
             _LOGGER.debug("[%s] Member isolation configured for hvac_mode trigger: %s", self._group.entity_id, self._trigger_hvac_modes)
             # Check initial hvac_mode at startup (same pattern as sensor state check above)
-            if self._group.shared_target_state.hvac_mode in self._trigger_hvac_modes:
+            if self.target_state.hvac_mode in self._trigger_hvac_modes:
                 self._trigger_active = True
                 _LOGGER.debug("[%s] Isolation hvac_mode already active at startup, activating immediately", self._group.entity_id)
                 await self._activate_isolation()
@@ -217,6 +227,53 @@ class MemberIsolationHandler:
 
     # --- Per-member methods for MEMBER_OFF trigger ---
 
+    def check_member_off_isolation(self) -> None:
+        """Activate or release MEMBER_OFF isolation for a single member.
+
+        Only runs when isolation_trigger == MEMBER_OFF and the entity is in the
+        configured watch list (or all members if the list is empty).
+        """
+        if not self._group.event:
+            return
+        
+        event_data = self._group.event.data
+        entity_id = event_data.get("entity_id")
+        old_state = event_data.get("old_state")
+        new_state = event_data.get("new_state")
+
+        if entity_id is None or old_state is None or new_state is None:
+            return
+
+        if not (old_hvac_mode := old_state.state):
+            return
+        
+        if not (new_hvac_mode := new_state.state):
+            return
+
+        if old_hvac_mode == new_hvac_mode:
+            return
+
+        trigger = self._group.config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
+        if trigger != IsolationTrigger.MEMBER_OFF:
+            return
+
+        watch_list = self._group.config.get(CONF_ISOLATION_ENTITIES, [])
+        if watch_list and entity_id not in watch_list:
+            return
+
+        if new_hvac_mode == HVACMode.OFF:
+            # Synchronously update run_state so the subsequent LOCK enforcement sees
+            # the member as isolated and skips it — avoids a send→echo→re-isolate loop.
+            self.isolate_member_sync(entity_id)
+        elif new_hvac_mode and new_hvac_mode != HVACMode.OFF:
+            # Member switched to an active mode → release isolation synchronously,
+            # then send restore call async.
+            if entity_id in self._group.run_state.isolated_members:
+                if self.target_state.hvac_mode == HVACMode.OFF:
+                    self.state_manager.update(hvac_mode=new_hvac_mode, entity_id=entity_id)
+                self.release_member_sync(entity_id)
+                self._hass.async_create_task(self.send_restore_call(entity_id))
+
     def isolate_member_sync(self, entity_id: str) -> None:
         """Synchronously add a member to isolated_members (MEMBER_OFF trigger).
 
@@ -228,12 +285,13 @@ class MemberIsolationHandler:
         instead (group goes OFF naturally).
         """
         remaining_active = [
-            e for e in self._group.climate_entity_ids
-            if e not in self._group.run_state.isolated_members
-            and e != entity_id
+            eid for eid in self._group.climate_entity_ids
+            if eid not in self._group.run_state.isolated_members
+            and eid != entity_id
         ]
         if not remaining_active:
             _LOGGER.debug("[%s] Last active member %s going OFF — clearing all isolated members", self._group.entity_id, entity_id)
+            self.state_manager.update(hvac_mode=HVACMode.OFF, entity_id=entity_id)
             self._group.run_state = replace(self._group.run_state, isolated_members=frozenset())
         else:
             new_isolated = self._group.run_state.isolated_members | frozenset([entity_id])
@@ -246,6 +304,8 @@ class MemberIsolationHandler:
         Called from SyncModeHandler before dispatching send_restore_call() so that
         subsequent LOCK enforcement does not skip the newly active member.
         """
+        if entity_id not in self._group.run_state.isolated_members:
+            return
         new_isolated = self._group.run_state.isolated_members - frozenset([entity_id])
         self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
         _LOGGER.debug("[%s] MEMBER_OFF: sync-released %s", self._group.entity_id, entity_id)
