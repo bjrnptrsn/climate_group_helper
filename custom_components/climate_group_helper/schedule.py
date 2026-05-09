@@ -18,7 +18,7 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
 )
-from homeassistant.const import ATTR_TEMPERATURE
+from homeassistant.const import ATTR_TEMPERATURE, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_state_change_event, async_call_later
 
@@ -377,7 +377,10 @@ class ScheduleHandler(ScheduleBaseHandler):
             return
 
         @callback
-        def handle_state_change(_event):
+        def handle_state_change(event):
+            new_state = event.data.get("new_state")
+            if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                return
             self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.SLOT))
 
         self._unsub_listener = async_track_state_change_event(
@@ -462,7 +465,10 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
             return
 
         @callback
-        def handle_state_change(_event):
+        def handle_state_change(event):
+            new_state = event.data.get("new_state")
+            if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                return
             # Go directly to _on_slot_change — schedule_listener would start resync/override
             # timers that have no meaning for the bypass layer.
             self._hass.async_create_task(self._on_slot_change(caller=ScheduleCaller.SLOT))

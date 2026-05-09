@@ -32,11 +32,13 @@ _TRUSTED_CONTEXT_IDS = frozenset(
         "service_call",
         "group",
         "sync_mode",
-        "schedule",
-        "isolation",
-        "presence",
-        "switch_enforce",
         "window_control",
+        "presence",
+        "schedule",
+        "switch",
+        "switch_enforce",
+        "override",
+        "isolation",
     }
 )
 

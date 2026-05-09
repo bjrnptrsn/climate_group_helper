@@ -11,7 +11,27 @@ set_schedule_entity:
       description: The new schedule entity to use (e.g. schedule.holiday). Set to null or empty to restore the configured default schedule.
       selector:
         entity:
-          domain: schedule
+          filter:
+            - domain: schedule
+            - domain: calendar
+      required: false
+
+set_schedule_bypass_entity:
+  name: Set Schedule Bypass Entity
+  description: Switch the active bypass entity at runtime (e.g. to swap between different vacation calendars). Set to null to restore the configured default.
+  target:
+    entity:
+      integration: climate_group_helper
+      domain: climate
+  fields:
+    schedule_bypass_entity:
+      name: Bypass Entity
+      description: The schedule.* or calendar.* entity to use as bypass (e.g. calendar.vacation). Set to null or empty to restore the configured default.
+      selector:
+        entity:
+          filter:
+            - domain: schedule
+            - domain: calendar
       required: false
 
 boost:

@@ -61,8 +61,6 @@ class WindowControlHandler:
 
         self._room_open = False
         self._zone_open = False
-        self._room_last_changed = float("inf")
-        self._zone_last_changed = float("inf")
 
         _LOGGER.debug(
             "[%s] WindowControl initialized. (room: %s.open_delay: %ds), (zone: %s.open_delay: %ds), (room/zone: close_delay: %ds)",
@@ -190,43 +188,37 @@ class WindowControlHandler:
 
     def _window_control_logic(self) -> tuple[str, float] | None:
         """This method implements the core logic for window control.
-        
+
         Return the control mode and the timer delay.
         Return None if no sensors are configured.
         """
-        self._room_open = False
-        self._zone_open = False
-        self._room_last_changed = float("inf")
-        self._zone_last_changed = float("inf")
-
-        # If no sensors are configured, return None
         if not self._room_sensor and not self._zone_sensor:
             return None
+
+        room_last_changed = float("inf")
+        zone_last_changed = float("inf")
 
         # If no room sensor is configured, room is always closed.
         # Transient states (unavailable/unknown) preserve the last known value.
         if self._room_sensor and (state := self._hass.states.get(self._room_sensor)):
             if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 self._room_open = state.state in (STATE_ON, STATE_OPEN, STATE_OPENING, STATE_CLOSING)
-                self._room_last_changed = time.time() - state.last_changed.timestamp()
-        elif self._room_sensor is None:
-            self._room_open = False
-            self._room_last_changed = float("inf")
+                room_last_changed = time.time() - state.last_changed.timestamp()
 
         # If no zone sensor is configured, use room sensor state.
         # Transient states (unavailable/unknown) preserve the last known value.
         if self._zone_sensor and (state := self._hass.states.get(self._zone_sensor)):
             if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 self._zone_open = state.state in (STATE_ON, STATE_OPEN, STATE_OPENING, STATE_CLOSING) or self._room_open
-                self._zone_last_changed = time.time() - state.last_changed.timestamp()
+                zone_last_changed = time.time() - state.last_changed.timestamp()
         elif self._zone_sensor is None:
             self._zone_open = self._room_open
-            self._zone_last_changed = self._room_last_changed
+            zone_last_changed = room_last_changed
 
         # Calculate timers
-        timer_room_open = max(self._room_delay - self._room_last_changed, 0) if self._room_open else self._room_delay
-        timer_zone_open = max(self._zone_delay - self._zone_last_changed, 0) if self._zone_open else self._zone_delay
-        timer_zone_close = max(self._close_delay - self._zone_last_changed, 0) if not self._zone_open else self._close_delay
+        timer_room_open = max(self._room_delay - room_last_changed, 0) if self._room_open else self._room_delay
+        timer_zone_open = max(self._zone_delay - zone_last_changed, 0) if self._zone_open else self._zone_delay
+        timer_zone_close = max(self._close_delay - zone_last_changed, 0) if not self._zone_open else self._close_delay
 
         # Calculate delays
         delay_room_open = min(timer_room_open, timer_zone_open) if self._room_open else None

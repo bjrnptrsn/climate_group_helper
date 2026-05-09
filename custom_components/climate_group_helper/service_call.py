@@ -876,6 +876,7 @@ class BaseServiceCallHandler(ABC):
         """
         pass
 
+
 class ClimateCallHandler(BaseServiceCallHandler):
     """Handler for direct user commands (set_hvac_mode, set_temperature, etc.).
 

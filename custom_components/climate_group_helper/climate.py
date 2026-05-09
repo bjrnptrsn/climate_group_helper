@@ -977,7 +977,6 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.event = None
         self._event_entity_id = None
 
-
     def _resolve_master_or_avg(self, use_master: bool, master_value, attr: str, avg_calc) -> float | None:
         """Return the display value for a temperature attribute.
 

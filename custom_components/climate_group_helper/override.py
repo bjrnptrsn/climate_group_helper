@@ -241,6 +241,7 @@ class SwitchOverrideManager(BaseOverrideManager):
         """Remove 'switch' from blocking_sources; restore members if no other block."""
         self._unblock()
         if not self._group.run_state.blocking_sources:
+            await self.enforce_call_handler.async_cancel_all()
             await self.call_handler.call_immediate()
 
     async def enforce_override(self) -> None:

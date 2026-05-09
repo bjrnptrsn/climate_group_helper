@@ -157,6 +157,9 @@ class MemberIsolationHandler:
         if new_state is None:
             return
 
+        if new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return
+
         now_active = new_state.state == STATE_ON
         _LOGGER.debug("[%s] Isolation sensor %s changed to: %s", self._group.entity_id, self._sensor_id, new_state.state)
         self._trigger_active = now_active

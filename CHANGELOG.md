@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0 - 2026-05-09
+
+**First stable release!** Based on 0.28.1 — no new features, no breaking changes.
+
+After several months of active development and real-world usage, the integration has proven reliable and feature-complete enough to graduate to a stable 1.0 release.
+
 ## 0.28.1 - 2026-05-02
 
 ### ✨ Improvements

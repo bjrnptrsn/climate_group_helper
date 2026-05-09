@@ -1,7 +1,7 @@
-# Climate Group Helper for Home Assistant
+# [Climate Group Helper](https://github.com/bjrnptrsn/climate_group_helper) for Home Assistant
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/icon@2x.png" alt="Climate Group Helper for Home Assistant logo" width="160"/>
+  <a href="https://github.com/bjrnptrsn/climate_group_helper"><img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/icon@2x.png" alt="Climate Group Helper for Home Assistant logo" width="160"/></a>
 </p>
 
 <p align="center">
