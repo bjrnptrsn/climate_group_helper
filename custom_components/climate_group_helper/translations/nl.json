@@ -226,6 +226,7 @@
               "retry_attempts": "Herhaalpogingen",
               "retry_delay": "Herhaalvertraging (seconden)",
               "staggered_call_delay": "Vertraging tussen opdrachten (seconden)",
+              "grace_period": "Optimistische UI-overgangsperiode (seconden)",
               "expose_smart_sensors": "Slimme sensoren weergeven",
               "expose_member_entities": "Ledenlijst weergeven",
               "expose_config": "Configuratie tonen (Debug)"
@@ -235,6 +236,7 @@
               "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
               "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren.",
               "staggered_call_delay": "Wachttijd tussen afzonderlijke opdrachten aan groepsleden. Gespreide opdrachten voorkomen netwerkcongestie in Zigbee/Matter-omgevingen. Stel in op 0 om te deactiveren.",
+              "grace_period": "Hoe lang de groep de verzonden waarde toont voordat wordt overgeschakeld naar het ledengemiddelde. Voorkomt UI-flikkering wanneer trage apparaten (Cloud-bridges, Zigbee) hun oude toestand terugsturen. Stel in op 0 om te deactiveren.",
               "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
               "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
               "expose_config": "Voegt alle configuratiewaarden toe aan de entiteitattributen. Handig voor debugging."

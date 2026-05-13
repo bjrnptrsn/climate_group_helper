@@ -9,7 +9,7 @@ from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .state import RunState
+from .state import TargetState
 
 
 async def async_get_config_entry_diagnostics(
@@ -48,8 +48,7 @@ async def async_get_config_entry_diagnostics(
             val = sorted(val)
         elif hasattr(val, "isoformat"):
             val = val.isoformat()
-        elif isinstance(val, RunState):
-            # target_state_snapshot — nested dataclass
+        elif isinstance(val, TargetState):
             val = _state_to_dict(val) if val else None
         run_dict[f.name] = val
     # config_overrides is a MappingProxyType — convert to plain dict
@@ -98,7 +97,7 @@ async def async_get_config_entry_diagnostics(
     return diag
 
 
-def _state_to_dict(state) -> dict[str, Any]:
+def _state_to_dict(state: Any) -> dict[str, Any]:
     """Convert a frozen dataclass to a dict, excluding None values."""
     result: dict[str, Any] = {}
     for f in fields(state):

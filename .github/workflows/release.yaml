@@ -1,0 +1,24 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  attach-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create zip
+        run: |
+          cd custom_components
+          zip -r ../climate_group_helper.zip climate_group_helper
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: climate_group_helper.zip

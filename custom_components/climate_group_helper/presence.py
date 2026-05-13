@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.core import callback
 from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE, STATE_UNKNOWN
@@ -42,8 +42,8 @@ class PresenceHandler:
         self._away_delay = group.config.get(CONF_PRESENCE_AWAY_DELAY, DEFAULT_PRESENCE_AWAY_DELAY)
         self._return_delay = group.config.get(CONF_PRESENCE_RETURN_DELAY, DEFAULT_PRESENCE_RETURN_DELAY)
 
-        self._timer_cancel = None
-        self._unsub_listener = None
+        self._timer_cancel: Callable[[], None] | None = None
+        self._unsub_listener: Callable[[], None] | None = None
         self._away_active = False
 
         _LOGGER.debug(
@@ -97,7 +97,7 @@ class PresenceHandler:
         3. Zone whitelist: if zones configured, person must be in one of them
         4. Fallback: anything else (e.g. "home", "on") → True
         """
-        if state_str in (STATE_OFF, "not_home"):
+        if state_str in (STATE_OFF, "not_home", "away"):
             return False
         if state_str in (STATE_UNKNOWN, STATE_UNAVAILABLE):
             return True
@@ -105,13 +105,13 @@ class PresenceHandler:
             if state_str == "home" and "zone.home" in self._zones:
                 return True
             for zone_id in self._zones:
-                if (zone_state := self._hass.states.get(zone_id)) and state_str == zone_state.name:
+                if state_str == zone_id:
                     return True
             return False
         return True
 
     @callback
-    def _state_change_listener(self, event) -> None:
+    def _state_change_listener(self, event: Any) -> None:
         new_state = event.data.get("new_state")
         if new_state is None:
             return
@@ -131,12 +131,12 @@ class PresenceHandler:
                 self._hass.async_create_task(self._go_restore())
 
     @callback
-    def _on_away(self, _now) -> None:
+    def _on_away(self, _now: Any) -> None:
         self._timer_cancel = None
         self._hass.async_create_task(self._go_away())
 
     @callback
-    def _on_return(self, _now) -> None:
+    def _on_return(self, _now: Any) -> None:
         self._timer_cancel = None
         self._hass.async_create_task(self._go_restore())
 

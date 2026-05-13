@@ -20,6 +20,7 @@ from .const import DOMAIN
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
+    from .override import SwitchOverrideManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,11 +63,11 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         self._is_on = True  # Default: switch is ON
 
     @property
-    def override_manager(self):
+    def override_manager(self) -> SwitchOverrideManager:
         return self._group.switch_override_manager
 
     @property
-    def device_info(self) -> dict[str, Any]:
+    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
         """Return the device info (same device as the ClimateGroupHelper)."""
         return self._group.device_info
 

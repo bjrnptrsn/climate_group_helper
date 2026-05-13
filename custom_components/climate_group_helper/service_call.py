@@ -43,6 +43,7 @@ from .state import FilterState
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
+    from .state import TargetState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,12 +73,12 @@ class BaseServiceCallHandler(ABC):
         """
         self._group = group
         self._hass = group.hass
-        self._debouncer: Debouncer | None = None
-        self._active_tasks: set[asyncio.Task] = set()
+        self._debouncer: Debouncer[Any] | None = None
+        self._active_tasks: set[asyncio.Task[Any]] = set()
         self._call_triggers: list[Callable[[], Any]] = []
 
     @property
-    def target_state(self):
+    def target_state(self) -> TargetState:
         """Return the shared target state."""
         return self._group.shared_target_state
 
@@ -106,8 +107,8 @@ class BaseServiceCallHandler(ABC):
         for callback_func in self._call_triggers:
             try:
                 callback_func()
-            except Exception as e:
-                _LOGGER.error("[%s] Error in execution callback: %s", self._group.entity_id, e)
+            except Exception:
+                _LOGGER.exception("[%s] Error in execution callback", self._group.entity_id)
 
     async def call_debounced(self, data: dict[str, Any] | None = None) -> None:
         """Debounce and execute a service call.
@@ -122,7 +123,7 @@ class BaseServiceCallHandler(ABC):
         for task in list(self._active_tasks):
             task.cancel()
 
-        async def debounce_func():
+        async def debounce_func() -> None:
             """Wrap _execute_calls as a cancellable Task."""
             task = asyncio.current_task()
             if task:
@@ -334,7 +335,13 @@ class BaseServiceCallHandler(ABC):
         Override in derived handlers that bypass all blocking (e.g. IsolationCallHandler).
         """
         run_state = self._group.run_state
-        return run_state.blocked or entity_id in run_state.isolated_members
+        if run_state.blocked:
+            _LOGGER.debug("[%s] Member %s blocked (blocking_sources=%s)", self._group.entity_id, entity_id, run_state.blocking_sources)
+            return True
+        if entity_id in run_state.isolated_members:
+            _LOGGER.debug("[%s] Member %s blocked (isolated)", self._group.entity_id, entity_id)
+            return True
+        return False
 
     def _is_oob_blocked(self, entity_id: str) -> bool:
         """Check if a member is blocked due to being out-of-bounds (OOB).
@@ -483,14 +490,14 @@ class BaseServiceCallHandler(ABC):
         timestamp = str(time.time())
         return f"{origin_entity}|{timestamp}"
 
-    def _build_initial_call(self, attr: str, value: Any, entity_ids: list[str]) -> list[dict]:
+    def _build_initial_call(self, attr: str, value: Any, entity_ids: list[str]) -> list[dict[str, Any]]:
         """Build a simple initial call dict from attr/value. No feature logic."""
         service = ATTR_SERVICE_MAP.get(attr)
         if not service:
             return []
         return [{"service": service, "kwargs": {attr: value}, "entity_ids": entity_ids}]
 
-    def _process_unsupported_hvac(self, calls: list[dict]) -> list[dict]:
+    def _process_unsupported_hvac(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Union strategy: handle members that don't support the requested HVAC mode."""
         if (self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION or
             self._group.config.get(CONF_UNION_UNSUPPORTED_HVAC_ACTION) != UnsupportedHvacAction.OFF):
@@ -531,7 +538,7 @@ class BaseServiceCallHandler(ABC):
 
         return [call for call in filtered if call["entity_ids"]]
 
-    def _process_min_temp_off(self, calls: list[dict]) -> list[dict]:
+    def _process_min_temp_off(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Handle min_temp_off: restructure HVAC_MODE calls for temp-capable devices.
 
         - OFF: split into temp-capable (SET_TEMPERATURE with min_temp + OFF) and
@@ -596,7 +603,7 @@ class BaseServiceCallHandler(ABC):
 
         return result
 
-    def _process_member_offset(self, calls: list[dict]) -> list[dict]:
+    def _process_member_offset(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Apply per-entity temperature offset.
 
         For calls with temperature kwargs that are not already injected,
@@ -647,7 +654,7 @@ class BaseServiceCallHandler(ABC):
 
         return result
 
-    def _process_group_offset(self, calls: list[dict]) -> list[dict]:
+    def _process_group_offset(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Shift temperature attributes by the global group offset.
 
         Applies on top of any member_offset_applied values — both offsets are additive.
@@ -691,7 +698,7 @@ class BaseServiceCallHandler(ABC):
         """Whether to apply the global group offset. False by default (direct-command handlers)."""
         return False
 
-    def _process_oob_guard(self, calls: list[dict]) -> list[dict]:
+    def _process_oob_guard(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """OOB guard: check if temperature values are within device range (union only).
 
         Checks ALL calls with ATTR_TEMPERATURE kwargs against device min/max.
@@ -767,21 +774,22 @@ class BaseServiceCallHandler(ABC):
                     # → In-range
                     in_range_ids.append(entity_id)
                     if entity_id in self._group.run_state.oob_members and state.state == HVACMode.OFF:
-                        if self.target_state.hvac_mode and self.target_state.hvac_mode != HVACMode.OFF:
-                            result.append({
-                                "service": SERVICE_SET_HVAC_MODE,
-                                "kwargs": {ATTR_HVAC_MODE: self.target_state.hvac_mode},
-                                "entity_ids": [entity_id],
-                            })
+                        target_mode = self.target_state.hvac_mode
+                        if target_mode and target_mode != HVACMode.OFF:
+                            capable = self._get_capable_entities(ATTR_HVAC_MODE, target_mode)
+                            if entity_id in capable:
+                                result.append({
+                                    "service": SERVICE_SET_HVAC_MODE,
+                                    "kwargs": {ATTR_HVAC_MODE: target_mode},
+                                    "entity_ids": [entity_id],
+                                })
                     new_oob.discard(entity_id)
 
             if in_range_ids:
                 result.append({
-                    "service": call["service"],
+                    **call,
                     "kwargs": {**call_temp_attrs, **upstream_kwargs},
                     "entity_ids": in_range_ids,
-                    **({"injected": call["injected"]} if call.get("injected") else {}),
-                    **({"member_offset_applied": call["member_offset_applied"]} if call.get("member_offset_applied") else {}),
                 })
 
         # Side effect: write oob_members once at end (retry-safe)

@@ -14,7 +14,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, State, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.event import async_track_state_change_event
@@ -39,14 +39,17 @@ async def async_setup_entry(
 ) -> None:
     """Set up climate group sensors based on climate group state."""
     entity_registry = async_get_entity_registry(hass)
-    climate_group_entity_id = entity_registry.async_get_entity_id("climate", DOMAIN, config_entry.unique_id)
+    climate_group_entity_id = (
+        entity_registry.async_get_entity_id("climate", DOMAIN, config_entry.unique_id)
+        if config_entry.unique_id else None
+    )
 
     if not climate_group_entity_id:
         _LOGGER.warning("[%s] Climate group entity not found for config entry", config_entry.title)
         return
 
     # Initial entities to add
-    new_entities = []
+    new_entities: list[SensorEntity] = []
 
     # Handle Smart Sensors lifecycle
     if not config_entry.options.get(CONF_EXPOSE_SMART_SENSORS, False):
@@ -98,14 +101,13 @@ class ClimateGroupHelperBaseSensor(SensorEntity):
         hass: HomeAssistant,
         config_entry: ConfigEntry,
         climate_group_entity_id: str,
-    ):
+    ) -> None:
         """Initialize the sensor."""
         self.hass = hass
         self.config_entry = config_entry
-        self._attr_has_entity_name = True
         self._attr_should_poll = False
         self._climate_group_entity_id = climate_group_entity_id
-        self._climate_group_state = None
+        self._climate_group_state: State | None = None
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks."""
@@ -114,7 +116,7 @@ class ClimateGroupHelperBaseSensor(SensorEntity):
         self._climate_group_state = self.hass.states.get(self._climate_group_entity_id)
 
         @callback
-        def state_changed_listener(event):
+        def state_changed_listener(event: Any) -> None:
             """Handle state changes."""
             if (new_state := event.data.get("new_state")) is None:
                 return
@@ -128,7 +130,7 @@ class ClimateGroupHelperBaseSensor(SensorEntity):
         )
 
     @property
-    def device_info(self) -> dict[str, Any]:
+    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
         """Return the device info."""
         return {
             "identifiers": {(DOMAIN, self.config_entry.unique_id)},
@@ -156,17 +158,16 @@ class ClimateGroupHelperTemperatureSensor(ClimateGroupHelperBaseSensor):
         self._attr_native_unit_of_measurement = hass.config.units.temperature_unit
 
     @property
-    def native_value(self):
+    def native_value(self) -> float | int | None:
         """Return the state of the sensor."""
         if not self._climate_group_state:
             return None
-        
+
         value = self._climate_group_state.attributes.get(ATTR_CURRENT_TEMPERATURE)
-        
         if value is not None and not isinstance(value, (int, float)):
             _LOGGER.debug("[%s] Invalid temperature value for %s: %s", self.entity_id, self.entity_id, value)
             return None
-        
+
         return value
 
 
@@ -189,17 +190,16 @@ class ClimateGroupHelperHumiditySensor(ClimateGroupHelperBaseSensor):
         self._attr_unique_id = f"{config_entry.unique_id}_humidity"
 
     @property
-    def native_value(self):
+    def native_value(self) -> float | int | None:
         """Return the state of the sensor."""
         if not self._climate_group_state:
             return None
-        
+
         value = self._climate_group_state.attributes.get(ATTR_CURRENT_HUMIDITY)
-        
         if value is not None and not isinstance(value, (int, float)):
             _LOGGER.debug("[%s] Invalid humidity value for %s: %s", self.entity_id, self.entity_id, value)
             return None
-        
+
         return value
 
 
@@ -222,7 +222,7 @@ class ClimateGroupHelperConfigurationSensor(SensorEntity):
         self._attr_unique_id = f"{config_entry.unique_id}_configuration"
 
     @property
-    def device_info(self) -> dict[str, Any]:
+    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
         """Return the device info."""
         return {
             "identifiers": {(DOMAIN, self.config_entry.unique_id)},

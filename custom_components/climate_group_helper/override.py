@@ -20,10 +20,17 @@ from .const import (
     WindowControlAction,
 )
 from .schedule import ScheduleCaller
-from .state import ClimateState
+from .state import ClimateState, TargetState
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
+    from .service_call import (
+        OverrideCallHandler,
+        SwitchCallHandler,
+        SwitchEnforceCallHandler,
+        WindowControlCallHandler,
+        PresenceCallHandler,
+    )
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +47,7 @@ class OverrideHandler:
         self._group = group
 
     @property
-    def override_manager(self):
+    def override_manager(self) -> BoostOverrideManager:
         return self._group.boost_override_manager
 
     def async_setup(self) -> None:
@@ -88,29 +95,30 @@ class BaseOverrideManager:
         self._timer: Any = None
 
     @property
-    def call_handler(self):
+    def call_handler(self) -> OverrideCallHandler:
         """Return the call handler for this override manager. Override in subclasses."""
         return self._group.override_call_handler
 
-    def _start_timer(self, duration_seconds: float, on_expired) -> None:
+    def _start_timer(self, duration: float, on_expired: Any) -> None:
         """Start an override timer. Sets active_override to OVERRIDE_NAME."""
-        if duration_seconds <= 0:
+        if duration <= 0:
             return
         self._cancel_timer()
 
-        self._group.run_state = self._group.run_state.set_override(self.OVERRIDE_NAME, duration_seconds)
-        _LOGGER.debug("[%s] Setting override: '%s' for %s seconds", self._group.entity_id, self.OVERRIDE_NAME, duration_seconds)
+        self._group.run_state = self._group.run_state.set_override(self.OVERRIDE_NAME, duration)
+        _LOGGER.debug("[%s] Setting override: '%s' for %s seconds", self._group.entity_id, self.OVERRIDE_NAME, duration)
 
         @callback
         def _handle_timeout(_now: Any) -> None:
             self._timer = None
             self._hass.async_create_task(on_expired())
 
-        self._timer = async_call_later(self._hass, duration_seconds, _handle_timeout)
+        self._timer = async_call_later(self._hass, duration, _handle_timeout)
         _LOGGER.debug(
             "[%s] %s timer started: %.0fs (ends %s)",
             self._group.entity_id, self.OVERRIDE_NAME,
-            duration_seconds, self._group.run_state.active_override_end.strftime("%H:%M:%S"),
+            duration, self._group.run_state.active_override_end.strftime("%H:%M:%S")
+            if self._group.run_state.active_override_end else "unknown",
         )
 
     def _block(self) -> None:
@@ -133,7 +141,7 @@ class BaseOverrideManager:
         Only saved on the first activation so consecutive overrides preserve the
         original target_state state.
         """
-        if self._group.run_state.active_override is None:
+        if self._group.run_state.active_override is None and self._group.run_state.target_state_snapshot is None:
             self._group.run_state = replace(
                 self._group.run_state,
                 target_state_snapshot=self._group.shared_target_state,
@@ -144,7 +152,7 @@ class BaseOverrideManager:
         self._group.run_state = self._group.run_state.clear_override().clear_snapshot()
 
     @property
-    def _snapshot(self):
+    def _snapshot(self) -> TargetState | None:
         """Return the saved target_state snapshot, or None."""
         return self._group.run_state.target_state_snapshot
 
@@ -167,7 +175,7 @@ class BoostOverrideManager(BaseOverrideManager):
 
     OVERRIDE_NAME = "boost"
 
-    async def activate(self, temperature: float, duration_seconds: float) -> None:
+    async def activate(self, temperature: float, duration: float) -> None:
         """Start boost override: snapshot, temperature, timer.
 
         Rejected if any blocking source is active. Snapshot is saved only on
@@ -182,12 +190,12 @@ class BoostOverrideManager(BaseOverrideManager):
 
         self._save_snapshot()
         self._group.climate_state_manager.update(temperature=temperature)
-        self._start_timer(duration_seconds, self._on_expired)
+        self._start_timer(duration, self._on_expired)
         await self.call_handler.call_immediate()
 
         _LOGGER.debug(
             "[%s] Boost started: temperature=%s, duration=%.0fs",
-            self._group.entity_id, temperature, duration_seconds,
+            self._group.entity_id, temperature, duration,
         )
 
     def abort(self) -> None:
@@ -223,11 +231,11 @@ class SwitchOverrideManager(BaseOverrideManager):
     OVERRIDE_NAME = "switch"
 
     @property
-    def call_handler(self):
+    def call_handler(self) -> SwitchCallHandler:  # type: ignore[override]
         return self._group.switch_call_handler
 
     @property
-    def enforce_call_handler(self):
+    def enforce_call_handler(self) -> SwitchEnforceCallHandler:
         return self._group.switch_enforce_call_handler
 
     async def activate(self) -> None:
@@ -266,10 +274,10 @@ class WindowOverrideManager(BaseOverrideManager):
         self._window_temperature: float | None = group.config.get(CONF_WINDOW_TEMPERATURE)
 
     @property
-    def call_handler(self):
+    def call_handler(self) -> WindowControlCallHandler:  # type: ignore[override]
         return self._group.window_control_call_handler
 
-    def _active_data(self) -> dict:
+    def _active_data(self) -> dict[str, Any]:
         """Return the data dict for the active window override (OFF or temperature)."""
         if self._window_action == WindowControlAction.TEMPERATURE and self._window_temperature is not None:
             return {"temperature": self._window_temperature}
@@ -320,15 +328,15 @@ class PresenceOverrideManager(BaseOverrideManager):
     def __init__(self, group: ClimateGroupHelper) -> None:
         super().__init__(group)
         self._action = group.config.get(CONF_PRESENCE_ACTION, PresenceAction.OFF)
-        self._away_offset = group.config.get(CONF_PRESENCE_AWAY_OFFSET, -2.0)
+        self._away_offset = group.config.get(CONF_PRESENCE_AWAY_OFFSET, 0.0)
         self._away_temperature = group.config.get(CONF_PRESENCE_AWAY_TEMPERATURE)
         self._away_preset = group.config.get(CONF_PRESENCE_AWAY_PRESET)
 
     @property
-    def call_handler(self):
+    def call_handler(self) -> PresenceCallHandler:  # type: ignore[override]
         return self._group.presence_call_handler
 
-    def _active_data(self) -> dict:
+    def _active_data(self) -> dict[str, Any]:
         """Compute the away payload against the current target_state at call time.
 
         AWAY_OFFSET is intentionally computed here (not at activate time) so that

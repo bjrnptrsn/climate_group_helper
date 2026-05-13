@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.const import (
     STATE_CLOSING,
@@ -31,6 +31,8 @@ from .const import (
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
+    from .override import WindowOverrideManager
+    from .state import TargetState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,8 +48,8 @@ class WindowControlHandler:
         """Initialize the window control handler."""
         self._group = group
         self._hass = group.hass
-        self._timer_cancel: Any = None
-        self._unsub_listener = None
+        self._timer_cancel: Callable[[], None] | None = None
+        self._unsub_listener: Callable[[], None] | None = None
 
         self._window_control_mode = self._group.config.get(CONF_WINDOW_MODE, WindowControlMode.DISABLED)
         self._control_state = WINDOW_CLOSE
@@ -67,23 +69,13 @@ class WindowControlHandler:
             group.entity_id, self._room_sensor, self._room_delay, self._zone_sensor, self._zone_delay, self._close_delay)
 
     @property
-    def state_manager(self):
-        """Return the specialized state manager for window control (read-only)."""
-        return self._group.window_control_state_manager
-
-    @property
-    def override_manager(self):
+    def override_manager(self) -> WindowOverrideManager:
         return self._group.window_override_manager
 
     @property
-    def call_handler(self):
-        """Return the specialized call handler for window control operations."""
-        return self._group.window_control_call_handler
-
-    @property
-    def target_state(self):
+    def target_state(self) -> TargetState:
         """Return the current target state (from central source)."""
-        return self.state_manager.target_state
+        return self._group.window_control_state_manager.target_state
 
     @property
     def force_off(self) -> bool:
@@ -160,7 +152,11 @@ class WindowControlHandler:
     def _timer_expired(self, now: Any) -> None:
         """Timer callback – recalculate and execute current action."""
         self._timer_cancel = None
-        mode, _ = self._window_control_logic()
+        result = self._window_control_logic()
+        if result is None:
+            _LOGGER.debug("[%s] Window control sensors not available on timer expiry", self._group.entity_id)
+            return
+        mode, _ = result
         if mode:
             self._hass.async_create_task(self._execute_action(mode))
 

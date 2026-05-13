@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.0 - 2026-05-13
+
+### 🌟 New Features
+
+*   **Configurable UI Grace Period**: The optimistic UI grace period is now configurable and extended to all target state attributes — temperature, humidity, fan mode, preset mode, and swing modes, in addition to HVAC mode. Prevents dashboard flicker while slow devices catch up after a command.
+
+### 🔧 Fixes
+
+*   **Presence Zone Matching**: Zone IDs are now correctly matched when using zone restrictions.
+
+*   **Presence Away State**: `device_tracker` sensors reporting `away` are now correctly treated as absent, in addition to `not_home`.
+
+*   **Calibration Heartbeat**: The periodic heartbeat now also re-syncs humidity calibration, not just temperature.
+
+*   **Calibration with Member Isolation**: Isolated members no longer receive calibration writes.
+
 ## 1.0.0 - 2026-05-09
 
 **First stable release!** Based on 0.28.1 — no new features, no breaking changes.

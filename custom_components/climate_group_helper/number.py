@@ -56,7 +56,7 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         self._attr_unique_id = f"{group.unique_id}_group_offset"
 
     @property
-    def device_info(self) -> dict[str, Any]:
+    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
         """Attach this entity to the same device as the climate group."""
         return self._group.device_info
 

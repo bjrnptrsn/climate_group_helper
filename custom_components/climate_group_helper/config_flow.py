@@ -12,11 +12,18 @@ from homeassistant.components.climate import (
     ATTR_MAX_TEMP,
     ATTR_PRESET_MODES,
     ATTR_HVAC_MODES,
+    DEFAULT_MAX_TEMP,
+    DEFAULT_MIN_TEMP,
     HVACMode,
 )
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import CONF_ENTITIES, CONF_NAME, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import (
+    CONF_ENTITIES,
+    CONF_NAME,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+)
 from homeassistant.core import callback
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.data_entry_flow import section
@@ -33,6 +40,7 @@ from .const import (
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
+    CONF_GRACE_PERIOD,
     CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_SENSORS,
     CONF_HUMIDITY_TARGET_AVG,
@@ -46,8 +54,8 @@ from .const import (
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_RESTORE_DELAY,
     CONF_ISOLATION_SENSOR,
-    CONF_ISOLATION_TRIGGER,
     CONF_ISOLATION_TRIGGER_HVAC_MODES,
+    CONF_ISOLATION_TRIGGER,
     CONF_MASTER_ENTITY,
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
@@ -90,6 +98,7 @@ from .const import (
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
     DEFAULT_CLOSE_DELAY,
+    DEFAULT_GRACE_PERIOD,
     DEFAULT_NAME,
     DEFAULT_ROOM_OPEN_DELAY,
     DEFAULT_ZONE_OPEN_DELAY,
@@ -111,11 +120,7 @@ from .const import (
     WindowControlMode,
 )
 
-from .climate import (
-    DEFAULT_MIN_TEMP,
-    DEFAULT_MAX_TEMP,
-    _filter_cgh_sensors,
-)
+from .climate import filter_cgh_sensors
 
 
 class ClimateGroupHelperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -176,10 +181,12 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self._config_entry = config_entry
-        self._min_temp = DEFAULT_MIN_TEMP
-        self._max_temp = DEFAULT_MAX_TEMP
+        self._min_temp: float = DEFAULT_MIN_TEMP
+        self._max_temp: float = DEFAULT_MAX_TEMP
         self._refresh_hint_shown = False
-        self._from_adv_mode: bool = bool(config_entry.options.get(CONF_ADVANCED_MODE, False))
+        self._from_adv_mode: bool = bool(
+            config_entry.options.get(CONF_ADVANCED_MODE, False)
+        )
 
     def _update_dynamic_limits(self) -> None:
         """Calculate dynamic temperature limits from member entities."""
@@ -190,14 +197,18 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         entities = self._config_entry.options.get(CONF_ENTITIES)
         if entities:
             valid_states = [
-                state for entity_id in entities
+                state
+                for entity_id in entities
                 if (state := self.hass.states.get(entity_id)) is not None
                 and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
             ]
             if valid_states:
                 # Min = Highest minimum
                 try:
-                    min_temps = [float(state.attributes.get(ATTR_MIN_TEMP, DEFAULT_MIN_TEMP)) for state in valid_states]
+                    min_temps = [
+                        float(state.attributes.get(ATTR_MIN_TEMP, DEFAULT_MIN_TEMP))
+                        for state in valid_states
+                    ]
                     if min_temps:
                         self._min_temp = max(min_temps)
                 except (ValueError, TypeError):
@@ -205,13 +216,18 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
 
                 # Max = Lowest maximum
                 try:
-                    max_temps = [float(state.attributes.get(ATTR_MAX_TEMP, DEFAULT_MAX_TEMP)) for state in valid_states]
+                    max_temps = [
+                        float(state.attributes.get(ATTR_MAX_TEMP, DEFAULT_MAX_TEMP))
+                        for state in valid_states
+                    ]
                     if max_temps:
                         self._max_temp = min(max_temps)
                 except (ValueError, TypeError):
                     pass
 
-    def _normalize_options(self, user_input: dict[str, Any], refresh: bool = False) -> dict[str, Any]:
+    def _normalize_options(
+        self, user_input: dict[str, Any], refresh: bool = False
+    ) -> dict[str, Any]:
         """Normalize and clean up options based on dependencies."""
         # Start with current config and overlay flat inputs
         current_config = {**self._config_entry.options, **user_input}
@@ -255,15 +271,24 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             # Downgrade master-dependent settings
             if current_config.get(CONF_SYNC_MODE) == SyncMode.MASTER_LOCK:
                 current_config[CONF_SYNC_MODE] = SyncMode.LOCK.value
-            if current_config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES) == AdoptManualChanges.MASTER_ONLY:
-                current_config[CONF_WINDOW_ADOPT_MANUAL_CHANGES] = AdoptManualChanges.OFF.value
+            if (
+                current_config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES)
+                == AdoptManualChanges.MASTER_ONLY
+            ):
+                current_config[CONF_WINDOW_ADOPT_MANUAL_CHANGES] = (
+                    AdoptManualChanges.OFF.value
+                )
 
         # Temperature Calibration logic
         if not current_config.get(CONF_TEMP_SENSORS) and advanced_mode:
             current_config.pop(CONF_TEMP_UPDATE_TARGETS, None)
 
         # Window Control logic
-        if not current_config.get(CONF_ROOM_SENSOR) and not current_config.get(CONF_ZONE_SENSOR) and advanced_mode:
+        if (
+            not current_config.get(CONF_ROOM_SENSOR)
+            and not current_config.get(CONF_ZONE_SENSOR)
+            and advanced_mode
+        ):
             current_config[CONF_WINDOW_MODE] = WindowControlMode.DISABLED.value
 
         # Presence Control logic
@@ -287,7 +312,9 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 current_config.pop(CONF_ISOLATION_ENTITIES, None)
             elif CONF_ISOLATION_ENTITIES in current_config:
                 current_config[CONF_ISOLATION_ENTITIES] = [
-                    eid for eid in current_config[CONF_ISOLATION_ENTITIES] if eid in valid_members
+                    eid
+                    for eid in current_config[CONF_ISOLATION_ENTITIES]
+                    if eid in valid_members
                 ]
         elif trigger == IsolationTrigger.MEMBER_OFF:
             # MEMBER_OFF: no sensor, no hvac_mode trigger, no delays (isolation is
@@ -297,7 +324,8 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             current_config[CONF_ISOLATION_ACTIVATE_DELAY] = 0
             current_config[CONF_ISOLATION_RESTORE_DELAY] = 0
             pruned = [
-                eid for eid in current_config.get(CONF_ISOLATION_ENTITIES, [])
+                eid
+                for eid in current_config.get(CONF_ISOLATION_ENTITIES, [])
                 if eid in valid_members
             ]
             current_config[CONF_ISOLATION_ENTITIES] = pruned or list(valid_members)
@@ -306,7 +334,9 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             current_config.pop(CONF_ISOLATION_SENSOR, None)
             if CONF_ISOLATION_ENTITIES in current_config:
                 current_config[CONF_ISOLATION_ENTITIES] = [
-                    eid for eid in current_config[CONF_ISOLATION_ENTITIES] if eid in valid_members
+                    eid
+                    for eid in current_config[CONF_ISOLATION_ENTITIES]
+                    if eid in valid_members
                 ]
             # Remove trigger if no hvac_modes configured
             if not current_config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES):
@@ -316,7 +346,11 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         # Collect per-member temperature offsets from form fields
         offset_map: dict[str, float] = {}
         for key in list(current_config.keys()):
-            if isinstance(key, str) and key.startswith("Offset: ") and key.endswith(")"):
+            if (
+                isinstance(key, str)
+                and key.startswith("Offset: ")
+                and key.endswith(")")
+            ):
                 # Extract entity_id from between the last parenthesis
                 try:
                     entity_id = key.rsplit("(", 1)[-1].rstrip(")")
@@ -330,7 +364,6 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         elif advanced_mode:
             current_config.pop(CONF_MEMBER_TEMP_OFFSETS, None)
 
-
         return current_config
 
     def _section_factory_members(self, config: dict[str, Any]) -> dict[str, Any]:
@@ -338,54 +371,92 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         master_fields = {}
         if config.get(CONF_ADVANCED_MODE, False):
             master_fields = {
-                vol.Optional(CONF_MASTER_ENTITY, description={"suggested_value": config.get(CONF_MASTER_ENTITY)}): selector.EntitySelector(
+                vol.Optional(
+                    CONF_MASTER_ENTITY,
+                    description={"suggested_value": config.get(CONF_MASTER_ENTITY)},
+                ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=CLIMATE_DOMAIN)
                 ),
             }
 
         return {
-            vol.Required("members_section"): section(
-                vol.Schema({
-                    vol.Required(CONF_ENTITIES, default=config.get(CONF_ENTITIES, [])): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=CLIMATE_DOMAIN, multiple=True)
-                    ),
-                    **master_fields,
-                    vol.Required(CONF_HVAC_MODE_STRATEGY, default=config.get(CONF_HVAC_MODE_STRATEGY, HvacModeStrategy.NORMAL)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[HvacModeStrategy.NORMAL, HvacModeStrategy.OFF_PRIORITY, HvacModeStrategy.AUTO],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="hvac_mode_strategy",
-                        )
-                    ),
-                    vol.Required(CONF_FEATURE_STRATEGY, default=config.get(CONF_FEATURE_STRATEGY, FeatureStrategy.INTERSECTION)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[FeatureStrategy.INTERSECTION, FeatureStrategy.UNION],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="feature_strategy",
-                        )
-                    ),
-                    vol.Required(
-                        CONF_UNION_OUT_OF_BOUNDS_ACTION,
-                        default=config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, UnionOutOfBoundsAction.OFF),
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[UnionOutOfBoundsAction.OFF, UnionOutOfBoundsAction.CLAMP],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="union_out_of_bounds_action",
-                        )
-                    ),
-                    vol.Required(
-                        CONF_UNION_UNSUPPORTED_HVAC_ACTION,
-                        default=config.get(CONF_UNION_UNSUPPORTED_HVAC_ACTION, UnsupportedHvacAction.IGNORE),
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[UnsupportedHvacAction.IGNORE, UnsupportedHvacAction.OFF],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="union_unsupported_hvac_action",
-                        )
-                    ),
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("members_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {  # type: ignore[misc]
+                        vol.Required(
+                            CONF_ENTITIES, default=config.get(CONF_ENTITIES, [])
+                        ): selector.EntitySelector(
+                            selector.EntitySelectorConfig(
+                                domain=CLIMATE_DOMAIN, multiple=True
+                            )
+                        ),
+                        **master_fields,
+                        vol.Required(
+                            CONF_HVAC_MODE_STRATEGY,
+                            default=config.get(
+                                CONF_HVAC_MODE_STRATEGY, HvacModeStrategy.NORMAL
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[
+                                    HvacModeStrategy.NORMAL,
+                                    HvacModeStrategy.OFF_PRIORITY,
+                                    HvacModeStrategy.AUTO,
+                                ],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="hvac_mode_strategy",
+                            )
+                        ),
+                        vol.Required(
+                            CONF_FEATURE_STRATEGY,
+                            default=config.get(
+                                CONF_FEATURE_STRATEGY, FeatureStrategy.INTERSECTION
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[
+                                    FeatureStrategy.INTERSECTION,
+                                    FeatureStrategy.UNION,
+                                ],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="feature_strategy",
+                            )
+                        ),
+                        vol.Required(
+                            CONF_UNION_OUT_OF_BOUNDS_ACTION,
+                            default=config.get(
+                                CONF_UNION_OUT_OF_BOUNDS_ACTION,
+                                UnionOutOfBoundsAction.OFF,
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[
+                                    UnionOutOfBoundsAction.OFF,
+                                    UnionOutOfBoundsAction.CLAMP,
+                                ],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="union_out_of_bounds_action",
+                            )
+                        ),
+                        vol.Required(
+                            CONF_UNION_UNSUPPORTED_HVAC_ACTION,
+                            default=config.get(
+                                CONF_UNION_UNSUPPORTED_HVAC_ACTION,
+                                UnsupportedHvacAction.IGNORE,
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[
+                                    UnsupportedHvacAction.IGNORE,
+                                    UnsupportedHvacAction.OFF,
+                                ],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="union_unsupported_hvac_action",
+                            )
+                        ),
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
             )
         }
 
@@ -395,60 +466,104 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         if config.get(CONF_MASTER_ENTITY):
             # master_fields[vol.Optional(CONF_TEMP_USE_MASTER, default=config.get(CONF_TEMP_USE_MASTER, False))] = bool
             master_fields = {
-                vol.Optional(CONF_TEMP_USE_MASTER, default=config.get(CONF_TEMP_USE_MASTER, False)): bool
+                vol.Optional(
+                    CONF_TEMP_USE_MASTER,
+                    default=config.get(CONF_TEMP_USE_MASTER, False),
+                ): selector.BooleanSelector()
             }
 
         advanced_fields = {}
         if config.get(CONF_ADVANCED_MODE, False):
             advanced_fields = {
-                vol.Optional(CONF_MIN_TEMP_OFF, default=config.get(CONF_MIN_TEMP_OFF, False)): bool,
-                vol.Optional(CONF_TEMP_SENSORS, default=config.get(CONF_TEMP_SENSORS, [])): selector.EntitySelector(
+                vol.Optional(
+                    CONF_MIN_TEMP_OFF, default=config.get(CONF_MIN_TEMP_OFF, False)
+                ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_TEMP_SENSORS, default=config.get(CONF_TEMP_SENSORS, [])
+                ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN, multiple=True)
                 ),
-                vol.Optional(CONF_TEMP_UPDATE_TARGETS, default=config.get(CONF_TEMP_UPDATE_TARGETS, [])): selector.EntitySelector(
+                vol.Optional(
+                    CONF_TEMP_UPDATE_TARGETS,
+                    default=config.get(CONF_TEMP_UPDATE_TARGETS, []),
+                ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=NUMBER_DOMAIN, multiple=True)
                 ),
-                vol.Required(CONF_TEMP_CALIBRATION_MODE, default=config.get(CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE)): selector.SelectSelector(
+                vol.Required(
+                    CONF_TEMP_CALIBRATION_MODE,
+                    default=config.get(
+                        CONF_TEMP_CALIBRATION_MODE, CalibrationMode.ABSOLUTE
+                    ),
+                ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[opt.value for opt in CalibrationMode],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="temp_calibration_mode",
                     )
                 ),
-                vol.Optional(CONF_CALIBRATION_HEARTBEAT, default=config.get(CONF_CALIBRATION_HEARTBEAT, 0)): selector.NumberSelector(
-                    selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
+                vol.Optional(
+                    CONF_CALIBRATION_HEARTBEAT,
+                    default=config.get(CONF_CALIBRATION_HEARTBEAT, 0),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=120,
+                        step=1,
+                        unit_of_measurement="min",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
                 ),
-                vol.Optional(CONF_CALIBRATION_IGNORE_OFF, default=config.get(CONF_CALIBRATION_IGNORE_OFF, False)): bool,
+                vol.Optional(
+                    CONF_CALIBRATION_IGNORE_OFF,
+                    default=config.get(CONF_CALIBRATION_IGNORE_OFF, False),
+                ): selector.BooleanSelector(),
             }
 
         return {
-            vol.Required("temperature_section"): section(
-                vol.Schema({
-                    vol.Required(CONF_TEMP_TARGET_AVG, default=config.get(CONF_TEMP_TARGET_AVG, AverageOption.MEAN)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[opt.value for opt in AverageOption],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="temp_target_avg",
-                        )
-                    ),
-                    **master_fields,
-                    vol.Required(CONF_TEMP_TARGET_ROUND, default=config.get(CONF_TEMP_TARGET_ROUND, RoundOption.NONE)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[opt.value for opt in RoundOption],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="temp_target_round",
-                        )
-                    ),
-                    vol.Required(CONF_TEMP_CURRENT_AVG, default=config.get(CONF_TEMP_CURRENT_AVG, AverageOption.MEAN)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[opt.value for opt in AverageOption],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="temp_current_avg",
-                        )
-                    ),
-                    **advanced_fields,
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("temperature_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {  # type: ignore[misc]
+                        vol.Required(
+                            CONF_TEMP_TARGET_AVG,
+                            default=config.get(
+                                CONF_TEMP_TARGET_AVG, AverageOption.MEAN
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in AverageOption],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="temp_target_avg",
+                            )
+                        ),
+                        **master_fields,
+                        vol.Required(
+                            CONF_TEMP_TARGET_ROUND,
+                            default=config.get(
+                                CONF_TEMP_TARGET_ROUND, RoundOption.NONE
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in RoundOption],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="temp_target_round",
+                            )
+                        ),
+                        vol.Required(
+                            CONF_TEMP_CURRENT_AVG,
+                            default=config.get(
+                                CONF_TEMP_CURRENT_AVG, AverageOption.MEAN
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in AverageOption],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="temp_current_avg",
+                            )
+                        ),
+                        **advanced_fields,
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
             )
         }
 
@@ -457,48 +572,73 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         master_fields = {}
         if config.get(CONF_MASTER_ENTITY):
             master_fields = {
-                vol.Optional(CONF_HUMIDITY_USE_MASTER, default=config.get(CONF_HUMIDITY_USE_MASTER, False)): bool
+                vol.Optional(
+                    CONF_HUMIDITY_USE_MASTER,
+                    default=config.get(CONF_HUMIDITY_USE_MASTER, False),
+                ): selector.BooleanSelector()
             }
 
         advanced_fields = {}
         if config.get(CONF_ADVANCED_MODE, False):
             advanced_fields = {
-                vol.Optional(CONF_HUMIDITY_SENSORS, default=config.get(CONF_HUMIDITY_SENSORS, [])): selector.EntitySelector(
+                vol.Optional(
+                    CONF_HUMIDITY_SENSORS, default=config.get(CONF_HUMIDITY_SENSORS, [])
+                ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN, multiple=True)
                 ),
-                vol.Optional(CONF_HUMIDITY_UPDATE_TARGETS, default=config.get(CONF_HUMIDITY_UPDATE_TARGETS, [])): selector.EntitySelector(
+                vol.Optional(
+                    CONF_HUMIDITY_UPDATE_TARGETS,
+                    default=config.get(CONF_HUMIDITY_UPDATE_TARGETS, []),
+                ): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=NUMBER_DOMAIN, multiple=True)
                 ),
             }
 
         return {
-            vol.Required("humidity_section"): section(
-                vol.Schema({
-                    vol.Required(CONF_HUMIDITY_TARGET_AVG, default=config.get(CONF_HUMIDITY_TARGET_AVG, AverageOption.MEAN)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[opt.value for opt in AverageOption],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="humidity_target_avg",
-                        )
-                    ),
-                    **master_fields,
-                    vol.Required(CONF_HUMIDITY_TARGET_ROUND, default=config.get(CONF_HUMIDITY_TARGET_ROUND, RoundOption.NONE)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[opt.value for opt in RoundOption],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="humidity_target_round",
-                        )
-                    ),
-                    vol.Required(CONF_HUMIDITY_CURRENT_AVG, default=config.get(CONF_HUMIDITY_CURRENT_AVG, AverageOption.MEAN)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[opt.value for opt in AverageOption],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="humidity_current_avg",
-                        )
-                    ),
-                    **advanced_fields,
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("humidity_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {  # type: ignore[misc]
+                        vol.Required(
+                            CONF_HUMIDITY_TARGET_AVG,
+                            default=config.get(
+                                CONF_HUMIDITY_TARGET_AVG, AverageOption.MEAN
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in AverageOption],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="humidity_target_avg",
+                            )
+                        ),
+                        **master_fields,
+                        vol.Required(
+                            CONF_HUMIDITY_TARGET_ROUND,
+                            default=config.get(
+                                CONF_HUMIDITY_TARGET_ROUND, RoundOption.NONE
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in RoundOption],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="humidity_target_round",
+                            )
+                        ),
+                        vol.Required(
+                            CONF_HUMIDITY_CURRENT_AVG,
+                            default=config.get(
+                                CONF_HUMIDITY_CURRENT_AVG, AverageOption.MEAN
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in AverageOption],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="humidity_current_avg",
+                            )
+                        ),
+                        **advanced_fields,
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
             )
         }
 
@@ -509,24 +649,40 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             sync_options.append(SyncMode.MASTER_LOCK.value)
 
         return {
-            vol.Required("sync_section"): section(
-                vol.Schema({
-                    vol.Required(CONF_SYNC_MODE, default=config.get(CONF_SYNC_MODE, SyncMode.DISABLED)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=sync_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="sync_mode"
-                        )
-                    ),
-                    vol.Required(CONF_SYNC_ATTRS, default=config.get(CONF_SYNC_ATTRS, SYNC_TARGET_ATTRS)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(options=SYNC_TARGET_ATTRS, mode=selector.SelectSelectorMode.LIST, multiple=True, translation_key="sync_attributes")
-                    ),
-                    vol.Optional(CONF_IGNORE_OFF_MEMBERS_SYNC, default=config.get(CONF_IGNORE_OFF_MEMBERS_SYNC, False)): bool,
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("sync_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {
+                        vol.Required(
+                            CONF_SYNC_MODE,
+                            default=config.get(CONF_SYNC_MODE, SyncMode.DISABLED),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=sync_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="sync_mode",
+                            )
+                        ),
+                        vol.Required(
+                            CONF_SYNC_ATTRS,
+                            default=config.get(CONF_SYNC_ATTRS, SYNC_TARGET_ATTRS),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=SYNC_TARGET_ATTRS,
+                                mode=selector.SelectSelectorMode.LIST,
+                                multiple=True,
+                                translation_key="sync_attributes",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_IGNORE_OFF_MEMBERS_SYNC,
+                            default=config.get(CONF_IGNORE_OFF_MEMBERS_SYNC, False),
+                        ): selector.BooleanSelector(),
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
             )
         }
-    
+
     def _section_factory_window_control(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for window control section."""
         adopt_options = [AdoptManualChanges.OFF.value, AdoptManualChanges.ALL.value]
@@ -538,52 +694,130 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         if isinstance(adopt_val, bool):
             adopt_val = AdoptManualChanges.ALL if adopt_val else AdoptManualChanges.OFF
         try:
-            adopt_val = AdoptManualChanges(adopt_val)
-        except (ValueError, KeyError):
+            adopt_val = AdoptManualChanges(str(adopt_val))
+        except ValueError:
             adopt_val = AdoptManualChanges.OFF
 
         return {
-            vol.Required("window_section"): section(
-                vol.Schema({
-                    vol.Required(CONF_WINDOW_MODE, default=config.get(CONF_WINDOW_MODE, WindowControlMode.DISABLED)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(options=[opt.value for opt in WindowControlMode], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="window_mode")
-                    ),
-                    vol.Required(CONF_WINDOW_ADOPT_MANUAL_CHANGES, default=adopt_val): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=adopt_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="window_adopt_manual_changes",
-                        )
-                    ),
-                    vol.Required(CONF_WINDOW_ACTION, default=config.get(CONF_WINDOW_ACTION, WindowControlAction.OFF)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(options=[opt.value for opt in WindowControlAction], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="window_action")
-                    ),
-                    vol.Optional(CONF_WINDOW_TEMPERATURE, description={"suggested_value": config.get(CONF_WINDOW_TEMPERATURE)}): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=self._min_temp, max=self._max_temp, step=0.5, unit_of_measurement="°C", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_ROOM_SENSOR, description={"suggested_value": config.get(CONF_ROOM_SENSOR)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "cover"])
-                    ),
-                    vol.Optional(CONF_ZONE_SENSOR, description={"suggested_value": config.get(CONF_ZONE_SENSOR)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "cover"])
-                    ),
-                    vol.Optional(CONF_ROOM_OPEN_DELAY, default=config.get(CONF_ROOM_OPEN_DELAY, DEFAULT_ROOM_OPEN_DELAY)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_ZONE_OPEN_DELAY, default=config.get(CONF_ZONE_OPEN_DELAY, DEFAULT_ZONE_OPEN_DELAY)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=1, max=900, step=5, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_CLOSE_DELAY, default=config.get(CONF_CLOSE_DELAY, DEFAULT_CLOSE_DELAY)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("window_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {
+                        vol.Required(
+                            CONF_WINDOW_MODE,
+                            default=config.get(
+                                CONF_WINDOW_MODE, WindowControlMode.DISABLED
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in WindowControlMode],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="window_mode",
+                            )
+                        ),
+                        vol.Required(
+                            CONF_WINDOW_ADOPT_MANUAL_CHANGES, default=adopt_val
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=adopt_options,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="window_adopt_manual_changes",
+                            )
+                        ),
+                        vol.Required(
+                            CONF_WINDOW_ACTION,
+                            default=config.get(
+                                CONF_WINDOW_ACTION, WindowControlAction.OFF
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in WindowControlAction],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="window_action",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_WINDOW_TEMPERATURE,
+                            description={
+                                "suggested_value": config.get(CONF_WINDOW_TEMPERATURE)
+                            },
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=self._min_temp,
+                                max=self._max_temp,
+                                step=0.5,
+                                unit_of_measurement="°C",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_ROOM_SENSOR,
+                            description={
+                                "suggested_value": config.get(CONF_ROOM_SENSOR)
+                            },
+                        ): selector.EntitySelector(
+                            selector.EntitySelectorConfig(
+                                domain=["binary_sensor", "input_boolean", "cover"]
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_ZONE_SENSOR,
+                            description={
+                                "suggested_value": config.get(CONF_ZONE_SENSOR)
+                            },
+                        ): selector.EntitySelector(
+                            selector.EntitySelectorConfig(
+                                domain=["binary_sensor", "input_boolean", "cover"]
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_ROOM_OPEN_DELAY,
+                            default=config.get(
+                                CONF_ROOM_OPEN_DELAY, DEFAULT_ROOM_OPEN_DELAY
+                            ),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=120,
+                                step=1,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_ZONE_OPEN_DELAY,
+                            default=config.get(
+                                CONF_ZONE_OPEN_DELAY, DEFAULT_ZONE_OPEN_DELAY
+                            ),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=1,
+                                max=900,
+                                step=5,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_CLOSE_DELAY,
+                            default=config.get(CONF_CLOSE_DELAY, DEFAULT_CLOSE_DELAY),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=300,
+                                step=1,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
             )
         }
 
     def _section_factory_presence(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for presence control section."""
-        
+
         # Determine available presets based on members' supported presets
         available_presets: list[str] = []
         seen: set[str] = set()
@@ -595,62 +829,191 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         available_presets.append(mode)
 
         return {
-            vol.Required("presence_section"): section(
-                vol.Schema({
-                    vol.Required(CONF_PRESENCE_MODE, default=config.get(CONF_PRESENCE_MODE, PresenceMode.DISABLED)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(options=[opt.value for opt in PresenceMode], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_mode")
-                    ),
-                    vol.Optional(CONF_PRESENCE_SENSOR, default=config.get(CONF_PRESENCE_SENSOR, [])): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean", "device_tracker", "person", "calendar"], multiple=True)
-                    ),
-                    vol.Optional(CONF_PRESENCE_ZONE, default=config.get(CONF_PRESENCE_ZONE, [])): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="zone", multiple=True)
-                    ),
-                    vol.Required(CONF_PRESENCE_ACTION, default=config.get(CONF_PRESENCE_ACTION, PresenceAction.OFF)): selector.SelectSelector(
-                        selector.SelectSelectorConfig(options=[opt.value for opt in PresenceAction], mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_action")
-                    ),
-                    vol.Optional(CONF_PRESENCE_AWAY_OFFSET, default=config.get(CONF_PRESENCE_AWAY_OFFSET, 0.0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=-10, max=10, step=0.5, unit_of_measurement="°C", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_PRESENCE_AWAY_TEMPERATURE, description={"suggested_value": config.get(CONF_PRESENCE_AWAY_TEMPERATURE)}): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=self._min_temp, max=self._max_temp, step=0.5, unit_of_measurement="°C", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_PRESENCE_AWAY_PRESET, description={"suggested_value": config.get(CONF_PRESENCE_AWAY_PRESET)}): selector.SelectSelector(
-                        selector.SelectSelectorConfig(options=available_presets, mode=selector.SelectSelectorMode.DROPDOWN, translation_key="presence_away_preset")
-                    ),
-                    vol.Optional(CONF_PRESENCE_AWAY_DELAY, default=config.get(CONF_PRESENCE_AWAY_DELAY, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_PRESENCE_RETURN_DELAY, default=config.get(CONF_PRESENCE_RETURN_DELAY, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("presence_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {
+                        vol.Required(
+                            CONF_PRESENCE_MODE,
+                            default=config.get(
+                                CONF_PRESENCE_MODE, PresenceMode.DISABLED
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in PresenceMode],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="presence_mode",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_PRESENCE_SENSOR,
+                            default=config.get(CONF_PRESENCE_SENSOR, []),
+                        ): selector.EntitySelector(
+                            selector.EntitySelectorConfig(
+                                domain=[
+                                    "binary_sensor",
+                                    "input_boolean",
+                                    "device_tracker",
+                                    "person",
+                                    "calendar",
+                                ],
+                                multiple=True,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_PRESENCE_ZONE,
+                            default=config.get(CONF_PRESENCE_ZONE, []),
+                        ): selector.EntitySelector(
+                            selector.EntitySelectorConfig(domain="zone", multiple=True)
+                        ),
+                        vol.Required(
+                            CONF_PRESENCE_ACTION,
+                            default=config.get(
+                                CONF_PRESENCE_ACTION, PresenceAction.OFF
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in PresenceAction],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="presence_action",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_PRESENCE_AWAY_OFFSET,
+                            default=config.get(CONF_PRESENCE_AWAY_OFFSET, 0.0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=-10,
+                                max=10,
+                                step=0.5,
+                                unit_of_measurement="°C",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_PRESENCE_AWAY_TEMPERATURE,
+                            description={
+                                "suggested_value": config.get(
+                                    CONF_PRESENCE_AWAY_TEMPERATURE
+                                )
+                            },
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=self._min_temp,
+                                max=self._max_temp,
+                                step=0.5,
+                                unit_of_measurement="°C",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_PRESENCE_AWAY_PRESET,
+                            description={
+                                "suggested_value": config.get(CONF_PRESENCE_AWAY_PRESET)
+                            },
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=available_presets,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="presence_away_preset",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_PRESENCE_AWAY_DELAY,
+                            default=config.get(CONF_PRESENCE_AWAY_DELAY, 0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=300,
+                                step=1,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_PRESENCE_RETURN_DELAY,
+                            default=config.get(CONF_PRESENCE_RETURN_DELAY, 0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=300,
+                                step=1,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
             )
         }
 
     def _section_factory_schedule(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for schedule section."""
         return {
-            vol.Required("schedule_section"): section(
-                vol.Schema({
-                    vol.Optional(CONF_SCHEDULE_ENTITY, description={"suggested_value": config.get(CONF_SCHEDULE_ENTITY)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["schedule", "calendar"])
-                    ),
-                    vol.Optional(CONF_SCHEDULE_BYPASS_ENTITY, description={"suggested_value": config.get(CONF_SCHEDULE_BYPASS_ENTITY)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["schedule", "calendar"])
-                    ),
-                    vol.Optional(CONF_RESYNC_INTERVAL, default=config.get(CONF_RESYNC_INTERVAL, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_OVERRIDE_DURATION, default=config.get(CONF_OVERRIDE_DURATION, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=120, step=1, unit_of_measurement="min", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_PERSIST_CHANGES, default=config.get(CONF_PERSIST_CHANGES, False)): bool,
-                    vol.Optional(CONF_PERSIST_ACTIVE_SCHEDULE, default=config.get(CONF_PERSIST_ACTIVE_SCHEDULE, False)): bool,
-                    vol.Optional(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, default=config.get(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, False)): bool,
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("schedule_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_SCHEDULE_ENTITY,
+                            description={
+                                "suggested_value": config.get(CONF_SCHEDULE_ENTITY)
+                            },
+                        ): selector.EntitySelector(
+                            selector.EntitySelectorConfig(
+                                domain=["schedule", "calendar"]
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_SCHEDULE_BYPASS_ENTITY,
+                            description={
+                                "suggested_value": config.get(
+                                    CONF_SCHEDULE_BYPASS_ENTITY
+                                )
+                            },
+                        ): selector.EntitySelector(
+                            selector.EntitySelectorConfig(
+                                domain=["schedule", "calendar"]
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_RESYNC_INTERVAL,
+                            default=config.get(CONF_RESYNC_INTERVAL, 0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=120,
+                                step=1,
+                                unit_of_measurement="min",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_OVERRIDE_DURATION,
+                            default=config.get(CONF_OVERRIDE_DURATION, 0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=120,
+                                step=1,
+                                unit_of_measurement="min",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_PERSIST_CHANGES,
+                            default=config.get(CONF_PERSIST_CHANGES, False),
+                        ): selector.BooleanSelector(),
+                        vol.Optional(
+                            CONF_PERSIST_ACTIVE_SCHEDULE,
+                            default=config.get(CONF_PERSIST_ACTIVE_SCHEDULE, False),
+                        ): selector.BooleanSelector(),
+                        vol.Optional(
+                            CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
+                            default=config.get(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, False),
+                        ): selector.BooleanSelector(),
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
             )
         }
 
@@ -664,19 +1027,33 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         for entity_id in entities:
             # Try to get a friendly name for a more readable UI label
             state = self.hass.states.get(entity_id)
-            name = state.attributes.get("friendly_name", entity_id) if state else entity_id
-            
+            name = (
+                state.attributes.get("friendly_name", entity_id) if state else entity_id
+            )
+
             # Format: "Offset: Friendly Name (entity_id)" so HA displays it nicely
             key = f"Offset: {name} ({entity_id})"
-            
-            fields[vol.Optional(key, default=offsets.get(entity_id, 0.0))] = selector.NumberSelector(
-                selector.NumberSelectorConfig(min=-20, max=20, step=0.5, unit_of_measurement="°", mode=selector.NumberSelectorMode.SLIDER)
+
+            fields[vol.Optional(key, default=offsets.get(entity_id, 0.0))] = (
+                selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=-20,
+                        max=20,
+                        step=0.5,
+                        unit_of_measurement="°",
+                        mode=selector.NumberSelectorMode.SLIDER,
+                    )
+                )
             )
-        fields[vol.Optional(CONF_MEMBER_OFFSET_CORRECTION, default=config.get(CONF_MEMBER_OFFSET_CORRECTION, True))] = bool
+        fields[
+            vol.Optional(
+                CONF_MEMBER_OFFSET_CORRECTION,
+                default=config.get(CONF_MEMBER_OFFSET_CORRECTION, True),
+            )
+        ] = selector.BooleanSelector()  # type: ignore[assignment]
         return {
-            vol.Required("temp_offsets_section"): section(
-                vol.Schema(fields),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("temp_offsets_section"): section(  # type: ignore[dict-item]
+                vol.Schema(fields), {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
             )
         }
 
@@ -687,7 +1064,9 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             return {}
 
         # Filter saved entities to only those still in the group (stale-ref guard)
-        saved_isolation = [e for e in config.get(CONF_ISOLATION_ENTITIES, []) if e in members]
+        saved_isolation = [
+            e for e in config.get(CONF_ISOLATION_ENTITIES, []) if e in members
+        ]
         member_options = [{"value": eid, "label": eid} for eid in members]
 
         # Collect available HVAC modes from member states (for HVAC_MODE trigger selector)
@@ -701,71 +1080,171 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         available_hvac_modes.append(mode)
 
         trigger = config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
-        saved_hvac_modes = [m for m in config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, []) if m in seen]
-        hvac_mode_options = available_hvac_modes if available_hvac_modes else [m.value for m in HVACMode]
+        saved_hvac_modes = [
+            m for m in config.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, []) if m in seen
+        ]
+        hvac_mode_options = (
+            available_hvac_modes
+            if available_hvac_modes
+            else [m.value for m in HVACMode]
+        )
 
         return {
-            vol.Required("isolation_section"): section(
-                vol.Schema({
-                    vol.Required(CONF_ISOLATION_TRIGGER, default=trigger): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[
-                                IsolationTrigger.DISABLED,
-                                IsolationTrigger.SENSOR,
-                                IsolationTrigger.HVAC_MODE,
-                                IsolationTrigger.MEMBER_OFF,
-                            ],
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="isolation_trigger",
-                        )
-                    ),
-                    vol.Optional(CONF_ISOLATION_SENSOR, description={"suggested_value": config.get(CONF_ISOLATION_SENSOR)}): selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain=["binary_sensor", "input_boolean"])
-                    ),
-                    vol.Optional(CONF_ISOLATION_TRIGGER_HVAC_MODES, default=saved_hvac_modes): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=hvac_mode_options,
-                            multiple=True,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            translation_key="isolation_trigger_hvac_modes",
-                        )
-                    ),
-                    vol.Optional(CONF_ISOLATION_ENTITIES, default=saved_isolation): selector.SelectSelector(
-                        selector.SelectSelectorConfig(options=member_options, multiple=True, mode=selector.SelectSelectorMode.DROPDOWN)
-                    ),
-                    vol.Optional(CONF_ISOLATION_ACTIVATE_DELAY, default=config.get(CONF_ISOLATION_ACTIVATE_DELAY, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_ISOLATION_RESTORE_DELAY, default=config.get(CONF_ISOLATION_RESTORE_DELAY, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=300, step=1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("isolation_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {
+                        vol.Required(
+                            CONF_ISOLATION_TRIGGER, default=trigger
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[
+                                    IsolationTrigger.DISABLED,
+                                    IsolationTrigger.SENSOR,
+                                    IsolationTrigger.HVAC_MODE,
+                                    IsolationTrigger.MEMBER_OFF,
+                                ],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="isolation_trigger",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_ISOLATION_SENSOR,
+                            description={
+                                "suggested_value": config.get(CONF_ISOLATION_SENSOR)
+                            },
+                        ): selector.EntitySelector(
+                            selector.EntitySelectorConfig(
+                                domain=["binary_sensor", "input_boolean"]
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_ISOLATION_TRIGGER_HVAC_MODES, default=saved_hvac_modes
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=hvac_mode_options,
+                                multiple=True,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="isolation_trigger_hvac_modes",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_ISOLATION_ENTITIES, default=saved_isolation
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=member_options,  # type: ignore[typeddict-item]
+                                multiple=True,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_ISOLATION_ACTIVATE_DELAY,
+                            default=config.get(CONF_ISOLATION_ACTIVATE_DELAY, 0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=300,
+                                step=1,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_ISOLATION_RESTORE_DELAY,
+                            default=config.get(CONF_ISOLATION_RESTORE_DELAY, 0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=300,
+                                step=1,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
             )
         }
 
     def _section_factory_advanced(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for advanced section."""
         return {
-            vol.Required("advanced_section"): section(
-                vol.Schema({
-                    vol.Optional(CONF_DEBOUNCE_DELAY, default=config.get(CONF_DEBOUNCE_DELAY, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=10, step=0.1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_RETRY_ATTEMPTS, default=config.get(CONF_RETRY_ATTEMPTS, 0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=5, step=1, mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_RETRY_DELAY, default=config.get(CONF_RETRY_DELAY, 2.5)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=10, step=0.5, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_STAGGERED_CALL_DELAY, default=config.get(CONF_STAGGERED_CALL_DELAY, 0.0)): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=0, max=2, step=0.1, unit_of_measurement="s", mode=selector.NumberSelectorMode.SLIDER)
-                    ),
-                    vol.Optional(CONF_EXPOSE_SMART_SENSORS, default=config.get(CONF_EXPOSE_SMART_SENSORS, False)): bool,
-                    vol.Optional(CONF_EXPOSE_MEMBER_ENTITIES, default=config.get(CONF_EXPOSE_MEMBER_ENTITIES, True)): bool,
-                    vol.Optional(CONF_EXPOSE_CONFIG, default=config.get(CONF_EXPOSE_CONFIG, False)): bool,
-                }),
-                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)}
+            vol.Required("advanced_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_DEBOUNCE_DELAY,
+                            default=config.get(CONF_DEBOUNCE_DELAY, 0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=10,
+                                step=0.1,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_RETRY_ATTEMPTS,
+                            default=config.get(CONF_RETRY_ATTEMPTS, 0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=5,
+                                step=1,
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_RETRY_DELAY, default=config.get(CONF_RETRY_DELAY, 2.5)
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=10,
+                                step=0.5,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_STAGGERED_CALL_DELAY,
+                            default=config.get(CONF_STAGGERED_CALL_DELAY, 0.0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=2,
+                                step=0.1,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_GRACE_PERIOD,
+                            default=config.get(CONF_GRACE_PERIOD, DEFAULT_GRACE_PERIOD),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=30,
+                                step=0.5,
+                                unit_of_measurement="s",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_EXPOSE_SMART_SENSORS,
+                            default=config.get(CONF_EXPOSE_SMART_SENSORS, False),
+                        ): selector.BooleanSelector(),
+                        vol.Optional(
+                            CONF_EXPOSE_MEMBER_ENTITIES,
+                            default=config.get(CONF_EXPOSE_MEMBER_ENTITIES, True),
+                        ): selector.BooleanSelector(),
+                        vol.Optional(
+                            CONF_EXPOSE_CONFIG,
+                            default=config.get(CONF_EXPOSE_CONFIG, False),
+                        ): selector.BooleanSelector(),
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
             )
         }
 
@@ -797,44 +1276,73 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
 
             # Suggest a refresh if master changed and hint not yet shown
             new_master = flattened_input.get(CONF_MASTER_ENTITY)
-            master_changed = (CONF_MASTER_ENTITY in flattened_input and new_master != old_master)
+            master_changed = (
+                CONF_MASTER_ENTITY in flattened_input and new_master != old_master
+            )
 
             if master_changed and not self._refresh_hint_shown:
                 self._refresh_hint_shown = True
-                return await self._show_main_form(current_config, form_errors={
-                    "base": "master_refresh_notice",
-                    "temperature_section": "master_options_notice",
-                    "humidity_section": "master_options_notice",
-                    "sync_section": "master_options_notice",
-                    "window_section": "master_options_notice",
-                    "presence_section": "master_options_notice",
-                })
+                return await self._show_main_form(
+                    current_config,
+                    form_errors={
+                        "base": "master_refresh_notice",
+                        "temperature_section": "master_options_notice",
+                        "humidity_section": "master_options_notice",
+                        "sync_section": "master_options_notice",
+                        "window_section": "master_options_notice",
+                        "presence_section": "master_options_notice",
+                    },
+                )
 
             # Validate: isolation_entities must be a proper subset of entities
             # (not enforced for MEMBER_OFF — dynamic per-entity trigger has no batch deadlock risk)
-            entities = set(flattened_input.get(CONF_ENTITIES, self._config_entry.options.get(CONF_ENTITIES, [])))
-            isolation_trigger = flattened_input.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
+            entities = set(
+                flattened_input.get(
+                    CONF_ENTITIES, self._config_entry.options.get(CONF_ENTITIES, [])
+                )
+            )
+            isolation_trigger = flattened_input.get(
+                CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED
+            )
             isolation_entities = set(flattened_input.get(CONF_ISOLATION_ENTITIES, []))
             if (
-                isolation_trigger not in (IsolationTrigger.DISABLED, IsolationTrigger.MEMBER_OFF)
-                and isolation_entities and isolation_entities >= entities
+                isolation_trigger
+                not in (IsolationTrigger.DISABLED, IsolationTrigger.MEMBER_OFF)
+                and isolation_entities
+                and isolation_entities >= entities
             ):
-                return await self._show_main_form(current_config, form_errors={
-                    "isolation_section": "isolation_all_selected",
-                })
+                return await self._show_main_form(
+                    current_config,
+                    form_errors={
+                        "isolation_section": "isolation_all_selected",
+                    },
+                )
 
             # Validate: own CGH sensors must not be used as external sensors (feedback loop)
             for conf_key in (CONF_TEMP_SENSORS, CONF_HUMIDITY_SENSORS):
                 selected = flattened_input.get(conf_key, [])
-                if len(_filter_cgh_sensors(self.hass, selected, "")) < len(selected):
-                    return await self._show_main_form(current_config, form_errors={
-                        "calibration_section": "sensor_loop_protection",
-                    })
+                if len(filter_cgh_sensors(self.hass, selected, "")) < len(selected):
+                    section_key = (
+                        "temperature_section"
+                        if conf_key == CONF_TEMP_SENSORS
+                        else "humidity_section"
+                    )
+                    return await self._show_main_form(
+                        current_config,
+                        form_errors={
+                            section_key: "sensor_loop_protection",
+                        },
+                    )
 
             new_adv_mode = bool(flattened_input.get(CONF_ADVANCED_MODE))
-            adv_mode_changed = (CONF_ADVANCED_MODE in flattened_input and new_adv_mode != self._from_adv_mode)
+            adv_mode_changed = (
+                CONF_ADVANCED_MODE in flattened_input
+                and new_adv_mode != self._from_adv_mode
+            )
 
-            final_options = self._normalize_options(flattened_input, refresh=adv_mode_changed)
+            final_options = self._normalize_options(
+                flattened_input, refresh=adv_mode_changed
+            )
 
             if adv_mode_changed:
                 return await self._show_main_form(final_options)
@@ -844,9 +1352,11 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
 
             return self.async_create_entry(title="", data=final_options)
 
-        return await self._show_main_form(self._config_entry.options)
+        return await self._show_main_form(dict(self._config_entry.options))
 
-    async def _show_main_form(self, config: dict[str, Any], form_errors: dict[str, str] | None = None) -> ConfigFlowResult:
+    async def _show_main_form(
+        self, config: dict[str, Any], form_errors: dict[str, str] | None = None
+    ) -> ConfigFlowResult:
         """Show the unified configuration form."""
         self._update_dynamic_limits()
 
@@ -868,8 +1378,8 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             schema_dict.update(self._section_factory_isolation(config))
             schema_dict.update(self._section_factory_advanced(config))
 
-        schema_dict[vol.Optional(CONF_ADVANCED_MODE, default=advanced_mode)] = bool
-        schema_dict[vol.Optional(CONF_EXPAND_SECTIONS, default=config.get(CONF_EXPAND_SECTIONS, False))] = bool
+        schema_dict[vol.Optional(CONF_ADVANCED_MODE, default=advanced_mode)] = selector.BooleanSelector()  # type: ignore[index]
+        schema_dict[vol.Optional(CONF_EXPAND_SECTIONS, default=config.get(CONF_EXPAND_SECTIONS, False))] = selector.BooleanSelector()  # type: ignore[index]
 
         return self.async_show_form(
             step_id="init",

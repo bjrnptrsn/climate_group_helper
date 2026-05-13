@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import HVACMode
 from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
@@ -24,6 +24,7 @@ from .service_call import BaseServiceCallHandler
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
+    from .state import IsolationStateManager, TargetState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -65,8 +66,8 @@ class MemberIsolationHandler:
         self._activate_delay: float = group.config.get(CONF_ISOLATION_ACTIVATE_DELAY, 0) if self._group.advanced_mode else 0
         self._restore_delay: float = group.config.get(CONF_ISOLATION_RESTORE_DELAY, 0) if self._group.advanced_mode else 0
 
-        self._unsub_listener = None
-        self._pending_timer: Any = None
+        self._unsub_listener: Callable[[], None] | None = None
+        self._pending_timer: Callable[[], None] | None = None
         self._trigger_active: bool = False
 
         # Per-entity call handlers — created in async_setup, keyed by entity_id
@@ -79,12 +80,12 @@ class MemberIsolationHandler:
         )
 
     @property
-    def state_manager(self):
+    def state_manager(self) -> IsolationStateManager:
         """Return the state manager for sync mode operations."""
-        return self._group.isolation_state_manager    
+        return self._group.isolation_state_manager
 
     @property
-    def target_state(self):
+    def target_state(self) -> TargetState:
         """Return the current target state (from central source)."""
         return self.state_manager.target_state
 
@@ -278,8 +279,6 @@ class MemberIsolationHandler:
             # Member switched to an active mode → release isolation synchronously,
             # then send restore call async.
             if entity_id in self._group.run_state.isolated_members:
-                if self.target_state.hvac_mode == HVACMode.OFF:
-                    self.state_manager.update(hvac_mode=new_hvac_mode, entity_id=entity_id)
                 self.release_member_sync(entity_id)
                 self._hass.async_create_task(self.send_restore_call(entity_id))
 

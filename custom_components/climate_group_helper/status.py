@@ -1,10 +1,10 @@
 """Status and analytics aggregation for ClimateGroupHelper extra_state_attributes."""
 from __future__ import annotations
 
-from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import HVACMode
+from homeassistant.util import dt as dt_util
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     STATE_UNAVAILABLE,
@@ -72,7 +72,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     if target.last_source:
         attrs[ATTR_LAST_SOURCE] = target.last_source
     if target.last_timestamp:
-        attrs[ATTR_LAST_CHANGED] = datetime.fromtimestamp(target.last_timestamp).isoformat()
+        attrs[ATTR_LAST_CHANGED] = dt_util.utc_from_timestamp(target.last_timestamp).isoformat()
     if target.last_entity:
         attrs[ATTR_LAST_ENTITY] = target.last_entity
 

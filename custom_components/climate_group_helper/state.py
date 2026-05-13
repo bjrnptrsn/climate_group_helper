@@ -6,9 +6,10 @@ import time
 from dataclasses import asdict, dataclass, field, fields, replace
 from datetime import datetime, timedelta
 from types import MappingProxyType
-from typing import Any, TYPE_CHECKING
+from typing import Any, Self, TYPE_CHECKING
 
 from homeassistant.core import Event
+from homeassistant.util import dt as dt_util
 
 from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
@@ -72,9 +73,9 @@ class RunState:
             new_overrides.pop(key, None)
         return replace(self, config_overrides=MappingProxyType(new_overrides))
 
-    def set_override(self, name: str, duration_seconds: float) -> RunState:
+    def set_override(self, name: str, duration: float) -> RunState:
         """Return a new RunState with the override set and end time computed."""
-        end = datetime.now() + timedelta(seconds=duration_seconds)
+        end = dt_util.now() + timedelta(seconds=duration)
         return replace(self, active_override=name, active_override_end=end)
 
     def clear_override(self) -> RunState:
@@ -100,7 +101,7 @@ class ClimateState:
     swing_mode: str | None = None
     swing_horizontal_mode: str | None = None
 
-    def update(self, **kwargs: Any) -> ClimateState:
+    def update(self, **kwargs: Any) -> Self:
         """Return a new state with updated values."""
         valid_fields = {f.name for f in fields(self)}
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
@@ -138,15 +139,15 @@ class CurrentState(ClimateState):
 @dataclass(frozen=True)
 class FilterState(ClimateState):
     """Masking state for attribute access control."""
-    hvac_mode: bool = True
+    hvac_mode: bool = True  # type: ignore[assignment]
     temperature: bool = True
     target_temp_low: bool = True
     target_temp_high: bool = True
     humidity: bool = True
-    fan_mode: bool = True
-    preset_mode: bool = True
-    swing_mode: bool = True
-    swing_horizontal_mode: bool = True
+    fan_mode: bool = True  # type: ignore[assignment]
+    preset_mode: bool = True  # type: ignore[assignment]
+    swing_mode: bool = True  # type: ignore[assignment]
+    swing_horizontal_mode: bool = True  # type: ignore[assignment]
 
     @classmethod
     def from_keys(cls, attributes: list[str]) -> FilterState:
@@ -250,7 +251,7 @@ class BaseStateManager:
         """Return the current target state from central source."""
         return self._group.shared_target_state
 
-    def update(self, entity_id: str | None = None, **kwargs) -> bool:
+    def update(self, entity_id: str | None = None, **kwargs: Any) -> bool:
         """Update target_state with source tracking.
         
         Template Method workflow:
@@ -292,7 +293,7 @@ class BaseStateManager:
 
         return True
 
-    def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
+    def _filter_update(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
         """Filter hook - return False to block this update.
 
         Args:
@@ -328,7 +329,7 @@ class BaseStateManager:
             return True
         return False
 
-    def _check_partial_sync(self, entity_id: str | None, kwargs: dict) -> bool:
+    def _check_partial_sync(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
         """Check Partial Sync / Last Man Standing logic.
 
         Blocks updating TargetState HVACMode.OFF unless this is the last active member.
@@ -347,11 +348,13 @@ class BaseStateManager:
             return True
 
         # Allow if no other members are still ON (Last Man Standing)
+        # Isolated members are excluded — they don't participate in group state.
         other_active_members = [
             entity for entity in self._group.climate_entity_ids
-            if entity != entity_id 
-            and (state := self._group.hass.states.get(entity)) 
-            and state.state != HVACMode.OFF 
+            if entity != entity_id
+            and entity not in self._group.run_state.isolated_members
+            and (state := self._group.hass.states.get(entity))
+            and state.state != HVACMode.OFF
             and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         ]
 
@@ -372,7 +375,7 @@ class ClimateStateManager(BaseStateManager):
         """Initialize the climate state manager."""
         super().__init__(group)
 
-    def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
+    def _filter_update(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
         """Filter user updates based on blocking mode."""
         if entity_id and entity_id in self._group.run_state.isolated_members:
             _LOGGER.debug("[%s] TargetState update blocked: %s is isolated", self._group.entity_id, entity_id)
@@ -397,7 +400,7 @@ class SyncModeStateManager(BaseStateManager):
         """Initialize the sync mode state manager."""
         super().__init__(group)
 
-    def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
+    def _filter_update(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
         """Apply sync-mode specific filters."""
         if entity_id and entity_id in self._group.run_state.isolated_members:
             _LOGGER.debug(
@@ -432,7 +435,7 @@ class WindowControlStateManager(BaseStateManager):
         """Initialize the window control state manager."""
         super().__init__(group)
 
-    def _filter_update(self, entity_id: str | None, kwargs: dict) -> bool:
+    def _filter_update(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
         """Block all updates - Window Control is read-only."""
         _LOGGER.debug("[%s] TargetState update blocked for WindowControl", self._group.entity_id)
         return False
