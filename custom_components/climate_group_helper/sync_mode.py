@@ -6,7 +6,7 @@ import asyncio
 import logging
 import time
 from dataclasses import fields
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import Event
 from homeassistant.components.climate import HVACMode
@@ -26,6 +26,8 @@ from .state import ClimateState, FilterState
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
+    from .state import SyncModeStateManager, TargetState
+    from .service_call import SyncCallHandler
 
 _TRUSTED_CONTEXT_IDS = frozenset(
     {
@@ -74,7 +76,7 @@ class SyncModeHandler:
             self._sync_mode,
             self._filter_state,
         )
-        self._active_sync_tasks: set[asyncio.Task] = set()
+        self._active_sync_tasks: set[asyncio.Task[Any]] = set()
 
     @property
     def sync_mode(self) -> SyncMode:
@@ -84,17 +86,17 @@ class SyncModeHandler:
         return self._sync_mode
 
     @property
-    def state_manager(self):
+    def state_manager(self) -> SyncModeStateManager:
         """Return the state manager for sync mode operations."""
         return self._group.sync_mode_state_manager
 
     @property
-    def call_handler(self):
+    def call_handler(self) -> SyncCallHandler:
         """Return the call handler for sync mode operations."""
         return self._group.sync_mode_call_handler
 
     @property
-    def target_state(self):
+    def target_state(self) -> TargetState:
         """Return the current target state (from central source)."""
         return self.state_manager.target_state
 
@@ -116,11 +118,17 @@ class SyncModeHandler:
             _LOGGER.debug("[%s] Startup phase, sync blocked", self._group.entity_id)
             return
 
+        if self._group.event is None or self._group.change_state is None or self._group.change_state.entity_id is None:
+            return
+
         event = self._group.event
         origin_event = getattr(event.context, "origin_event", None)
-        change_entity_id = self._group.change_state.entity_id or None
+        change_entity_id = self._group.change_state.entity_id
         change_dict = self._group.change_state.attributes()
         own_echo = self._is_own_echo(event)
+
+        if self._is_transient_state_event(event):
+            return
 
         if not own_echo:
             # MEMBER_OFF isolation trigger: runs before the DISABLED guard so it works
@@ -157,14 +165,13 @@ class SyncModeHandler:
 
         # Deep Origin Analysis: Did we cause this change?
         if own_echo:
+            if origin_event is None:
+                return
             accepted = self._filter_echo_changes(origin_event, change_dict, change_entity_id)
             if accepted:
                 _LOGGER.debug("[%s] Adopting side effects: %s", self._group.entity_id, accepted)
                 self._reverse_offset_temperatures(change_entity_id, accepted)
                 self.state_manager.update(entity_id=change_entity_id, **accepted)
-            return
-
-        if self._is_transient_state_event(event):
             return
 
         # --- Fresh Event (external change) ---
@@ -229,7 +236,7 @@ class SyncModeHandler:
 
     # --- Offset Helpers ---
 
-    def _reverse_offset_temperatures(self, entity_id: str, data: dict) -> None:
+    def _reverse_offset_temperatures(self, entity_id: str, data: dict[str, Any]) -> None:
         """Reverse-transform member temperatures to logical group values (in-place).
         
         When adopting a member's temperature in Mirror/Master-Lock mode,
@@ -255,11 +262,8 @@ class SyncModeHandler:
         """Extract origin entity from parent_id (format: 'entity_id|timestamp')."""
         parent_id = origin_event.context.parent_id or ""
         if "|" in parent_id:
-            try:
-                origin, _ = parent_id.split("|", 1)
-                return origin
-            except ValueError:
-                pass
+            origin, _ = parent_id.split("|", 1)
+            return origin
         return ""
 
     def _has_relevant_changes(self, event: Event) -> bool:
@@ -318,7 +322,7 @@ class SyncModeHandler:
 
         return False
 
-    def _filter_echo_changes(self, origin_event: Event, change_dict: dict, change_entity_id: str | None) -> dict:
+    def _filter_echo_changes(self, origin_event: Event, change_dict: dict[str, Any], change_entity_id: str | None) -> dict[str, Any]:
         """Filter echo changes, returning only accepted side effects.
 
         - Ordered attrs that match: Clean Echo -> ignored (already in sync)

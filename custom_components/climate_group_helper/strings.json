@@ -226,6 +226,7 @@
               "retry_attempts": "Retry Attempts",
               "retry_delay": "Retry Delay (seconds)",
               "staggered_call_delay": "Staggered Call Delay (seconds)",
+              "grace_period": "Optimistic UI Grace Period (seconds)",
               "expose_smart_sensors": "Expose Smart Sensors",
               "expose_member_entities": "Expose Member List",
               "expose_config": "Expose Configuration Sensor"
@@ -235,6 +236,7 @@
               "retry_attempts": "How many times to resend a command if a device doesn't respond. Set to 0 to disable.",
               "retry_delay": "Pause between retry attempts. Giving devices a moment to recover can improve reliability.",
               "staggered_call_delay": "Time to wait between individual commands to group members. Staggering calls prevents network congestion in Zigbee/Matter environments. Set to 0 to disable.",
+              "grace_period": "How long the group shows the commanded value before switching to the member average. Prevents UI flicker when slow devices (Cloud bridges, Zigbee) echo their old state back. Set to 0 to disable.",
               "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
               "expose_member_entities": "Creates an attribute listing all member entity IDs.",
               "expose_config": "Creates a diagnostic sensor (sensor.*_configuration) that exposes portable settings as a JSON attribute. Useful for copying settings between groups via automations."

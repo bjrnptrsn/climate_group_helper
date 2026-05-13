@@ -1,6 +1,5 @@
 {
   "homeassistant": "2025.9.0",
-
   "name": "Climate Group Helper",
   "render_readme": true
 }

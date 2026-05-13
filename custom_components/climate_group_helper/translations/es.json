@@ -226,6 +226,7 @@
               "retry_attempts": "Intentos de Reintento",
               "retry_delay": "Retardo de Reintento (segundos)",
               "staggered_call_delay": "Retraso entre comandos (segundos)",
+              "grace_period": "Período de gracia de la UI optimista (segundos)",
               "expose_smart_sensors": "Exponer sensores inteligentes",
               "expose_member_entities": "Exponer lista de miembros",
               "expose_config": "Mostrar configuración (Depuración)"
@@ -235,6 +236,7 @@
               "retry_attempts": "Cuántas veces reenviar un comando si un dispositivo no responde. Poner a 0 para desactivar.",
               "retry_delay": "Pausa entre intentos. Dar un momento a los dispositivos para recuperarse puede mejorar la fiabilidad.",
               "staggered_call_delay": "Tiempo de espera entre comandos individuales a los miembros del grupo. Escalonar los comandos evita la congestión de red en entornos Zigbee/Matter. Establecer en 0 para desactivar.",
+              "grace_period": "Cuánto tiempo muestra el grupo el valor enviado antes de cambiar al promedio de los miembros. Evita el parpadeo de la UI cuando dispositivos lentos (puentes Cloud, Zigbee) devuelven su estado antiguo. Establecer en 0 para desactivar.",
               "expose_smart_sensors": "Crea entidades de sensor adicionales para temperatura y humedad del grupo (útil para gráficos).",
               "expose_member_entities": "Crea un atributo listando todos los IDs de entidades miembro.",
               "expose_config": "Añade todos los valores de configuración a los atributos de la entidad. Útil para depuración."

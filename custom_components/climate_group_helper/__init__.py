@@ -19,6 +19,7 @@ from .const import (
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
+    CONF_GRACE_PERIOD,
     CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_SENSORS,
     CONF_HUMIDITY_TARGET_AVG,
@@ -112,6 +113,7 @@ VALID_CONFIG_KEYS = {
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_STAGGERED_CALL_DELAY,
+    CONF_GRACE_PERIOD,
     # Sync mode options
     CONF_SYNC_MODE,
     CONF_SYNC_ATTRS,
@@ -199,7 +201,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old config entries to the current version.
 
     Versions before v10: Soft Reset

@@ -226,6 +226,7 @@
               "retry_attempts": "Počet opakovaných pokusov",
               "retry_delay": "Oneskorenie opakovania (sekundy)",
               "staggered_call_delay": "Oneskorenie medzi príkazmi (sekundy)",
+              "grace_period": "Optimistická prechodová doba UI (sekundy)",
               "expose_smart_sensors": "Zobraziť inteligentné senzory",
               "expose_member_entities": "Zobraziť zoznam členov",
               "expose_config": "Zobraziť konfiguráciu (ladenie)"
@@ -235,6 +236,7 @@
               "retry_attempts": "Koľkokrát znovu odoslať príkaz, ak zariadenie nereaguje. Nastavte na 0 pre vypnutie.",
               "retry_delay": "Pauza medzi pokusmi. Dať zariadeniam chvíľu na zotavenie môže zlepšiť spoľahlivosť.",
               "staggered_call_delay": "Čas čakania medzi jednotlivými príkazmi členom skupiny. Rozloženie príkazov zabraňuje preťaženiu siete v prostredí Zigbee/Matter. Nastavte na 0 pre vypnutie.",
+              "grace_period": "Ako dlho skupina zobrazuje zadanú hodnotu pred prepnutím na priemer členov. Zabraňuje blikaniu UI, keď pomalé zariadenia (Cloud bridges, Zigbee) posielajú späť svoj starý stav. Nastavte na 0 pre vypnutie.",
               "expose_smart_sensors": "Vytvorí ďalšie entity senzorov pre teplotu a vlhkosť skupiny (užitočné pre grafy).",
               "expose_member_entities": "Vytvorí atribút so zoznamom všetkých ID entít členov.",
               "expose_config": "Pridá všetky konfiguračné hodnoty do atribútov entity. Užitočné pre ladenie."

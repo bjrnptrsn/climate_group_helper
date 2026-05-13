@@ -78,6 +78,8 @@ from .const import (
     CONF_ADVANCED_MODE,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_MEMBER_ENTITIES,
+    CONF_GRACE_PERIOD,
+    DEFAULT_GRACE_PERIOD,
     CONF_FEATURE_STRATEGY,
     CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_SENSORS,
@@ -100,6 +102,7 @@ from .const import (
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
     CONF_TEMP_USE_MASTER,
+    CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_SENSOR,
     CONF_PRESENCE_SENSOR,
     CONF_PRESENCE_ZONE,
@@ -128,14 +131,13 @@ from . import VALID_CONFIG_KEYS
 from .calibration import CalibrationHandler
 from .isolation import MemberIsolationHandler
 from .override import (
-    BaseOverrideManager,
     BoostOverrideManager,
     OverrideHandler,
     SwitchOverrideManager,
     WindowOverrideManager,
 )
 from .presence import PresenceHandler, PresenceOverrideManager
-from .schedule import ScheduleHandler, ScheduleBypassHandler
+from .schedule import ScheduleCaller, ScheduleHandler, ScheduleBypassHandler
 from .service_call import (
     ClimateCallHandler,
     OverrideCallHandler,
@@ -163,7 +165,7 @@ from .window_control import WindowControlHandler
 from .meta_processor import SlotMetaProcessor
 from .status import build_extra_state_attributes
 
-CALC_TYPES = {
+CALC_TYPES: dict[AverageOption, Callable[..., float]] = {
     AverageOption.MIN: min,
     AverageOption.MAX: max,
     AverageOption.MEAN: mean,
@@ -193,17 +195,18 @@ DEFAULT_SUPPORTED_FEATURES = (
 _LOGGER = logging.getLogger(__name__)
 
 
-def _warn_missing_entities(hass: HomeAssistant, config: dict, group_entity_id: str) -> None:
+def _warn_missing_entities(hass: HomeAssistant, config: dict[str, Any], group_entity_id: str) -> None:
     """Log a warning for each configured entity that no longer exists in the state machine."""
+    registry = er.async_get(hass)
     checks: list[tuple[str, str]] = []
     for key in (CONF_ROOM_SENSOR, CONF_ZONE_SENSOR, CONF_ISOLATION_SENSOR, CONF_SCHEDULE_ENTITY, CONF_SCHEDULE_BYPASS_ENTITY):
         if val := config.get(key):
             checks.append((key, val))
-    for key in (CONF_PRESENCE_SENSOR, CONF_PRESENCE_ZONE):
+    for key in (CONF_PRESENCE_SENSOR, CONF_PRESENCE_ZONE, CONF_ISOLATION_ENTITIES, CONF_TEMP_UPDATE_TARGETS, CONF_HUMIDITY_UPDATE_TARGETS):
         for eid in config.get(key, []):
             checks.append((key, eid))
     for key, eid in checks:
-        if hass.states.get(eid) is None:
+        if hass.states.get(eid) is None and registry.async_get(eid) is None:
             _LOGGER.warning(
                 "[%s] Configured entity '%s' (option '%s') does not exist — "
                 "it may have been deleted. Update the integration options.",
@@ -211,7 +214,7 @@ def _warn_missing_entities(hass: HomeAssistant, config: dict, group_entity_id: s
             )
 
 
-def _filter_cgh_sensors(hass: HomeAssistant, entity_ids: list[str], label: str) -> list[str]:
+def filter_cgh_sensors(hass: HomeAssistant, entity_ids: list[str], label: str, group_entity_id: str = "") -> list[str]:
     """Remove own CGH sensor entities from a sensor list and log a warning for each one found."""
     registry = er.async_get(hass)
     valid_sensors: list[str] = []
@@ -221,7 +224,7 @@ def _filter_cgh_sensors(hass: HomeAssistant, entity_ids: list[str], label: str) 
             _LOGGER.warning(
                 "[%s] Sensor loop protection: '%s' is a CGH sensor and cannot be used as "
                 "an external %s sensor — ignoring. Remove it in the integration options.",
-                DOMAIN, eid, label
+                group_entity_id, eid, label
             )
         else:
             valid_sensors.append(eid)
@@ -271,10 +274,10 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Home Assistant
         self.hass = hass
-        self.entry = None
+        self.entry: ConfigEntry | None = None
         self.config = config
         self.climate_entity_ids = entity_ids
-        self.event: Event = None
+        self.event: Event | None = None
         self._attr_name = name
         self._attr_unique_id = unique_id
         self._event_entity_id: str | None = None
@@ -282,7 +285,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Advanced mode
         self._advanced_mode: bool = config.get(CONF_ADVANCED_MODE, False)
 
-        def _get_adv(key: str, fallback=None) -> Any:
+        def _get_adv(key: str, fallback: Any = None) -> Any:
             """Return config[key] only in advanced mode, else fallback."""
             return config.get(key, fallback) if self._advanced_mode else fallback
 
@@ -318,14 +321,16 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.calibration_handler = CalibrationHandler(self)
 
         # State variables
-        self.states: list[State] | None = None
+        self.states: list[State] = []
         self.shared_target_state = TargetState()
         self.current_group_state = CurrentState()
         self.change_state: ChangeState | None = None
         self.master_state: State | None = None
         self.current_master_state = CurrentState()
         self.run_state = RunState()
-        self._grace_period_unsub = None  # Cancel handle for grace period refresh timer
+        self._grace_period = float(config.get(CONF_GRACE_PERIOD, DEFAULT_GRACE_PERIOD))
+        self._grace_period_unsub: Callable[[], None] | None = None
+        self._grace_period_last_ts: float | None = None
 
         # State managers
         self.climate_state_manager = ClimateStateManager(self)
@@ -348,7 +353,6 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.window_control_call_handler = WindowControlCallHandler(self)
 
         # Modules
-        self.base_override_manager = BaseOverrideManager(self)
         self.boost_override_manager = BoostOverrideManager(self)
         self.member_isolation_handler = MemberIsolationHandler(self)
         self.override_handler = OverrideHandler(self)
@@ -402,7 +406,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_translation_key = "climate_group_helper"
 
     @property
-    def device_info(self) -> dict[str, Any]:
+    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
         """Return the device info."""
         return {
             "identifiers": {(DOMAIN, self._attr_unique_id)},
@@ -433,11 +437,11 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Guard against feedback loops from misconfigured CGH sensors.
         # Filter sensor lists and rebuild _entity_ids so the listener never subscribes to our own sensors.
-        self.temp_sensor_entity_ids = _filter_cgh_sensors(
-            self.hass, self.temp_sensor_entity_ids, "temperature"
+        self.temp_sensor_entity_ids = filter_cgh_sensors(
+            self.hass, self.temp_sensor_entity_ids, "temperature", self.entity_id
         )
-        self.humidity_sensor_entity_ids = _filter_cgh_sensors(
-            self.hass, self.humidity_sensor_entity_ids, "humidity"
+        self.humidity_sensor_entity_ids = filter_cgh_sensors(
+            self.hass, self.humidity_sensor_entity_ids, "humidity", self.entity_id
         )
         self._entity_ids = (
             self.climate_entity_ids
@@ -458,7 +462,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Register listeners
         self.async_on_remove(
             async_track_state_change_event(
-                self.hass, self._entity_ids, self._state_change_listener
+                self.hass, self._entity_ids, self._state_change_listener  # type: ignore[arg-type]
             )
         )
 
@@ -532,9 +536,11 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if (temperature is None) == (temperature_offset is None):
             raise ServiceValidationError("Exactly one of 'temperature' or 'temperature_offset' must be provided.")
         if temperature is None:
-            current = self.shared_target_state.temperature or 0.0
-            temperature = current + temperature_offset
-        await self.boost_override_manager.activate(temperature=temperature, duration_seconds=duration * 60)
+            current = self.shared_target_state.temperature
+            if current is None:
+                raise ServiceValidationError("Cannot use 'temperature_offset': group has no current target temperature.")
+            temperature = current + temperature_offset  # type: ignore[operator]
+        await self.boost_override_manager.activate(temperature=temperature, duration=duration * 60)
 
     async def async_service_apply_config(
         self,
@@ -543,6 +549,9 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         include_entity_selectors: bool = False,
     ) -> None:
         """Handle apply_config service call."""
+        if self.entry is None:
+            _LOGGER.warning("[%s] apply_config: entry is None, skipping", self.entity_id)
+            return
         try:
             new_settings = json.loads(settings)
         except json.JSONDecodeError as err:
@@ -584,6 +593,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
         await super().async_will_remove_from_hass()
+        self._cancel_grace_period_timer()
         await self.climate_call_handler.async_cancel_all()
         
         if self.advanced_mode:
@@ -601,7 +611,10 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Restore group offset first to ensure it's available for TargetState restoration
         if (last_offset := last_attrs.get(ATTR_GROUP_OFFSET)) is not None:
-            self.run_state = replace(self.run_state, group_offset=float(last_offset))
+            try:
+                self.run_state = replace(self.run_state, group_offset=float(last_offset))
+            except (TypeError, ValueError):
+                pass
 
         # We filter for ClimateState fields to ensure we only store relevant climate attributes
         restored_data = {}
@@ -620,13 +633,13 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Restore modes and features
         if last_state.state in valid_hvac_modes:
-            self._attr_hvac_mode = last_state.state
+            self._attr_hvac_mode = HVACMode(last_state.state)
             self._attr_available = True
             self._attr_assumed_state = True
         if ATTR_HVAC_ACTION in last_attrs:
             self._attr_hvac_action = last_attrs[ATTR_HVAC_ACTION]
-        if ATTR_HVAC_MODES in last_attrs:
-            self._attr_hvac_modes = self._sort_hvac_modes(last_attrs[ATTR_HVAC_MODES])
+        if (modes := last_attrs.get(ATTR_HVAC_MODES)):
+            self._attr_hvac_modes = self._sort_hvac_modes(modes)
         if ATTR_FAN_MODES in last_attrs:
             self._attr_fan_modes = last_attrs[ATTR_FAN_MODES]
         if ATTR_PRESET_MODES in last_attrs:
@@ -663,7 +676,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if (last_active := last_attrs.get(ATTR_LAST_ACTIVE_HVAC_MODE)) is not None:
             self.run_state = replace(self.run_state, last_active_hvac_mode=last_active)
 
-    def _reduce_attributes(self, attributes: list[Any], default: Any = None) -> list | int:
+    def _reduce_attributes(self, attributes: list[Any], default: Any = None) -> list[Any] | int:
         """Reduce a list of attributes (modes or features) based on the feature strategy."""
         if not attributes:
             return default if default is not None else []
@@ -672,9 +685,9 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if isinstance(attributes[0], (ClimateEntityFeature, int)):
             # Intersection (common features)
             if self._feature_strategy == FeatureStrategy.INTERSECTION:
-                return reduce(lambda x, y: x & y, attributes)
+                return reduce(lambda x, y: x & y, attributes)  # type: ignore[no-any-return]
             # Union (all features)
-            return reduce(lambda x, y: x | y, attributes)
+            return reduce(lambda x, y: x | y, attributes)  # type: ignore[no-any-return]
 
         # Handle list of modes [HVACMode | str]
         # Filter out empty attributes or None
@@ -691,7 +704,55 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         return modes
 
-    def _sort_hvac_modes(self, modes: list[HVACMode | str]) -> list[HVACMode]:
+    def _start_grace_period_timer(self, remaining: float) -> None:
+        """(Re-)start the one-shot timer that forces a state refresh when the grace period expires.
+
+        Always replaces an existing timer so that a new UI command correctly extends
+        the window to _grace_period seconds from the latest change.
+        """
+        if self._grace_period_unsub is not None:
+            self._grace_period_unsub()
+
+        @callback
+        def _grace_period_expired(_now: Any) -> None:
+            self._grace_period_unsub = None
+            self._grace_period_last_ts = None
+            _LOGGER.debug("[%s] Grace period expired, forcing state refresh", self.entity_id)
+            self.async_defer_or_update_ha_state()
+
+        _LOGGER.debug("[%s] Grace period started, refresh in %.1f seconds", self.entity_id, remaining)
+        self._grace_period_unsub = async_call_later(self.hass, remaining, _grace_period_expired)
+
+    def _cancel_grace_period_timer(self) -> None:
+        """Cancel a pending grace period timer, if any."""
+        if self._grace_period_unsub is not None:
+            self._grace_period_unsub()
+            self._grace_period_unsub = None
+        self._grace_period_last_ts = None
+
+    def _get_optimistic_value(self, attr: str) -> Any:
+        """Return the target state value while the UI grace period is active, else None.
+
+        Shows the commanded value instead of the live member average for up to
+        _grace_period seconds after a direct UI command, preventing flicker while
+        slow devices echo their old state back.
+        """
+        if self._grace_period <= 0:
+            return None
+
+        timestamp = self.shared_target_state.last_timestamp or 0
+        elapsed = time.time() - timestamp
+
+        if self.shared_target_state.last_source == "ui" and elapsed < self._grace_period:
+            if timestamp != self._grace_period_last_ts:
+                self._grace_period_last_ts = timestamp
+                self._start_grace_period_timer(self._grace_period - elapsed)
+            return getattr(self.shared_target_state, attr, None)
+
+        self._cancel_grace_period_timer()
+        return None
+
+    def _sort_hvac_modes(self, modes: list[Any]) -> list[HVACMode]:
         """Sort HVAC modes based on a predefined order."""
 
         # Make sure OFF is always included
@@ -700,44 +761,17 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Return modes sorted in the order of the HVACMode enum
         return [m for m in HVACMode if m in all_modes]
 
-    def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | str | None:
+    def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | None:
         """Determine the group's HVAC mode based on member modes and strategy."""
-        
-        # Optimistic UI Update (Grace Period)
-        # Shows target_state.hvac_mode immediately after a UI command to prevent
-        # flicker while devices echo their old state back. A one-shot timer fires
-        # async_write_ha_state() at expiry so the display corrects itself even if
-        # no further state event arrives (e.g. device changes mode implicitly).
-        elapsed = time.time() - (self.shared_target_state.last_timestamp or 0)
-        if (
-            self.shared_target_state.last_source == "ui"
-            and self.shared_target_state.last_timestamp
-            and elapsed < 3.0
-            and self.shared_target_state.hvac_mode is not None
-        ):
-            if self._grace_period_unsub is None:
-                remaining = 3.0 - elapsed
 
-                @callback
-                def _grace_period_expired(_now):
-                    self._grace_period_unsub = None
-                    _LOGGER.debug("[%s] Grace period expired, forcing state refresh", self.entity_id)
-                    self.async_defer_or_update_ha_state()
-
-                self._grace_period_unsub = async_call_later(self.hass, remaining, _grace_period_expired)
-            _LOGGER.debug("[%s] Applying optimistic state: %s", self.entity_id, self.shared_target_state.hvac_mode)
-            return self.shared_target_state.hvac_mode
-
-        # Grace period expired or not active — cancel any pending timer
-        if self._grace_period_unsub is not None:
-            self._grace_period_unsub()
-            self._grace_period_unsub = None
+        if (val := self._get_optimistic_value("hvac_mode")) is not None:
+            return HVACMode(val)
 
         active_hvac_modes = [mode for mode in current_hvac_modes if mode != HVACMode.OFF]
 
-        most_common_active_hvac_mode = None
+        most_common_active_hvac_mode: HVACMode | None = None
         if active_hvac_modes:
-            most_common_active_hvac_mode = max(active_hvac_modes, key=active_hvac_modes.count)
+            most_common_active_hvac_mode = HVACMode(max(active_hvac_modes, key=active_hvac_modes.count))
 
         strategy = self._hvac_mode_strategy
 
@@ -791,7 +825,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         return None
 
     @staticmethod
-    def within_tolerance(val1: float, val2: float, tolerance: float = FLOAT_TOLERANCE) -> bool:
+    def within_tolerance(val1: Any, val2: Any, tolerance: float = FLOAT_TOLERANCE) -> bool:
         """Check if two values are within a given tolerance."""
         try:
             return abs(float(val1) - float(val2)) < tolerance
@@ -831,7 +865,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         all_ready = len(valid_states) == len(expected_entity_ids) if expected_entity_ids else True
         return valid_states, all_ready
 
-    def _get_avg_sensor_value(self, sensor_ids: list[str], calc_func) -> float | None:
+    def _get_avg_sensor_value(self, sensor_ids: list[str], calc_func: Callable[[list[float]], float]) -> float | None:
         """Calculate average value from multiple sensors."""
         if not sensor_ids:
             return None
@@ -851,7 +885,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
     @callback
     def _state_change_listener(self, event: Event | None = None) -> None:
         """Handle state changes."""
-        self.event: Event = event
+        self.event = event
         self.async_defer_or_update_ha_state()
 
     @callback
@@ -865,7 +899,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if not self.run_state.startup_time and all_members_ready:
             self.run_state = replace(self.run_state, startup_time=time.time())
             if self.advanced_mode:
-                self.hass.async_create_task(self.schedule_handler.schedule_listener(caller="group"))
+                self.hass.async_create_task(self.schedule_handler.schedule_listener(caller=ScheduleCaller.RESYNC))
                 self.calibration_handler.update("temperature", force_sync=True)
                 self.calibration_handler.update("humidity", force_sync=True)
             _LOGGER.debug("[%s] All members ready the first time.", self.entity_id)
@@ -919,9 +953,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
                 self.sync_mode_handler.resync()
 
         # All available HVAC modes --> list of HVACMode (str), e.g. [<HVACMode.OFF: 'off'>, <HVACMode.HEAT: 'heat'>, <HVACMode.AUTO: 'auto'>, ...]
-        self._attr_hvac_modes = self._sort_hvac_modes(
-            self._reduce_attributes(list(find_state_attributes(self.states, ATTR_HVAC_MODES)))
-        )
+        hvac_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_HVAC_MODES)))
+        self._attr_hvac_modes = self._sort_hvac_modes(hvac_modes if isinstance(hvac_modes, list) else [])
 
         # A list of all HVAC modes that are currently set
         self._current_hvac_modes = [state.state for state in self.states]
@@ -977,7 +1010,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.event = None
         self._event_entity_id = None
 
-    def _resolve_master_or_avg(self, use_master: bool, master_value, attr: str, avg_calc) -> float | None:
+    def _resolve_master_or_avg(self, use_master: bool, master_value: float | None, attr: str, avg_calc: Callable[[Any], float | None]) -> float | None:
         """Return the display value for a temperature attribute.
 
         Priority: master entity → offset-corrected average → raw member average.
@@ -1000,19 +1033,16 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             ]
             return avg_calc(values) if values else None
 
-        return reduce_attribute(self.states, attr, reduce=lambda *data: avg_calc(data))
+        return reduce_attribute(self.states, attr, reduce=lambda *data: avg_calc(data))  # type: ignore[no-any-return]
 
     def _update_temperature_attributes(self) -> None:
         """Calculate and set all temperature-related attributes."""
         # Current temperature
         self._member_temp_avg = reduce_attribute(
-            self.states, ATTR_CURRENT_TEMPERATURE,
-            reduce=lambda *data: self._temp_current_avg_calc(data)
+            self.states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._temp_current_avg_calc(data)
         )
         if self.temp_sensor_entity_ids:  # always empty in simple mode
-            self._attr_current_temperature = self._get_avg_sensor_value(
-                self.temp_sensor_entity_ids, self._temp_current_avg_calc
-            )
+            self._attr_current_temperature = self._get_avg_sensor_value(self.temp_sensor_entity_ids, self._temp_current_avg_calc)
             if self._attr_current_temperature is not None:
                 self.calibration_handler.update("temperature", self._event_entity_id)
             else:
@@ -1020,15 +1050,18 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         else:
             self._attr_current_temperature = self._member_temp_avg
 
-        # Target temperatures: master override or offset-corrected member average
+        # Target temperatures: grace period → master override → offset-corrected member average
         master = self.current_master_state
-        self._attr_target_temperature = self._resolve_master_or_avg(
+        val = self._get_optimistic_value("temperature")
+        self._attr_target_temperature = val if val is not None else self._resolve_master_or_avg(
             self._temp_use_master, master.temperature, ATTR_TEMPERATURE, self._temp_target_avg_calc
         )
-        self._attr_target_temperature_low = self._resolve_master_or_avg(
+        val = self._get_optimistic_value("target_temp_low")
+        self._attr_target_temperature_low = val if val is not None else self._resolve_master_or_avg(
             self._temp_use_master, master.target_temp_low, ATTR_TARGET_TEMP_LOW, self._temp_target_avg_calc
         )
-        self._attr_target_temperature_high = self._resolve_master_or_avg(
+        val = self._get_optimistic_value("target_temp_high")
+        self._attr_target_temperature_high = val if val is not None else self._resolve_master_or_avg(
             self._temp_use_master, master.target_temp_high, ATTR_TARGET_TEMP_HIGH, self._temp_target_avg_calc
         )
 
@@ -1062,14 +1095,13 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
                 _LOGGER.debug("[%s] External humidity sensors unavailable.", self.entity_id)
         else:
             self._attr_current_humidity = reduce_attribute(
-                self.states, ATTR_CURRENT_HUMIDITY,
-                reduce=lambda *data: self._humidity_current_avg_calc(data)
+                self.states, ATTR_CURRENT_HUMIDITY, reduce=lambda *data: self._humidity_current_avg_calc(data)
             )
 
-        # Target humidity (master override or member average)
-        self._attr_target_humidity = self._resolve_master_or_avg(
-            self._humidity_use_master, self.current_master_state.humidity,
-            ATTR_HUMIDITY, self._humidity_target_avg_calc
+        # Target humidity: grace period → master override → member average
+        val = self._get_optimistic_value("humidity")
+        self._attr_target_humidity = val if val is not None else self._resolve_master_or_avg(
+            self._humidity_use_master, self.current_master_state.humidity, ATTR_HUMIDITY, self._humidity_target_avg_calc
         )
         if self._attr_target_humidity is not None:
             self._attr_target_humidity = self.mean_round(self._attr_target_humidity, self._humidity_round)
@@ -1080,21 +1112,30 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
     def _update_mode_attributes(self) -> None:
         """Calculate and set fan, preset, swing modes and supported features."""
-        self._attr_fan_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_FAN_MODES))))
-        self._attr_fan_mode = most_frequent_attribute(self.states, ATTR_FAN_MODE)
+        fan_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_FAN_MODES)))
+        self._attr_fan_modes = sorted(fan_modes) if isinstance(fan_modes, list) else []
+        val = self._get_optimistic_value("fan_mode")
+        self._attr_fan_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_FAN_MODE)
 
-        self._attr_preset_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_PRESET_MODES))))
-        self._attr_preset_mode = most_frequent_attribute(self.states, ATTR_PRESET_MODE)
+        preset_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_PRESET_MODES)))
+        self._attr_preset_modes = sorted(preset_modes) if isinstance(preset_modes, list) else []
+        val = self._get_optimistic_value("preset_mode")
+        self._attr_preset_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_PRESET_MODE)
 
-        self._attr_swing_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_MODES))))
-        self._attr_swing_mode = most_frequent_attribute(self.states, ATTR_SWING_MODE)
+        swing_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_MODES)))
+        self._attr_swing_modes = sorted(swing_modes) if isinstance(swing_modes, list) else []
+        val = self._get_optimistic_value("swing_mode")
+        self._attr_swing_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_SWING_MODE)
 
-        self._attr_swing_horizontal_modes = sorted(self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_HORIZONTAL_MODES))))
-        self._attr_swing_horizontal_mode = most_frequent_attribute(self.states, ATTR_SWING_HORIZONTAL_MODE)
+        swing_horizontal_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_HORIZONTAL_MODES)))
+        self._attr_swing_horizontal_modes = sorted(swing_horizontal_modes) if isinstance(swing_horizontal_modes, list) else []
+        val = self._get_optimistic_value("swing_horizontal_mode")
+        self._attr_swing_horizontal_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_SWING_HORIZONTAL_MODE)
 
         # Supported features
         attr_supported_features = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SUPPORTED_FEATURES)), default=0)
-        self._attr_supported_features = (attr_supported_features | DEFAULT_SUPPORTED_FEATURES) & SUPPORTED_FEATURES
+        features = attr_supported_features if isinstance(attr_supported_features, int) else 0
+        self._attr_supported_features = (features | DEFAULT_SUPPORTED_FEATURES) & SUPPORTED_FEATURES
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Forward the set_hvac_mode command to all climate in the climate group."""
@@ -1137,7 +1178,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Set to the last active HVAC mode if available
         if self.run_state.last_active_hvac_mode is not None:
             _LOGGER.debug("[%s] Turn on with the last active HVAC mode: %s", self.entity_id, self.run_state.last_active_hvac_mode)
-            await self.async_set_hvac_mode(self.run_state.last_active_hvac_mode)
+            await self.async_set_hvac_mode(HVACMode(self.run_state.last_active_hvac_mode))
 
         # Try to set the first available HVAC mode
         elif self._attr_hvac_modes:

@@ -361,7 +361,7 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | Option | Description |
 |--------|-------------|
 | **Presence Control Mode** | **Disabled** (default) or **Enabled**. |
-| **Presence Trigger** | One or more entities reporting room presence (binary_sensor, device_tracker, or person). Any 'on' or 'home' state is treated as present. The group is occupied if **any** sensor reports presence. |
+| **Presence Trigger** | One or more entities reporting room presence (binary_sensor, device_tracker, or person). Any `on` or `home` state is treated as present; `not_home` and `away` are treated as absent. The group is occupied if **any** sensor reports presence. |
 | **Presence Zone** | *(Optional)* One or more `zone` entities. If configured, a person/device_tracker sensor only counts as present when located in one of the selected zones. Leave empty to treat any non-away state as present. |
 | **Away Action** | The fallback action to perform when absence is detected: **Turn Off**, **Away Offset**, **Away Temperature**, or **Away Preset**. |
 | **Away Offset** | *(Away Offset action)* Offset from current target when away (e.g. `−2.0°C` or `+2.0°C`). |
@@ -408,6 +408,7 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
 | **Staggered Call Delay** | Time to wait between individual commands to group members (0–2s, default: 0). Staggering calls prevents radio flooding in large Zigbee/Matter networks. Also applies to calibration writes. |
+| **UI Grace Period** | Duration (seconds) for which the group displays the commanded value immediately after a UI action, before slow member devices echo their state back. Prevents visual flicker on the dashboard. Applies to all attributes: HVAC mode, temperature, humidity, fan/preset/swing modes. |
 
 ## Services
 

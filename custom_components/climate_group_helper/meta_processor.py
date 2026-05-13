@@ -106,11 +106,10 @@ class SlotMetaProcessor:
         # Combined view for meta-key processing (bypass wins)
         combined = {**basis_data, **bypass_data}
 
-        # Update the calendar slot title (active_slot_title).
-        slot_message = combined.pop("message", None)
-        self._group.run_state = replace(self._group.run_state, active_slot_title=slot_message)
-
         meta_candidates = {k: v for k, v in combined.items() if k not in ATTR_SERVICE_MAP}
+
+        slot_message = meta_candidates.pop("message", None)
+        self._group.run_state = replace(self._group.run_state, active_slot_title=slot_message)
 
         # Identify valid meta-keys; warn on unknown ones (typo guard)
         # turn_off=False is semantically identical to the key being absent — it must not
@@ -144,7 +143,7 @@ class SlotMetaProcessor:
 
         # Trigger a state update so that changes to config_overrides or other
         # RunState fields are immediately visible in HA attributes.
-        if keys_to_clear or new_meta_keys or slot_message:
+        if keys_to_clear or new_meta_keys or slot_message is not None:
             self._group.async_defer_or_update_ha_state()
 
         return MetaProcessResult(

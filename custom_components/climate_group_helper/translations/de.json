@@ -226,6 +226,7 @@
               "retry_attempts": "Wiederholungsversuche",
               "retry_delay": "Wiederholungsverzögerung (Sekunden)",
               "staggered_call_delay": "Verzögerung zwischen Befehlen (Sekunden)",
+              "grace_period": "Optimistische UI-Übergangszeit (Sekunden)",
               "expose_smart_sensors": "Smarte Sensoren bereitstellen",
               "expose_member_entities": "Mitgliederliste bereitstellen",
               "expose_config": "Konfiguration anzeigen (Debug)"
@@ -235,6 +236,7 @@
               "retry_attempts": "Wie oft Befehle erneut gesendet werden, falls ein Gerät nicht antwortet. Auf 0 setzen zum Deaktivieren.",
               "retry_delay": "Pause zwischen Wiederholungsversuchen. Gibt Geräten einen Moment zur Erholung.",
               "staggered_call_delay": "Wartezeit zwischen einzelnen Befehlen an Gruppenmitglieder. Die gestaffelte Übertragung verhindert Netzwerküberlastung in Zigbee/Matter-Umgebungen. Auf 0 setzen zum Deaktivieren.",
+              "grace_period": "Wie lange die Gruppe den gesendeten Wert anzeigt, bevor sie zum Mitgliederdurchschnitt wechselt. Verhindert UI-Flackern, wenn langsame Geräte (Cloud-Bridges, Zigbee) ihren alten Zustand zurückmelden. Auf 0 setzen zum Deaktivieren.",
               "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
               "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
               "expose_config": "Fügt alle Konfigurationswerte den Entitätsattributen hinzu. Nützlich für die Fehlersuche."

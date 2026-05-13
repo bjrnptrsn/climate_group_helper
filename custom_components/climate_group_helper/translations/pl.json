@@ -226,6 +226,7 @@
               "retry_attempts": "Próby Ponowienia",
               "retry_delay": "Opóźnienie Ponowienia (sekundy)",
               "staggered_call_delay": "Opóźnienie między poleceniami (sekundy)",
+              "grace_period": "Optymistyczny okres przejścia UI (sekundy)",
               "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
               "expose_member_entities": "Pokaż Listę Członków",
               "expose_config": "Pokaż konfigurację (Debug)"
@@ -235,6 +236,7 @@
               "retry_attempts": "Ile razy ponownie wysłać polecenie, jeśli urządzenie nie odpowiada. Ustaw na 0, aby wyłączyć.",
               "retry_delay": "Pauza między próbami. Danie urządzeniom chwili na odzyskanie sprawności może poprawić niezawodność.",
               "staggered_call_delay": "Czas oczekiwania między poszczególnymi poleceniami do członków grupy. Rozłożenie poleceń zapobiega przeciążeniu sieci w środowiskach Zigbee/Matter. Ustaw na 0, aby wyłączyć.",
+              "grace_period": "Jak długo grupa wyświetla wysłaną wartość przed przełączeniem na średnią członków. Zapobiega migotaniu UI, gdy wolne urządzenia (mosty Cloud, Zigbee) odsyłają swój stary stan. Ustaw na 0, aby wyłączyć.",
               "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
               "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
               "expose_config": "Dodaje wszystkie wartości konfiguracji do atrybutów encji. Przydatne do debugowania."

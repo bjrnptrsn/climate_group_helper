@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import ATTR_CURRENT_TEMPERATURE, HVACMode
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
@@ -55,9 +55,9 @@ class CalibrationHandler:
         self._calibration_heartbeat = int(group.config.get(CONF_CALIBRATION_HEARTBEAT, 0))
 
         # Runtime state
-        self._heartbeat_unsub = None
+        self._heartbeat_unsub: Callable[[], None] | None = None
         self._pending: dict[str, float | int] = {}
-        self._debouncer: Debouncer | None = None
+        self._debouncer: Debouncer[Any] | None = None
         # Built in async_setup via device registry: target_entity_id → climate_member_id
         self._target_member_map: dict[str, str] = {}
 
@@ -98,9 +98,10 @@ class CalibrationHandler:
         self._pending.clear()
 
     @callback
-    def _heartbeat(self, _now) -> None:
+    def _heartbeat(self, _now: Any) -> None:
         _LOGGER.debug("[%s] Calibration heartbeat triggered", self._group.entity_id)
         self.update("temperature", force_sync=True)
+        self.update("humidity", force_sync=True)
 
     def update(self, domain: str, event_entity_id: str | None = None, force_sync: bool = False) -> None:
         """Queue calibration writes for all target entities in the given domain.
@@ -153,6 +154,13 @@ class CalibrationHandler:
             member_state = self._hass.states.get(member_id) if member_id else None
 
             # Skip guards
+            if member_id and member_id in self._group.run_state.isolated_members:
+                _LOGGER.debug(
+                    "[%s] Skipping calibration update for %s because member %s is isolated",
+                    self._group.entity_id, target_state.entity_id, member_id,
+                )
+                continue
+
             if member_state and member_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 _LOGGER.debug(
                     "[%s] Skipping calibration update for %s because member %s is unavailable",
@@ -219,8 +227,8 @@ class CalibrationHandler:
                     continue
 
                 self._pending[target_state.entity_id] = target_val
-            except Exception as error:
-                _LOGGER.error("[%s] Error updating target entity %s: %s", self._group.entity_id, target_state.entity_id, error)
+            except Exception:
+                _LOGGER.exception("[%s] Error updating target entity %s", self._group.entity_id, target_state.entity_id)
                 continue
 
         if not self._pending:

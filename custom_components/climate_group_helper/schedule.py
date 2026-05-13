@@ -6,7 +6,7 @@ import logging
 import yaml
 from dataclasses import fields, replace
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import (
     ATTR_FAN_MODE,
@@ -56,15 +56,15 @@ class ScheduleCaller(StrEnum):
 
     SLOT = "slot"
     SERVICE_CALL = "service_call"  # Genuine user command (climate_call_handler)
-    SYNC_CALL = (
-        "sync_call"  # Sync enforcement / MIRROR adoption (sync_mode_call_handler)
-    )
+    SYNC_CALL = "sync_call"        # Sync enforcement / MIRROR adoption (sync_mode_call_handler)
     RESYNC = "resync"
     SWITCH = "switch"
 
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
+    from .state import ScheduleStateManager, TargetState
+    from .service_call import ScheduleCallHandler
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -88,7 +88,7 @@ class ScheduleBaseHandler:
         self._persist_changes = group.config.get(CONF_PERSIST_CHANGES, False) if group.advanced_mode else False
 
         # Shared timer slot — either resync or schedule-override, never both simultaneously.
-        self._timer = None
+        self._timer: Callable[[], None] | None = None
         self._active_timer_type: str | None = None
 
         _LOGGER.debug(
@@ -98,15 +98,15 @@ class ScheduleBaseHandler:
         )
 
     @property
-    def state_manager(self):
+    def state_manager(self) -> ScheduleStateManager:
         return self._group.schedule_state_manager
 
     @property
-    def call_handler(self):
+    def call_handler(self) -> ScheduleCallHandler:
         return self._group.schedule_call_handler
 
     @property
-    def target_state(self):
+    def target_state(self) -> TargetState:
         return self._group.shared_target_state
 
     @property
@@ -129,7 +129,7 @@ class ScheduleBaseHandler:
         """Hook: sync enforcement or MIRROR adoption was executed."""
         self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.SYNC_CALL))
 
-    def _parse_entity_state(self, state) -> dict:
+    def _parse_entity_state(self, state: Any) -> dict[str, Any]:
         """Extract a slot data dict from a schedule or calendar entity.
 
         schedule.*: attributes are used directly.
@@ -161,19 +161,22 @@ class ScheduleBaseHandler:
             return data
         return dict(state.attributes)
 
-    def _snapshot_to_kwargs(self, snapshot) -> dict:
+    def _snapshot_to_kwargs(self, snapshot: TargetState) -> dict[str, Any]:
         """Return climate-relevant fields from a TargetState snapshot.
 
         Metadata fields (last_source, last_entity, last_timestamp) are excluded
         so the restore gets fresh source information from the StateManager.
+        hvac_mode is always included (even None) so a bypass that changed the mode
+        does not leave the group in the wrong mode after restore.
         """
-        return {
-            f.name: getattr(snapshot, f.name)
-            for f in fields(ClimateState)
-            if getattr(snapshot, f.name, None) is not None
-        }
+        result = {}
+        for f in fields(ClimateState):
+            value = getattr(snapshot, f.name, None)
+            if f.name == "hvac_mode" or value is not None:
+                result[f.name] = value
+        return result
 
-    def _validate_climate_payload(self, entity_id: str, payload: dict) -> dict:
+    def _validate_climate_payload(self, entity_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Filter a climate payload, dropping invalid values with a warning.
 
         Mode attributes (hvac_mode, fan_mode, …) must be non-empty strings.
@@ -193,7 +196,7 @@ class ScheduleBaseHandler:
                     continue
             elif attr in _CLIMATE_NUMERIC_ATTRS:
                 try:
-                    float(value)
+                    value = float(value)
                 except (TypeError, ValueError):
                     _LOGGER.warning(
                         "[%s] Schedule slot: '%s' expects a numeric value, got %r — ignored.",
@@ -212,36 +215,37 @@ class ScheduleBaseHandler:
             if self._group.run_state.active_override == "schedule_override":
                 self._group.run_state = self._group.run_state.clear_override()
 
-    def _start_timer(self, timer_type: str, duration_seconds: int | None = None) -> None:
+    def _start_timer(self, timer_type: str, duration: int | None = None) -> None:
         """Start a resync or override timer. Both fire schedule_listener(RESYNC) on expiry."""
-        if duration_seconds is None:
-            duration_seconds = 60 * (
+        if duration is None:
+            duration = 60 * (
                 self._resync_interval if timer_type == "resync" else self._override_duration
             )
-        if duration_seconds <= 0:
+        if duration <= 0:
             return
         self._cancel_timer()
 
         if timer_type == "override":
             self._group.run_state = self._group.run_state.set_override(
-                "schedule_override", duration_seconds
+                "schedule_override", duration
             )
 
         @callback
-        def handle_timer_timeout(_now):
+        def handle_timer_timeout(_now: Any) -> None:
             self._timer = None
             self._active_timer_type = None
-            self._group.run_state = self._group.run_state.clear_override()
+            if self._group.run_state.active_override == "schedule_override":
+                self._group.run_state = self._group.run_state.clear_override()
             self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.RESYNC))
 
-        self._timer = async_call_later(self._hass, duration_seconds, handle_timer_timeout)
+        self._timer = async_call_later(self._hass, duration, handle_timer_timeout)
         self._active_timer_type = timer_type
         _LOGGER.debug(
             "[%s] %s timer started: %.0fs",
-            self._group.entity_id, timer_type.capitalize(), duration_seconds,
+            self._group.entity_id, timer_type.capitalize(), duration,
         )
 
-    async def schedule_listener(self, caller: ScheduleCaller):
+    async def schedule_listener(self, caller: ScheduleCaller) -> None:
         """Entry point for all basis-schedule events: apply slot, manage timers."""
         _LOGGER.debug("[%s] Schedule listener triggered by: %s", self._group.entity_id, caller)
 
@@ -267,8 +271,8 @@ class ScheduleBaseHandler:
 
         # While bypass is active the basis timer is suspended — bypass has no timer of its own
         # and holds priority until it deactivates.
-        if self._bypass_entity:
-            if state := self._hass.states.get(self._bypass_entity):
+        if self.bypass_entity_id:
+            if state := self._hass.states.get(self.bypass_entity_id):
                 if state.state == "on":
                     return
 
@@ -293,7 +297,7 @@ class ScheduleBaseHandler:
         regardless of which side triggered the call.
         """
         basis_state  = self._hass.states.get(self._schedule_entity) if self._schedule_entity else None
-        bypass_state = self._hass.states.get(self._bypass_entity)   if self._bypass_entity   else None
+        bypass_state = self._hass.states.get(self.bypass_entity_id) if self.bypass_entity_id else None
 
         basis_data  = self._parse_entity_state(basis_state)  if (basis_state  and basis_state.state  == "on") else {}
         bypass_data = self._parse_entity_state(bypass_state) if (bypass_state and bypass_state.state == "on") else {}
@@ -355,7 +359,12 @@ class ScheduleHandler(ScheduleBaseHandler):
 
     def __init__(self, group: ClimateGroupHelper) -> None:
         super().__init__(group)
-        self._unsub_listener = None
+        self._unsub_listener: Callable[[], None] | None = None
+
+    @property
+    def bypass_entity_id(self) -> str | None:
+        """Delegate to ScheduleBypassHandler — single source of truth."""
+        return self._group.schedule_bypass_handler.bypass_entity_id
 
     async def async_setup(self) -> None:
         """Subscribe to the schedule entity and register call triggers."""
@@ -377,7 +386,7 @@ class ScheduleHandler(ScheduleBaseHandler):
             return
 
         @callback
-        def handle_state_change(event):
+        def handle_state_change(event: Any) -> None:
             new_state = event.data.get("new_state")
             if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 return
@@ -441,7 +450,7 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
 
     def __init__(self, group: ClimateGroupHelper) -> None:
         super().__init__(group)
-        self._unsub_listener = None
+        self._unsub_listener: Callable[[], None] | None = None
 
     async def async_setup(self) -> None:
         """Subscribe to the bypass entity and apply current state if already active."""
@@ -465,7 +474,7 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
             return
 
         @callback
-        def handle_state_change(event):
+        def handle_state_change(event: Any) -> None:
             new_state = event.data.get("new_state")
             if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 return
@@ -486,11 +495,6 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
         """Switch the active bypass entity at runtime (service: set_schedule_bypass_entity)."""
         self._unsubscribe()
         self._bypass_entity = new_entity_id or self._group.config.get(CONF_SCHEDULE_BYPASS_ENTITY)
-
-        # Sync with ScheduleHandler so its timer-suspend and slot-merge logic uses the new entity.
-        # Both handler instances inherit _bypass_entity from ScheduleBaseHandler.__init__,
-        # but they are separate instances — updating one does not update the other.
-        self._group.schedule_handler._bypass_entity = self._bypass_entity
 
         _LOGGER.debug("[%s] Bypass entity updated: %s", self._group.entity_id, self._bypass_entity or "(none)")
 

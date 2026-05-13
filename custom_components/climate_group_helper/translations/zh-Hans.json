@@ -226,6 +226,7 @@
               "retry_attempts": "重试次数",
               "retry_delay": "重试延迟 (秒)",
               "staggered_call_delay": "命令间延迟（秒）",
+              "grace_period": "乐观 UI 缓冲期（秒）",
               "expose_smart_sensors": "公开智能传感器",
               "expose_member_entities": "公开成员列表",
               "expose_config": "显示配置 (调试)"
@@ -235,6 +236,7 @@
               "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
               "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。",
               "staggered_call_delay": "向组成员发送各条命令之间的等待时间。错开命令可防止 Zigbee/Matter 网络拥塞。设置为 0 可禁用。",
+              "grace_period": "群组在切换到成员平均值之前显示已发送值的时长。防止慢速设备（Cloud 网关、Zigbee）回显旧状态时的 UI 闪烁。设置为 0 可禁用。",
               "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
               "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
               "expose_config": "将所有配置值添加到实体属性中。用于调试。"

@@ -226,6 +226,7 @@
               "retry_attempts": "Genforsøg Forsøg",
               "retry_delay": "Genforsøg Forsinkelse (sekunder)",
               "staggered_call_delay": "Forsinkelse mellem kommandoer (sekunder)",
+              "grace_period": "Optimistisk UI-overgangsperiode (sekunder)",
               "expose_smart_sensors": "Udstil smarte sensorer",
               "expose_member_entities": "Udstil medlemsliste",
               "expose_config": "Vis konfiguration (Fejlfinding)"
@@ -235,6 +236,7 @@
               "retry_attempts": "Hvor mange gange en kommando skal gensendes, hvis en enhed ikke svarer. Sæt til 0 for at deaktivere.",
               "retry_delay": "Pause mellem genforsøg. At give enheder et øjeblik til at komme sig kan forbedre pålideligheden.",
               "staggered_call_delay": "Ventetid mellem individuelle kommandoer til gruppemedlemmer. Fordeling af kommandoer forhindrer netværksbelastning i Zigbee/Matter-miljøer. Sæt til 0 for at deaktivere.",
+              "grace_period": "Hvor længe gruppen viser den befalede værdi, inden den skifter til medlemsgennemsnittet. Forhindrer UI-flimmer, når langsomme enheder (Cloud-broer, Zigbee) ekko deres gamle tilstand. Sæt til 0 for at deaktivere.",
               "expose_smart_sensors": "Opretter ekstra sensorenheder for gruppens temperatur og fugtighed (nyttigt til grafer).",
               "expose_member_entities": "Opretter en attribut, der viser alle medlemsenheds-id'er.",
               "expose_config": "Tilføjer alle konfigurationsværdier til entitetsattributterne. Nyttigt til fejlfinding."
