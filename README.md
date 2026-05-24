@@ -22,6 +22,10 @@
   📅 <b>Schedule automation</b> via Schedule and Calendar entities.
 </p>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_simple.png" alt="Climate Group Helper Simple Configuration Options Overview" height="350"/>
+</p>
+
 ---
 
 ## Why this exists
@@ -40,6 +44,13 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 | **2. Add** | Go to *Settings → Devices & Services → Helpers → Create Helper*. |
 | **3. Setup** | Give your group a name and select your thermostats (TRVs, ACs, heaters — mix freely). |
 | **4. Done!** | You now have a single entity controlling everything. <br> *Tip: Enable **Advanced Mode** in the options to unlock all features.* |
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/helper_selection.png" alt="Select Climate Group Helper in Home Assistant" width="400"/>
+</p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/setup_flow.png" alt="Configure Climate Group Helper" width="400"/>
+</p>
 
 ---
 
@@ -90,6 +101,10 @@ Unlock the full potential of your climate system. These specialized features are
 
 > [!NOTE]
 > **New groups start in Simple Mode.** Existing groups upgraded from earlier versions keep **Advanced Features** active automatically so nothing breaks.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_advanced.png" alt="Climate Group Helper Advanced Configuration Options Overview" width="400"/>
+</p>
 
 ### Master Entity
 
