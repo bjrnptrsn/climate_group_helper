@@ -65,7 +65,8 @@
               "temp_update_targets": "Skriv Ekstern Temp til Entiteter",
               "temp_calibration_mode": "Kalibreringstilstand",
               "calibration_heartbeat": "Kalibrerings-Heartbeat (min)",
-              "calibration_ignore_off": "Ignorer slukkede medlemmer"
+              "calibration_ignore_off": "Ignorer slukkede medlemmer",
+              "ignore_off_members_temperature": "Udeluk slukket medlemmer fra temperatur"
             },
             "data_description": {
               "temp_target_avg": "Hvordan gruppen beregner sætpunktet, der skal sendes til dens medlemmer.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Skriv værdien fra den eksterne sensor til nummerentiteter (f.eks. TRV kalibrering forskydninger). Nyttigt for at holde termostater opmærksomme på den faktiske stuetemperatur.",
               "temp_calibration_mode": "Absolut: Send værdi direkte. Offset: Send difference (Ekstern - TRV Intern). Skaleret: Send som heltal x100 (f.eks. 21.5 -> 2150).",
               "calibration_heartbeat": "Tving periodisk kalibreringssynkronisering til enheder, selvom temperaturen ikke er ændret. Sæt til 0 for at deaktivere.",
-              "calibration_ignore_off": "Send ikke kalibreringsopdateringer til medlemmer, der i øjeblikket er slukkede."
+              "calibration_ignore_off": "Send ikke kalibreringsopdateringer til medlemmer, der i øjeblikket er slukkede.",
+              "ignore_off_members_temperature": "Medlemmer, der i øjeblikket er slukket, udelukkes fra beregningen af aktuel og måltemperatur."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Gruppemedlemmer der skal isoleres når sensoren er aktiv.",
               "isolation_activate_delay": "(Kun sensor / HVAC-tilstand trigger) Ventetid efter sensor ON inden isolering af medlemmer.",
               "isolation_restore_delay": "(Kun sensor / HVAC-tilstand trigger) Ventetid efter sensor OFF inden gendannelse af medlemmer."
+            }
+          },
+          "member_template_section": {
+            "name": "Medlemsskabelon",
+            "description": "Gengiver enkelt-setpunkt-medlemmer som virtuelle varme/køl-rækkevidde-enheder. Group Helper oversætter rækkevidde-kommandoer til passende fysiske varme/køl-kommandoer baseret på hvert medlems aktuelle temperatur.",
+            "data": {
+              "range_template_entities": "Enkelt-setpunkt-medlemmer",
+              "range_template_deadband_action": "Deadband-handling"
+            },
+            "data_description": {
+              "range_template_entities": "Vælg enkelt-setpunkt-termostater, der skal gengives som virtuelle rækkevidde-enheder.",
+              "range_template_deadband_action": "Handling, der udføres, når den aktuelle temperatur er inden for målrækkevidde (deadband)."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Fraværs-forskydning",
         "away_temperature": "Fraværs-temperatur",
         "away_preset": "Fraværs-forudindstilling"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Sluk",
+        "fan_only": "Kun blæser"
       }
     }
   },

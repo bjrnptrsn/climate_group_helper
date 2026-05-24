@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-import yaml
+import yaml  # type: ignore[import-untyped]
 from dataclasses import fields, replace
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Callable
@@ -207,7 +207,12 @@ class ScheduleBaseHandler:
         return valid
 
     def _cancel_timer(self) -> None:
-        """Cancel the active timer and clear any associated schedule_override RunState."""
+        """Cancel the active timer and clear any associated schedule_override RunState.
+
+        Only clears 'schedule_override' from RunState — never touches 'boost'.
+        BoostOverrideManager owns its own _cancel_timer() which clears 'boost'.
+        The two timer systems are intentionally independent.
+        """
         if self._timer:
             self._timer()
             self._timer = None
@@ -296,7 +301,7 @@ class ScheduleBaseHandler:
         Always reads the current state of both entities so the result is consistent
         regardless of which side triggered the call.
         """
-        basis_state  = self._hass.states.get(self._schedule_entity) if self._schedule_entity else None
+        basis_state  = self._hass.states.get(self.schedule_entity_id) if self.schedule_entity_id else None
         bypass_state = self._hass.states.get(self.bypass_entity_id) if self.bypass_entity_id else None
 
         basis_data  = self._parse_entity_state(basis_state)  if (basis_state  and basis_state.state  == "on") else {}
@@ -327,7 +332,8 @@ class ScheduleBaseHandler:
 
             # Only snapshot on the first bypass activation — consecutive basis-slot changes
             # while bypass is active must not overwrite the original pre-bypass state.
-            if self._group.run_state.active_override is None and self._group.run_state.target_state_snapshot is None:
+            # Boost is excluded: boost_override_manager.abort() above handles its own snapshot.
+            if self._group.run_state.active_override != "boost" and self._group.run_state.target_state_snapshot is None:
                 self._group.run_state = replace(
                     self._group.run_state,
                     target_state_snapshot=self._group.shared_target_state,
@@ -451,6 +457,11 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
     def __init__(self, group: ClimateGroupHelper) -> None:
         super().__init__(group)
         self._unsub_listener: Callable[[], None] | None = None
+
+    @property
+    def schedule_entity_id(self) -> str | None:
+        """Delegate to ScheduleHandler — single source of truth."""
+        return self._group.schedule_handler.schedule_entity_id
 
     async def async_setup(self) -> None:
         """Subscribe to the bypass entity and apply current state if already active."""

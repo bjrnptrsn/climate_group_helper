@@ -157,6 +157,9 @@ class WindowControlHandler:
             _LOGGER.debug("[%s] Window control sensors not available on timer expiry", self._group.entity_id)
             return
         mode, _ = result
+        if mode == self._control_state:
+            _LOGGER.debug("[%s] Control state already '%s' on timer expiry, skipping", self._group.entity_id, mode)
+            return
         if mode:
             self._hass.async_create_task(self._execute_action(mode))
 

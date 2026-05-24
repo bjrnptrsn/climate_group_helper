@@ -107,6 +107,12 @@ class SyncModeHandler:
             return FilterState.from_keys(self._group.run_state.config_overrides[META_KEY_SYNC_ATTRS])
         return self._filter_state
 
+    def async_teardown(self) -> None:
+        """Cancel all pending enforcement tasks."""
+        for task in self._active_sync_tasks:
+            task.cancel()
+        self._active_sync_tasks.clear()
+
     def resync(self) -> None:
         """Handle changes based on sync mode."""
 
@@ -170,7 +176,7 @@ class SyncModeHandler:
             accepted = self._filter_echo_changes(origin_event, change_dict, change_entity_id)
             if accepted:
                 _LOGGER.debug("[%s] Adopting side effects: %s", self._group.entity_id, accepted)
-                self._reverse_offset_temperatures(change_entity_id, accepted)
+                accepted = self._reverse_offset_temperatures(change_entity_id, accepted)
                 self.state_manager.update(entity_id=change_entity_id, **accepted)
             return
 
@@ -194,10 +200,10 @@ class SyncModeHandler:
         # is reporting its restored hardware state, not a deliberate user change.
         # LOCK enforcement below still runs to correct the member if needed.
         old_state = event.data.get("old_state")
-        is_reconnect = old_state and old_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+        is_reconnect = old_state is not None and old_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         if self.sync_mode in (SyncMode.MIRROR, SyncMode.MIRROR_LOCK) and not is_reconnect:
             if filtered := {key: value for key, value in change_dict.items() if self.filter_state.to_dict().get(key)}:
-                self._reverse_offset_temperatures(change_entity_id, filtered)
+                filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
                 self.state_manager.update(entity_id=change_entity_id, **filtered)
                 _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
 
@@ -219,7 +225,7 @@ class SyncModeHandler:
             master_id = self._group._master_entity_id
             if master_id and change_entity_id == master_id:
                 if filtered := {key: value for key, value in change_dict.items() if self.filter_state.to_dict().get(key)}:
-                    self._reverse_offset_temperatures(change_entity_id, filtered)
+                    filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
                     self.state_manager.update(entity_id=change_entity_id, **filtered)
                     _LOGGER.debug("[%s] Master entity change adopted: %s", self._group.entity_id, filtered)
             # Non-master changes are enforced (reverted) via call_debounced below
@@ -236,12 +242,13 @@ class SyncModeHandler:
 
     # --- Offset Helpers ---
 
-    def _reverse_offset_temperatures(self, entity_id: str, data: dict[str, Any]) -> None:
-        """Reverse-transform member temperatures to logical group values (in-place).
-        
+    def _reverse_offset_temperatures(self, entity_id: str, data: dict[str, Any]) -> dict[str, Any]:
+        """Reverse-transform member temperatures to logical group values.
+
         When adopting a member's temperature in Mirror/Master-Lock mode,
         the member's actual value must be converted back to the group-level
         value by subtracting both the member's individual offset and the global group offset.
+        Returns a new dict; the input is never mutated.
         """
         offset_map = self._group._temp_offset_map
         global_offset = self._group.run_state.group_offset
@@ -249,11 +256,13 @@ class SyncModeHandler:
 
         total_offset = member_offset + global_offset
         if total_offset == 0.0:
-            return
+            return data
 
-        for key in ("temperature", "target_temp_low", "target_temp_high"):
-            if key in data and data[key] is not None:
-                data[key] = data[key] - total_offset
+        result = dict(data)
+        for key in {"temperature", "target_temp_low", "target_temp_high"}:
+            if key in result and result[key] is not None:
+                result[key] = result[key] - total_offset
+        return result
 
     # --- Echo Detection Helpers ---
 
@@ -271,6 +280,8 @@ class SyncModeHandler:
 
         Filters out display-only updates (e.g. current_temperature, hvac_action)
         that cannot affect sync decisions or enforcement.
+        Uses event.data directly — the event is already template-rendered by
+        _state_change_listener, so read_member_event would double-wrap it.
         """
         new_state = event.data.get("new_state")
         old_state = event.data.get("old_state")

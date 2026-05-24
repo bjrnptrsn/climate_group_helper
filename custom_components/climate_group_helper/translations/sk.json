@@ -65,7 +65,8 @@
               "temp_update_targets": "Zapísať externú teplotu do entít",
               "temp_calibration_mode": "Režim kalibrácie",
               "calibration_heartbeat": "Kalibračný heartbeat (min)",
-              "calibration_ignore_off": "Ignorovať vypnutých členov"
+              "calibration_ignore_off": "Ignorovať vypnutých členov",
+              "ignore_off_members_temperature": "Vylúčiť vypnutých členov z teploty"
             },
             "data_description": {
               "temp_target_avg": "Ako skupina vypočítava požadovanú hodnotu na odoslanie svojim členom.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Zapísať hodnotu externého senzora do číselných entít (napr. kalibračné offsety TRV). Užitočné pre udržanie termostatov v obraze o skutočnej izbovej teplote.",
               "temp_calibration_mode": "Absolútny: Odoslať hodnotu priamo. Offset: Odoslať rozdiel (Externý - TRV interný). Škálovaný: Odoslať ako celé číslo x100 (napr. 21,5 -> 2150).",
               "calibration_heartbeat": "Pravidelne vynútiť synchronizáciu kalibrácie do entít, aj keď sa teplota nezmenila. Nastavte na 0 pre vypnutie.",
-              "calibration_ignore_off": "Neposielať aktualizácie kalibrácie členom, ktorí sú momentálne vypnutí."
+              "calibration_ignore_off": "Neposielať aktualizácie kalibrácie členom, ktorí sú momentálne vypnutí.",
+              "ignore_off_members_temperature": "Členovia, ktorí sú aktuálne vypnutí, budú vylúčení z výpočtu aktuálnej a cieľovej teploty."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Členovia skupiny na izoláciu pri aktívnom senzore.",
               "isolation_activate_delay": "(Iba spúšťač senzor / režim HVAC) Čakacia doba po zapnutí senzora pred izolovaním členov.",
               "isolation_restore_delay": "(Iba spúšťač senzor / režim HVAC) Čakacia doba po vypnutí senzora pred obnovením členov."
+            }
+          },
+          "member_template_section": {
+            "name": "Šablóna člena",
+            "description": "Vykresluje členy s jedným žiadaným bodom ako virtuálne entity s rozsahom teplo/chlad. Group Helper prekladá príkazy rozsahu na zodpovedajúce fyzické príkazy teplo/chlad podľa aktuálnej teploty každého člena.",
+            "data": {
+              "range_template_entities": "Členy s jedným žiadaným bodom",
+              "range_template_deadband_action": "Akcia v mŕtvom pásme"
+            },
+            "data_description": {
+              "range_template_entities": "Vyberte termostaty s jedným žiadaným bodom, ktoré sa majú vykresliť ako virtuálne zariadenia v režime rozsahu.",
+              "range_template_deadband_action": "Akcia, ktorá sa vykoná, keď je aktuálna teplota v rámci cieľového rozsahu (mŕtve pásmo)."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Posun pri neprítomnosti",
         "away_temperature": "Teplota pri neprítomnosti",
         "away_preset": "Predvoľba pri neprítomnosti"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Vypnúť",
+        "fan_only": "Iba ventilátor"
       }
     }
   },

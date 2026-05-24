@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0 - 2026-05-24
+
+### 🌟 New Features
+
+*   **Ignore OFF Members for Temperature**: New option to exclude members that are currently `off` from the group's temperature display. Useful when switched-off devices report unrealistic setpoints (e.g. 5 °C frost protection) that drag down the group's average.
+
+*   **Range Template** (Member Template Pattern): Groups of single-setpoint thermostats can now act as native `heat_cool` range entities. The group exposes `target_temp_low` and `target_temp_high` setpoints; outgoing range commands are translated per-member into physical `heat` / `cool` / deadband (`off` or `fan_only`) actions based on the member's current temperature. Configured per group via a new advanced-mode section.
+
+### 🔧 Fixes
+
+*   **Member Isolation**: Fixed two edge cases — isolated members could prevent Last Man Standing from firing, and a member reconnecting in `off` state was not correctly picked up by the Member Off trigger.
+
+*   **Schedule Meta-Key `turn_off` is now an explicit two-state trigger**: `true` = off, `false` = restore. A slot without `turn_off` has no effect.
+
 ## 1.1.0 - 2026-05-13
 
 ### 🌟 New Features

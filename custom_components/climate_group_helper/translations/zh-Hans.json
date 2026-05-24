@@ -65,7 +65,8 @@
               "temp_update_targets": "将外部温度写入实体",
               "temp_calibration_mode": "校准模式",
               "calibration_heartbeat": "校准心跳 (分钟)",
-              "calibration_ignore_off": "忽略已关闭的成员"
+              "calibration_ignore_off": "忽略已关闭的成员",
+              "ignore_off_members_temperature": "从温度中排除已关闭的成员"
             },
             "data_description": {
               "temp_target_avg": "组如何计算要发送给成员的目标设定值。",
@@ -77,7 +78,8 @@
               "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。",
               "temp_calibration_mode": "绝对: 直接发送值。偏移: 发送差值 (外部 - TRV 内部)。 缩放: 发送为整数 x100 (例如 21.5 -> 2150)。",
               "calibration_heartbeat": "定期强制将校准同步到实体，即使温度未更改。设置为 0 以禁用。",
-              "calibration_ignore_off": "不要向当前处于关闭状态的成员发送校准更新。"
+              "calibration_ignore_off": "不要向当前处于关闭状态的成员发送校准更新。",
+              "ignore_off_members_temperature": "当前已关闭的成员将被排除在当前温度和目标温度的计算之外。"
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "传感器激活时要隔离的组成员。",
               "isolation_activate_delay": "(仅限传感器 / HVAC 模式触发器) 传感器ON后等待隔离成员的时间。",
               "isolation_restore_delay": "(仅限传感器 / HVAC 模式触发器) 传感器OFF后等待恢复成员的时间。"
+            }
+          },
+          "member_template_section": {
+            "name": "成员模板",
+            "description": "将单设定点成员渲染为虚拟冷暖范围实体。群组助手根据每个成员的当前温度，将范围命令转换为适当的物理冷暖命令。",
+            "data": {
+              "range_template_entities": "单设定点成员",
+              "range_template_deadband_action": "死区动作"
+            },
+            "data_description": {
+              "range_template_entities": "选择要渲染为虚拟范围模式设备的单设定点恒温器。",
+              "range_template_deadband_action": "当前温度在目标范围（死区）内时执行的动作。"
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "离开偏移",
         "away_temperature": "离开温度",
         "away_preset": "离开预设"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "关闭",
+        "fan_only": "仅风扇"
       }
     }
   },

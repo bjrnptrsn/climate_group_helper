@@ -83,7 +83,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
             if s.state not in (HVACMode.OFF, STATE_UNAVAILABLE, STATE_UNKNOWN)
         )
         attrs[ATTR_ACTIVE_MEMBER_COUNT] = active
-        attrs[ATTR_TOTAL_MEMBER_COUNT] = len(group.states)
+        attrs[ATTR_TOTAL_MEMBER_COUNT] = len(group.climate_entity_ids)
 
     # --- Blocking sources ---
     if run_state.blocking_sources:

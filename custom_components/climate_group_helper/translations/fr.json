@@ -65,7 +65,8 @@
               "temp_update_targets": "Écrire la Temp Externe vers les Entités",
               "temp_calibration_mode": "Mode de Calibration",
               "calibration_heartbeat": "Heartbeat de Calibration (min)",
-              "calibration_ignore_off": "Ignorer les membres éteints"
+              "calibration_ignore_off": "Ignorer les membres éteints",
+              "ignore_off_members_temperature": "Exclure les membres éteints de la température"
             },
             "data_description": {
               "temp_target_avg": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Écrire la valeur du capteur externe vers des entités numériques (ex. offsets de calibration TRV). Utile pour garder les thermostats informés de la température réelle de la pièce.",
               "temp_calibration_mode": "Absolu: Envoyer valeur directe. Offset: Envoyer delta (Externe - TRV Interne). Échelonné: Envoyer comme entier x100 (ex. 21.5 -> 2150).",
               "calibration_heartbeat": "Forcer périodiquement la synchronisation de la calibration vers les entités même si la température n'a pas changé. Régler sur 0 pour désactiver.",
-              "calibration_ignore_off": "Ne pas envoyer de mises à jour de calibrage aux membres actuellement éteints."
+              "calibration_ignore_off": "Ne pas envoyer de mises à jour de calibrage aux membres actuellement éteints.",
+              "ignore_off_members_temperature": "Les membres actuellement éteints seront exclus des calculs de température actuelle et cible."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Membres du groupe à isoler quand le capteur est actif.",
               "isolation_activate_delay": "(Déclencheur capteur / mode HVAC uniquement) Temps d'attente après l'activation du capteur avant d'isoler les membres.",
               "isolation_restore_delay": "(Déclencheur capteur / mode HVAC uniquement) Temps d'attente après la désactivation avant de restaurer les membres."
+            }
+          },
+          "member_template_section": {
+            "name": "Modèle de membre",
+            "description": "Rend les membres à point de consigne unique comme des entités virtuelles de plage chaud/froid. Le Group Helper traduit les commandes de plage en commandes physiques chaud/froid appropriées en fonction de la température actuelle de chaque membre.",
+            "data": {
+              "range_template_entities": "Membres à point de consigne unique",
+              "range_template_deadband_action": "Action en zone morte"
+            },
+            "data_description": {
+              "range_template_entities": "Sélectionne les thermostats à point de consigne unique à rendre comme des appareils virtuels en mode plage.",
+              "range_template_deadband_action": "Action à effectuer lorsque la température actuelle se trouve dans la plage cible (zone morte)."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Décalage en absence",
         "away_temperature": "Température en absence",
         "away_preset": "Préréglage en absence"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Éteindre",
+        "fan_only": "Ventilateur uniquement"
       }
     }
   },

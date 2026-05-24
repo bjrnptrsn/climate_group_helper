@@ -65,7 +65,8 @@
               "temp_update_targets": "Schrijf Externe Temp naar Entiteiten",
               "temp_calibration_mode": "Kalibratiemodus",
               "calibration_heartbeat": "Kalibratie Hartslag (min)",
-              "calibration_ignore_off": "Uitgeschakelde leden negeren"
+              "calibration_ignore_off": "Uitgeschakelde leden negeren",
+              "ignore_off_members_temperature": "Uitgeschakelde leden uitsluiten van temperatuur"
             },
             "data_description": {
               "temp_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur.",
               "temp_calibration_mode": "Absoluut: Verzend waarde direct. Offset: Verzend verschil (Extern - TRV Intern). Geschaald: Verzend als geheel getal x100 (bijv. 21.5 -> 2150).",
               "calibration_heartbeat": "Forceer periodiek kalibratiesynchronisatie naar entiteiten, zelfs als de temperatuur niet is gewijzigd. Stel in op 0 om uit te schakelen.",
-              "calibration_ignore_off": "Stuur geen kalibratie-updates naar leden die momenteel uitgeschakeld zijn."
+              "calibration_ignore_off": "Stuur geen kalibratie-updates naar leden die momenteel uitgeschakeld zijn.",
+              "ignore_off_members_temperature": "Leden die momenteel uitgeschakeld zijn, worden uitgesloten van de berekening van de huidige en doeltemperatuur."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Groepsleden om te isoleren wanneer de sensor actief is.",
               "isolation_activate_delay": "(Alleen sensor- / HVAC-modus trigger) Wachttijd na sensor ON voordat leden worden geïsoleerd.",
               "isolation_restore_delay": "(Alleen sensor- / HVAC-modus trigger) Wachttijd na sensor OFF voordat leden worden hersteld."
+            }
+          },
+          "member_template_section": {
+            "name": "Ledensjabloon",
+            "description": "Geeft leden met enkelvoudig instelpunt weer als virtuele warmte/koelte-bereik-entiteiten. De Group Helper vertaalt bereikopdrachten naar passende fysieke warmte/koelte-opdrachten op basis van de huidige temperatuur van elk lid.",
+            "data": {
+              "range_template_entities": "Leden met enkelvoudig instelpunt",
+              "range_template_deadband_action": "Deadband-actie"
+            },
+            "data_description": {
+              "range_template_entities": "Selecteer thermostaten met enkelvoudig instelpunt om weer te geven als virtuele bereikmodusapparaten.",
+              "range_template_deadband_action": "Actie die wordt uitgevoerd wanneer de huidige temperatuur zich binnen het doelbereik (deadband) bevindt."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Afwezigheids-verschuiving",
         "away_temperature": "Afwezigheids-temperatuur",
         "away_preset": "Afwezigheids-voorinstelling"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Uitschakelen",
+        "fan_only": "Alleen ventilator"
       }
     }
   },

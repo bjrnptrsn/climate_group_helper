@@ -45,18 +45,12 @@ _HA_SYSTEM_ATTRS: frozenset[str] = frozenset({
 
 # Counter-actions during cleanup must run in this order to avoid stale-read bugs.
 #
-# The critical constraint: group_offset must be reset *before* turn_off is restored.
-# When turn_off is cleaned up, switch_override_manager.restore() fires call_immediate(),
-# which reads run_state.group_offset at that moment.  If the offset were still set to
-# the schedule value, members would receive the wrong temperature on restore.
-#
 # sync_mode and sync_attrs are pure config shadowing (no call fired), so their position
 # is irrelevant — placing them first keeps them out of the way.
 _CLEANUP_ORDER: list[str] = [
     META_KEY_SYNC_ATTRS,
     META_KEY_SYNC_MODE,
     META_KEY_GROUP_OFFSET,
-    META_KEY_TURN_OFF,
 ]
 
 
@@ -65,17 +59,12 @@ class MetaProcessResult:
     """Return value of SlotMetaProcessor.process().
 
     Attributes:
-        climate_payload: Slot attributes that map to climate service calls.
-                         Consumed directly by ScheduleHandler for member updates.
-        has_meta_keys:   True when the slot contained at least one valid meta-key.
-                         Used by ScheduleHandler's early-return guard so that a slot
-                         with *only* meta-keys (e.g. turn_off, no temperature) still
-                         reaches the timer logic at the end of schedule_listener().
+        climate_payload:        Basis-slot attributes that map to climate service calls.
+        climate_bypass_payload: Bypass-slot attributes (empty when no bypass is active).
     """
 
     climate_payload: dict[str, Any]
     climate_bypass_payload: dict[str, Any]
-    has_meta_keys: bool
 
 
 class SlotMetaProcessor:
@@ -111,15 +100,21 @@ class SlotMetaProcessor:
         slot_message = meta_candidates.pop("message", None)
         self._group.run_state = replace(self._group.run_state, active_slot_title=slot_message)
 
+        # turn_off is a one-shot trigger, not a stateful key — never enters _active_keys.
+        # true → activate, anything else → restore, absent → no-op.
+        if META_KEY_TURN_OFF in meta_candidates:
+            turn_off_value = meta_candidates.pop(META_KEY_TURN_OFF)
+            if turn_off_value is True:
+                _LOGGER.debug("[%s] Meta-Key: turn_off=true → switch block ON", self._group.entity_id)
+                await self._group.switch_override_manager.activate()
+            elif turn_off_value is False:
+                _LOGGER.debug("[%s] Meta-Key: turn_off=false → switch block OFF", self._group.entity_id)
+                await self._group.switch_override_manager.restore()
+
         # Identify valid meta-keys; warn on unknown ones (typo guard)
-        # turn_off=False is semantically identical to the key being absent — it must not
-        # enter _active_keys, otherwise the cleanup path would call restore() on a switch
-        # that was never activated.
         new_meta_keys: set[str] = set()
         for key, value in meta_candidates.items():
             if key in META_STATE_KEYS:
-                if key == META_KEY_TURN_OFF and value is not True:
-                    continue
                 new_meta_keys.add(key)
             elif key not in _HA_SYSTEM_ATTRS:
                 _LOGGER.warning(
@@ -149,7 +144,6 @@ class SlotMetaProcessor:
         return MetaProcessResult(
             climate_payload=basis_climate,
             climate_bypass_payload=bypass_climate,
-            has_meta_keys=bool(new_meta_keys),
         )
 
     async def _apply(self, key: str, value: Any) -> None:
@@ -158,13 +152,7 @@ class SlotMetaProcessor:
         config_overrides has already been updated by the caller before this method
         is invoked, so manager calls can rely on the new value being visible in RunState.
         """
-        if key == META_KEY_TURN_OFF:
-            # value is guaranteed True here — process() filters out non-True values
-            # before adding the key to new_meta_keys, so _apply is never called with False.
-            _LOGGER.debug("[%s] Meta-Key apply: turn_off=true → switch block ON", self._group.entity_id)
-            await self._group.switch_override_manager.activate()
-
-        elif key == META_KEY_GROUP_OFFSET:
+        if key == META_KEY_GROUP_OFFSET:
             try:
                 offset_val = float(value)
                 _LOGGER.debug("[%s] Meta-Key apply: group_offset=%s", self._group.entity_id, offset_val)
@@ -188,10 +176,7 @@ class SlotMetaProcessor:
     async def _cleanup(self, keys: set[str]) -> None:
         """Execute counter-actions for meta-keys that have left the current slot.
 
-        Iteration order follows _CLEANUP_ORDER.  This is required because
-        group_offset must be reset before turn_off is restored: the restore
-        call fires call_immediate() which reads run_state.group_offset at
-        that moment (see _CLEANUP_ORDER for the full rationale).
+        Iteration order follows _CLEANUP_ORDER (see comment there for rationale).
         """
         _LOGGER.debug("[%s] Meta-Key cleanup: %s", self._group.entity_id, keys)
 
@@ -200,11 +185,7 @@ class SlotMetaProcessor:
             if k in _CLEANUP_ORDER
             else len(_CLEANUP_ORDER)
         ):
-            if key == META_KEY_TURN_OFF:
-                _LOGGER.debug("[%s] Meta-Key cleanup: turn_off absent → switch block OFF", self._group.entity_id)
-                await self._group.switch_override_manager.restore()
-
-            elif key == META_KEY_GROUP_OFFSET:
+            if key == META_KEY_GROUP_OFFSET:
                 # Ownership guard: only reset if config_overrides still contains the marker.
                 # A missing marker means the user moved the slider during this slot, which
                 # cleared the marker (OffsetNumber.async_set_native_value) and transferred

@@ -14,6 +14,7 @@ from homeassistant.components.climate import (
     ATTR_HVAC_MODES,
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
+    ClimateEntityFeature,
     HVACMode,
 )
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
@@ -50,6 +51,7 @@ from .const import (
     CONF_HVAC_MODE_STRATEGY,
     CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
     CONF_IGNORE_OFF_MEMBERS_SYNC,
+    CONF_IGNORE_OFF_MEMBERS_TEMPERATURE,
     CONF_ISOLATION_ACTIVATE_DELAY,
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_RESTORE_DELAY,
@@ -77,6 +79,8 @@ from .const import (
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
     CONF_ROOM_SENSOR,
+    CONF_RANGE_TEMPLATE_ENTITIES,
+    CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_ENTITY,
     CONF_STAGGERED_CALL_DELAY,
@@ -114,6 +118,7 @@ from .const import (
     PresenceMode,
     RoundOption,
     SyncMode,
+    RangeTemplateDeadbandAction,
     UnionOutOfBoundsAction,
     UnsupportedHvacAction,
     WindowControlAction,
@@ -249,7 +254,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 CONF_WINDOW_TEMPERATURE,
                 CONF_ZONE_SENSOR,
             ]:
-                if key not in user_input or not user_input.get(key):
+                if key not in user_input or user_input.get(key) is None:
                     current_config.pop(key, None)
 
         # Master Entity Logic
@@ -363,6 +368,27 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             current_config[CONF_MEMBER_TEMP_OFFSETS] = offset_map
         elif advanced_mode:
             current_config.pop(CONF_MEMBER_TEMP_OFFSETS, None)
+
+        # Range Template logic
+        if advanced_mode:
+            if CONF_RANGE_TEMPLATE_ENTITIES in current_config:
+                pruned_template = [
+                    eid for eid in current_config.get(CONF_RANGE_TEMPLATE_ENTITIES, [])
+                    if eid in valid_members
+                ]
+                if pruned_template:
+                    current_config[CONF_RANGE_TEMPLATE_ENTITIES] = pruned_template
+                else:
+                    current_config.pop(CONF_RANGE_TEMPLATE_ENTITIES, None)
+                    current_config.pop(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, None)
+
+            # Falls abgewählt
+            if CONF_RANGE_TEMPLATE_ENTITIES not in user_input or user_input.get(CONF_RANGE_TEMPLATE_ENTITIES) is None:
+                current_config.pop(CONF_RANGE_TEMPLATE_ENTITIES, None)
+                current_config.pop(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, None)
+        else:
+            current_config.pop(CONF_RANGE_TEMPLATE_ENTITIES, None)
+            current_config.pop(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, None)
 
         return current_config
 
@@ -516,6 +542,10 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_CALIBRATION_IGNORE_OFF,
                     default=config.get(CONF_CALIBRATION_IGNORE_OFF, False),
+                ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_IGNORE_OFF_MEMBERS_TEMPERATURE,
+                    default=config.get(CONF_IGNORE_OFF_MEMBERS_TEMPERATURE, False),
                 ): selector.BooleanSelector(),
             }
 
@@ -1166,6 +1196,69 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             )
         }
 
+    def _section_factory_member_template(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Factory for Range Template section.
+
+        Filters out members that already advertise TARGET_TEMPERATURE_RANGE
+        natively — the template only adds value for single-setpoint devices.
+        Members whose state is currently None (just added, not yet available)
+        are optimistically included so they aren't silently locked out.
+        """
+        members = config.get(CONF_ENTITIES, [])
+        if not members:
+            return {}
+
+        selectable_members = []
+        for entity_id in members:
+            state = self.hass.states.get(entity_id)
+            if state is None:
+                selectable_members.append(entity_id)
+                continue
+            features = state.attributes.get("supported_features", 0)
+            if not (features & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE):
+                selectable_members.append(entity_id)
+
+        if not selectable_members:
+            return {}
+
+        member_options = [{"value": eid, "label": eid} for eid in selectable_members]
+        saved_template_entities = [
+            e for e in config.get(CONF_RANGE_TEMPLATE_ENTITIES, []) if e in selectable_members
+        ]
+
+        return {
+            vol.Required("member_template_section"): section(
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_RANGE_TEMPLATE_ENTITIES,
+                            default=saved_template_entities,
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=member_options,
+                                multiple=True,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
+                        ),
+                        vol.Required(
+                            CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
+                            default=config.get(
+                                CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
+                                RangeTemplateDeadbandAction.OFF,
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in RangeTemplateDeadbandAction],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="range_template_deadband_action",
+                            )
+                        ),
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
+            )
+        }
+
     def _section_factory_advanced(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for advanced section."""
         return {
@@ -1236,7 +1329,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         ): selector.BooleanSelector(),
                         vol.Optional(
                             CONF_EXPOSE_MEMBER_ENTITIES,
-                            default=config.get(CONF_EXPOSE_MEMBER_ENTITIES, True),
+                            default=config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
                         ): selector.BooleanSelector(),
                         vol.Optional(
                             CONF_EXPOSE_CONFIG,
@@ -1376,6 +1469,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             schema_dict.update(self._section_factory_schedule(config))
             schema_dict.update(self._section_factory_temp_offsets(config))
             schema_dict.update(self._section_factory_isolation(config))
+            schema_dict.update(self._section_factory_member_template(config))
             schema_dict.update(self._section_factory_advanced(config))
 
         schema_dict[vol.Optional(CONF_ADVANCED_MODE, default=advanced_mode)] = selector.BooleanSelector()  # type: ignore[index]

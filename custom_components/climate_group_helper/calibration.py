@@ -93,7 +93,7 @@ class CalibrationHandler:
             self._heartbeat_unsub()
             self._heartbeat_unsub = None
         if self._debouncer:
-            self._debouncer.async_cancel()
+            self._debouncer.async_shutdown()
             self._debouncer = None
         self._pending.clear()
 
@@ -247,7 +247,10 @@ class CalibrationHandler:
                 immediate=False,
                 function=self._flush,
             )
-        self._hass.async_create_task(self._debouncer.async_call())
+        self._hass.async_create_task(
+            self._debouncer.async_call(),
+            name=f"climate_group_calibration_flush:{self._group.entity_id}",
+        )
 
     async def _flush(self) -> None:
         """Write queued calibration values, with optional stagger delay between writes."""
@@ -262,7 +265,10 @@ class CalibrationHandler:
                 await asyncio.sleep(stagger_delay)
 
             _LOGGER.debug("[%s] Writing calibration %s → %s", self._group.entity_id, entity_id, value)
-            await self._hass.services.async_call(
-                NUMBER_DOMAIN, "set_value",
-                {ATTR_ENTITY_ID: entity_id, "value": value},
-            )
+            try:
+                await self._hass.services.async_call(
+                    NUMBER_DOMAIN, "set_value",
+                    {ATTR_ENTITY_ID: entity_id, "value": value},
+                )
+            except Exception:
+                _LOGGER.exception("[%s] Failed to write calibration to %s", self._group.entity_id, entity_id)

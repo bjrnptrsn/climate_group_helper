@@ -353,7 +353,7 @@ class BaseStateManager:
             entity for entity in self._group.climate_entity_ids
             if entity != entity_id
             and entity not in self._group.run_state.isolated_members
-            and (state := self._group.hass.states.get(entity))
+            and (state := self._group.read_member_state(entity))
             and state.state != HVACMode.OFF
             and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         ]
@@ -382,9 +382,8 @@ class ClimateStateManager(BaseStateManager):
             return False
 
         if self._check_blocking_mode():
-            # Allow explicit off command
             if kwargs.get(ATTR_HVAC_MODE) == HVACMode.OFF:
-                _LOGGER.debug("[%s] Blocking mode active, but allowing adopt off command", self._group.entity_id)
+                _LOGGER.debug("[%s] Blocking mode active, allowing adopt off command", self._group.entity_id)
                 return True
             if not self._check_adopt_manual_changes(entity_id):
                 return False

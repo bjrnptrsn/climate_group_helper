@@ -109,6 +109,7 @@ CONF_OVERRIDE_DURATION = "override_duration"
 CONF_PERSIST_CHANGES = "persist_changes"
 CONF_PERSIST_ACTIVE_SCHEDULE = "persist_active_schedule"
 CONF_IGNORE_OFF_MEMBERS_SCHEDULE = "ignore_off_members_schedule"
+CONF_IGNORE_OFF_MEMBERS_TEMPERATURE = "ignore_off_members_temperature"
 
 # Advanced options
 CONF_DEBOUNCE_DELAY = "debounce_delay"
@@ -120,6 +121,8 @@ CONF_MIN_TEMP_OFF = "min_temp_off"
 CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
 CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_EXPOSE_CONFIG = "expose_config"
+CONF_RANGE_TEMPLATE_ENTITIES = "range_template_entities"
+CONF_RANGE_TEMPLATE_DEADBAND_ACTION = "range_template_deadband_action"
 
 # UI options
 CONF_EXPAND_SECTIONS = "expand_sections"
@@ -209,6 +212,13 @@ class WindowControlAction(StrEnum):
 
     OFF = "off"
     TEMPERATURE = "temperature"
+
+
+class RangeTemplateDeadbandAction(StrEnum):
+    """Physical action when a range-template member is inside the deadband."""
+
+    OFF = "off"
+    FAN_ONLY = "fan_only"
 
 
 class PresenceMode(StrEnum):

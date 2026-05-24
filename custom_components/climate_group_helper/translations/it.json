@@ -65,7 +65,8 @@
               "temp_update_targets": "Scrivi Temp Esterna su Entità",
               "temp_calibration_mode": "Modalità di Calibrazione",
               "calibration_heartbeat": "Heartbeat di Calibrazione (min)",
-              "calibration_ignore_off": "Ignora membri spenti"
+              "calibration_ignore_off": "Ignora membri spenti",
+              "ignore_off_members_temperature": "Escludi membri spenti dalla temperatura"
             },
             "data_description": {
               "temp_target_avg": "Come il gruppo calcola il setpoint da inviare ai suoi membri.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Scrivi il valore del sensore esterno su entità numeriche (es. offset calibrazione TRV). Utile per mantenere i termostati consapevoli della temperatura reale della stanza.",
               "temp_calibration_mode": "Assoluto: Invia valore diretto. Offset: Invia differenza (Esterno - TRV Interno). Scalato: Invia come intero x100 (es. 21.5 -> 2150).",
               "calibration_heartbeat": "Forza periodicamente la sincronizzazione della calibrazione alle entità anche se la temperatura non è cambiata. Imposta a 0 per disabilitare.",
-              "calibration_ignore_off": "Non inviare aggiornamenti di calibrazione ai membri attualmente spenti."
+              "calibration_ignore_off": "Non inviare aggiornamenti di calibrazione ai membri attualmente spenti.",
+              "ignore_off_members_temperature": "I membri attualmente spenti verranno esclusi dai calcoli della temperatura attuale e target."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Membri del gruppo da isolare quando il sensore è attivo.",
               "isolation_activate_delay": "(Solo trigger sensore / modalità HVAC) Attesa dopo l'attivazione del sensore prima di isolare i membri.",
               "isolation_restore_delay": "(Solo trigger sensore / modalità HVAC) Attesa dopo la disattivazione prima di ripristinare i membri."
+            }
+          },
+          "member_template_section": {
+            "name": "Modello membro",
+            "description": "Rende i membri a punto di impostazione singolo come entità virtuali di intervallo caldo/freddo. Il Group Helper traduce i comandi di intervallo in comandi fisici caldo/freddo appropriati in base alla temperatura attuale di ciascun membro.",
+            "data": {
+              "range_template_entities": "Membri a punto di impostazione singolo",
+              "range_template_deadband_action": "Azione nella zona morta"
+            },
+            "data_description": {
+              "range_template_entities": "Seleziona i termostati a punto di impostazione singolo da renderizzare come dispositivi virtuali in modalità intervallo.",
+              "range_template_deadband_action": "Azione da eseguire quando la temperatura attuale è all'interno dell'intervallo target (zona morta)."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Offset in assenza",
         "away_temperature": "Temperatura in assenza",
         "away_preset": "Preset in assenza"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Spegni",
+        "fan_only": "Solo ventilatore"
       }
     }
   },

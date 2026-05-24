@@ -257,10 +257,13 @@ class MemberIsolationHandler:
         if old_hvac_mode == new_hvac_mode:
             return
 
-        # Transient states carry no meaningful HVAC mode — ignore entirely.
-        # unavailable/unknown → X: not a deliberate user action, skip isolation/release.
-        # X → unavailable/unknown: member going offline, skip release of existing isolation.
-        if STATE_UNAVAILABLE in (old_hvac_mode, new_hvac_mode) or STATE_UNKNOWN in (old_hvac_mode, new_hvac_mode):
+        # Transient new_state: member going offline — no meaningful state to act on.
+        if new_hvac_mode in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return
+        # Transient old_state + new OFF: member came back online already OFF (e.g. after a
+        # brief disconnect). Treat as a deliberate OFF — isolation should fire.
+        # Transient old_state + new active: not a deliberate user change — skip release.
+        if old_hvac_mode in (STATE_UNAVAILABLE, STATE_UNKNOWN) and new_hvac_mode != HVACMode.OFF:
             return
 
         trigger = self._group.config.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)

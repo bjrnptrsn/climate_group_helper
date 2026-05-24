@@ -93,6 +93,17 @@ async def async_get_config_entry_diagnostics(
     handlers["window_force_off"] = group.window_control_handler.force_off if hasattr(group, "window_control_handler") else None
     handlers["advanced_mode"] = group.advanced_mode
     diag["handlers"] = handlers
+    # Range Template (Member Template Pattern)
+    if group.range_template is not None:
+        diag["range_template"] = {
+            "entity_ids": sorted(group.range_template.entity_ids),
+            "deadband_action": group.range_template.deadband_action,
+            "low": group.range_template.low,
+            "high": group.range_template.high,
+            "last_physical_mode": dict(group.range_template.last_physical_mode),
+        }
+    else:
+        diag["range_template"] = None
 
     return diag
 

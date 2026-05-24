@@ -65,7 +65,8 @@
               "temp_update_targets": "Zapisz Zewnętrzną Temp do Encji",
               "temp_calibration_mode": "Tryb Kalibracji",
               "calibration_heartbeat": "Puls Kalibracji (min)",
-              "calibration_ignore_off": "Ignoruj wyłączone elementy"
+              "calibration_ignore_off": "Ignoruj wyłączone elementy",
+              "ignore_off_members_temperature": "Wyklucz wyłączonych członków z temperatury"
             },
             "data_description": {
               "temp_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych (np. offsety kalibracji TRV). Przydatne, aby termostaty znały rzeczywistą temperaturę w pomieszczeniu.",
               "temp_calibration_mode": "Absolutny: Wyślij wartość bezpośrednio. Offset: Wyślij różnicę (Zewnętrzna - TRV Wewnętrzna). Skalowany: Wyślij jako liczbę całkowitą x100 (np. 21.5 -> 2150).",
               "calibration_heartbeat": "Okresowo wymuszaj synchronizację kalibracji do encji, nawet jeśli temperatura się nie zmieniła. Ustaw na 0, aby wyłączyć.",
-              "calibration_ignore_off": "Nie wysyłaj aktualizacji kalibracji do elementów, które są obecnie wyłączone."
+              "calibration_ignore_off": "Nie wysyłaj aktualizacji kalibracji do elementów, które są obecnie wyłączone.",
+              "ignore_off_members_temperature": "Członkowie, którzy są obecnie wyłączeni, zostaną wykluczeni z obliczeń aktualnej i docelowej temperatury."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Członkowie grupy do izolacji gdy czujnik jest aktywny.",
               "isolation_activate_delay": "(Tylko wyzwalacz czujnik / tryb HVAC) Czas oczekiwania po włączeniu czujnika przed izolacją członków.",
               "isolation_restore_delay": "(Tylko wyzwalacz czujnik / tryb HVAC) Czas oczekiwania po wyłączeniu czujnika przed przywróceniem członków."
+            }
+          },
+          "member_template_section": {
+            "name": "Szablon elementu",
+            "description": "Renderuje elementy z jednym punktem nastawy jako wirtualne encje zakresu ciepło/chłód. Group Helper tłumaczy polecenia zakresu na odpowiednie fizyczne polecenia ciepło/chłód na podstawie aktualnej temperatury każdego elementu.",
+            "data": {
+              "range_template_entities": "Elementy z jednym punktem nastawy",
+              "range_template_deadband_action": "Akcja w martwej strefie"
+            },
+            "data_description": {
+              "range_template_entities": "Wybierz termostaty z jednym punktem nastawy do wyrenderowania jako wirtualne urządzenia w trybie zakresu.",
+              "range_template_deadband_action": "Akcja wykonywana, gdy aktualna temperatura znajduje się wewnątrz zakresu docelowego (martwa strefa)."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Przesunięcie nieobecności",
         "away_temperature": "Temperatura nieobecności",
         "away_preset": "Preset nieobecności"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Wyłącz",
+        "fan_only": "Tylko wentylator"
       }
     }
   },

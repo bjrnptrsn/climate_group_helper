@@ -65,7 +65,8 @@
               "temp_update_targets": "Schreibe externe Temp. in Entitäten",
               "temp_calibration_mode": "Kalibrierungs-Modus",
               "calibration_heartbeat": "Kalibrierungs-Heartbeat (min)",
-              "calibration_ignore_off": "Ausgeschaltete Mitglieder ignorieren"
+              "calibration_ignore_off": "Ausgeschaltete Mitglieder ignorieren",
+              "ignore_off_members_temperature": "Ausgeschaltete Mitglieder von Temperatur ausschließen"
             },
             "data_description": {
               "temp_target_avg": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten (z.B. TRV-Kalibrierung). Nützlich, um Thermostate über die tatsächliche Raumtemperatur zu informieren.",
               "temp_calibration_mode": "Absolut: Wert direkt senden. Offset: Differenz senden (Extern - TRV Intern). Skaliert: Sende als Integer x100 (z.B. 21,5 -> 2150).",
               "calibration_heartbeat": "Erzwinge periodisch die Synchronisierung der Kalibrierung, auch wenn sich die Temperatur nicht geändert hat. Setze auf 0, um zu deaktivieren.",
-              "calibration_ignore_off": "Sende keine Kalibrierungs-Updates an Mitglieder, die derzeit ausgeschaltet sind."
+              "calibration_ignore_off": "Sende keine Kalibrierungs-Updates an Mitglieder, die derzeit ausgeschaltet sind.",
+              "ignore_off_members_temperature": "Mitglieder, die aktuell ausgeschaltet sind, werden bei der Berechnung der aktuellen und Zieltemperatur nicht berücksichtigt."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Gruppenmitglieder, die beim aktiven Sensor isoliert werden.",
               "isolation_activate_delay": "(Nur Sensor- / HVAC-Modus-Auslöser) Wartezeit nach Sensor ON, bevor Mitglieder isoliert werden.",
               "isolation_restore_delay": "(Nur Sensor- / HVAC-Modus-Auslöser) Wartezeit nach Sensor OFF, bevor Mitglieder synchronisiert werden."
+            }
+          },
+          "member_template_section": {
+            "name": "Mitglieds-Template",
+            "description": "Rendert Einzelsollwert-Mitglieder als virtuelle Heat/Cool-Range-Entitäten. Der Group Helper übersetzt Range-Befehle in geeignete physische Heat/Cool-Befehle basierend auf der aktuellen Temperatur jedes Mitglieds.",
+            "data": {
+              "range_template_entities": "Einzelsollwert-Mitglieder",
+              "range_template_deadband_action": "Deadband-Aktion"
+            },
+            "data_description": {
+              "range_template_entities": "Wähle Einzelsollwert-Thermostate, die als virtuelle Range-Mode-Geräte dargestellt werden sollen.",
+              "range_template_deadband_action": "Aktion, die ausgeführt wird, wenn die aktuelle Temperatur innerhalb des Zielbereichs (Deadband) liegt."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Abwesenheits-Versatz",
         "away_temperature": "Abwesenheits-Temperatur",
         "away_preset": "Abwesenheits-Preset"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Ausschalten",
+        "fan_only": "Nur Lüftung"
       }
     }
   },

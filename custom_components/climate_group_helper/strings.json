@@ -65,7 +65,8 @@
               "temp_update_targets": "Write External Temp to Entities",
               "temp_calibration_mode": "Calibration Mode",
               "calibration_heartbeat": "Calibration Heartbeat (min)",
-              "calibration_ignore_off": "Ignore Off Members"
+              "calibration_ignore_off": "Ignore Off Members",
+              "ignore_off_members_temperature": "Exclude Off Members from Temperature"
             },
             "data_description": {
               "temp_target_avg": "How the group calculates the target setpoint to send to its members.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Write the external sensor value to number entities (e.g. TRV calibration offsets). Useful for keeping thermostats aware of actual room temperature.",
               "temp_calibration_mode": "Absolute: Send value directly. Offset: Send delta (External - TRV Internal). Scaled: Send as Integer x100 (e.g. 21.5 -> 2150).",
               "calibration_heartbeat": "Periodically force-sync calibration to entities even if temperature hasn't changed. Set to 0 to disable.",
-              "calibration_ignore_off": "Do not send calibration updates to members that are currently off."
+              "calibration_ignore_off": "Do not send calibration updates to members that are currently off.",
+              "ignore_off_members_temperature": "Exclude members that are currently off from current and target temperature calculations."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Group members to isolate when the trigger is active.",
               "isolation_activate_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger activates before isolating members.",
               "isolation_restore_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger deactivates before restoring members to the group target state."
+            }
+          },
+          "member_template_section": {
+            "name": "Member Template",
+            "description": "Render single-setpoint members as virtual heat/cool range entities. The group helper translates range commands into appropriate physical heat/cool commands based on each member's current temperature.",
+            "data": {
+              "range_template_entities": "Single-Setpoint Members",
+              "range_template_deadband_action": "Deadband Action"
+            },
+            "data_description": {
+              "range_template_entities": "Select single-setpoint thermostats to render as virtual range-mode devices.",
+              "range_template_deadband_action": "Action to perform when the current temperature is inside the target range (deadband)."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Away Offset",
         "away_temperature": "Away Temperature",
         "away_preset": "Away Preset"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Turn Off",
+        "fan_only": "Fan Only"
       }
     }
   },

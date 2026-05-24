@@ -65,7 +65,8 @@
               "temp_update_targets": "Escribir Temp Externa en Entidades",
               "temp_calibration_mode": "Modo de Calibración",
               "calibration_heartbeat": "Heartbeat de Calibración (min)",
-              "calibration_ignore_off": "Ignorar miembros apagados"
+              "calibration_ignore_off": "Ignorar miembros apagados",
+              "ignore_off_members_temperature": "Excluir miembros apagados de la temperatura"
             },
             "data_description": {
               "temp_target_avg": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Escribir el valor del sensor externo en entidades numéricas (ej. offsets calibración TRV). Útil para mantener termostatos conscientes de la temperatura real.",
               "temp_calibration_mode": "Absoluto: Enviar valor directamente. Offset: Enviar diferencia (Externo - TRV Interno). Escalado: Enviar como entero x100 (ej. 21.5 -> 2150).",
               "calibration_heartbeat": "Forzar periódicamente la sincronización de calibración a entidades aunque la temperatura no haya cambiado. Poner a 0 para desactivar.",
-              "calibration_ignore_off": "No enviar actualizaciones de calibración a los miembros que actualmente están apagados."
+              "calibration_ignore_off": "No enviar actualizaciones de calibración a los miembros que actualmente están apagados.",
+              "ignore_off_members_temperature": "Los miembros que están apagados actualmente se excluirán de los cálculos de temperatura actual y objetivo."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Miembros del grupo a aislar cuando el sensor está activo.",
               "isolation_activate_delay": "(Solo disparador sensor / modo HVAC) Tiempo de espera tras activar el sensor antes de aislar miembros.",
               "isolation_restore_delay": "(Solo disparador sensor / modo HVAC) Tiempo de espera tras desactivar el sensor antes de restaurar miembros."
+            }
+          },
+          "member_template_section": {
+            "name": "Plantilla de miembro",
+            "description": "Renderiza miembros de punto de ajuste único como entidades virtuales de rango calor/frío. El Group Helper traduce los comandos de rango en comandos físicos de calor/frío apropiados basados en la temperatura actual de cada miembro.",
+            "data": {
+              "range_template_entities": "Miembros de punto de ajuste único",
+              "range_template_deadband_action": "Acción en zona muerta"
+            },
+            "data_description": {
+              "range_template_entities": "Selecciona termostatos de punto de ajuste único para renderizarlos como dispositivos virtuales en modo rango.",
+              "range_template_deadband_action": "Acción a realizar cuando la temperatura actual está dentro del rango objetivo (zona muerta)."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Desplazamiento en ausencia",
         "away_temperature": "Temperatura en ausencia",
         "away_preset": "Preset en ausencia"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Apagar",
+        "fan_only": "Solo ventilador"
       }
     }
   },

@@ -40,6 +40,7 @@ from .const import (
     UnsupportedHvacAction,
 )
 from .state import FilterState
+from .member_template import _resolve_range, _read_current_temp, _expected_mode_for
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -269,6 +270,7 @@ class BaseServiceCallHandler(ABC):
                             processed = self._process_min_temp_off(raw)
                             processed = self._process_member_offset(processed)
                             processed = self._process_group_offset(processed)
+                            processed = self._process_range_template(processed)
                             processed = self._process_oob_guard(processed)
                             calls.extend(processed)
                             temp_range_processed = True
@@ -286,6 +288,7 @@ class BaseServiceCallHandler(ABC):
             processed = self._process_min_temp_off(processed)
             processed = self._process_member_offset(processed)
             processed = self._process_group_offset(processed)
+            processed = self._process_range_template(processed)
             processed = self._process_oob_guard(processed)
             calls.extend(processed)
 
@@ -322,9 +325,7 @@ class BaseServiceCallHandler(ABC):
         """Read from target_state, with group_offset applied for temperature attributes."""
         raw = getattr(self.target_state, attr, None)
         if raw is not None and attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
-            group_offset = self._group.run_state.group_offset
-            if group_offset != 0.0:
-                return round(float(raw) + group_offset, 1)
+            return round(float(raw) + self._group.run_state.group_offset, 1)
         return raw
 
     def _is_member_blocked(self, entity_id: str) -> bool:
@@ -361,7 +362,7 @@ class BaseServiceCallHandler(ABC):
             if not active_temps:
                 return False  # Targets cleared -> no longer OOB
 
-            state = self._hass.states.get(entity_id)
+            state = self._group.read_member_state(entity_id)
             if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 return True  # Device unavailable -> keep blocked
 
@@ -399,7 +400,8 @@ class BaseServiceCallHandler(ABC):
         for entity_id in self._group.climate_entity_ids:
             if self._is_member_blocked(entity_id):
                 continue
-            state = self._hass.states.get(entity_id)
+
+            state = self._group.read_member_state(entity_id)
             if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
             if attr in MODE_MODES_MAP:
@@ -439,7 +441,7 @@ class BaseServiceCallHandler(ABC):
             return []
 
         for entity_id in self._get_capable_entities(attr, target_value):
-            state = self._hass.states.get(entity_id)
+            state = self._group.read_member_state(entity_id)
             if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
 
@@ -513,7 +515,7 @@ class BaseServiceCallHandler(ABC):
         # Identify members that technically do not support the target mode
         unsupported = {
             eid for eid in self._group.climate_entity_ids
-            if (state := self._hass.states.get(eid)) and 
+            if (state := self._group.read_member_state(eid)) and 
                (modes := state.attributes.get(ATTR_HVAC_MODES, [])) and 
                target_mode not in modes
         }
@@ -527,7 +529,7 @@ class BaseServiceCallHandler(ABC):
         # For explicit HVAC_MODE changes, turn unsupported members OFF
         if hvac_call:
             for entity_id in unsupported:
-                state = self._hass.states.get(entity_id)
+                state = self._group.read_member_state(entity_id)
                 if state and state.state != HVACMode.OFF and not self._is_member_blocked(entity_id):
                     filtered.append({
                         "service": SERVICE_SET_HVAC_MODE,
@@ -564,23 +566,25 @@ class BaseServiceCallHandler(ABC):
             # Entity split: temp-capable vs. non-temp devices
             temp_ids = [
                 eid for eid in entity_ids
-                if (state := self._hass.states.get(eid)) and ATTR_TEMPERATURE in state.attributes
+                if (state := self._group.read_member_state(eid)) and (ATTR_TEMPERATURE in state.attributes or ATTR_TARGET_TEMP_LOW in state.attributes)
             ]
             non_temp_ids = [eid for eid in entity_ids if eid not in temp_ids]
 
             if hvac_mode == HVACMode.OFF:
                 # OFF: each temp-capable device gets its own min_temp
                 for eid in temp_ids:
-                    state = self._hass.states.get(eid)
+                    state = self._group.read_member_state(eid)
                     device_min = state.attributes.get("min_temp", DEFAULT_MIN_TEMP) if state else DEFAULT_MIN_TEMP
                     result.append({
+                        **call,
                         "service": SERVICE_SET_TEMPERATURE,
                         "kwargs": {ATTR_TEMPERATURE: device_min, ATTR_HVAC_MODE: HVACMode.OFF},
                         "entity_ids": [eid],
-                        "injected": [ATTR_TEMPERATURE],
+                        "injected": list(set(call.get("injected", [])) | {ATTR_TEMPERATURE}),
                     })
                 if non_temp_ids:
                     result.append({
+                        **call,
                         "service": SERVICE_SET_HVAC_MODE,
                         "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
                         "entity_ids": non_temp_ids,
@@ -590,12 +594,14 @@ class BaseServiceCallHandler(ABC):
                 target_temp = self.target_state.temperature
                 if target_temp is not None and temp_ids:
                     result.append({
+                        **call,
                         "service": SERVICE_SET_TEMPERATURE,
                         "kwargs": {ATTR_TEMPERATURE: target_temp, ATTR_HVAC_MODE: hvac_mode},
                         "entity_ids": temp_ids,
                     })
                 if non_temp_ids or (target_temp is None and temp_ids):
                     result.append({
+                        **call,
                         "service": SERVICE_SET_HVAC_MODE,
                         "kwargs": {ATTR_HVAC_MODE: hvac_mode},
                         "entity_ids": non_temp_ids + (temp_ids if target_temp is None else []),
@@ -640,7 +646,7 @@ class BaseServiceCallHandler(ABC):
                 adjusted_kwargs = dict(kwargs)
                 for attr in transformable:
                     if adjusted_kwargs[attr] is not None:
-                        adjusted_kwargs[attr] = adjusted_kwargs[attr] + member_offset
+                        adjusted_kwargs[attr] = round(float(adjusted_kwargs[attr]) + member_offset, 1)
 
                 result.append({
                     **call,
@@ -698,6 +704,131 @@ class BaseServiceCallHandler(ABC):
         """Whether to apply the global group offset. False by default (direct-command handlers)."""
         return False
 
+    def _process_range_template(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Translate outgoing range commands into physical single-setpoint commands.
+
+        The output half of the Range Template. For each call addressing
+        template-covered members:
+          - non-range calls (e.g. `hvac_mode=off`, preset, fan) pass through;
+          - range calls (`target_temp_low/high` or `hvac_mode=heat_cool`) are
+            translated per member based on its `current_temperature` —
+            `heat`+`low`, `cool`+`high`, or the configured deadband action;
+          - native members in the same call are emitted unchanged in a
+            separate output call;
+          - translated payloads are bucketed by `(service, kwargs)` so members
+            with identical decisions ship in one call.
+
+        This is the only pipeline stage that may *increase* `len(calls)`. The
+        `target_temp_low/high` from the incoming call is cached on the template
+        so a follow-up `hvac_mode=heat_cool` (without explicit setpoints) can
+        still resolve a band. Outputs carry `injected=[ATTR_TEMPERATURE,
+        ATTR_HVAC_MODE]` so `_is_stale_call` does not discard them as
+        deviations from `target_state`.
+        """
+        template = self._group.range_template
+        if template is None:
+            return calls
+
+        result = []
+        for call in calls:
+            entity_ids = call["entity_ids"]
+            kwargs = call["kwargs"]
+
+            template_members = [eid for eid in entity_ids if template.covers(eid)]
+            if not template_members:
+                result.append(call)
+                continue
+
+            is_range_call = (
+                ATTR_TARGET_TEMP_LOW in kwargs
+                or ATTR_TARGET_TEMP_HIGH in kwargs
+                or kwargs.get(ATTR_HVAC_MODE) == HVACMode.HEAT_COOL
+            )
+
+            if not is_range_call:
+                result.append(call)
+                continue
+
+            # Cache the commanded range so later hvac_mode=heat_cool without
+            # explicit setpoints can still resolve a band.
+            if ATTR_TARGET_TEMP_LOW in kwargs and kwargs[ATTR_TARGET_TEMP_LOW] is not None:
+                template.low = float(kwargs[ATTR_TARGET_TEMP_LOW])
+            if ATTR_TARGET_TEMP_HIGH in kwargs and kwargs[ATTR_TARGET_TEMP_HIGH] is not None:
+                template.high = float(kwargs[ATTR_TARGET_TEMP_HIGH])
+
+            # Prefer cached template values (with offsets applied by upstream
+            # pipeline stages). Fall back to target_state via _resolve_range
+            # when no range has been cached yet (first call).
+            low_val = template.low
+            high_val = template.high
+            if low_val is None and high_val is None:
+                low_val, high_val = _resolve_range(self._group)
+
+            # Native members keep the original payload in a separate call.
+            native_members = [eid for eid in entity_ids if eid not in template_members]
+            if native_members:
+                result.append({**call, "entity_ids": native_members})
+
+            if low_val is None or high_val is None:
+                _LOGGER.warning(
+                    "[%s] Range Template active, but target_temp_low/high are not set. Command discarded.",
+                    self._group.entity_id,
+                )
+                continue
+
+            # Bucket per-member translations by (service, kwargs) so identical
+            # decisions ship as a single call.
+            bundled: dict[tuple[str, frozenset[tuple[str, Any]]], list[str]] = {}
+
+            for eid in template_members:
+                state = self._hass.states.get(eid)
+                if not state:
+                    continue
+                current_temp = _read_current_temp(state)
+                expected_mode, expected_temp = _expected_mode_for(template, eid, low_val, high_val, current_temp)
+
+                # Track the active heating/cooling mode for the fallback in
+                # _expected_mode_for() when current_temperature later goes missing.
+                # Deadband is not tracked — it's the neutral state.
+                if expected_mode != template.deadband_action:
+                    template.last_physical_mode[eid] = expected_mode
+
+                if expected_mode in (HVACMode.OFF, HVACMode.FAN_ONLY):
+                    trans_service = SERVICE_SET_HVAC_MODE
+                    trans_kwargs = {ATTR_HVAC_MODE: expected_mode}
+                else:
+                    trans_service = SERVICE_SET_TEMPERATURE
+                    trans_kwargs = {
+                        ATTR_HVAC_MODE: expected_mode,
+                        ATTR_TEMPERATURE: expected_temp,
+                    }
+
+                # Carry through orthogonal mode attributes from the original call.
+                passthrough_keys = {"preset_mode", "fan_mode", "swing_mode", "swing_horizontal_mode"}
+                for pk in passthrough_keys:
+                    if pk in kwargs:
+                        trans_kwargs[pk] = kwargs[pk]
+
+                kw_set = frozenset(trans_kwargs.items())
+                bundled.setdefault((trans_service, kw_set), []).append(eid)
+
+            for (trans_service, kw_set), eids in bundled.items():
+                # Mark translated attrs as injected so _is_stale_call does not
+                # reject them for diverging from target_state.
+                injected = list(call.get("injected", []))
+                for k in (ATTR_TEMPERATURE, ATTR_HVAC_MODE):
+                    if k not in injected:
+                        injected.append(k)
+
+                result.append({
+                    "service": trans_service,
+                    "kwargs": dict(kw_set),
+                    "entity_ids": eids,
+                    "injected": injected,
+                })
+
+        return result
+
     def _process_oob_guard(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """OOB guard: check if temperature values are within device range (union only).
 
@@ -727,7 +858,7 @@ class BaseServiceCallHandler(ABC):
 
             in_range_ids = []
             for entity_id in call["entity_ids"]:
-                state = self._hass.states.get(entity_id)
+                state = self._group.read_member_state(entity_id)
                 if not state:
                     continue
 
@@ -754,7 +885,6 @@ class BaseServiceCallHandler(ABC):
                             })
                     else:  # CLAMP
                         clamped_kwargs = {**upstream_kwargs}
-                        injected = []
                         for attr, value in call_temp_attrs.items():
                             clamped = value
                             if min_temp is not None and value < min_temp:
@@ -762,13 +892,13 @@ class BaseServiceCallHandler(ABC):
                             elif max_temp is not None and value > max_temp:
                                 clamped = max_temp
                             clamped_kwargs[attr] = clamped
-                            injected.append(attr)
-                            
+
                         result.append({
+                            **call,
                             "service": SERVICE_SET_TEMPERATURE,
                             "kwargs": clamped_kwargs,
                             "entity_ids": [entity_id],
-                            "injected": injected,
+                            "injected": list(set(call.get("injected", [])) | call_temp_attrs.keys()),
                         })
                 else:
                     # → In-range
@@ -867,11 +997,15 @@ class BaseServiceCallHandler(ABC):
         if target_value == HVACMode.OFF:
             return False
 
-        # Deadlock Prevention: Don't skip if ALL members are OFF.
+        # Deadlock Prevention: Don't skip if any other non-isolated member is still
+        # active. Isolated members never receive enforcement, so counting them as
+        # "active" would cause a deadlock where no member gets synced.
         return any(
             member_state.state != HVACMode.OFF
             for member_id in self._group.climate_entity_ids
-            if (member_state := self._hass.states.get(member_id)) and member_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            if member_id not in self._group.run_state.isolated_members
+            and (member_state := self._group.read_member_state(member_id))
+            and member_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         )
 
     async def _after_call_trigger(self, data: dict[str, Any] | None = None) -> None:

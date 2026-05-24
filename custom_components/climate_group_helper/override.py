@@ -111,6 +111,9 @@ class BaseOverrideManager:
         @callback
         def _handle_timeout(_now: Any) -> None:
             self._timer = None
+            # Clear active_override synchronously so run_state is consistent
+            # before the async on_expired task starts
+            self._group.run_state = self._group.run_state.clear_override()
             self._hass.async_create_task(on_expired())
 
         self._timer = async_call_later(self._hass, duration, _handle_timeout)
@@ -310,6 +313,9 @@ class WindowOverrideManager(BaseOverrideManager):
         Uses WindowControlCallHandler (bypasses blocking_sources, respects isolated_members).
         """
         if "window" not in self._group.run_state.blocking_sources:
+            return
+        # Switch takes precedence — SwitchOverrideManager already sends OFF to all members.
+        if "switch" in self._group.run_state.blocking_sources:
             return
         _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
         await self.call_handler.call_debounced(self._active_data())

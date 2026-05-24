@@ -78,9 +78,8 @@ from .const import (
     CONF_ADVANCED_MODE,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_MEMBER_ENTITIES,
-    CONF_GRACE_PERIOD,
-    DEFAULT_GRACE_PERIOD,
     CONF_FEATURE_STRATEGY,
+    CONF_GRACE_PERIOD,
     CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_SENSORS,
     CONF_HUMIDITY_TARGET_AVG,
@@ -88,13 +87,21 @@ from .const import (
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HUMIDITY_USE_MASTER,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_IGNORE_OFF_MEMBERS_TEMPERATURE,
+    CONF_ISOLATION_ENTITIES,
+    CONF_ISOLATION_SENSOR,
     CONF_MASTER_ENTITY,
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
     CONF_PERSIST_ACTIVE_SCHEDULE,
+    CONF_PRESENCE_SENSOR,
+    CONF_PRESENCE_ZONE,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
+    CONF_ROOM_SENSOR,
+    CONF_SCHEDULE_BYPASS_ENTITY,
+    CONF_SCHEDULE_ENTITY,
     CONF_STAGGERED_CALL_DELAY,
     CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_SENSORS,
@@ -102,15 +109,11 @@ from .const import (
     CONF_TEMP_TARGET_ROUND,
     CONF_TEMP_UPDATE_TARGETS,
     CONF_TEMP_USE_MASTER,
-    CONF_ISOLATION_ENTITIES,
-    CONF_ISOLATION_SENSOR,
-    CONF_PRESENCE_SENSOR,
-    CONF_PRESENCE_ZONE,
-    CONF_ROOM_SENSOR,
-    CONF_SCHEDULE_BYPASS_ENTITY,
-    CONF_SCHEDULE_ENTITY,
     CONF_WINDOW_ADOPT_MANUAL_CHANGES,
     CONF_ZONE_SENSOR,
+    CONF_RANGE_TEMPLATE_ENTITIES,
+    CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
+    DEFAULT_GRACE_PERIOD,
     DOMAIN,
     ENTITY_SELECTOR_KEYS,
     FLOAT_TOLERANCE,
@@ -126,6 +129,7 @@ from .const import (
     HvacModeStrategy,
     RoundOption,
     SyncMode,
+    RangeTemplateDeadbandAction,
 )
 from . import VALID_CONFIG_KEYS
 from .calibration import CalibrationHandler
@@ -137,6 +141,8 @@ from .override import (
     WindowOverrideManager,
 )
 from .presence import PresenceHandler, PresenceOverrideManager
+from .member_template import RangeTemplate, _apply_range_template, initialize_last_modes
+
 from .schedule import ScheduleCaller, ScheduleHandler, ScheduleBypassHandler
 from .service_call import (
     ClimateCallHandler,
@@ -317,7 +323,20 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self._window_adopt_manual_changes = config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES, AdoptManualChanges.OFF)
         self._temp_offset_map: dict[str, float] = config.get(CONF_MEMBER_TEMP_OFFSETS, {})
         self._member_offset_correction: bool = config.get(CONF_MEMBER_OFFSET_CORRECTION, True)
+        self._ignore_off_members_temperature: bool = config.get(CONF_IGNORE_OFF_MEMBERS_TEMPERATURE, False)
         self._member_temp_avg = None
+
+        # Range Template (Member Template Pattern)
+        template_entities = _get_adv(CONF_RANGE_TEMPLATE_ENTITIES, [])
+        if template_entities:
+            deadband = config.get(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, RangeTemplateDeadbandAction.OFF)
+            self.range_template = RangeTemplate(
+                entity_ids=frozenset(template_entities),
+                deadband_action=deadband,
+            )
+        else:
+            self.range_template = None
+
         self.calibration_handler = CalibrationHandler(self)
 
         # State variables
@@ -434,6 +453,12 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Therefore, we restore some of the last known states before registering the listeners.
         if (last_state := await self.async_get_last_state()) is not None:
              self._restore_state(last_state)
+
+        # Range Template: seed last_physical_mode *after* the target state
+        # has been restored, so the deviation fallback in _expected_mode_for()
+        # is not blind at first start.
+        if self.range_template is not None:
+            initialize_last_modes(self)
 
         # Guard against feedback loops from misconfigured CGH sensors.
         # Filter sensor lists and rebuild _entity_ids so the listener never subscribes to our own sensors.
@@ -595,7 +620,15 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         await super().async_will_remove_from_hass()
         self._cancel_grace_period_timer()
         await self.climate_call_handler.async_cancel_all()
-        
+        await self.override_call_handler.async_cancel_all()
+        await self.presence_call_handler.async_cancel_all()
+        await self.schedule_call_handler.async_cancel_all()
+        await self.switch_call_handler.async_cancel_all()
+        await self.switch_enforce_call_handler.async_cancel_all()
+        await self.sync_mode_call_handler.async_cancel_all()
+        await self.window_control_call_handler.async_cancel_all()
+        self.sync_mode_handler.async_teardown()
+
         if self.advanced_mode:
             self.calibration_handler.async_teardown()
             self.member_isolation_handler.async_teardown()
@@ -845,6 +878,37 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             return round(value)
         return value
 
+    def read_member_state(self, entity_id: str) -> State | None:
+        """Central member-state read — the only path that applies Member Templates.
+
+        All code that needs a member's state must go through this method; direct
+        `hass.states.get(member_id)` calls bypass any active template and
+        produce inconsistent behaviour. Returns the real state untouched when
+        no template applies (template disabled, entity not covered, or the
+        group is not in the relevant mode). See `member_template.py` for the
+        manipulation logic.
+        """
+        state = self.hass.states.get(entity_id)
+        if state is None or self.range_template is None:
+            return state
+        return _apply_range_template(self, entity_id, state)
+
+    def read_member_event(self, event: Event) -> tuple[State | None, State | None]:
+        """Unpack a `state_changed` event into template-rendered `(new_state, old_state)`.
+
+        Called once at the source in `_state_change_listener` so every downstream
+        consumer (`ChangeState.from_event`, `SyncModeHandler._has_relevant_changes`)
+        sees a rendered event without having to call a gateway itself.
+        """
+        entity_id = event.data.get("entity_id")
+        new_state = event.data.get("new_state")
+        old_state = event.data.get("old_state")
+        if self.range_template is None or entity_id is None:
+            return new_state, old_state
+        new_wrapped = _apply_range_template(self, entity_id, new_state) if new_state else None
+        old_wrapped = _apply_range_template(self, entity_id, old_state) if old_state else None
+        return new_wrapped, old_wrapped
+
     def _get_valid_member_states(self, entity_ids: list[str]) -> tuple[list[State], bool]:
         """Get valid states for provided entities.
 
@@ -859,7 +923,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         all_states = [
             state
             for entity_id in expected_entity_ids
-            if (state := self.hass.states.get(entity_id)) is not None
+            if (state := self.read_member_state(entity_id)) is not None
         ]
         valid_states = [state for state in all_states if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)]
         all_ready = len(valid_states) == len(expected_entity_ids) if expected_entity_ids else True
@@ -884,7 +948,29 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
     @callback
     def _state_change_listener(self, event: Event | None = None) -> None:
-        """Handle state changes."""
+        """Handle a member `state_changed` event.
+
+        For active Member Templates (e.g. Range Template), the event is
+        reconstructed at the source with rendered `new_state`/`old_state` so
+        all downstream consumers (`ChangeState.from_event`, `SyncModeHandler`,
+        …) see a template-rendered event transparently. HA's `Event` is
+        frozen, so a new object is built preserving `context`, `origin`, and
+        `time_fired_timestamp` — losing any of these would break echo
+        suppression and origin analysis.
+        """
+        if event is not None:
+            new_wrapped, old_wrapped = self.read_member_event(event)
+            event = Event(
+                event_type=event.event_type,
+                data={
+                    **event.data,
+                    "new_state": new_wrapped,
+                    "old_state": old_wrapped,
+                },
+                origin=event.origin,
+                time_fired_timestamp=event.time_fired_timestamp,
+                context=event.context,
+            )
         self.event = event
         self.async_defer_or_update_ha_state()
 
@@ -912,7 +998,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Load master entity state
         if self._master_entity_id:
-            raw = self.hass.states.get(self._master_entity_id)
+            raw = self.read_member_state(self._master_entity_id)
             if raw and raw.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 self.master_state = raw
                 self.current_master_state = CurrentState(
@@ -1000,8 +1086,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if self.shared_target_state == TargetState():
             initial_data = self.current_group_state.to_dict()
             if initial_data:
-                # We use restore source to bypass blocking during startup
-                self.schedule_state_manager.update(last_source="restore", **initial_data)
+                self.shared_target_state = self.shared_target_state.update(**initial_data)
                 _LOGGER.debug("[%s] Initialized Persistent Target State from current values: %s", self.entity_id, self.shared_target_state)
 
         # Clear instance-level event state after use — all three are persisted across
@@ -1010,13 +1095,13 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.event = None
         self._event_entity_id = None
 
-    def _resolve_master_or_avg(self, use_master: bool, master_value: float | None, attr: str, avg_calc: Callable[[Any], float | None]) -> float | None:
-        """Return the display value for a temperature attribute.
+    def _resolve_master_or_avg(self, use_master: bool, master_value: float | None, attr: str, avg_calc: Callable[[Any], float | None], states: list[State]) -> float | None:
+        """Return the display value for a temperature or humidity attribute.
 
         Priority: master entity → offset-corrected average → raw member average.
-        When member_offset_correction is enabled, each member's per-device offset is
-        subtracted before averaging so the group shows the logical set point (e.g. 20°C)
-        rather than the hardware-adjusted member average (e.g. 23°C with a +3° offset).
+        `states` is provided by the caller — either the full self.states or a pre-filtered
+        subset (e.g. without OFF members). Offset correction subtracts each member's
+        per-device offset before averaging so the group shows the logical set point.
         """
         if use_master and self._master_entity_id and master_value is not None:
             return master_value
@@ -1028,18 +1113,29 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         ):
             values = [
                 val - self._temp_offset_map.get(s.entity_id, 0.0)
-                for s in self.states
+                for s in states
                 if (val := s.attributes.get(attr)) is not None
             ]
             return avg_calc(values) if values else None
 
-        return reduce_attribute(self.states, attr, reduce=lambda *data: avg_calc(data))  # type: ignore[no-any-return]
+        return reduce_attribute(states, attr, reduce=lambda *data: avg_calc(data))  # type: ignore[no-any-return]
 
     def _update_temperature_attributes(self) -> None:
-        """Calculate and set all temperature-related attributes."""
+        """Calculate and set all temperature-related attributes.
+
+        temp_states excludes OFF members when CONF_IGNORE_OFF_MEMBERS_TEMPERATURE is set.
+        min_temp, max_temp, and temp_step always use self.states — device capability limits
+        must reflect the full group regardless of which members are currently active.
+        """
+        temp_states = (
+            [s for s in self.states if s.state != HVACMode.OFF]
+            if self._ignore_off_members_temperature
+            else self.states
+        )
+
         # Current temperature
         self._member_temp_avg = reduce_attribute(
-            self.states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._temp_current_avg_calc(data)
+            temp_states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._temp_current_avg_calc(data)
         )
         if self.temp_sensor_entity_ids:  # always empty in simple mode
             self._attr_current_temperature = self._get_avg_sensor_value(self.temp_sensor_entity_ids, self._temp_current_avg_calc)
@@ -1054,15 +1150,15 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         master = self.current_master_state
         val = self._get_optimistic_value("temperature")
         self._attr_target_temperature = val if val is not None else self._resolve_master_or_avg(
-            self._temp_use_master, master.temperature, ATTR_TEMPERATURE, self._temp_target_avg_calc
+            self._temp_use_master, master.temperature, ATTR_TEMPERATURE, self._temp_target_avg_calc, temp_states
         )
         val = self._get_optimistic_value("target_temp_low")
         self._attr_target_temperature_low = val if val is not None else self._resolve_master_or_avg(
-            self._temp_use_master, master.target_temp_low, ATTR_TARGET_TEMP_LOW, self._temp_target_avg_calc
+            self._temp_use_master, master.target_temp_low, ATTR_TARGET_TEMP_LOW, self._temp_target_avg_calc, temp_states
         )
         val = self._get_optimistic_value("target_temp_high")
         self._attr_target_temperature_high = val if val is not None else self._resolve_master_or_avg(
-            self._temp_use_master, master.target_temp_high, ATTR_TARGET_TEMP_HIGH, self._temp_target_avg_calc
+            self._temp_use_master, master.target_temp_high, ATTR_TARGET_TEMP_HIGH, self._temp_target_avg_calc, temp_states
         )
 
         # Round target values
@@ -1101,7 +1197,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Target humidity: grace period → master override → member average
         val = self._get_optimistic_value("humidity")
         self._attr_target_humidity = val if val is not None else self._resolve_master_or_avg(
-            self._humidity_use_master, self.current_master_state.humidity, ATTR_HUMIDITY, self._humidity_target_avg_calc
+            self._humidity_use_master, self.current_master_state.humidity, ATTR_HUMIDITY, self._humidity_target_avg_calc, self.states
         )
         if self._attr_target_humidity is not None:
             self._attr_target_humidity = self.mean_round(self._attr_target_humidity, self._humidity_round)

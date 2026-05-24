@@ -58,6 +58,7 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
     - [Schedule Meta-Keys](#schedule-configuration--meta-keys)
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
+  - [Member Template](#member-template)
 - [Management Entities (Switch & Slider)](#management-entities-switch--slider)
   - [Main Switch](#main-switch)
   - [Group Offset](#group-offset)
@@ -233,7 +234,7 @@ You can omit attributes you don't need — for example, use only `hvac_mode: "of
 | `group_offset` | Float −5.0 … 5.0 | `group_offset: 1.5` | Temporarily sets the **Group Offset** for the slot duration. If you move the offset slider manually while this slot is active, your value takes over and the slot-end reset is skipped. |
 | `sync_mode` | `disabled`, `lock`, `mirror`, `master_lock` | `sync_mode: disabled` | Temporarily overrides the configured **Sync Mode** for the slot duration. Useful for slots where you want members to be left alone (e.g. a "sleep" slot where manual adjustments are allowed). |
 | `sync_attributes` | Any subset of: `hvac_mode`, `temperature`, `target_temp_low`, `target_temp_high`, `humidity`, `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode` | `sync_attributes: [hvac_mode]` | Temporarily overrides which **Sync Attributes** are synchronized for the slot duration. Useful for slots where you want to sync only the mode but let members manage their own temperature. Restores to the configured Sync Attributes setting when the slot ends. |
-| `turn_off` | `true` | `turn_off: true` | Activates the **Main Switch** block — all members are turned off for the slot duration. Equivalent to toggling the Main Switch off. Members are restored automatically when the slot ends or a new slot without `turn_off` begins. |
+| `turn_off` | `true` / `false` | `turn_off: true` | Explicit two-state trigger: `true` turns all members off (equivalent to toggling the **Main Switch** off). `false` restores all members (equivalent to toggling the **Main Switch** back on). A slot without `turn_off` has no effect on the current state. |
 
 **Example — night slot that turns everything off:**
 ```yaml
@@ -262,6 +263,21 @@ Temporarily isolate specific members from the group using sensors or state trigg
 *   **HVAC Mode:** Isolation activates when the group's target mode matches a configured set (e.g. isolate radiators when switching to `cool`).
 *   **Member Off:** Automatically isolates individual members when they are turned `off` manually. Restoration occurs as soon as the device is turned back `on`.
 *   **Configurable Delays:** Set custom reaction times for activation and restoration (Sensor and HVAC Mode triggers only).
+
+### Member Template
+
+A **Member Template** wraps individual group members with a virtual capability profile that differs from what their Home Assistant integration natively reports. From the group's perspective — and from all features built on top of it (Sync Mode, Schedule, Calibration, etc.) — the wrapped member looks and behaves like a device with a different set of capabilities. The physical device itself is unaffected.
+
+#### Range Template
+
+Translates outgoing `heat_cool` range commands into single-setpoint commands for members whose HA integration only exposes a single `temperature` attribute, even though the underlying device physically supports auto-changeover. The group exposes `target_temp_low` and `target_temp_high`; each wrapped member receives a physical single-setpoint command based on the current room temperature:
+
+*   Temperature **below** `target_temp_low` → send `heat` + low setpoint
+*   Temperature **above** `target_temp_high` → send `cool` + high setpoint
+*   Temperature **within** the band → send the configured **Deadband Action**
+
+*   **Deadband Action:** What to do when the room is already within the target band: **Turn Off** (default) or **Fan Only**.
+*   **Native members unaffected:** Members that already advertise `heat_cool` natively are excluded automatically.
 
 ## Management Entities (Switch & Slider)
 
@@ -399,6 +415,13 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | **Isolated Members** | Which group members to isolate. For Member Off, defaults to all members. |
 | **Activate Delay** | Time to wait after the trigger activates before isolating members. |
 | **Restore Delay** | Time to wait after the trigger deactivates before restoring members. |
+
+### Member Template
+
+| Option | Description |
+|--------|-------------|
+| **Range Template Members** | Select which group members should be treated as synthesized `heat_cool` devices. Only members that do **not** natively advertise `heat_cool` are eligible. |
+| **Deadband Action** | What to do when the room temperature is already within the target band (between `target_temp_low` and `target_temp_high`). **Turn Off** (default) or **Fan Only**. |
 
 ### Availability & Timings
 

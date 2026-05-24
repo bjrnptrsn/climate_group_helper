@@ -65,7 +65,8 @@
               "temp_update_targets": "Skriv Extern Temp till Entiteter",
               "temp_calibration_mode": "Kalibreringsläge",
               "calibration_heartbeat": "Kalibrerings-Heartbeat (min)",
-              "calibration_ignore_off": "Ignorera avstängda medlemmar"
+              "calibration_ignore_off": "Ignorera avstängda medlemmar",
+              "ignore_off_members_temperature": "Uteslut avstängda medlemmar från temperatur"
             },
             "data_description": {
               "temp_target_avg": "Hur gruppen beräknar målvärdet att skicka till sina medlemmar.",
@@ -77,7 +78,8 @@
               "temp_update_targets": "Skriv det externa sensorvärdet till nummerentiteter (t.ex. TRV kalibrering offset). Användbart för att hålla termostater medvetna om faktisk rumstemperatur.",
               "temp_calibration_mode": "Absolut: Skicka värde direkt. Offset: Skicka skillnad (Extern - TRV Intern). Skalad: Skicka som heltal x100 (t.ex. 21.5 -> 2150).",
               "calibration_heartbeat": "Tvinga periodiskt kalibreringssynkronisering till entiteter även om temperaturen inte har ändrats. Ställ in på 0 för att inaktivera.",
-              "calibration_ignore_off": "Skicka inte kalibreringsuppdateringar till medlemmar som för närvarande är avstängda."
+              "calibration_ignore_off": "Skicka inte kalibreringsuppdateringar till medlemmar som för närvarande är avstängda.",
+              "ignore_off_members_temperature": "Medlemmar som för närvarande är avstängda utesluts från beräkningen av aktuell och måltemperatur."
             }
           },
           "humidity_section": {
@@ -216,6 +218,18 @@
               "isolation_entities": "Gruppmedlemmar att isolera när sensorn är aktiv.",
               "isolation_activate_delay": "(Endast sensor- / HVAC-lägesutlösare) Väntetid efter sensor ON innan isolering av medlemmar.",
               "isolation_restore_delay": "(Endast sensor- / HVAC-lägesutlösare) Väntetid efter sensor OFF innan återställning av medlemmar."
+            }
+          },
+          "member_template_section": {
+            "name": "Medlemsmall",
+            "description": "Renderar medlemmar med enstaka börvärde som virtuella värme/kyla-intervallentiteter. Group Helper översätter intervallkommandon till lämpliga fysiska värme/kyla-kommandon baserat på varje medlems aktuella temperatur.",
+            "data": {
+              "range_template_entities": "Medlemmar med enstaka börvärde",
+              "range_template_deadband_action": "Deadband-åtgärd"
+            },
+            "data_description": {
+              "range_template_entities": "Välj termostater med enstaka börvärde för att rendera dem som virtuella intervallenheter.",
+              "range_template_deadband_action": "Åtgärd som utförs när den aktuella temperaturen är inom målintervallet (deadband)."
             }
           },
           "advanced_section": {
@@ -403,6 +417,12 @@
         "away_offset": "Frånvaro-förskjutning",
         "away_temperature": "Frånvaro-temperatur",
         "away_preset": "Frånvaro-förinställning"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "off": "Stäng av",
+        "fan_only": "Endast fläkt"
       }
     }
   },
