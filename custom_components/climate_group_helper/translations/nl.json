@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "U moet ten minste één klimaatapparaat selecteren.",
-      "invalid_entity": "Eén of meer geselecteerde apparaten zijn geen geldige klimaatentiteiten.",
-      "duplicate_name": "Er bestaat al een klimaatgroep met deze naam.",
-      "unavailable_entities": "Sommige geselecteerde apparaten zijn niet beschikbaar. De groep wordt aangemaakt, maar werkt mogelijk niet volledig totdat ze reageren."
+      "no_entities": "U moet ten minste één klimaatapparaat selecteren."
     },
     "abort": {
       "already_configured": "Deze groep is al geconfigureerd.",
@@ -224,11 +221,11 @@
             "name": "Ledensjabloon",
             "description": "Geeft leden met enkelvoudig instelpunt weer als virtuele warmte/koelte-bereik-entiteiten. De Group Helper vertaalt bereikopdrachten naar passende fysieke warmte/koelte-opdrachten op basis van de huidige temperatuur van elk lid.",
             "data": {
-              "range_template_entities": "Leden met enkelvoudig instelpunt",
+              "range_template_enabled": "Bereiksjabloon inschakelen",
               "range_template_deadband_action": "Deadband-actie"
             },
             "data_description": {
-              "range_template_entities": "Selecteer thermostaten met enkelvoudig instelpunt om weer te geven als virtuele bereikmodusapparaten.",
+              "range_template_enabled": "Geeft automatisch alle leden met één instelpunt (zonder native verwarming/koeling) weer als virtuele apparaten in bereikmodus.",
               "range_template_deadband_action": "Actie die wordt uitgevoerd wanneer de huidige temperatuur zich binnen het doelbereik (deadband) bevindt."
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "Ten minste één klimaatapparaat moet in de groep blijven.",
-      "invalid_entity": "Ongeldig apparaat geselecteerd.",
-      "configuration_error": "Kan configuratie niet bijwerken.",
       "calibration_requires_sensors": "Kalibratiedoelen vereisen minimaal één externe temperatuursensor.",
       "master_refresh_notice": "Master-entiteit toegevoegd. Nieuwe opties beschikbaar.",
       "master_options_notice": "Nieuwe Master-entiteit optie",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "Doel HVAC-modus"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Weg",
+              "home": "Thuis",
+              "sleep": "Slapen",
+              "comfort": "Comfort",
+              "activity": "Activiteit",
+              "standby": "Standby",
+              "economy": "Zuinig",
+              "building_protection": "Gebouwbeveiliging",
+              "boost": "Boost"
+            }
           }
         }
       }

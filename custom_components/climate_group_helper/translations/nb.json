@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "Du må velge minst én klimaenhet.",
-      "invalid_entity": "En eller flere valgte enheter er ikke gyldige klimaenheter.",
-      "duplicate_name": "En klimagruppe med dette navnet finnes allerede.",
-      "unavailable_entities": "Noen valgte enheter er utilgjengelige. Gruppen vil bli opprettet, men fungerer kanskje ikke fullt ut før de svarer."
+      "no_entities": "Du må velge minst én klimaenhet."
     },
     "abort": {
       "already_configured": "Denne gruppen er allerede konfigurert.",
@@ -224,11 +221,11 @@
             "name": "Medlemsmal",
             "description": "Gjengir enkelt-settpunkt-medlemmer som virtuelle varme/kjøl-rekkevidde-enheter. Group Helper oversetter rekkevidde-kommandoer til passende fysiske varme/kjøl-kommandoer basert på hvert medlems nåværende temperatur.",
             "data": {
-              "range_template_entities": "Enkelt-settpunkt-medlemmer",
+              "range_template_enabled": "Aktiver områdemal",
               "range_template_deadband_action": "Deadband-handling"
             },
             "data_description": {
-              "range_template_entities": "Velg enkelt-settpunkt-termostater som skal gjengis som virtuelle rekkevidde-enheter.",
+              "range_template_enabled": "Gjengir automatisk alle enkelt-settpunkt-medlemmer (uten native varme/kjøling) som virtuelle områdeenheter.",
               "range_template_deadband_action": "Handling som utføres når gjeldende temperatur er innenfor målrekkevidde (deadband)."
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "Minst én klimaenhet må være igjen i gruppen.",
-      "invalid_entity": "Ugyldig enhet valgt.",
-      "configuration_error": "Kunne ikke oppdatere konfigurasjonen.",
       "calibration_requires_sensors": "Kalibreringsmål krever minst én ekstern temperatursensor.",
       "master_refresh_notice": "Master-enhet lagt til. Nye alternativer tilgjengelig.",
       "master_options_notice": "Nytt valg for master-enhet",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "Mål HVAC-modus"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Borte",
+              "home": "Hjemme",
+              "sleep": "Sove",
+              "comfort": "Komfort",
+              "activity": "Aktivitet",
+              "standby": "Standby",
+              "economy": "Økonomi",
+              "building_protection": "Bygningsbeskyttelse",
+              "boost": "Boost"
+            }
           }
         }
       }

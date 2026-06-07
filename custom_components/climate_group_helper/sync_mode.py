@@ -72,9 +72,7 @@ class SyncModeHandler:
         )
         _LOGGER.debug(
             "[%s] Initialize sync mode: %s with FilterState: %s",
-            self._group.entity_id,
-            self._sync_mode,
-            self._filter_state,
+            self._group.entity_id, self._sync_mode, self._filter_state
         )
         self._active_sync_tasks: set[asyncio.Task[Any]] = set()
 

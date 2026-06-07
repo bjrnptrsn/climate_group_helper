@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.0 - 2026-06-07
+
+> [!WARNING]
+> Requires Home Assistant 2026.3 or later. Replaces the withdrawn 1.2.1 release.
+
+### ✨ Improvements
+
+*   **Humidity Step**: The group now aggregates the `target_humidity_step` attribute from its members (using the maximum step across all members) and exposes it correctly to Home Assistant.
+
+*   **Preset Mode Translations**: Added translations for common preset modes (`away`, `sleep`, `economy`, `building_protection`, etc.) across all supported languages. The group entity now displays these presets with the same labels as member devices.
+
+*   **Range Template — Automatic Member Detection**: The Range Template section in the config flow is now a simple toggle instead of a manual multi-select. When enabled, all members without native `heat_cool` support are covered automatically — no manual selection needed. Existing configs are migrated automatically.
+
+### 🔧 Fixes
+
+*   **Range Template — Capability Awareness**: Members that only support `heat` no longer receive `cool` commands (and vice versa) when the Range Template is active. The deadband action is used as fallback instead.
+
 ## 1.2.0 - 2026-05-24
 
 ### 🌟 New Features

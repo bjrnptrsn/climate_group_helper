@@ -26,6 +26,7 @@ from .const import (
     ATTR_EFFECTIVE_SYNC_MODE,
     ATTR_ENABLED_FEATURES,
     ATTR_GROUP_OFFSET,
+    ATTR_OFFSET_ENTITY_ID,
     ATTR_ISOLATED_MEMBERS,
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_LAST_CHANGED,
@@ -66,7 +67,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # Alternatively, we could store a reference to the number entity in the group.
     # For now, we'll provide the unique_id based one or the group can provide it.
     if group.advanced_mode and group.offset_entity_id:
-        attrs["offset_entity_id"] = group.offset_entity_id
+        attrs[ATTR_OFFSET_ENTITY_ID] = group.offset_entity_id
 
     # --- Source information ---
     if target.last_source:

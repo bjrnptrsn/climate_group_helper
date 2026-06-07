@@ -57,7 +57,7 @@ from .const import (
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
     CONF_ROOM_SENSOR,
-    CONF_RANGE_TEMPLATE_ENTITIES,
+    CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_ENTITY,
@@ -158,7 +158,7 @@ VALID_CONFIG_KEYS = {
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_CONFIG,
     CONF_EXPAND_SECTIONS,
-    CONF_RANGE_TEMPLATE_ENTITIES,
+    CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
 
     # Member Isolation options
@@ -208,18 +208,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migrate old config entries to the current version.
+    """Migrate old config entries to the current version (Soft Reset to v11).
 
-    Versions before v10: Soft Reset
+    Combines all historical transformations (v7–v11) into a single pass:
         - Combine data+options
-        - Apply historical transformations (since v7)
+        - Apply all historical transformations
         - Filter out invalid configuration keys
         - Restore defaults for valid keys not present
     """
-    if entry.version < 10:
-        _LOGGER.info("[%s] Migrating config entry from version %s to 10 (Soft Reset)", entry.title, entry.version)
+    if entry.version < 11:
+        _LOGGER.info("[%s] Migrating config entry from version %s to 11", entry.title, entry.version)
 
         # Combine data + options (covers pre-v7 entries that still used entry.data)
         old_config = {**entry.data, **entry.options}
@@ -246,6 +245,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if CONF_ADVANCED_MODE not in old_config:
             old_config[CONF_ADVANCED_MODE] = True
 
+        # v10 → v11: CONF_RANGE_TEMPLATE_ENTITIES list → CONF_RANGE_TEMPLATE_ENABLED bool
+        if "range_template_entities" in old_config:
+            old_config[CONF_RANGE_TEMPLATE_ENABLED] = bool(old_config.pop("range_template_entities"))
+
         # Whitelist filter: discard all deprecated/renamed keys
         new_options = {key: value for key, value in old_config.items() if key in VALID_CONFIG_KEYS}
 
@@ -253,9 +256,8 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if CONF_EXPAND_SECTIONS not in new_options:
             new_options[CONF_EXPAND_SECTIONS] = False
 
-        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=10)
-
-        _LOGGER.info("[%s] Migration to v10 complete. %d valid keys preserved.", entry.title, len(new_options))
+        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=11)
+        _LOGGER.info("[%s] Migration to v11 complete. %d valid keys preserved.", entry.title, len(new_options))
 
     return True
 

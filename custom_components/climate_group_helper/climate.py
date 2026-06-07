@@ -32,6 +32,7 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_TEMP_STEP,
+    ATTR_TARGET_HUMIDITY_STEP,
     DEFAULT_MAX_HUMIDITY,
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_HUMIDITY,
@@ -111,7 +112,7 @@ from .const import (
     CONF_TEMP_USE_MASTER,
     CONF_WINDOW_ADOPT_MANUAL_CHANGES,
     CONF_ZONE_SENSOR,
-    CONF_RANGE_TEMPLATE_ENTITIES,
+    CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     DEFAULT_GRACE_PERIOD,
     DOMAIN,
@@ -141,8 +142,7 @@ from .override import (
     WindowOverrideManager,
 )
 from .presence import PresenceHandler, PresenceOverrideManager
-from .member_template import RangeTemplate, _apply_range_template, initialize_last_modes
-
+from .member_template import MemberTemplateManager
 from .schedule import ScheduleCaller, ScheduleHandler, ScheduleBypassHandler
 from .service_call import (
     ClimateCallHandler,
@@ -327,15 +327,10 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self._member_temp_avg = None
 
         # Range Template (Member Template Pattern)
-        template_entities = _get_adv(CONF_RANGE_TEMPLATE_ENTITIES, [])
-        if template_entities:
-            deadband = config.get(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, RangeTemplateDeadbandAction.OFF)
-            self.range_template = RangeTemplate(
-                entity_ids=frozenset(template_entities),
-                deadband_action=deadband,
-            )
-        else:
-            self.range_template = None
+        deadband_action = None
+        if _get_adv(CONF_RANGE_TEMPLATE_ENABLED, False):
+            deadband_action = config.get(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, RangeTemplateDeadbandAction.OFF)
+        self.member_template_manager = MemberTemplateManager(group=self, deadband_action=deadband_action)
 
         self.calibration_handler = CalibrationHandler(self)
 
@@ -404,6 +399,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_target_humidity = None
         self._attr_min_humidity = DEFAULT_MIN_HUMIDITY
         self._attr_max_humidity = DEFAULT_MAX_HUMIDITY
+        self._attr_target_humidity_step = None
 
         self._attr_hvac_modes = [HVACMode.OFF]
         self._attr_hvac_mode = None
@@ -457,8 +453,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Range Template: seed last_physical_mode *after* the target state
         # has been restored, so the deviation fallback in _expected_mode_for()
         # is not blind at first start.
-        if self.range_template is not None:
-            initialize_last_modes(self)
+        self.member_template_manager.initialize_last_modes()
 
         # Guard against feedback loops from misconfigured CGH sensors.
         # Filter sensor lists and rebuild _entity_ids so the listener never subscribes to our own sensors.
@@ -619,14 +614,14 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         """Handle removal."""
         await super().async_will_remove_from_hass()
         self._cancel_grace_period_timer()
-        await self.climate_call_handler.async_cancel_all()
-        await self.override_call_handler.async_cancel_all()
-        await self.presence_call_handler.async_cancel_all()
-        await self.schedule_call_handler.async_cancel_all()
-        await self.switch_call_handler.async_cancel_all()
-        await self.switch_enforce_call_handler.async_cancel_all()
-        await self.sync_mode_call_handler.async_cancel_all()
-        await self.window_control_call_handler.async_cancel_all()
+        await self.climate_call_handler.async_shutdown()
+        await self.override_call_handler.async_shutdown()
+        await self.presence_call_handler.async_shutdown()
+        await self.schedule_call_handler.async_shutdown()
+        await self.switch_call_handler.async_shutdown()
+        await self.switch_enforce_call_handler.async_shutdown()
+        await self.sync_mode_call_handler.async_shutdown()
+        await self.window_control_call_handler.async_shutdown()
         self.sync_mode_handler.async_teardown()
 
         if self.advanced_mode:
@@ -696,6 +691,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_max_temp = last_attrs.get(ATTR_MAX_TEMP, DEFAULT_MAX_TEMP)
         self._attr_min_humidity = last_attrs.get(ATTR_MIN_HUMIDITY, DEFAULT_MIN_HUMIDITY)
         self._attr_max_humidity = last_attrs.get(ATTR_MAX_HUMIDITY, DEFAULT_MAX_HUMIDITY)
+        if ATTR_TARGET_HUMIDITY_STEP in last_attrs:
+            self._attr_target_humidity_step = last_attrs.get(ATTR_TARGET_HUMIDITY_STEP)
 
         # Restore persisted active schedule entity
         if (
@@ -889,9 +886,9 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         manipulation logic.
         """
         state = self.hass.states.get(entity_id)
-        if state is None or self.range_template is None:
+        if state is None:
             return state
-        return _apply_range_template(self, entity_id, state)
+        return self.member_template_manager.apply_state(entity_id, state)
 
     def read_member_event(self, event: Event) -> tuple[State | None, State | None]:
         """Unpack a `state_changed` event into template-rendered `(new_state, old_state)`.
@@ -903,10 +900,11 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         entity_id = event.data.get("entity_id")
         new_state = event.data.get("new_state")
         old_state = event.data.get("old_state")
-        if self.range_template is None or entity_id is None:
+        if entity_id is None:
             return new_state, old_state
-        new_wrapped = _apply_range_template(self, entity_id, new_state) if new_state else None
-        old_wrapped = _apply_range_template(self, entity_id, old_state) if old_state else None
+        manager = self.member_template_manager
+        new_wrapped = manager.apply_state(entity_id, new_state) if new_state else None
+        old_wrapped = manager.apply_state(entity_id, old_state) if old_state else None
         return new_wrapped, old_wrapped
 
     def _get_valid_member_states(self, entity_ids: list[str]) -> tuple[list[State], bool]:
@@ -1040,7 +1038,11 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # All available HVAC modes --> list of HVACMode (str), e.g. [<HVACMode.OFF: 'off'>, <HVACMode.HEAT: 'heat'>, <HVACMode.AUTO: 'auto'>, ...]
         hvac_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_HVAC_MODES)))
-        self._attr_hvac_modes = self._sort_hvac_modes(hvac_modes if isinstance(hvac_modes, list) else [])
+        hvac_modes_list = hvac_modes if isinstance(hvac_modes, list) else []
+        template_member_ids = self.member_template_manager.update_members()
+        if template_member_ids and HVACMode.HEAT_COOL not in hvac_modes_list:
+            hvac_modes_list = list(hvac_modes_list) + [HVACMode.HEAT_COOL]
+        self._attr_hvac_modes = self._sort_hvac_modes(hvac_modes_list)
 
         # A list of all HVAC modes that are currently set
         self._current_hvac_modes = [state.state for state in self.states]
@@ -1202,9 +1204,10 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if self._attr_target_humidity is not None:
             self._attr_target_humidity = self.mean_round(self._attr_target_humidity, self._humidity_round)
 
-        # Humidity limits
+        # Humidity limits and step
         self._attr_min_humidity = reduce_attribute(self.states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY)
         self._attr_max_humidity = reduce_attribute(self.states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
+        self._attr_target_humidity_step = reduce_attribute(self.states, ATTR_TARGET_HUMIDITY_STEP, reduce=max)
 
     def _update_mode_attributes(self) -> None:
         """Calculate and set fan, preset, swing modes and supported features."""
@@ -1231,6 +1234,9 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Supported features
         attr_supported_features = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SUPPORTED_FEATURES)), default=0)
         features = attr_supported_features if isinstance(attr_supported_features, int) else 0
+        range_template = self.member_template_manager.range_template
+        if range_template is not None and range_template.entity_ids:
+            features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         self._attr_supported_features = (features | DEFAULT_SUPPORTED_FEATURES) & SUPPORTED_FEATURES
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:

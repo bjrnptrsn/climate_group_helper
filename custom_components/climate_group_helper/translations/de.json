@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "Du musst mindestens ein Klimagerät auswählen.",
-      "invalid_entity": "Eines oder mehrere der ausgewählten Geräte sind keine gültigen Klimageräte.",
-      "duplicate_name": "Eine Klimagruppe mit diesem Namen existiert bereits.",
-      "unavailable_entities": "Einige ausgewählte Geräte sind nicht verfügbar. Die Gruppe wird erstellt, funktioniert aber möglicherweise nicht vollständig, bis sie antworten."
+      "no_entities": "Du musst mindestens ein Klimagerät auswählen."
     },
     "abort": {
       "already_configured": "Diese Gruppe ist bereits konfiguriert.",
@@ -224,11 +221,11 @@
             "name": "Mitglieds-Template",
             "description": "Rendert Einzelsollwert-Mitglieder als virtuelle Heat/Cool-Range-Entitäten. Der Group Helper übersetzt Range-Befehle in geeignete physische Heat/Cool-Befehle basierend auf der aktuellen Temperatur jedes Mitglieds.",
             "data": {
-              "range_template_entities": "Einzelsollwert-Mitglieder",
+              "range_template_enabled": "Bereichsvorlage aktivieren",
               "range_template_deadband_action": "Deadband-Aktion"
             },
             "data_description": {
-              "range_template_entities": "Wähle Einzelsollwert-Thermostate, die als virtuelle Range-Mode-Geräte dargestellt werden sollen.",
+              "range_template_enabled": "Stellt alle Einzelsollwert-Mitglieder (ohne natives Heizen/Kühlen) automatisch als virtuelle Bereichsgeräte dar.",
               "range_template_deadband_action": "Aktion, die ausgeführt wird, wenn die aktuelle Temperatur innerhalb des Zielbereichs (Deadband) liegt."
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "Mindestens ein Klimagerät muss in der Gruppe verbleiben.",
-      "invalid_entity": "Ungültiges Gerät ausgewählt.",
-      "configuration_error": "Konfiguration konnte nicht aktualisiert werden.",
       "calibration_requires_sensors": "Kalibrierungsziele erfordern mindestens einen externen Temperatursensor.",
       "master_refresh_notice": "Master-Entität hinzugefügt. Neue Optionen verfügbar.",
       "master_options_notice": "Neue Master-Entitäts-Option",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "Ziel-HVAC-Modus"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Abwesend",
+              "home": "Anwesend",
+              "sleep": "Schlaf",
+              "comfort": "Komfort",
+              "activity": "Aktivität",
+              "standby": "Standby",
+              "economy": "Sparmodus",
+              "building_protection": "Gebäudeschutz",
+              "boost": "Boost"
+            }
           }
         }
       }

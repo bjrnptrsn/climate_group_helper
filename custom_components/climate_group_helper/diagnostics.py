@@ -50,13 +50,9 @@ async def async_get_config_entry_diagnostics(
             val = val.isoformat()
         elif isinstance(val, TargetState):
             val = _state_to_dict(val) if val else None
+        elif hasattr(val, "items"):
+            val = dict(val)
         run_dict[f.name] = val
-    # config_overrides is a MappingProxyType — convert to plain dict
-    if "config_overrides" in run_dict:
-        run_dict["config_overrides"] = dict(run.config_overrides)
-    # target_state_snapshot is a TargetState — convert to dict
-    if run.target_state_snapshot:
-        run_dict["target_state_snapshot"] = _state_to_dict(run.target_state_snapshot)
     diag["run_state"] = run_dict
 
     # TargetState — only non-None fields
@@ -90,17 +86,18 @@ async def async_get_config_entry_diagnostics(
     handlers["sync_mode"] = str(group.sync_mode_handler.sync_mode)
     handlers["schedule_entity"] = group.schedule_handler.schedule_entity_id
     handlers["bypass_entity"] = group.schedule_bypass_handler.bypass_entity_id
-    handlers["window_force_off"] = group.window_control_handler.force_off if hasattr(group, "window_control_handler") else None
+    handlers["window_force_off"] = group.window_control_handler.force_off
     handlers["advanced_mode"] = group.advanced_mode
     diag["handlers"] = handlers
     # Range Template (Member Template Pattern)
-    if group.range_template is not None:
+    range_template = group.member_template_manager.range_template
+    if range_template is not None:
         diag["range_template"] = {
-            "entity_ids": sorted(group.range_template.entity_ids),
-            "deadband_action": group.range_template.deadband_action,
-            "low": group.range_template.low,
-            "high": group.range_template.high,
-            "last_physical_mode": dict(group.range_template.last_physical_mode),
+            "entity_ids": sorted(range_template.entity_ids),
+            "deadband_action": range_template.deadband_action,
+            "low": range_template.low,
+            "high": range_template.high,
+            "last_physical_mode": dict(range_template.last_physical_mode),
         }
     else:
         diag["range_template"] = None

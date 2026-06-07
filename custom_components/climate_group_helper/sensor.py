@@ -60,20 +60,22 @@ async def async_setup_entry(
                 entity_registry.async_remove(entity_id)
                 _LOGGER.debug("[%s] Removed disabled sensor %s", config_entry.title, entity_id)
     else:
-        # Create each sensor only if the group already exposes that value or external sensors are
-        # configured for it. Avoids creating a humidity sensor for groups that have no humidity data.
+        # Create each sensor only if the group exposes that value, external sensors are configured,
+        # or we cannot yet determine (group not yet in state machine on first setup).
         group_state = hass.states.get(climate_group_entity_id)
-
-        if (
+        has_temp = (
             bool(config_entry.options.get(CONF_TEMP_SENSORS))
-            or (group_state is not None and group_state.attributes.get(ATTR_CURRENT_TEMPERATURE) is not None)
-        ):
-            new_entities.append(ClimateGroupHelperTemperatureSensor(hass, config_entry, climate_group_entity_id))
-
-        if (
+            or group_state is None
+            or group_state.attributes.get(ATTR_CURRENT_TEMPERATURE) is not None
+        )
+        has_humidity = (
             bool(config_entry.options.get(CONF_HUMIDITY_SENSORS))
-            or (group_state is not None and group_state.attributes.get(ATTR_CURRENT_HUMIDITY) is not None)
-        ):
+            or group_state is None
+            or group_state.attributes.get(ATTR_CURRENT_HUMIDITY) is not None
+        )
+        if has_temp:
+            new_entities.append(ClimateGroupHelperTemperatureSensor(hass, config_entry, climate_group_entity_id))
+        if has_humidity:
             new_entities.append(ClimateGroupHelperHumiditySensor(hass, config_entry, climate_group_entity_id))
 
     # Handle Configuration Sensor lifecycle
@@ -150,7 +152,7 @@ class ClimateGroupHelperTemperatureSensor(ClimateGroupHelperBaseSensor):
         hass: HomeAssistant,
         config_entry: ConfigEntry,
         climate_group_entity_id: str,
-    ):
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(hass, config_entry, climate_group_entity_id)
         self._attr_translation_key = "temperature"
@@ -165,7 +167,7 @@ class ClimateGroupHelperTemperatureSensor(ClimateGroupHelperBaseSensor):
 
         value = self._climate_group_state.attributes.get(ATTR_CURRENT_TEMPERATURE)
         if value is not None and not isinstance(value, (int, float)):
-            _LOGGER.debug("[%s] Invalid temperature value for %s: %s", self.entity_id, self.entity_id, value)
+            _LOGGER.debug("[%s] Invalid temperature value: %s", self.entity_id, value)
             return None
 
         return value
@@ -183,7 +185,7 @@ class ClimateGroupHelperHumiditySensor(ClimateGroupHelperBaseSensor):
         hass: HomeAssistant,
         config_entry: ConfigEntry,
         climate_group_entity_id: str,
-    ):
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(hass, config_entry, climate_group_entity_id)
         self._attr_translation_key = "humidity"
@@ -197,7 +199,7 @@ class ClimateGroupHelperHumiditySensor(ClimateGroupHelperBaseSensor):
 
         value = self._climate_group_state.attributes.get(ATTR_CURRENT_HUMIDITY)
         if value is not None and not isinstance(value, (int, float)):
-            _LOGGER.debug("[%s] Invalid humidity value for %s: %s", self.entity_id, self.entity_id, value)
+            _LOGGER.debug("[%s] Invalid humidity value: %s", self.entity_id, value)
             return None
 
         return value
@@ -214,7 +216,7 @@ class ClimateGroupHelperConfigurationSensor(SensorEntity):
         self,
         hass: HomeAssistant,
         config_entry: ConfigEntry,
-    ):
+    ) -> None:
         """Initialize the sensor."""
         self.hass = hass
         self.config_entry = config_entry

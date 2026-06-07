@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "Devi selezionare almeno un dispositivo climatico.",
-      "invalid_entity": "Uno o più dispositivi selezionati non sono entità climatiche valide.",
-      "duplicate_name": "Esiste già un gruppo climatico con questo nome.",
-      "unavailable_entities": "Alcuni dispositivi selezionati non sono disponibili. Il gruppo verrà creato ma potrebbe non funzionare completamente finché non rispondono."
+      "no_entities": "Devi selezionare almeno un dispositivo climatico."
     },
     "abort": {
       "already_configured": "Questo gruppo è già configurato.",
@@ -224,11 +221,11 @@
             "name": "Modello membro",
             "description": "Rende i membri a punto di impostazione singolo come entità virtuali di intervallo caldo/freddo. Il Group Helper traduce i comandi di intervallo in comandi fisici caldo/freddo appropriati in base alla temperatura attuale di ciascun membro.",
             "data": {
-              "range_template_entities": "Membri a punto di impostazione singolo",
+              "range_template_enabled": "Abilita modello intervallo",
               "range_template_deadband_action": "Azione nella zona morta"
             },
             "data_description": {
-              "range_template_entities": "Seleziona i termostati a punto di impostazione singolo da renderizzare come dispositivi virtuali in modalità intervallo.",
+              "range_template_enabled": "Visualizza automaticamente tutti i membri a setpoint singolo (senza caldo/freddo nativo) come dispositivi virtuali in modalità intervallo.",
               "range_template_deadband_action": "Azione da eseguire quando la temperatura attuale è all'interno dell'intervallo target (zona morta)."
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "Almeno un dispositivo climatico deve rimanere nel gruppo.",
-      "invalid_entity": "Dispositivo selezionato non valido.",
-      "configuration_error": "Impossibile aggiornare la configurazione.",
       "calibration_requires_sensors": "Gli obiettivi di calibrazione richiedono almeno un sensore di temperatura esterno.",
       "master_refresh_notice": "Entità Master aggiunta. Nuove opzioni disponibili.",
       "master_options_notice": "Nuova opzione entità Master",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "Modalità HVAC Target"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Fuori casa",
+              "home": "A casa",
+              "sleep": "Sonno",
+              "comfort": "Comfort",
+              "activity": "Attività",
+              "standby": "Standby",
+              "economy": "Economico",
+              "building_protection": "Protezione dell'edificio",
+              "boost": "Boost"
+            }
           }
         }
       }

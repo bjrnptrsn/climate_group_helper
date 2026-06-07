@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "Du måste välja minst en klimatenhet.",
-      "invalid_entity": "En eller flera valda enheter är inte giltiga klimatenheter.",
-      "duplicate_name": "En klimatgrupp med detta namn finns redan.",
-      "unavailable_entities": "Vissa valda enheter är otillgängliga. Gruppen kommer att skapas men kanske inte fungerar fullt ut förrän de svarar."
+      "no_entities": "Du måste välja minst en klimatenhet."
     },
     "abort": {
       "already_configured": "Denna grupp är redan konfigurerad.",
@@ -224,11 +221,11 @@
             "name": "Medlemsmall",
             "description": "Renderar medlemmar med enstaka börvärde som virtuella värme/kyla-intervallentiteter. Group Helper översätter intervallkommandon till lämpliga fysiska värme/kyla-kommandon baserat på varje medlems aktuella temperatur.",
             "data": {
-              "range_template_entities": "Medlemmar med enstaka börvärde",
+              "range_template_enabled": "Aktivera intervallmall",
               "range_template_deadband_action": "Deadband-åtgärd"
             },
             "data_description": {
-              "range_template_entities": "Välj termostater med enstaka börvärde för att rendera dem som virtuella intervallenheter.",
+              "range_template_enabled": "Återger automatiskt alla enkelpunktsmedlemmar (utan native värme/kyla) som virtuella enheter i intervallläge.",
               "range_template_deadband_action": "Åtgärd som utförs när den aktuella temperaturen är inom målintervallet (deadband)."
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "Minst en klimatenhet måste finnas kvar i gruppen.",
-      "invalid_entity": "Ogiltig enhet vald.",
-      "configuration_error": "Kunde inte uppdatera konfigurationen.",
       "calibration_requires_sensors": "Kalibreringsmål kräver minst en extern temperatursensor.",
       "master_refresh_notice": "Master-enhet tillagd. Nya alternativ tillgängliga.",
       "master_options_notice": "Nytt alternativ för master-enhet",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "Mål HVAC-läge"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Borta",
+              "home": "Hemma",
+              "sleep": "Sova",
+              "comfort": "Komfort",
+              "activity": "Aktivitet",
+              "standby": "Standby",
+              "economy": "Ekonomi",
+              "building_protection": "Byggnadsskydd",
+              "boost": "Boost"
+            }
           }
         }
       }

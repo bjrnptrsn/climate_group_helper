@@ -44,9 +44,7 @@ class RunState:
     active_override_end: datetime | None = None
     active_slot_title: str | None = None
     blocking_sources: frozenset[str] = field(default_factory=frozenset)
-    config_overrides: MappingProxyType[str, Any] = field(
-        default_factory=lambda: MappingProxyType({})
-    )
+    config_overrides: MappingProxyType[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     group_offset: float = 0.0
     isolated_members: frozenset[str] = field(default_factory=frozenset)
     last_active_hvac_mode: str | None = None
@@ -242,7 +240,7 @@ class BaseStateManager:
 
     SOURCE: str = "state_manager"  # Default source, override in derived classes
 
-    def __init__(self, group: ClimateGroupHelper):
+    def __init__(self, group: ClimateGroupHelper) -> None:
         """Initialize the state manager."""
         self._group = group
 
@@ -371,7 +369,7 @@ class ClimateStateManager(BaseStateManager):
 
     SOURCE = "group"
 
-    def __init__(self, group: ClimateGroupHelper):
+    def __init__(self, group: ClimateGroupHelper) -> None:
         """Initialize the climate state manager."""
         super().__init__(group)
 
@@ -395,7 +393,7 @@ class SyncModeStateManager(BaseStateManager):
 
     SOURCE = "sync_mode"
 
-    def __init__(self, group: ClimateGroupHelper):
+    def __init__(self, group: ClimateGroupHelper) -> None:
         """Initialize the sync mode state manager."""
         super().__init__(group)
 
@@ -430,7 +428,7 @@ class WindowControlStateManager(BaseStateManager):
 
     SOURCE = "window_control"
 
-    def __init__(self, group: ClimateGroupHelper):
+    def __init__(self, group: ClimateGroupHelper) -> None:
         """Initialize the window control state manager."""
         super().__init__(group)
 
@@ -450,7 +448,7 @@ class ScheduleStateManager(BaseStateManager):
 
     SOURCE = "schedule"
 
-    def __init__(self, group: ClimateGroupHelper):
+    def __init__(self, group: ClimateGroupHelper) -> None:
         """Initialize the schedule state manager."""
         super().__init__(group)
 
@@ -461,6 +459,6 @@ class IsolationStateManager(BaseStateManager):
 
     SOURCE = "isolation"
 
-    def __init__(self, group: ClimateGroupHelper):
+    def __init__(self, group: ClimateGroupHelper) -> None:
         """Initialize the isolation state manager."""
         super().__init__(group)

@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "Musisz wybrać co najmniej jedno urządzenie klimatyczne.",
-      "invalid_entity": "Jedno lub więcej wybranych urządzeń nie jest poprawną encją klimatyczną.",
-      "duplicate_name": "Grupa klimatyczna o tej nazwie już istnieje.",
-      "unavailable_entities": "Niektóre wybrane urządzenia są niedostępne. Grupa zostanie utworzona, ale może nie działać w pełni, dopóki nie odpowiedzą."
+      "no_entities": "Musisz wybrać co najmniej jedno urządzenie klimatyczne."
     },
     "abort": {
       "already_configured": "Ta grupa jest już skonfigurowana.",
@@ -224,11 +221,11 @@
             "name": "Szablon elementu",
             "description": "Renderuje elementy z jednym punktem nastawy jako wirtualne encje zakresu ciepło/chłód. Group Helper tłumaczy polecenia zakresu na odpowiednie fizyczne polecenia ciepło/chłód na podstawie aktualnej temperatury każdego elementu.",
             "data": {
-              "range_template_entities": "Elementy z jednym punktem nastawy",
+              "range_template_enabled": "Włącz szablon zakresu",
               "range_template_deadband_action": "Akcja w martwej strefie"
             },
             "data_description": {
-              "range_template_entities": "Wybierz termostaty z jednym punktem nastawy do wyrenderowania jako wirtualne urządzenia w trybie zakresu.",
+              "range_template_enabled": "Automatycznie renderuje wszystkich członków z jednym punktem nastawy (bez natywnego ogrzewania/chłodzenia) jako wirtualne urządzenia w trybie zakresu.",
               "range_template_deadband_action": "Akcja wykonywana, gdy aktualna temperatura znajduje się wewnątrz zakresu docelowego (martwa strefa)."
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "Co najmniej jedno urządzenie klimatyczne musi pozostać w grupie.",
-      "invalid_entity": "Wybrano nieprawidłowe urządzenie.",
-      "configuration_error": "Nie można zaktualizować konfiguracji.",
       "calibration_requires_sensors": "Cele kalibracji wymagają co najmniej jednego zewnętrznego czujnika temperatury.",
       "master_refresh_notice": "Dodano encję nadrzędną (Master). Dostępne nowe opcje.",
       "master_options_notice": "Nowa opcja encji nadrzędnej",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "Docelowy Tryb HVAC"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Poza domem",
+              "home": "W domu",
+              "sleep": "Sen",
+              "comfort": "Komfort",
+              "activity": "Aktywność",
+              "standby": "Standby",
+              "economy": "Ekonomiczny",
+              "building_protection": "Ochrona budynku",
+              "boost": "Boost"
+            }
           }
         }
       }

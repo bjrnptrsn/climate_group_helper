@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "You must select at least one climate device.",
-      "invalid_entity": "One or more selected devices are not valid climate entities.",
-      "duplicate_name": "A climate group with this name already exists.",
-      "unavailable_entities": "Some selected devices are unavailable. The group will be created but may not work fully until they respond."
+      "no_entities": "You must select at least one climate device."
     },
     "abort": {
       "already_configured": "This group is already configured.",
@@ -224,11 +221,11 @@
             "name": "Member Template",
             "description": "Render single-setpoint members as virtual heat/cool range entities. The group helper translates range commands into appropriate physical heat/cool commands based on each member's current temperature.",
             "data": {
-              "range_template_entities": "Single-Setpoint Members",
+              "range_template_enabled": "Enable Range Template",
               "range_template_deadband_action": "Deadband Action"
             },
             "data_description": {
-              "range_template_entities": "Select single-setpoint thermostats to render as virtual range-mode devices.",
+              "range_template_enabled": "Automatically render all single-setpoint members (without native heat/cool) as virtual range-mode devices.",
               "range_template_deadband_action": "Action to perform when the current temperature is inside the target range (deadband)."
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "At least one climate device must remain in the group.",
-      "invalid_entity": "Invalid device selected.",
-      "configuration_error": "Could not update configuration.",
       "calibration_requires_sensors": "Calibration targets require at least one external temperature sensor.",
       "master_refresh_notice": "Master Entity added. New options available.",
       "master_options_notice": "New Master entity option",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "Target HVAC Mode"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Away",
+              "home": "Home",
+              "sleep": "Sleep",
+              "comfort": "Comfort",
+              "activity": "Activity",
+              "standby": "Standby",
+              "economy": "Economy",
+              "building_protection": "Building Protection",
+              "boost": "Boost"
+            }
           }
         }
       }

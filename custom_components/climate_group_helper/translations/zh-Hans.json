@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "您必须至少选择一个空调设备。",
-      "invalid_entity": "一个或多个选定的设备不是有效的空调实体。",
-      "duplicate_name": "以该名称命名的空调组已存在。",
-      "unavailable_entities": "部分所选设备不可用。群组将被创建，但在它们响应之前可能无法完全运行。"
+      "no_entities": "您必须至少选择一个空调设备。"
     },
     "abort": {
       "already_configured": "此组已配置。",
@@ -224,11 +221,11 @@
             "name": "成员模板",
             "description": "将单设定点成员渲染为虚拟冷暖范围实体。群组助手根据每个成员的当前温度，将范围命令转换为适当的物理冷暖命令。",
             "data": {
-              "range_template_entities": "单设定点成员",
+              "range_template_enabled": "启用范围模板",
               "range_template_deadband_action": "死区动作"
             },
             "data_description": {
-              "range_template_entities": "选择要渲染为虚拟范围模式设备的单设定点恒温器。",
+              "range_template_enabled": "自动将所有单设定点成员（不支持原生制热/制冷）呈现为虚拟范围模式设备。",
               "range_template_deadband_action": "当前温度在目标范围（死区）内时执行的动作。"
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "组中必须至少保留一个空调设备。",
-      "invalid_entity": "选定的设备无效。",
-      "configuration_error": "无法更新配置。",
       "calibration_requires_sensors": "校准目标需要至少一个外部温度传感器。",
       "master_refresh_notice": "已添加主实体。新选项可用。",
       "master_options_notice": "新的主实体选项",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "目标 HVAC 模式"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "离家",
+              "home": "在家",
+              "sleep": "睡觉",
+              "comfort": "舒适",
+              "activity": "活动",
+              "standby": "待机",
+              "economy": "节能",
+              "building_protection": "防冻保护",
+              "boost": "强劲"
+            }
           }
         }
       }

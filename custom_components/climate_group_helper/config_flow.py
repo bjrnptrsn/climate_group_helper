@@ -79,7 +79,7 @@ from .const import (
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
     CONF_ROOM_SENSOR,
-    CONF_RANGE_TEMPLATE_ENTITIES,
+    CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_ENTITY,
@@ -131,7 +131,7 @@ from .climate import filter_cgh_sensors
 class ClimateGroupHelperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 10
+    VERSION = 11
 
     @staticmethod
     @callback
@@ -284,9 +284,11 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     AdoptManualChanges.OFF.value
                 )
 
-        # Temperature Calibration logic
+        # Temperature/Humidity Calibration logic
         if not current_config.get(CONF_TEMP_SENSORS) and advanced_mode:
             current_config.pop(CONF_TEMP_UPDATE_TARGETS, None)
+        if not current_config.get(CONF_HUMIDITY_SENSORS) and advanced_mode:
+            current_config.pop(CONF_HUMIDITY_UPDATE_TARGETS, None)
 
         # Window Control logic
         if (
@@ -371,24 +373,9 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
 
         # Range Template logic
         if advanced_mode:
-            if CONF_RANGE_TEMPLATE_ENTITIES in current_config:
-                pruned_template = [
-                    eid for eid in current_config.get(CONF_RANGE_TEMPLATE_ENTITIES, [])
-                    if eid in valid_members
-                ]
-                if pruned_template:
-                    current_config[CONF_RANGE_TEMPLATE_ENTITIES] = pruned_template
-                else:
-                    current_config.pop(CONF_RANGE_TEMPLATE_ENTITIES, None)
-                    current_config.pop(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, None)
-
-            # Falls abgewählt
-            if CONF_RANGE_TEMPLATE_ENTITIES not in user_input or user_input.get(CONF_RANGE_TEMPLATE_ENTITIES) is None:
-                current_config.pop(CONF_RANGE_TEMPLATE_ENTITIES, None)
+            if not user_input.get(CONF_RANGE_TEMPLATE_ENABLED, False):
+                current_config.pop(CONF_RANGE_TEMPLATE_ENABLED, None)
                 current_config.pop(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, None)
-        else:
-            current_config.pop(CONF_RANGE_TEMPLATE_ENTITIES, None)
-            current_config.pop(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, None)
 
         return current_config
 
@@ -1199,47 +1186,32 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
     def _section_factory_member_template(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for Range Template section.
 
-        Filters out members that already advertise TARGET_TEMPERATURE_RANGE
-        natively — the template only adds value for single-setpoint devices.
-        Members whose state is currently None (just added, not yet available)
-        are optimistically included so they aren't silently locked out.
+        Shows the section only when at least one member lacks native heat_cool —
+        i.e. when the Range Template would actually do something useful.
         """
-        members = config.get(CONF_ENTITIES, [])
-        if not members:
+        if not (members := config.get(CONF_ENTITIES, [])):
             return {}
 
-        selectable_members = []
-        for entity_id in members:
-            state = self.hass.states.get(entity_id)
-            if state is None:
-                selectable_members.append(entity_id)
-                continue
-            features = state.attributes.get("supported_features", 0)
-            if not (features & ClimateEntityFeature.TARGET_TEMPERATURE_RANGE):
-                selectable_members.append(entity_id)
-
-        if not selectable_members:
+        has_single_setpoint = any(
+            HVACMode.HEAT_COOL
+            not in (
+                state.attributes.get(ATTR_HVAC_MODES, [])
+                if (state := self.hass.states.get(entity_id))
+                else []
+            )
+            for entity_id in members
+        )
+        if not has_single_setpoint:
             return {}
-
-        member_options = [{"value": eid, "label": eid} for eid in selectable_members]
-        saved_template_entities = [
-            e for e in config.get(CONF_RANGE_TEMPLATE_ENTITIES, []) if e in selectable_members
-        ]
 
         return {
             vol.Required("member_template_section"): section(
                 vol.Schema(
                     {
-                        vol.Optional(
-                            CONF_RANGE_TEMPLATE_ENTITIES,
-                            default=saved_template_entities,
-                        ): selector.SelectSelector(
-                            selector.SelectSelectorConfig(
-                                options=member_options,
-                                multiple=True,
-                                mode=selector.SelectSelectorMode.DROPDOWN,
-                            )
-                        ),
+                        vol.Required(
+                            CONF_RANGE_TEMPLATE_ENABLED,
+                            default=config.get(CONF_RANGE_TEMPLATE_ENABLED, False),
+                        ): selector.BooleanSelector(),
                         vol.Required(
                             CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
                             default=config.get(
@@ -1414,7 +1386,8 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             # Validate: own CGH sensors must not be used as external sensors (feedback loop)
             for conf_key in (CONF_TEMP_SENSORS, CONF_HUMIDITY_SENSORS):
                 selected = flattened_input.get(conf_key, [])
-                if len(filter_cgh_sensors(self.hass, selected, "")) < len(selected):
+                label = "temperature" if conf_key == CONF_TEMP_SENSORS else "humidity"
+                if len(filter_cgh_sensors(self.hass, selected, label)) < len(selected):
                     section_key = (
                         "temperature_section"
                         if conf_key == CONF_TEMP_SENSORS

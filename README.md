@@ -22,6 +22,10 @@
   📅 <b>Schedule automation</b> via Schedule and Calendar entities.
 </p>
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_simple.png" alt="Climate Group Helper Simple Configuration Options Overview" height="350"/>
+</p>
+
 ---
 
 ## Why this exists
@@ -40,6 +44,13 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 | **2. Add** | Go to *Settings → Devices & Services → Helpers → Create Helper*. |
 | **3. Setup** | Give your group a name and select your thermostats (TRVs, ACs, heaters — mix freely). |
 | **4. Done!** | You now have a single entity controlling everything. <br> *Tip: Enable **Advanced Mode** in the options to unlock all features.* |
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/helper_selection.png" alt="Select Climate Group Helper in Home Assistant" width="400"/>
+</p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/setup_flow.png" alt="Configure Climate Group Helper" width="400"/>
+</p>
 
 ---
 
@@ -90,6 +101,10 @@ Unlock the full potential of your climate system. These specialized features are
 
 > [!NOTE]
 > **New groups start in Simple Mode.** Existing groups upgraded from earlier versions keep **Advanced Features** active automatically so nothing breaks.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_advanced.png" alt="Climate Group Helper Advanced Configuration Options Overview" width="400"/>
+</p>
 
 ### Master Entity
 
@@ -277,7 +292,7 @@ Translates outgoing `heat_cool` range commands into single-setpoint commands for
 *   Temperature **within** the band → send the configured **Deadband Action**
 
 *   **Deadband Action:** What to do when the room is already within the target band: **Turn Off** (default) or **Fan Only**.
-*   **Native members unaffected:** Members that already advertise `heat_cool` natively are excluded automatically.
+*   **Automatic member detection:** All members that do **not** natively advertise `heat_cool` are automatically covered — no manual selection needed. Members with native `heat_cool` support are left unchanged.
 
 ## Management Entities (Switch & Slider)
 
@@ -349,6 +364,7 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | **Calibration Targets** | Write calculated temperature to number entities. Supports **Absolute** (Standard), **Offset** (Delta), and **Scaled** (x100) modes. |
 | **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
 | **Ignore Off Members** | Prevents sending calibration updates to devices that are currently `off`, preserving battery life on wireless sensors and TRVs. |
+| **Exclude Off Members** | Exclude members that are currently `off` from temperature calculations (both current and target). Prevents a cold, switched-off radiator from dragging down the displayed average. |
 | **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
 | **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). |
 
@@ -420,10 +436,10 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 
 | Option | Description |
 |--------|-------------|
-| **Range Template Members** | Select which group members should be treated as synthesized `heat_cool` devices. Only members that do **not** natively advertise `heat_cool` are eligible. |
+| **Enable Range Template** | Enables automatic `heat_cool` range control for all members that do not natively advertise `heat_cool`. No manual selection needed — the group detects eligible members automatically. |
 | **Deadband Action** | What to do when the room temperature is already within the target band (between `target_temp_low` and `target_temp_high`). **Turn Off** (default) or **Fan Only**. |
 
-### Availability & Timings
+### Advanced Settings
 
 | Option | Description |
 |--------|-------------|
@@ -432,6 +448,9 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
 | **Staggered Call Delay** | Time to wait between individual commands to group members (0–2s, default: 0). Staggering calls prevents radio flooding in large Zigbee/Matter networks. Also applies to calibration writes. |
 | **UI Grace Period** | Duration (seconds) for which the group displays the commanded value immediately after a UI action, before slow member devices echo their state back. Prevents visual flicker on the dashboard. Applies to all attributes: HVAC mode, temperature, humidity, fan/preset/swing modes. |
+| **Expose Smart Sensors** | Create additional temperature and humidity sensor entities that reflect the group's current aggregated state (useful for historical graphs and dashboards). |
+| **Expose Member List** | Add the `entity_id` attribute containing the list of all member entity IDs to the climate group helper entity (enables use of `expand()` templates). |
+| **Expose Configuration Sensor** | Create a diagnostic configuration sensor entity (`sensor.*_configuration`) containing a portable JSON snapshot of all group settings under the `settings_json` attribute. |
 
 ## Services
 

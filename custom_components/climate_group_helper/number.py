@@ -71,8 +71,11 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         self._group.offset_set_callback = self._set_offset
         if (last := await self.async_get_last_number_data()) is not None:
             if last.native_value is not None:
-                self._group.run_state = replace(self._group.run_state, group_offset=float(last.native_value))
-                _LOGGER.debug("[%s] Restored group offset: %s", self._group.entity_id, last.native_value)
+                try:
+                    self._group.run_state = replace(self._group.run_state, group_offset=float(last.native_value))
+                    _LOGGER.debug("[%s] Restored group offset: %s", self._group.entity_id, last.native_value)
+                except (ValueError, TypeError):
+                    _LOGGER.warning("[%s] Could not restore group offset from '%s' — using default 0.0", self._group.entity_id, last.native_value)
 
     async def _set_offset(self, value: float) -> None:
         """Set group offset and update both entities for UI consistency."""

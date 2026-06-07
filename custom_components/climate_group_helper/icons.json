@@ -7,13 +7,17 @@
             "state": {
               "antifrost": "mdi:snowflake",
               "auto": "mdi:thermostat-auto",
+              "away": "mdi:home-outline",
+              "building_protection": "mdi:shield-home",
               "day": "mdi:weather-sunny",
+              "economy": "mdi:leaf",
               "frost_guard": "mdi:snowflake-thermometer",
               "holiday": "mdi:bag-suitcase-outline",
               "manual": "mdi:gesture-tap",
               "night": "mdi:weather-night",
               "no_frost": "mdi:snowflake-melt",
               "schedule": "mdi:calendar-clock",
+              "sleep": "mdi:sleep",
               "standby": "mdi:home-export-outline",
               "summer": "mdi:radiator-off",
               "vacation": "mdi:beach"

@@ -40,7 +40,6 @@ from .const import (
     UnsupportedHvacAction,
 )
 from .state import FilterState
-from .member_template import _resolve_range, _read_current_temp, _expected_mode_for
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -93,6 +92,13 @@ class BaseServiceCallHandler(ABC):
 
         if self._active_tasks:
             await asyncio.gather(*self._active_tasks, return_exceptions=True)
+
+    async def async_shutdown(self) -> None:
+        """Permanently shutdown the handler and its debouncer."""
+        await self.async_cancel_all()
+        if self._debouncer:
+            self._debouncer.async_shutdown()
+            self._debouncer = None
 
     def register_call_trigger(self, callback: Callable[[], Any]) -> None:
         """Register a callback to be called after successful execution."""
@@ -725,7 +731,7 @@ class BaseServiceCallHandler(ABC):
         ATTR_HVAC_MODE]` so `_is_stale_call` does not discard them as
         deviations from `target_state`.
         """
-        template = self._group.range_template
+        template = self._group.member_template_manager.range_template
         if template is None:
             return calls
 
@@ -762,7 +768,7 @@ class BaseServiceCallHandler(ABC):
             low_val = template.low
             high_val = template.high
             if low_val is None and high_val is None:
-                low_val, high_val = _resolve_range(self._group)
+                low_val, high_val = self._group.member_template_manager.resolve_range()
 
             # Native members keep the original payload in a separate call.
             native_members = [eid for eid in entity_ids if eid not in template_members]
@@ -770,11 +776,15 @@ class BaseServiceCallHandler(ABC):
                 result.append({**call, "entity_ids": native_members})
 
             if low_val is None or high_val is None:
-                _LOGGER.warning(
-                    "[%s] Range Template active, but target_temp_low/high are not set. Command discarded.",
-                    self._group.entity_id,
+                if self._group._attr_target_temperature is None:
+                    continue
+                target_temp = float(self._group._attr_target_temperature)
+                low_val = target_temp - 5
+                high_val = target_temp + 5
+                self._group.shared_target_state = self._group.shared_target_state.update(
+                    target_temp_low=low_val,
+                    target_temp_high=high_val,
                 )
-                continue
 
             # Bucket per-member translations by (service, kwargs) so identical
             # decisions ship as a single call.
@@ -784,8 +794,9 @@ class BaseServiceCallHandler(ABC):
                 state = self._hass.states.get(eid)
                 if not state:
                     continue
-                current_temp = _read_current_temp(state)
-                expected_mode, expected_temp = _expected_mode_for(template, eid, low_val, high_val, current_temp)
+                current_temp = self._group.member_template_manager._read_current_temp(state)
+                supported_modes = state.attributes.get(ATTR_HVAC_MODES)
+                expected_mode, expected_temp = self._group.member_template_manager.expected_mode_for(eid, low_val, high_val, current_temp, supported_modes)
 
                 # Track the active heating/cooling mode for the fallback in
                 # _expected_mode_for() when current_temperature later goes missing.
@@ -793,7 +804,7 @@ class BaseServiceCallHandler(ABC):
                 if expected_mode != template.deadband_action:
                     template.last_physical_mode[eid] = expected_mode
 
-                if expected_mode in (HVACMode.OFF, HVACMode.FAN_ONLY):
+                if expected_mode in (HVACMode.OFF, HVACMode.FAN_ONLY) or expected_temp is None:
                     trans_service = SERVICE_SET_HVAC_MODE
                     trans_kwargs = {ATTR_HVAC_MODE: expected_mode}
                 else:
@@ -1131,7 +1142,9 @@ class SyncCallHandler(BaseServiceCallHandler):
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Read from target_state with group_offset applied for temperature attributes."""
-        return self._get_target_value_with_offset(attr, value)
+        if self._apply_group_offset():
+            return self._get_target_value_with_offset(attr, value)
+        return getattr(self.target_state, attr, None)
 
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
         """Apply Partial Sync: skip OFF members if CONF_IGNORE_OFF_MEMBERS_SYNC is set."""
@@ -1232,7 +1245,9 @@ class ScheduleCallHandler(BaseServiceCallHandler):
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Read from target_state with group_offset applied for temperature attributes."""
-        return self._get_target_value_with_offset(attr, value)
+        if self._apply_group_offset():
+            return self._get_target_value_with_offset(attr, value)
+        return getattr(self.target_state, attr, None)
 
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
         """Apply Partial Sync: skip OFF members if CONF_IGNORE_OFF_MEMBERS_SCHEDULE is set."""

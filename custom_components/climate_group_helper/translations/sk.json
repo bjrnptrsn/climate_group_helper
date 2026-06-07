@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "Musíte vybrať aspoň jedno klimatické zariadenie.",
-      "invalid_entity": "Jedno alebo viac vybraných zariadení nie sú platné klimatické entity.",
-      "duplicate_name": "Klimatická skupina s týmto názvom už existuje.",
-      "unavailable_entities": "Niektoré vybrané zariadenia sú nedostupné. Skupina bude vytvorená, ale nemusí plne fungovať, kým neodpovedia."
+      "no_entities": "Musíte vybrať aspoň jedno klimatické zariadenie."
     },
     "abort": {
       "already_configured": "Táto skupina je už nakonfigurovaná.",
@@ -224,11 +221,11 @@
             "name": "Šablóna člena",
             "description": "Vykresluje členy s jedným žiadaným bodom ako virtuálne entity s rozsahom teplo/chlad. Group Helper prekladá príkazy rozsahu na zodpovedajúce fyzické príkazy teplo/chlad podľa aktuálnej teploty každého člena.",
             "data": {
-              "range_template_entities": "Členy s jedným žiadaným bodom",
+              "range_template_enabled": "Povoliť šablónu rozsahu",
               "range_template_deadband_action": "Akcia v mŕtvom pásme"
             },
             "data_description": {
-              "range_template_entities": "Vyberte termostaty s jedným žiadaným bodom, ktoré sa majú vykresliť ako virtuálne zariadenia v režime rozsahu.",
+              "range_template_enabled": "Automaticky zobrazuje všetkých členov s jedným nastavením (bez natívneho kúrenia/chladenia) ako virtuálne zariadenia v režime rozsahu.",
               "range_template_deadband_action": "Akcia, ktorá sa vykoná, keď je aktuálna teplota v rámci cieľového rozsahu (mŕtve pásmo)."
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "Aspoň jedno klimatické zariadenie musí zostať v skupine.",
-      "invalid_entity": "Bolo vybrané neplatné zariadenie.",
-      "configuration_error": "Konfiguráciu sa nepodarilo aktualizovať.",
       "calibration_requires_sensors": "Kalibračné ciele vyžadujú aspoň jeden externý teplotný senzor.",
       "master_refresh_notice": "Pridaná Hlavná entita (Master). Dostupné nové možnosti.",
       "master_options_notice": "Nová možnosť Hlavnej entity",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "Cieľový režim HVAC"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Neprítomný",
+              "home": "Doma",
+              "sleep": "Spánok",
+              "comfort": "Komfort",
+              "activity": "Aktivita",
+              "standby": "Pohotovosť",
+              "economy": "Ekonomický",
+              "building_protection": "Ochrana budovy",
+              "boost": "Zosilnenie"
+            }
           }
         }
       }

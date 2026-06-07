@@ -111,9 +111,6 @@ class BaseOverrideManager:
         @callback
         def _handle_timeout(_now: Any) -> None:
             self._timer = None
-            # Clear active_override synchronously so run_state is consistent
-            # before the async on_expired task starts
-            self._group.run_state = self._group.run_state.clear_override()
             self._hass.async_create_task(on_expired())
 
         self._timer = async_call_later(self._hass, duration, _handle_timeout)
@@ -210,6 +207,9 @@ class BoostOverrideManager(BaseOverrideManager):
 
     async def _on_expired(self) -> None:
         """Boost timer expired — restore snapshot and apply schedule if active."""
+        if self._group.run_state.active_override != "boost":
+            _LOGGER.debug("[%s] Stale _on_expired skipped (new boost started before task ran)", self._group.entity_id)
+            return
         snapshot = self._snapshot
         self._restore_snapshot()
         _LOGGER.debug("[%s] Boost expired, active_override cleared", self._group.entity_id)
@@ -282,8 +282,12 @@ class WindowOverrideManager(BaseOverrideManager):
 
     def _active_data(self) -> dict[str, Any]:
         """Return the data dict for the active window override (OFF or temperature)."""
-        if self._window_action == WindowControlAction.TEMPERATURE and self._window_temperature is not None:
-            return {"temperature": self._window_temperature}
+        if self._window_action == WindowControlAction.TEMPERATURE:
+            if self._window_temperature is not None:
+                return {"temperature": self._window_temperature}
+            _LOGGER.warning("[%s] Window action is TEMPERATURE but no window_temperature configured — falling back to OFF",
+                self._group.entity_id,
+            )
         return {"hvac_mode": HVACMode.OFF}
 
     async def activate(self) -> None:
@@ -354,14 +358,24 @@ class PresenceOverrideManager(BaseOverrideManager):
             group_offset = self._group.run_state.group_offset
             if base is not None:
                 return {"temperature": round(base + group_offset + self._away_offset, 1)}
+            _LOGGER.warning(
+                "[%s] Presence AWAY_OFFSET: target temperature is None — falling back to OFF",
+                self._group.entity_id,
+            )
             return {"hvac_mode": HVACMode.OFF}
         if self._action == PresenceAction.AWAY_TEMPERATURE and self._away_temperature is not None:
             return {"temperature": self._away_temperature}
         if self._action == PresenceAction.AWAY_PRESET and self._away_preset:
             return {"preset_mode": self._away_preset}
+        _LOGGER.warning(
+            "[%s] Presence action '%s' could not produce a valid payload — falling back to OFF",
+            self._group.entity_id,
+            self._action,
+        )
         return {"hvac_mode": HVACMode.OFF}
 
     async def activate(self) -> None:
+        self._group.boost_override_manager.abort()
         self._block()
         # Window/switch already cover the members — don't send a conflicting command.
         if {"switch", "window"} & self._group.run_state.blocking_sources:

@@ -7,16 +7,13 @@ but specialised and automated for specific transformation patterns.
 The pattern has two halves:
 
 * **Input gateway** — `ClimateGroupHelper.read_member_state()` /
-  `read_member_event()` call the template's apply-function to wrap a real
-  `State` into a template-specific proxy. Consumers (`SyncModeHandler`,
+  `read_member_event()` call `MemberTemplateManager.apply_state()` to wrap a
+  real `State` into a template-specific proxy. Consumers (`SyncModeHandler`,
   `ChangeState`, service-call filters) see a transparent virtual entity and
   no longer need to know about the underlying physical device.
 * **Output pipeline** — a stage in `BaseServiceCallHandler._generate_calls_from_dict`
-  translates outgoing commands back into the physical capability profile.
-
-This module is pure data + pure functions. Configuration and the small amount
-of runtime state live in template dataclasses; behaviour lives in the two
-integration points above.
+  translates outgoing commands back into the physical capability profile, using
+  `MemberTemplateManager.resolve_range()` and `MemberTemplateManager.expected_mode_for()`.
 
 Currently implemented:
 
@@ -30,7 +27,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import logging
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from homeassistant.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
@@ -49,6 +46,9 @@ from homeassistant.const import (
 from homeassistant.core import State
 from types import MappingProxyType
 
+if TYPE_CHECKING:
+    from .climate import ClimateGroupHelper
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -56,11 +56,9 @@ _LOGGER = logging.getLogger(__name__)
 class RangeTemplate:
     """Per-group configuration and runtime state for the Range Template.
 
-    Lives on `ClimateGroupHelper.range_template` (or `None` when no member is
-    configured for range templating). `low`/`high` cache the most recently
-    commanded range so a follow-up `hvac_mode=heat_cool` without explicit
-    setpoints can still resolve a band. `last_physical_mode` is used as a
-    fallback in `_expected_mode_for()` when `current_temperature` is
+    `low`/`high` cache the most recently commanded range so a follow-up
+    `hvac_mode=heat_cool` without explicit setpoints can still resolve a band.
+    `last_physical_mode` is used as a fallback when `current_temperature` is
     unavailable.
     """
 
@@ -80,18 +78,7 @@ class RangeTemplateState:
 
     Not a subclass of HA's `State` (which has `__slots__` and is internally
     mutated by HA); attribute access is delegated to the wrapped real state via
-    `__getattr__`. Only `state` and `attributes` are overridden:
-
-    * `state` returns `heat_cool` while the physical mode matches the *expected*
-      mode for the current band, and falls through to the real physical mode
-      otherwise. That mismatch is how `SyncModeHandler` natively detects
-      deviations (LOCK reverts, MIRROR adopts) without needing template-aware
-      code paths.
-    * `attributes` advertises `TARGET_TEMPERATURE_RANGE` (and drops
-      `TARGET_TEMPERATURE`), injects `heat_cool` into `hvac_modes`, exposes
-      `target_temp_low`/`target_temp_high` from the template, and suppresses
-      `temperature`. All other attributes pass through unchanged — including
-      `current_temperature`, `hvac_action`, `min_temp`, `max_temp`.
+    `__getattr__`. Only `state` and `attributes` are overridden.
     """
 
     def __init__(
@@ -115,8 +102,6 @@ class RangeTemplateState:
     def state(self) -> str:
         if self._real.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return self._real.state
-        # Mismatch surfaces the real physical mode so SyncModeHandler can
-        # detect the deviation and correct it via the output pipeline.
         return HVACMode.HEAT_COOL if self._real.state == self._expected_mode else self._real.state
 
     @property
@@ -141,106 +126,134 @@ class RangeTemplateState:
         return MappingProxyType(attrs)
 
 
-def _read_current_temp(state: State) -> float | None:
-    """Read `current_temperature` from a raw state, tolerating missing or non-numeric values."""
-    temp = state.attributes.get(ATTR_CURRENT_TEMPERATURE)
-    if temp is not None:
-        try:
-            return float(temp)
-        except (ValueError, TypeError):
-            pass
-    return None
+class MemberTemplateManager:
+    """Manages all Member Template instances for a climate group.
 
-
-def _resolve_range(group) -> tuple[float | None, float | None]:
-    """Resolve the active range band.
-
-    Prefers `shared_target_state` (the authoritative source, restored by
-    `RestoreEntity`) and falls back to the template's cached `low`/`high` from
-    the most recent command. Either side may be `None` before the group has
-    ever received a range command.
+    Owned by `ClimateGroupHelper`. Central entry point for both the input
+    gateway (apply_state) and output pipeline (resolve_range / expected_mode_for).
     """
-    low = group.shared_target_state.target_temp_low
-    high = group.shared_target_state.target_temp_high
 
-    template = group.range_template
-    if template is not None:
-        if low is None and template.low is not None:
-            low = template.low
-        if high is None and template.high is not None:
-            high = template.high
+    def __init__(self, group: ClimateGroupHelper, deadband_action: str | None) -> None:
+        self._group = group
+        self._range_template: RangeTemplate | None = (
+            RangeTemplate(entity_ids=frozenset(), deadband_action=deadband_action)
+            if deadband_action is not None
+            else None
+        )
 
-    return low, high
+    @property
+    def range_template(self) -> RangeTemplate | None:
+        """Return the active RangeTemplate, or None when disabled."""
+        return self._range_template
 
+    # ------------------------------------------------------------------
+    # Input gateway
+    # ------------------------------------------------------------------
 
-def _expected_mode_for(
-    template: RangeTemplate,
-    entity_id: str,
-    low: float,
-    high: float,
-    current_temp: float | None,
-) -> tuple[str, float | None]:
-    """Compute the expected physical (mode, setpoint) for one member.
+    def apply_state(self, entity_id: str, state: State) -> State | RangeTemplateState:
+        """Wrap a member State into a RangeTemplateState, or pass through unchanged."""
+        template = self._range_template
+        if template is None or not template.covers(entity_id):
+            return state
 
-    Below the band -> heat at low, above -> cool at high, inside -> the
-    configured deadband action with no setpoint. When `current_temperature` is
-    unknown, fall back to the last observed physical mode so a member that is
-    actively heating or cooling stays in that mode until a real reading
-    arrives.
-    """
-    if current_temp is None:
-        mode = template.last_physical_mode.get(entity_id, template.deadband_action)
-        return mode, None
+        if self._group.shared_target_state.hvac_mode != HVACMode.HEAT_COOL:
+            return state
 
-    if current_temp < low:
-        return HVACMode.HEAT, low
-    elif current_temp > high:
-        return HVACMode.COOL, high
-    else:
-        return template.deadband_action, None
+        low, high = self.resolve_range()
+        if low is None or high is None:
+            expected_mode = state.state
+            expected_temp = state.attributes.get(ATTR_TEMPERATURE)
+            return RangeTemplateState(state, None, None, expected_mode, expected_temp)
 
+        current_temp = self._read_current_temp(state)
+        supported_modes = state.attributes.get(ATTR_HVAC_MODES)
+        expected_mode, expected_temp = self.expected_mode_for(entity_id, low, high, current_temp, supported_modes)
+        return RangeTemplateState(state, low, high, expected_mode, expected_temp)
 
-def _apply_range_template(group, entity_id: str, state: State) -> State | RangeTemplateState:
-    """Wrap a member `State` into a `RangeTemplateState`, or pass through unchanged.
+    # ------------------------------------------------------------------
+    # Output pipeline helpers
+    # ------------------------------------------------------------------
 
-    Pass-through (no wrapping) when the template is inactive, the entity is
-    not covered, or the group is not in `heat_cool` mode — in those cases the
-    real state already matches what consumers expect. When the band cannot be
-    resolved yet (group has never received a range command), the wrapper is
-    built with `low=high=None` and the expected mode/temp are taken from the
-    raw state; consumers then see the device exactly as it physically is.
-    """
-    template = group.range_template
-    if template is None or not template.covers(entity_id):
-        return state
+    def resolve_range(self) -> tuple[float | None, float | None]:
+        """Resolve the active range band from shared_target_state + cached template values."""
+        low = self._group.shared_target_state.target_temp_low
+        high = self._group.shared_target_state.target_temp_high
 
-    if group.shared_target_state.hvac_mode != HVACMode.HEAT_COOL:
-        return state
+        template = self._range_template
+        if template is not None:
+            if low is None and template.low is not None:
+                low = template.low
+            if high is None and template.high is not None:
+                high = template.high
 
-    low, high = _resolve_range(group)
-    if low is None or high is None:
-        expected_mode = state.state
-        expected_temp = state.attributes.get(ATTR_TEMPERATURE)
-        return RangeTemplateState(state, None, None, expected_mode, expected_temp)
+        return low, high
 
-    current_temp = _read_current_temp(state)
-    expected_mode, expected_temp = _expected_mode_for(template, entity_id, low, high, current_temp)
-    return RangeTemplateState(state, low, high, expected_mode, expected_temp)
+    def expected_mode_for(
+        self,
+        entity_id: str,
+        low: float,
+        high: float,
+        current_temp: float | None,
+        supported_modes: list[str] | None = None,
+    ) -> tuple[str, float | None]:
+        """Compute the expected physical (mode, setpoint) for one member."""
+        template = self._range_template
+        assert template is not None
 
+        if current_temp is None:
+            mode = template.last_physical_mode.get(entity_id, template.deadband_action)
+            return mode, None
 
-def initialize_last_modes(group) -> None:
-    """Seed `last_physical_mode` from current HA states.
+        if current_temp < low:
+            if supported_modes is None or HVACMode.HEAT in supported_modes:
+                return HVACMode.HEAT, low
+            return template.deadband_action, None
+        elif current_temp > high:
+            if supported_modes is None or HVACMode.COOL in supported_modes:
+                return HVACMode.COOL, high
+            return template.deadband_action, None
+        else:
+            return template.deadband_action, None
 
-    Must run *after* `async_get_last_state()` has restored
-    `shared_target_state.target_temp_low/high`, so that the deviation fallback
-    in `_expected_mode_for()` is not blind at first start. Unavailable or
-    unknown members are skipped — they will be picked up on the next real
-    state event.
-    """
-    template = group.range_template
-    if template is None:
-        return
-    for entity_id in template.entity_ids:
-        real_state = group.hass.states.get(entity_id)
-        if real_state and real_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-            template.last_physical_mode[entity_id] = real_state.state
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    def update_members(self) -> list:
+        """Recompute Range Template entity_ids. Returns the new list (empty when disabled)."""
+        template = self._range_template
+        if template is None:
+            return []
+
+        template.entity_ids = frozenset(
+            eid for eid in self._group.climate_entity_ids
+            if HVACMode.HEAT_COOL not in (
+                (s := self._group.hass.states.get(eid)) and s.attributes.get(ATTR_HVAC_MODES, []) or []
+            )
+        )
+        return list(template.entity_ids)
+
+    def initialize_last_modes(self) -> None:
+        """Seed last_physical_mode from current HA states after RestoreEntity has run."""
+        template = self._range_template
+        if template is None:
+            return
+        for entity_id in template.entity_ids:
+            real_state = self._group.hass.states.get(entity_id)
+            if real_state and real_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                template.last_physical_mode[entity_id] = real_state.state
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _read_current_temp(state: State) -> float | None:
+        """Read current_temperature from a raw state, tolerating missing or non-numeric values."""
+        temp = state.attributes.get(ATTR_CURRENT_TEMPERATURE)
+        if temp is not None:
+            try:
+                return float(temp)
+            except (ValueError, TypeError):
+                pass
+        return None

@@ -15,10 +15,7 @@
       }
     },
     "error": {
-      "no_entities": "Vous devez sélectionner au moins un appareil climatique.",
-      "invalid_entity": "Un ou plusieurs appareils sélectionnés ne sont pas des entités climatiques valides.",
-      "duplicate_name": "Un groupe climatique avec ce nom existe déjà.",
-      "unavailable_entities": "Certains appareils sélectionnés sont indisponibles. Le groupe sera créé mais peut ne pas fonctionner pleinement tant qu'ils ne répondent pas."
+      "no_entities": "Vous devez sélectionner au moins un appareil climatique."
     },
     "abort": {
       "already_configured": "Ce groupe est déjà configuré.",
@@ -224,11 +221,11 @@
             "name": "Modèle de membre",
             "description": "Rend les membres à point de consigne unique comme des entités virtuelles de plage chaud/froid. Le Group Helper traduit les commandes de plage en commandes physiques chaud/froid appropriées en fonction de la température actuelle de chaque membre.",
             "data": {
-              "range_template_entities": "Membres à point de consigne unique",
+              "range_template_enabled": "Activer le modèle de plage",
               "range_template_deadband_action": "Action en zone morte"
             },
             "data_description": {
-              "range_template_entities": "Sélectionne les thermostats à point de consigne unique à rendre comme des appareils virtuels en mode plage.",
+              "range_template_enabled": "Affiche automatiquement tous les membres à consigne unique (sans chauffage/refroidissement natif) comme des appareils virtuels en mode plage.",
               "range_template_deadband_action": "Action à effectuer lorsque la température actuelle se trouve dans la plage cible (zone morte)."
             }
           },
@@ -265,8 +262,6 @@
     },
     "error": {
       "no_entities": "Au moins un appareil climatique doit rester dans le groupe.",
-      "invalid_entity": "Appareil sélectionné invalide.",
-      "configuration_error": "Impossible de mettre à jour la configuration.",
       "calibration_requires_sensors": "Les cibles de calibration nécessitent au moins un capteur de température externe.",
       "master_refresh_notice": "Entité Maître ajoutée. Nouvelles options disponibles.",
       "master_options_notice": "Nouvelle option d'entité Maître",
@@ -436,6 +431,20 @@
           },
           "target_hvac_mode": {
             "name": "Mode HVAC Cible"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Absent",
+              "home": "Présent",
+              "sleep": "Sommeil",
+              "comfort": "Confort",
+              "activity": "Activité",
+              "standby": "Veille",
+              "economy": "Économie",
+              "building_protection": "Protection du bâtiment",
+              "boost": "Boost"
+            }
           }
         }
       }
