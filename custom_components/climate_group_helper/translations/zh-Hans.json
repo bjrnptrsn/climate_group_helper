@@ -356,7 +356,7 @@
       "isolation_all_selected": "至少一个成员必须保留在隔离之外。",
       "isolation_entity_overlap": "每个成员只能出现在一条隔离规则中。",
       "isolation_action_preset_required": "请为隔离动作选择一个预设模式。",
-      "sensor_loop_protection": "不能将 Climate Group Helper 传感器用作外部传感器——这会产生反馈回路。"
+      "sensor_loop_protection": "不能将 Climate Group Helper 实体用作外部传感器或校准目标——这会产生反馈回路。"
     },
     "abort": {
       "no_changes": "未检测到更改。"

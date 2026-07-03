@@ -356,7 +356,7 @@
       "isolation_all_selected": "Pelo menos um membro deve permanecer fora do isolamento.",
       "isolation_entity_overlap": "Cada membro só pode aparecer numa regra de isolamento.",
       "isolation_action_preset_required": "Selecione um modo pré-definido para a ação de isolamento.",
-      "sensor_loop_protection": "Não é possível usar um sensor do Climate Group Helper como sensor externo — isso criaria um ciclo de retroalimentação."
+      "sensor_loop_protection": "Não é possível usar uma entidade Climate Group Helper como sensor externo ou alvo de calibração — isso criaria um ciclo de retroalimentação."
     },
     "abort": {
       "no_changes": "Nenhuma alteração detectada."

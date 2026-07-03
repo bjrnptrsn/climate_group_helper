@@ -356,7 +356,7 @@
       "isolation_all_selected": "Co najmniej jeden członek musi pozostać poza izolacją.",
       "isolation_entity_overlap": "Każdy członek może znajdować się tylko w jednej regule izolacji.",
       "isolation_action_preset_required": "Wybierz tryb wstępny dla akcji izolacji.",
-      "sensor_loop_protection": "Nie można używać czujnika Climate Group Helper jako czujnika zewnętrznego — spowodowałoby to pętlę sprzężenia zwrotnego."
+      "sensor_loop_protection": "Encja Climate Group Helper nie może być używana jako zewnętrzny czujnik ani cel kalibracji — spowodowałoby to pętlę sprzężenia zwrotnego."
     },
     "abort": {
       "no_changes": "Nie wykryto zmian."

@@ -356,7 +356,7 @@
       "isolation_all_selected": "Au moins un membre doit rester en dehors de l'isolation.",
       "isolation_entity_overlap": "Chaque membre ne peut apparaître que dans une seule règle d'isolation.",
       "isolation_action_preset_required": "Sélectionnez un mode prédéfini pour l'action d'isolation.",
-      "sensor_loop_protection": "Impossible d'utiliser un capteur Climate Group Helper comme capteur externe — cela créerait une boucle de rétroaction."
+      "sensor_loop_protection": "Impossible d'utiliser une entité Climate Group Helper comme capteur externe ou cible de calibration — cela créerait une boucle de rétroaction."
     },
     "abort": {
       "no_changes": "Aucun changement détecté."

@@ -356,7 +356,7 @@
       "isolation_all_selected": "Alespoň jeden člen musí zůstat mimo izolaci.",
       "isolation_entity_overlap": "Každý člen může být pouze v jednom izolačním pravidle.",
       "isolation_action_preset_required": "Vyberte přednastavený režim pro izolační akci.",
-      "sensor_loop_protection": "Nelze použít senzor Climate Group Helper jako externí senzor — způsobilo by to zpětnou vazbu."
+      "sensor_loop_protection": "Entitu Climate Group Helper nelze použít jako externí senzor nebo cíl kalibrace — vznikla by zpětná vazba."
     },
     "abort": {
       "no_changes": "Nebyly zjištěny žádné změny."

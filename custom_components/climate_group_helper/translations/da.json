@@ -356,7 +356,7 @@
       "isolation_all_selected": "Mindst ét medlem skal forblive uden for isolation.",
       "isolation_entity_overlap": "Hvert medlem kan kun forekomme i én isolationsregel.",
       "isolation_action_preset_required": "Vælg en forudindstillet tilstand til isoleringshandlingen.",
-      "sensor_loop_protection": "Kan ikke bruge en Climate Group Helper-sensor som ekstern sensor — dette ville skabe en feedback-løkke."
+      "sensor_loop_protection": "En Climate Group Helper-enhed kan ikke bruges som ekstern sensor eller kalibreringsmål — det ville skabe en feedback-løkke."
     },
     "abort": {
       "no_changes": "Ingen ændringer registreret."

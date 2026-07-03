@@ -75,6 +75,7 @@ from .const import (
     ATTR_SCHEDULE_BYPASS_ENTITY,
     ATTR_SCHEDULE_ENTITY,
     ATTR_SETTINGS,
+    ATTR_TARGET_STATE,
     CONF_ADVANCED_MODE,
     CONF_DEBOUNCE_DELAY,
     CONF_EXPOSE_MEMBER_ENTITIES,
@@ -227,21 +228,26 @@ def _warn_missing_entities(hass: HomeAssistant, config: dict[str, Any], group_en
             )
 
 
-def filter_cgh_sensors(hass: HomeAssistant, entity_ids: list[str], label: str, group_entity_id: str = "") -> list[str]:
-    """Remove own CGH sensor entities from a sensor list and log a warning for each one found."""
+def filter_cgh_entities(
+    hass: HomeAssistant,
+    entity_ids: list[str],
+    label: str,
+    group_entity_id: str = "",
+) -> list[str]:
+    """Remove own CGH entities from a list and log a warning for each one found."""
     registry = er.async_get(hass)
-    valid_sensors: list[str] = []
+    valid_entities: list[str] = []
     for eid in entity_ids:
         entry = registry.async_get(eid)
         if entry and entry.platform == DOMAIN:
             _LOGGER.warning(
-                "[%s] Sensor loop protection: '%s' is a CGH sensor and cannot be used as "
-                "an external %s sensor — ignoring. Remove it in the integration options.",
-                group_entity_id, eid, label
+                "[%s] Loop protection: '%s' is a CGH entity and cannot be used as "
+                "external %s input — ignoring. Remove it in the integration options.",
+                group_entity_id, eid, label,
             )
         else:
-            valid_sensors.append(eid)
-    return valid_sensors
+            valid_entities.append(eid)
+    return valid_entities
 
 
 async def async_setup_entry(
@@ -471,11 +477,18 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Guard against feedback loops from misconfigured CGH sensors.
         # Filter sensor lists and rebuild _entity_ids so the listener never subscribes to our own sensors.
-        self.temp_sensor_entity_ids = filter_cgh_sensors(
-            self.hass, self.temp_sensor_entity_ids, "temperature", self.entity_id
+        self.temp_sensor_entity_ids = filter_cgh_entities(
+            self.hass, self.temp_sensor_entity_ids, "temperature sensor", self.entity_id
         )
-        self.humidity_sensor_entity_ids = filter_cgh_sensors(
-            self.hass, self.humidity_sensor_entity_ids, "humidity", self.entity_id
+        self.humidity_sensor_entity_ids = filter_cgh_entities(
+            self.hass, self.humidity_sensor_entity_ids, "humidity sensor", self.entity_id
+        )
+        # Filter calibration targets to prevent feedback loops
+        self.temp_update_target_entity_ids = filter_cgh_entities(
+            self.hass, self.temp_update_target_entity_ids, "temperature calibration target", self.entity_id
+        )
+        self.humidity_update_target_entity_ids = filter_cgh_entities(
+            self.hass, self.humidity_update_target_entity_ids, "humidity calibration target", self.entity_id
         )
         self._entity_ids = (
             self.climate_entity_ids
@@ -653,6 +666,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
     def _restore_state(self, last_state: State) -> None:
         """Restore state from last known state."""
         last_attrs = last_state.attributes
+        valid_hvac_modes = {m.value for m in HVACMode}
 
         # Restore group offset first to ensure it's available for TargetState restoration
         if (last_offset := last_attrs.get(ATTR_GROUP_OFFSET)) is not None:
@@ -661,20 +675,24 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             except (TypeError, ValueError):
                 pass
 
-        # We filter for ClimateState fields to ensure we only store relevant climate attributes
-        restored_data = {}
-        valid_hvac_modes = {m.value for m in HVACMode}
-        for field in fields(ClimateState):
-            key = field.name
-            if key == "hvac_mode":
-                if last_state.state in valid_hvac_modes:
-                    restored_data[key] = last_state.state
-            elif (value := last_attrs.get(key)) is not None:
-                restored_data[key] = value
+        # Restore Persistent Target State (prefer ATTR_TARGET_STATE dictionary over flat state/attributes)
+        if (saved := last_attrs.get(ATTR_TARGET_STATE)) and isinstance(saved, dict):
+            self.shared_target_state = self.shared_target_state.update(**saved)
+            _LOGGER.debug("[%s] Restored Persistent Target State from attribute: %s", self.entity_id, self.shared_target_state)
+        else:
+            # We filter for ClimateState fields to ensure we only store relevant climate attributes
+            restored_data = {}
+            for field in fields(ClimateState):
+                key = field.name
+                if key == "hvac_mode":
+                    if last_state.state in valid_hvac_modes:
+                        restored_data[key] = last_state.state
+                elif (value := last_attrs.get(key)) is not None:
+                    restored_data[key] = value
 
-        if restored_data:
-            self.shared_target_state = self.shared_target_state.update(**restored_data)
-            _LOGGER.debug("[%s] Restored Persistent Target State (offset corrected): %s", self.entity_id, self.shared_target_state)
+            if restored_data:
+                self.shared_target_state = self.shared_target_state.update(**restored_data)
+                _LOGGER.debug("[%s] Restored Persistent Target State (fallback): %s", self.entity_id, self.shared_target_state)
 
         # Restore modes and features
         if last_state.state in valid_hvac_modes:

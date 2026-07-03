@@ -356,7 +356,7 @@
       "isolation_all_selected": "Mindestens ein Mitglied muss außerhalb der Isolierung bleiben.",
       "isolation_entity_overlap": "Jedes Mitglied darf nur in einer Isolationsregel vorkommen.",
       "isolation_action_preset_required": "Wähle einen Preset-Modus für die Isolieraktion.",
-      "sensor_loop_protection": "Ein Climate Group Helper-Sensor kann nicht als externer Sensor verwendet werden — das würde eine Rückkopplungsschleife erzeugen."
+      "sensor_loop_protection": "Eine Climate Group Helper-Entität kann nicht als externer Sensor oder Kalibrierungsziel verwendet werden — dies würde eine Rückkopplungsschleife erzeugen."
     },
     "abort": {
       "no_changes": "Keine Änderungen erkannt."

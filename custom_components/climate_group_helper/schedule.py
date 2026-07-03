@@ -364,7 +364,7 @@ class ScheduleBaseHandler:
 
             if bypass_payload:
                 self.state_manager.update(**bypass_payload)
-            await self.call_handler.call_immediate(bypass_payload or None)
+                await self.call_handler.call_immediate(bypass_payload)
 
         elif self._group.run_state.target_state_snapshot:
             # Bypass just deactivated: restore the pre-bypass basis state from the snapshot.

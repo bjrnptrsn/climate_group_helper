@@ -356,7 +356,7 @@
       "isolation_all_selected": "At least one member must remain outside isolation.",
       "isolation_entity_overlap": "Each member can only appear in one isolation rule.",
       "isolation_action_preset_required": "Select a preset mode for the isolation action.",
-      "sensor_loop_protection": "Cannot use a Climate Group Helper sensor as an external sensor — this would create a feedback loop."
+      "sensor_loop_protection": "Cannot use a Climate Group Helper entity as an external sensor or calibration target — this would create a feedback loop."
     },
     "abort": {
       "no_changes": "No changes detected."

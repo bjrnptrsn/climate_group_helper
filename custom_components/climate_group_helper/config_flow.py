@@ -131,7 +131,7 @@ from .const import (
     WindowControlMode,
 )
 
-from .climate import filter_cgh_sensors
+from .climate import filter_cgh_entities
 
 
 class ClimateGroupHelperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -1533,10 +1533,27 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             for conf_key in (CONF_TEMP_SENSORS, CONF_HUMIDITY_SENSORS):
                 selected = flattened_input.get(conf_key, [])
                 label = "temperature" if conf_key == CONF_TEMP_SENSORS else "humidity"
-                if len(filter_cgh_sensors(self.hass, selected, label)) < len(selected):
+                if len(filter_cgh_entities(self.hass, selected, label)) < len(selected):
                     section_key = (
                         "temperature_section"
                         if conf_key == CONF_TEMP_SENSORS
+                        else "humidity_section"
+                    )
+                    return await self._show_main_form(
+                        current_config,
+                        form_errors={
+                            section_key: "sensor_loop_protection",
+                        },
+                    )
+
+            # Validate: own CGH entities must not be used as calibration targets (feedback loop)
+            for conf_key in (CONF_TEMP_UPDATE_TARGETS, CONF_HUMIDITY_UPDATE_TARGETS):
+                selected = flattened_input.get(conf_key, [])
+                label = "temperature" if conf_key == CONF_TEMP_UPDATE_TARGETS else "humidity"
+                if len(filter_cgh_entities(self.hass, selected, label)) < len(selected):
+                    section_key = (
+                        "temperature_section"
+                        if conf_key == CONF_TEMP_UPDATE_TARGETS
                         else "humidity_section"
                     )
                     return await self._show_main_form(

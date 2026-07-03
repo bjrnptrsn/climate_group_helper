@@ -289,6 +289,7 @@ ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
 ATTR_MASTER_FALLBACK_ACTIVE = "master_fallback_active"
 ATTR_OOB_MEMBERS = "oob_members"
 ATTR_SETTINGS_JSON = "settings_json"
+ATTR_TARGET_STATE = "target_state"
 # Configured features (for UI — which icons to show at all)
 ATTR_ENABLED_FEATURES = "enabled_features"
 # Source information

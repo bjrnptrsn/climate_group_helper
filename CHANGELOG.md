@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.3 - 2026-07-03
+
+### 🔧 Fixes
+
+*   **Presence Control**: Fixed an issue where an unrelated sensor update could cancel an active return-delay timer.
+
+*   **State restore after restart**: The group's intended target state is now correctly preserved across restarts.
+
 ## 1.4.2 - 2026-06-26
 
 ### ✨ Improvements

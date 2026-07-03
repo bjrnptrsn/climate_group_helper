@@ -356,7 +356,7 @@
       "isolation_all_selected": "Ten minste één lid moet buiten de isolatie blijven.",
       "isolation_entity_overlap": "Elk lid mag slechts in één isolatieregel voorkomen.",
       "isolation_action_preset_required": "Selecteer een vooringestelde modus voor de isolatieactie.",
-      "sensor_loop_protection": "Een Climate Group Helper-sensor kan niet als externe sensor worden gebruikt — dit zou een feedbacklus veroorzaken."
+      "sensor_loop_protection": "Een Climate Group Helper-entiteit kan niet worden gebruikt als externe sensor of kalibratiedoel — dit zou een feedbacklus veroorzaken."
     },
     "abort": {
       "no_changes": "Geen wijzigingen gedetecteerd."

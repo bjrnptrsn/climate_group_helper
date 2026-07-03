@@ -117,15 +117,16 @@ class PresenceHandler:
             return
 
         present = self._get_collective_presence()
-        self._cancel_timer()
 
         if not present and not self._away_active:
+            self._cancel_timer()
             self._away_active = True
             if self._away_delay > 0:
                 self._timer_cancel = async_call_later(self._hass, self._away_delay, self._on_away)
             else:
                 self._hass.async_create_task(self._go_away())
         elif present and self._away_active:
+            self._cancel_timer()
             self._away_active = False
             if self._return_delay > 0:
                 self._timer_cancel = async_call_later(self._hass, self._return_delay, self._on_return)

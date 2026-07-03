@@ -1,6 +1,7 @@
 """Status and analytics aggregation for ClimateGroupHelper extra_state_attributes."""
 from __future__ import annotations
 
+from dataclasses import fields
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import HVACMode
@@ -35,6 +36,7 @@ from .const import (
     ATTR_MASTER_FALLBACK_ACTIVE,
     ATTR_OOB_MEMBERS,
     ATTR_PRESENCE_FALLBACK,
+    ATTR_TARGET_STATE,
     ATTR_TOTAL_MEMBER_COUNT,
     CONF_ISOLATION_RULES,
     CONF_ISOLATION_TRIGGER,
@@ -46,6 +48,7 @@ from .const import (
     SyncMode,
     WindowControlMode,
 )
+from .state import ClimateState
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -62,6 +65,9 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     attrs[ATTR_LAST_ACTIVE_HVAC_MODE] = run_state.last_active_hvac_mode
     attrs[ATTR_CURRENT_HVAC_MODES] = group._current_hvac_modes
     attrs[ATTR_GROUP_OFFSET] = run_state.group_offset
+    attrs[ATTR_TARGET_STATE] = target.to_dict(
+        attributes=[f.name for f in fields(ClimateState)]
+    )
 
     if group.advanced_mode and group.offset_entity_id:
         attrs[ATTR_OFFSET_ENTITY_ID] = group.offset_entity_id
