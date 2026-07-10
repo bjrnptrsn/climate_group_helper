@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Apparaten toevoegen of verwijderen. Verwijderen stopt de besturing door de groep.",
-              "master_entity": "Wijs één lid aan als Master-entiteit (leider). Deze wordt gebruikt voor Master/Lock-synchronisatie en gecentraliseerde doelwaarden.",
+              "master_entity": "Wijs één lid aan als Master-entiteit (leider). Deze wordt gebruikt voor Master/Lock-synchronisatie en gecentraliseerde weergave van doelwaarden.",
               "hvac_mode_strategy": "Strategie voor het berekenen van de groepsstatus vanuit zijn leden (bijv. als één 'heat' en een ander 'off' staat).",
               "feature_strategy": "Bepaalt welke functies (bijv. preset modi, ventilatormodi) beschikbaar zijn in de groep wanneer leden verschillende mogelijkheden hebben.",
               "union_out_of_bounds_action": "Wat te doen met apparaten die de doeltemperatuur niet kunnen bereiken. Alleen van toepassing wanneer de functiestrategie is ingesteld op Unie.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
-              "temp_use_master": "Gebruik het instelpunt van de masterentiteit in plaats van een gemiddelde te berekenen. Valt terug op gemiddelde indien niet beschikbaar.",
+              "temp_use_master": "Toont het instelpunt van de masterentiteit als de doeltemperatuur van de groep in plaats van het lidgemiddelde. Valt terug op gemiddelde indien de masterentiteit niet beschikbaar is. Beïnvloedt alleen hoe de groepsstatus wordt weergegeven — het bestuurt of synchroniseert de leden niet (gebruik daarvoor Synchronisatiemodus: Master/Lock).",
               "temp_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
               "temp_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
               "min_temp_off": "Verzendt de minimumtemperatuur van het apparaat (bijv. 5°C) bij het uitschakelen van de groep. Dit zorgt ervoor dat kranen volledig gesloten zijn voor vorstbescherming.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
-              "humidity_use_master": "Gebruik het instelpunt van de masterentiteit in plaats van een gemiddelde te berekenen. Valt terug op gemiddelde indien niet beschikbaar.",
+              "humidity_use_master": "Toont het instelpunt van de masterentiteit als de doelvochtigheid van de groep in plaats van het lidgemiddelde. Valt terug op gemiddelde indien de masterentiteit niet beschikbaar is. Beïnvloedt alleen hoe de groepsstatus wordt weergegeven — het bestuurt of synchroniseert de leden niet (gebruik daarvoor Synchronisatiemodus: Master/Lock).",
               "humidity_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
               "humidity_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
               "humidity_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de luchtvochtigheid van de groep.",

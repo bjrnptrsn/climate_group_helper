@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Geräte hinzufügen oder entfernen. Das Entfernen stoppt deren Steuerung durch die Gruppe.",
-              "master_entity": "Bestimme ein Mitglied als Master Entity (Leader). Diese wird für Master/Lock-Synchronisierung und zentrale Zielwerte verwendet.",
+              "master_entity": "Bestimme ein Mitglied als Master Entity (Leader). Diese wird für Master/Lock-Synchronisierung und die zentrale Zielwertanzeige verwendet.",
               "hvac_mode_strategy": "Strategie zur Berechnung des Gruppenstatus aus den Mitgliedern (z.B. wenn eines 'heat' und ein anderes 'off' ist).",
               "feature_strategy": "Bestimmt, welche Funktionen (z.B. Preset-Modi, Lüfter-Modi) in der Gruppe verfügbar sind, wenn Mitglieder unterschiedliche Fähigkeiten haben.",
               "union_out_of_bounds_action": "Was mit Geräten geschieht, die die Zieltemperatur nicht erreichen können. Gilt nur wenn die Feature-Strategie auf Union gesetzt ist.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
-              "temp_use_master": "Den Sollwert des Master-Geräts verwenden statt den Durchschnitt zu berechnen. Fällt auf Mittelung zurück, falls nicht verfügbar.",
+              "temp_use_master": "Den Sollwert des Master-Geräts als Zieltemperatur der Gruppe anzeigen, statt den Durchschnitt zu berechnen. Fällt auf Mittelung zurück, falls das Master-Gerät nicht verfügbar ist. Betrifft nur die Anzeige des Gruppenstatus — steuert oder synchronisiert die Mitglieder nicht (verwende dafür Sync-Modus: Master/Lock).",
               "temp_target_round": "Gilt nur für Werte, die an Geräte gesendet werden, nicht für aktuelle/angezeigte Werte.",
               "temp_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
               "min_temp_off": "Sendet die Minimaltemperatur des Geräts (z.B. 5°C) beim Ausschalten der Gruppe. Dies stellt sicher, dass die Ventile zum Frostschutz vollständig geschlossen sind.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Wie die Gruppe den Zielwert berechnet, der an ihre Mitglieder gesendet wird.",
-              "humidity_use_master": "Den Sollwert des Master-Geräts verwenden statt den Durchschnitt zu berechnen. Fällt auf Mittelung zurück, falls nicht verfügbar.",
+              "humidity_use_master": "Den Sollwert des Master-Geräts als Zielfeuchtigkeit der Gruppe anzeigen, statt den Durchschnitt zu berechnen. Fällt auf Mittelung zurück, falls das Master-Gerät nicht verfügbar ist. Betrifft nur die Anzeige des Gruppenstatus — steuert oder synchronisiert die Mitglieder nicht (verwende dafür Sync-Modus: Master/Lock).",
               "humidity_target_round": "Gilt nur für Werte, die an Geräte gesendet werden, nicht für aktuelle/angezeigte Werte.",
               "humidity_current_avg": "Wie die Gruppe Sensorwerte ihrer Mitglieder zusammenfasst.",
               "humidity_sensors": "Verwende externe Sensoren anstelle der Mitgliederwerte. Diese werden zur einzigen Wahrheitsquelle für die Feuchtigkeit der Gruppe.",

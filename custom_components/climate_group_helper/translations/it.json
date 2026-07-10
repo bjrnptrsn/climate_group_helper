@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Aggiungi o rimuovi dispositivi. La rimozione dei dispositivi interrompe il loro controllo da parte del gruppo.",
-              "master_entity": "Designa un membro come Entità Master (Leader). Viene utilizzata per la sincronizzazione Master/Lock e i valori target centralizzati.",
+              "master_entity": "Designa un membro come Entità Master (Leader). Viene utilizzata per la sincronizzazione Master/Lock e la visualizzazione centralizzata dei target.",
               "hvac_mode_strategy": "Strategia per calcolare lo stato del gruppo dai suoi membri (es. se uno sta 'heat' e un altro è 'off').",
               "feature_strategy": "Determina quali funzionalità (es. modalità preimpostate, modalità ventilatore) sono disponibili nel gruppo quando i membri hanno capacità diverse.",
               "union_out_of_bounds_action": "Cosa fare con i dispositivi che non possono raggiungere la temperatura target. Si applica solo quando la strategia delle funzionalità è impostata su Unione.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Come il gruppo calcola il setpoint da inviare ai suoi membri.",
-              "temp_use_master": "Usa il setpoint dell'entità master invece di calcolare una media. Torna alla media se non disponibile.",
+              "temp_use_master": "Visualizza il setpoint dell'entità master come temperatura target del gruppo invece della media dei membri. Torna alla media se l'entità master non è disponibile. Influisce solo sulla visualizzazione dello stato del gruppo — non controlla né sincronizza i membri (usa Modalità di sincronizzazione: Master/Lock a tale scopo).",
               "temp_target_round": "Si applica solo ai valori inviati ai dispositivi, non ai valori attuali/visualizzati.",
               "temp_current_avg": "Come il gruppo riassume le letture dei sensori dai suoi membri.",
               "min_temp_off": "Invia la temperatura minima del dispositivo (es. 5°C) allo spegnimento del gruppo. Ciò garantitce che le valvole siano completamente chiuse per la protezione dal gelo.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Come il gruppo calcola il setpoint da inviare ai suoi membri.",
-              "humidity_use_master": "Usa il setpoint dell'entità master invece di calcolare una media. Torna alla media se non disponibile.",
+              "humidity_use_master": "Visualizza il setpoint dell'entità master come umidità target del gruppo invece della media dei membri. Torna alla media se l'entità master non è disponibile. Influisce solo sulla visualizzazione dello stato del gruppo — non controlla né sincronizza i membri (usa Modalità di sincronizzazione: Master/Lock a tale scopo).",
               "humidity_target_round": "Si applica solo ai valori inviati ai dispositivi, non ai valori attuali/visualizzati.",
               "humidity_current_avg": "Come il gruppo riassume le letture dei sensori dai suoi membri.",
               "humidity_sensors": "Usa sensori esterni invece delle letture dei membri. Questi diventano l'unica fonte di verità per l'umidità del gruppo.",

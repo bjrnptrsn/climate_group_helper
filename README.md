@@ -36,6 +36,9 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 > [!TIP]
 > **Not just for groups!** Even if you have only **one thermostat**, you can use this helper to add premium features like Window Control and Sensor Calibration to basic hardware.
 
+> [!TIP]
+> **Works with other integrations!** CGH works with any `climate.*` entity — including those from [Better Thermostat](https://github.com/KartoffelToby/better_thermostat) or [Versatile Thermostat](https://github.com/jmcollin78/versatile_thermostat). Let them handle per-device regulation (MPC, PID, TPI), while CGH orchestrates the multi-room logic. See [EXAMPLES.md](EXAMPLES.md) for setup examples.
+
 ## Quick Start
 
 | Step | Action |
@@ -70,6 +73,7 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
   - [Member Template](#member-template)
+- [Examples](EXAMPLES.md)
 - [Management Entities (Switch & Slider)](#management-entities-switch--slider)
   - [Main Switch](#main-switch)
   - [Group Offset](#group-offset)
@@ -110,7 +114,7 @@ Unlock the full potential of your climate system. These specialized features are
 
 Designate a single climate member as the **Reference Point** or **Leader** for the group. This is the first thing you configure in the setup wizard — and once set, it unlocks additional options in every subsequent step (Sync Mode, Window Control, and Temperature/Humidity averaging).
 
-*   **Centralized Target State:** Use the Master's target settings (temperature, humidity) as the group's goal, rather than calculated averages across all members.
+*   **Centralized Target Display:** Show the Master's target settings (temperature, humidity) as the group's displayed target, rather than calculated averages across all members. This affects only how the group state is displayed — it does not control or synchronize members (use **Sync Mode: Master/Lock** for that).
 *   **Hierarchical Sync (Master/Lock):** Enables a "Follow the Leader" sync mode. Changes on the Master are mirrored to all members; manual changes on other members are automatically reverted.
 *   **Intelligent Window Control:** If enabled, only manual adjustments on the Master update the target state while windows are open. Changes on other devices remain ignored.
 
@@ -178,7 +182,7 @@ Manage climate settings based on room presence. Select one or more triggers (bin
 *   **Away Temperature:** Members are set to a fixed absolute temperature.
 *   **Away Preset:** A preset mode is sent to members that support it.
 
-When presence returns, the group restores all members to the current target state. Window Control and the Main Switch always take priority over Presence Control.
+When presence returns, the group restores all members to the current target state. Priority order: the **Main Switch** always wins over **Window Control**, which in turn always wins over **Presence Control**.
 
 ### Schedule Automation
 
@@ -249,7 +253,8 @@ You can omit attributes you don't need — for example, use only `hvac_mode: "of
 | `group_offset` | Float −5.0 … 5.0 | `group_offset: 1.5` | Temporarily sets the **Group Offset** for the slot duration. If you move the offset slider manually while this slot is active, your value takes over and the slot-end reset is skipped. |
 | `sync_mode` | `disabled`, `lock`, `mirror`, `master_lock` | `sync_mode: disabled` | Temporarily overrides the configured **Sync Mode** for the slot duration. Useful for slots where you want members to be left alone (e.g. a "sleep" slot where manual adjustments are allowed). |
 | `sync_attributes` | Any subset of: `hvac_mode`, `temperature`, `target_temp_low`, `target_temp_high`, `humidity`, `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode` | `sync_attributes: [hvac_mode]` | Temporarily overrides which **Sync Attributes** are synchronized for the slot duration. Useful for slots where you want to sync only the mode but let members manage their own temperature. Restores to the configured Sync Attributes setting when the slot ends. |
-| `turn_off` | `true` / `false` | `turn_off: true` | Explicit two-state trigger: `true` turns all members off (equivalent to toggling the **Main Switch** off). `false` restores all members (equivalent to toggling the **Main Switch** back on). A slot without `turn_off` has no effect on the current state. |
+| `turn_off` | `true` / `false` | `turn_off: true` | Explicit two-state trigger: `true` turns all members off (equivalent to toggling the **Main Switch** off). `false` restores all members (equivalent to toggling the **Main Switch** back on). A slot without `turn_off` has no effect on the current state. The Main Switch and this meta-key are equal, interchangeable controls for the same block — whichever acts last wins, so you can always turn the Main Switch back on in the UI, even while a `turn_off: true` slot is active, and a later `turn_off: false` slot will likewise release a block you set manually via the Main Switch. |
+| `presence` | `away` | `presence: away` | Temporarily activates the **Presence Override** (away mode) for the slot duration. If presence sensors are configured, the block is only restored at the slot end if no physical absence is detected (slot-away wins during its slot; sensor-away takes over at the slot end if occupants are still absent). Boost commands are rejected during slot-away, and Window Control actions take precedence. |
 
 **Example — night slot that turns everything off:**
 ```yaml
@@ -321,7 +326,7 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 
 | Option | Description |
 |--------|-------------|
-| **Master Entity** | Designate one member as the group's Leader. Enables Master/Lock sync mode, Master-aware window tracking, and centralized temperature/humidity target. |
+| **Master Entity** | Designate one member as the group's Leader. Enables Master/Lock sync mode, Master-aware window tracking, and centralized temperature/humidity target display. |
 | **HVAC Mode Strategy** | How the group reports its combined mode. See table below. |
 | **Feature Strategy** | Which features the group exposes. See table below. |
 | **Out-of-Bounds Action** | *(Union only)* What to do when a target temperature is outside a member's range. |
@@ -333,7 +338,7 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 |----------|----------|
 | **Normal** | Group shows most common mode. Only `off` when all are off. |
 | **Off Priority** | Group shows `off` if *any* device is off. |
-| **Auto** | Smart switching between Normal and Off Priority. |
+| **Auto** | Based on the group's target mode: acts like **Normal** while the target is `off` (group only shows `off` once every member is off), and like **Off Priority** while the target is an active mode (group only shows that mode once every member has left `off`). Useful for external automations that need the group's reported mode to confirm a command has fully landed on every member before considering it done. |
 
 ### Feature Strategy
 
@@ -361,7 +366,7 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | Option | Description |
 |--------|-------------|
 | **External Sensors** | Select one or more sensors to override member readings. |
-| **Use Master Temperature/Humidity** | *(Requires Master Entity)* Use the Master's target value instead of averaging across all members. |
+| **Use Master Temperature/Humidity** | *(Requires Master Entity)* Display the Master's target value as the group's target instead of the member average. Falls back to averaging if the master is unavailable. Display-only — this option does not control or synchronize members (use **Sync Mode: Master/Lock** for that). |
 | **Averaging Method** | Mean, Median, Min, or Max—separately for Current and Target values. |
 | **Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
 | **Calibration Targets** | Write calculated temperature to number entities. Supports **Absolute** (Standard), **Offset** (Delta), and **Scaled** (x100) modes. |
@@ -476,7 +481,7 @@ Temporarily set the group to a target temperature for a fixed duration. When the
 
 *\*Either `temperature` or `temperature_offset` must be provided.*
 
-Manual changes (direct group commands or Mirror adoptions) abort the boost immediately. Lock enforcement does not. Boost is ignored while a group block (like an open window) is active.
+Manual changes (direct group commands or Mirror adoptions) abort the boost immediately. Lock enforcement does not. Boost is ignored while a group block (like an open window) is active. A boost ranks **above** the schedule and the bypass layer: schedule slot changes and bypass activations run in the background without touching the boosted temperature, and everything is re-applied once the boost ends. If the schedule turns the group off during a boost, the boost keeps the members running in their last active mode.
 
 **Example (absolute):**
 ```yaml
@@ -521,7 +526,7 @@ data:
 
 ### `climate_group_helper.set_schedule_bypass_entity`
 
-Dynamically change the active bypass schedule entity for a group at runtime. The bypass schedule acts as a priority layer that overrides the base schedule. When a bypass slot is active, the group's state is snapshotted on bypass start and restored on bypass end.
+Dynamically change the active bypass schedule entity for a group at runtime. The bypass schedule acts as a priority layer that overrides the base schedule. While a bypass is active, the group keeps tracking the base schedule in the background; when the bypass ends, the currently valid base state is restored (attributes only the bypass changed fall back to their pre-bypass values).
 
 **Service Fields:**
 

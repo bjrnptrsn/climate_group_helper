@@ -14,6 +14,7 @@ Supported meta-keys:
         sync_mode      : SyncMode  — temporarily shadows the configured sync mode
         group_offset   : float     — temporarily overrides the group temperature offset
         sync_attributes: list[str] — temporarily shadows the synchronized attributes
+        presence       : "away"    — activates the presence override for the slot duration
 
     One-Shot triggers (applied once per slot activation, not stored in config_overrides):
         turn_off       : bool      — activates/deactivates the switch override (OFF-all block)
@@ -30,7 +31,9 @@ from .const import (
     META_KEY_SYNC_ATTRS,
     META_KEY_SYNC_MODE,
     META_KEY_TURN_OFF,
+    META_KEY_PRESENCE,
     META_STATE_KEYS,
+    PresenceMode,
 )
 
 if TYPE_CHECKING:
@@ -55,6 +58,7 @@ _CLEANUP_ORDER: list[str] = [
     META_KEY_SYNC_ATTRS,
     META_KEY_SYNC_MODE,
     META_KEY_GROUP_OFFSET,
+    META_KEY_PRESENCE,
 ]
 
 
@@ -106,20 +110,45 @@ class SlotMetaProcessor:
         self._group.run_state = replace(self._group.run_state, active_slot_title=slot_message)
 
         # turn_off is a one-shot trigger, not a stateful key — never enters _active_keys.
-        # true → activate, anything else → restore, absent → no-op.
+        # true → activate, false → restore, absent → no-op. Equal, interchangeable
+        # with the UI switch (no ownership tracking): an already-active block is not
+        # re-activated (activate() sends OFF unconditionally — re-triggering it on
+        # every slot re-process would spam members with redundant OFF commands).
         if META_KEY_TURN_OFF in meta_candidates:
             turn_off_value = meta_candidates.pop(META_KEY_TURN_OFF)
             if turn_off_value is True:
-                _LOGGER.debug("[%s] Meta-Key: turn_off=true → switch block ON", self._group.entity_id)
-                await self._group.switch_override_manager.activate()
+                if "switch" not in self._group.run_state.blocking_sources:
+                    _LOGGER.debug("[%s] Meta-Key: turn_off=true → switch block ON", self._group.entity_id)
+                    await self._group.switch_override_manager.activate()
             elif turn_off_value is False:
-                _LOGGER.debug("[%s] Meta-Key: turn_off=false → switch block OFF", self._group.entity_id)
-                await self._group.switch_override_manager.restore()
+                if "switch" in self._group.run_state.blocking_sources:
+                    _LOGGER.debug("[%s] Meta-Key: turn_off=false → switch block OFF", self._group.entity_id)
+                    await self._group.switch_override_manager.restore()
 
         # Identify valid meta-keys; warn on unknown ones (typo guard)
         new_meta_keys: set[str] = set()
         for key, value in meta_candidates.items():
             if key in META_STATE_KEYS:
+                # Value guard: an invalid value must not be registered at all —
+                # it would show up in config_overrides and trigger a spurious
+                # cleanup counter-action at the slot end.
+                if key == META_KEY_PRESENCE and value != "away":
+                    _LOGGER.warning(
+                        "[%s] Invalid value for meta-key 'presence': %s (expected 'away') — ignored",
+                        self._group.entity_id, value,
+                    )
+                    continue
+                # sync_attributes reaches FilterState.from_keys() at enforce time —
+                # a non-list (e.g. int) would raise TypeError inside resync().
+                if key == META_KEY_SYNC_ATTRS and not (
+                    isinstance(value, (list, tuple))
+                    and all(isinstance(v, str) for v in value)
+                ):
+                    _LOGGER.warning(
+                        "[%s] Invalid value for meta-key 'sync_attributes': %s (expected a list of attribute names) — ignored",
+                        self._group.entity_id, value,
+                    )
+                    continue
                 new_meta_keys.add(key)
             elif key not in _HA_SYSTEM_ATTRS:
                 _LOGGER.warning(
@@ -178,6 +207,15 @@ class SlotMetaProcessor:
             # fall back to the config baseline when the key is absent.
             _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
 
+        elif key == META_KEY_PRESENCE:
+            # Value is validated in process() — only "away" reaches this point.
+            # Idempotency guard: activate() would re-send the away payload on every
+            # slot re-process (resync, bypass events, consecutive slots) — deviating
+            # members are handled by the enforce_override() path instead.
+            if "presence" not in self._group.run_state.blocking_sources:
+                _LOGGER.debug("[%s] Meta-Key apply: presence=away → presence block ON", self._group.entity_id)
+                await self._group.presence_override_manager.activate()
+
     async def _cleanup(self, keys: set[str]) -> None:
         """Execute counter-actions for meta-keys that have left the current slot.
 
@@ -205,5 +243,17 @@ class SlotMetaProcessor:
             elif key in (META_KEY_SYNC_MODE, META_KEY_SYNC_ATTRS):
                 # Pure shadowing — clear_config_overrides (below) is the entire cleanup.
                 _LOGGER.debug("[%s] Meta-Key cleanup: %s absent → config baseline restored", self._group.entity_id, key)
+
+            elif key == META_KEY_PRESENCE:
+                presence_handler = self._group.presence_handler
+                if (
+                    presence_handler.mode == PresenceMode.DISABLED
+                    or not presence_handler.sensors
+                    or presence_handler.get_collective_presence()
+                ):
+                    _LOGGER.debug("[%s] Meta-Key cleanup: presence absent → triggering restore", self._group.entity_id)
+                    await self._group.presence_override_manager.restore()
+                else:
+                    _LOGGER.debug("[%s] Meta-Key cleanup: presence absent but sensors indicate away → keeping presence block", self._group.entity_id)
 
         self._group.run_state = self._group.run_state.clear_config_overrides(keys)

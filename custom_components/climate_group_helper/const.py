@@ -330,12 +330,14 @@ META_KEY_TURN_OFF = "turn_off"  # no CONF_ mapping
 META_KEY_SYNC_MODE = CONF_SYNC_MODE  # == "sync_mode"
 META_KEY_GROUP_OFFSET = ATTR_GROUP_OFFSET  # RunState field, no CONF_ mapping
 META_KEY_SYNC_ATTRS = CONF_SYNC_ATTRS  # == "sync_attributes"
+META_KEY_PRESENCE = "presence"
 
 META_STATE_KEYS: frozenset[str] = frozenset({
     META_KEY_TURN_OFF,
     META_KEY_SYNC_MODE,
     META_KEY_GROUP_OFFSET,
     META_KEY_SYNC_ATTRS,
+    META_KEY_PRESENCE,
 })
 
 # Attribute to service call mapping

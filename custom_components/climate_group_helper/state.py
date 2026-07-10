@@ -40,10 +40,11 @@ class RunState:
     Updates are performed via dataclasses.replace(), consistent with TargetState.
     """
 
-    active_override: str | None = None
     active_override_end: datetime | None = None
+    active_override: str | None = None
     active_slot_title: str | None = None
     blocking_sources: frozenset[str] = field(default_factory=frozenset)
+    boost_temperature: float | None = None
     config_overrides: MappingProxyType[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     group_offset: float = 0.0
     isolated_members: frozenset[str] = field(default_factory=frozenset)
@@ -451,6 +452,19 @@ class ScheduleStateManager(BaseStateManager):
 
     def __init__(self, group: ClimateGroupHelper) -> None:
         """Initialize the schedule state manager."""
+        super().__init__(group)
+
+
+class BoostStateManager(BaseStateManager):
+    """State Manager for Boost updates.
+
+    Like Schedule, Boost updates (restores) are always allowed to bypass blocking filters.
+    """
+
+    SOURCE = "boost"
+
+    def __init__(self, group: ClimateGroupHelper) -> None:
+        """Initialize the boost state manager."""
         super().__init__(group)
 
 

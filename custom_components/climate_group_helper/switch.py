@@ -60,7 +60,6 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         self._attr_icon = "mdi:power"
         self._attr_translation_key = "main_switch"
         self._attr_unique_id = f"{group.unique_id}_control_switch"
-        self._is_on = True  # Default: switch is ON
 
     @property
     def override_manager(self) -> SwitchOverrideManager:
@@ -72,18 +71,27 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         return self._group.device_info
 
     async def async_added_to_hass(self) -> None:
-        """Restore state from previous run."""
+        """Restore state from previous run and register the state-push callback."""
         await super().async_added_to_hass()
+
+        # SwitchOverrideManager pushes block changes (also external ones, e.g.
+        # schedule meta-key turn_off) so is_on stays in sync in the HA state machine.
+        self._group.switch_state_callback = self.async_write_ha_state
+
         if (last := await self.async_get_last_state()) is not None:
-            self._is_on = last.state == "on"
-            if not self._is_on:
+            if last.state != "on":
                 _LOGGER.debug("[%s] Restoring control switch OFF state", self._group.entity_id)
                 await self.override_manager.activate()
 
+    async def async_will_remove_from_hass(self) -> None:
+        """Deregister the state-push callback."""
+        await super().async_will_remove_from_hass()
+        self._group.switch_state_callback = None
+
     @property
     def is_on(self) -> bool:
-        """Return true if the switch is on."""
-        return self._is_on
+        """Return true if the main switch is on (switch block not active)."""
+        return "switch" not in self._group.run_state.blocking_sources
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn switch ON → restore group to target_state."""

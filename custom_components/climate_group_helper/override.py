@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import fields, replace
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import HVACMode
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later
 
@@ -20,7 +21,7 @@ from .const import (
     WindowControlAction,
 )
 from .schedule import ScheduleCaller
-from .state import ClimateState, TargetState
+from .state import BoostStateManager, TargetState
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -109,7 +110,7 @@ class BaseOverrideManager:
         """
         if duration <= 0:
             return
-        self._cancel_timer()
+        self._cancel_timer(clear_state=False)
 
         self._group.run_state = self._group.run_state.set_override(self.OVERRIDE_NAME, duration)
         _LOGGER.debug("[%s] Setting override: '%s' for %s seconds", self._group.entity_id, self.OVERRIDE_NAME, duration)
@@ -141,13 +142,27 @@ class BaseOverrideManager:
             blocking_sources=self._group.run_state.blocking_sources - {self.OVERRIDE_NAME},
         )
 
+    def _any_member_not_off(self) -> bool:
+        """Return True if any reachable, non-isolated member has an HVAC mode other than OFF."""
+        return any(
+            (st := self._group.read_member_state(eid))
+            and st.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            and st.state != HVACMode.OFF
+            for eid in self._group.climate_entity_ids
+            if eid not in self._group.run_state.isolated_members
+        )
+
     def _save_snapshot(self) -> None:
         """Save current target_state as target_state snapshot (only if none exists yet).
 
-        Only saved on the first activation so consecutive overrides preserve the
-        original target_state state.
+        Only gated on snapshot existence so consecutive overrides preserve the
+        original reference state. Deliberately NOT gated on active_override: a boost
+        started while a schedule_override timer runs must still capture the current
+        target_state — it is a valid pre-boost reference, and skipping it would leave
+        the shadow to be created later from a target_state that already carries the
+        boost temperature.
         """
-        if self._group.run_state.active_override is None and self._group.run_state.target_state_snapshot is None:
+        if self._group.run_state.target_state_snapshot is None:
             self._group.run_state = replace(
                 self._group.run_state,
                 target_state_snapshot=self._group.shared_target_state,
@@ -162,9 +177,10 @@ class BaseOverrideManager:
         """Return the saved target_state snapshot, or None."""
         return self._group.run_state.target_state_snapshot
 
-    def _cancel_timer(self) -> None:
-        """Cancel the active timer and clear override name/end via clear_override().
+    def _cancel_timer(self, clear_state: bool = True) -> None:
+        """Cancel the active timer and optionally clear override name/end via clear_override().
 
+        If clear_state is True, active_override and active_override_end are cleared.
         target_state_snapshot is preserved — consecutive boosts keep the original
         snapshot. Full teardown (including snapshot) is done by the caller via
         clear_snapshot().
@@ -172,8 +188,38 @@ class BaseOverrideManager:
         if self._timer:
             self._timer()
             self._timer = None
-            self._group.run_state = self._group.run_state.clear_override()
+            if clear_state:
+                self._group.run_state = self._group.run_state.clear_override()
             _LOGGER.debug("[%s] %s timer cancelled", self._group.entity_id, self.OVERRIDE_NAME)
+
+    def _inject_wake_mode(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Add the target hvac_mode to a payload that lacks one.
+
+        Used only on the cascade path (_resolve_remaining_blocks): the released
+        higher-priority block may have left members OFF, and a bare setpoint or
+        preset payload won't wake them. No-op when the payload already carries
+        an hvac_mode or the target itself is OFF.
+        """
+        if "hvac_mode" not in payload:
+            target_hvac = self._group.shared_target_state.hvac_mode
+            if target_hvac != HVACMode.OFF:
+                return {**payload, "hvac_mode": target_hvac}
+        return payload
+
+    async def _resolve_remaining_blocks(self) -> None:
+        """Re-assert the remaining active block with the highest priority.
+
+        wake_members: the released block may have left members OFF (e.g.
+        switch/window action OFF) — a bare setpoint/preset payload won't wake
+        them, so the re-assert injects the target hvac_mode on top.
+        """
+        sources = self._group.run_state.blocking_sources
+        if "switch" in sources:
+            await self._group.switch_override_manager.enforce_override()
+        elif "window" in sources:
+            await self._group.window_override_manager.enforce_override(wake_members=True)
+        elif "presence" in sources:
+            await self._group.presence_override_manager.enforce_override(wake_members=True)
 
 
 class BoostOverrideManager(BaseOverrideManager):
@@ -181,21 +227,35 @@ class BoostOverrideManager(BaseOverrideManager):
 
     OVERRIDE_NAME = "boost"
 
-    async def activate(self, temperature: float, duration: float) -> None:
+    @property
+    def state_manager(self) -> BoostStateManager:
+        """Return the boost state manager."""
+        return self._group.boost_state_manager
+
+    async def activate(self, temperature: float, duration: float) -> bool:
         """Start boost override: snapshot, temperature, timer.
 
         Rejected if any blocking source is active. Snapshot is saved only on
         the first boost so consecutive boosts preserve the original state.
+        Returns False if rejected, True if the boost was started.
         """
         if self._group.run_state.blocking_sources:
-            _LOGGER.debug(
+            _LOGGER.warning(
                 "[%s] Boost rejected: block active (%s)",
                 self._group.entity_id, self._group.run_state.blocking_sources,
             )
-            return
+            return False
 
         self._save_snapshot()
-        self._group.climate_state_manager.update(temperature=temperature)
+        self._group.run_state = replace(self._group.run_state, boost_temperature=temperature)
+        self.state_manager.update(temperature=temperature)
+
+        # Boost implies active operation: never leave members OFF with only a
+        # set_temperature pending — force the last active HVAC mode (fallback: heat).
+        if self._group.shared_target_state.hvac_mode == HVACMode.OFF:
+            fallback_mode = self._group.run_state.last_active_hvac_mode or HVACMode.HEAT
+            self.state_manager.update(hvac_mode=fallback_mode)
+
         self._start_timer(duration, self._on_expired)
         await self.call_handler.call_immediate()
 
@@ -203,39 +263,91 @@ class BoostOverrideManager(BaseOverrideManager):
             "[%s] Boost started: temperature=%s, duration=%.0fs",
             self._group.entity_id, temperature, duration,
         )
+        return True
+
+    def _cancel_timer(self, clear_state: bool = True) -> None:
+        """Cancel the active timer and clear boost temperature."""
+        super()._cancel_timer(clear_state=clear_state)
+        if clear_state:
+            self._group.run_state = replace(self._group.run_state, boost_temperature=None)
+
+    def _restore_snapshot_to_target(self) -> None:
+        """Restore snapshot values back to target state and clear snapshot from run_state."""
+        snapshot = self._snapshot
+        if snapshot:
+            self._group.run_state = self._group.run_state.clear_override().clear_snapshot()
+            restore_kwargs = self._group.schedule_handler._snapshot_to_kwargs(snapshot)
+            self.state_manager.update(**restore_kwargs)
 
     def abort(self) -> None:
-        """Abort active boost without restore (manual override during boost)."""
+        """Abort active boost.
+
+        Restores the pre-boost snapshot ONLY if the boost temperature was never
+        overridden by a manual change — checked via temperature ==
+        boost_temperature. This subsumes a last_source check: as long as the
+        setpoint still carries the boost value, unrelated attribute changes
+        (e.g. fan_mode) or a basis slot re-assert may have moved last_source
+        away without touching the temperature. The comparison is exact-safe:
+        both sides carry the same verbatim-written value (no float drift).
+
+        Deliberate consequence: manually setting EXACTLY the boost temperature
+        during a boost also restores the pre-boost snapshot. The visible jump
+        back doubles as UI confirmation that the boost was aborted.
+        """
         if self._group.run_state.active_override == "boost":
+            boost_temperature = self._group.run_state.boost_temperature
             self._cancel_timer()
-            self._restore_snapshot()
+            if self._group.shared_target_state.temperature == boost_temperature:
+                self._restore_snapshot_to_target()
+            else:
+                self._restore_snapshot()
             _LOGGER.debug("[%s] Boost aborted", self._group.entity_id)
 
     async def _on_expired(self) -> None:
-        """Boost timer expired — restore snapshot and apply schedule if active."""
+        """Boost timer expired — restore shadow or delegate to schedule listener."""
         if self._group.run_state.active_override != "boost":
             _LOGGER.debug("[%s] Stale _on_expired skipped (new boost started before task ran)", self._group.entity_id)
             return
-        snapshot = self._snapshot
-        self._restore_snapshot()
-        _LOGGER.debug("[%s] Boost expired, active_override cleared", self._group.entity_id)
+
+        # Clear boost from run_state
+        self._group.run_state = self._group.run_state.clear_override()
+        self._group.run_state = replace(self._group.run_state, boost_temperature=None)
+        _LOGGER.debug("[%s] Boost expired, active_override and boost_temperature cleared", self._group.entity_id)
 
         schedule = self._group.schedule_handler
+        schedule_active = False
         if schedule.schedule_entity_id:
+            st = self._hass.states.get(schedule.schedule_entity_id)
+            if st and st.state == "on" and schedule.parse_entity_state(st):
+                schedule_active = True
+
+        bypass_active = False
+        if schedule.bypass_entity_id:
+            st = self._hass.states.get(schedule.bypass_entity_id)
+            if st and st.state == "on":
+                bypass_active = True
+
+        if schedule_active:
             await schedule.schedule_listener(caller=ScheduleCaller.RESYNC)
-        elif snapshot:
-            restore_kwargs = {
-                f.name: getattr(snapshot, f.name)
-                for f in fields(ClimateState)
-                if getattr(snapshot, f.name, None) is not None
-            }
-            schedule.state_manager.update(**restore_kwargs)
-            await self.call_handler.call_immediate()
-            schedule._start_timer("resync")
+        elif bypass_active:
+            # Bypass-only (no basis entity): schedule_listener would early-return
+            # on its `if not self._schedule_entity` guard and never re-assert the
+            # bypass — drive the slot processing directly instead.
+            await schedule.on_slot_change(ScheduleCaller.RESYNC)
+        else:
+            async with schedule.slot_transition_lock:
+                await schedule.restore_shadow()
 
 
 class SwitchOverrideManager(BaseOverrideManager):
-    """Manages the switch blocking source."""
+    """Manages the switch blocking source (main switch).
+
+    The main switch is the master: activating it ALWAYS sends OFF to all members
+    (no state guard — a stale or unreported member state must never suppress the
+    OFF command). The UI switch and the schedule meta-key `turn_off` are equal,
+    interchangeable triggers for the same block — either one can activate or
+    release it, whichever acts last wins.
+    """
 
     OVERRIDE_NAME = "switch"
 
@@ -247,19 +359,38 @@ class SwitchOverrideManager(BaseOverrideManager):
     def enforce_call_handler(self) -> SwitchEnforceCallHandler:
         return self._group.switch_enforce_call_handler
 
+    def _notify_switch_entity(self) -> None:
+        """Write the new block state to the ControlSwitch entity.
+
+        The switch's is_on is derived from blocking_sources — without this push,
+        external activations (schedule meta-key turn_off, restart restore) would
+        leave the switch's HA state stale until its next unrelated state write.
+        """
+        if self._group.switch_state_callback:
+            self._group.switch_state_callback()
+
     async def activate(self) -> None:
-        """Add 'switch' to blocking_sources, abort boost, push members OFF."""
+        """Add 'switch' to blocking_sources, abort boost, push members OFF.
+
+        OFF is sent unconditionally — regardless of what members currently
+        report — so the master switch is guaranteed to reach every device.
+        """
         self._group.boost_override_manager.abort()
         self._block()
-        if self._group.hvac_mode != HVACMode.OFF:
-            await self.call_handler.call_immediate({"hvac_mode": HVACMode.OFF})
+        self._notify_switch_entity()
+        await self.call_handler.call_immediate({"hvac_mode": HVACMode.OFF})
 
     async def restore(self) -> None:
         """Remove 'switch' from blocking_sources; restore members if no other block."""
         self._unblock()
+        self._notify_switch_entity()
+        # Cancel our own pending debounced enforce call — it carries a stale payload
+        # that must not land after the restore or the cascade re-assert.
+        await self.enforce_call_handler.async_cancel_all()
         if not self._group.run_state.blocking_sources:
-            await self.enforce_call_handler.async_cancel_all()
             await self.call_handler.call_immediate()
+        else:
+            await self._resolve_remaining_blocks()
 
     async def enforce_override(self) -> None:
         """Push OFF to deviating members when switch block is active.
@@ -300,27 +431,36 @@ class WindowOverrideManager(BaseOverrideManager):
         """Add 'window' to blocking_sources and push members.
 
         Sends OFF or the configured window temperature, depending on window_action.
-        Skipped if already OFF and action is OFF (no-op guard).
+        Skipped if already OFF and action is OFF (no-op guard based on member states).
         """
         self._block()
         payload = self._active_data()
-        if payload.get("hvac_mode") == HVACMode.OFF and self._group.hvac_mode == HVACMode.OFF:
+        if payload.get("hvac_mode") == HVACMode.OFF and not self._any_member_not_off():
             return
         await self.call_handler.call_immediate(payload)
 
     async def restore(self) -> None:
         """Remove 'window' from blocking_sources; restore members if no other block."""
         self._unblock()
+        # Cancel our own pending debounced enforce call — it carries a stale payload
+        # that must not land after the restore or the cascade re-assert.
+        await self.call_handler.async_cancel_all()
         if not self._group.run_state.blocking_sources:
-            await self.call_handler.async_cancel_all()
             await self.call_handler.call_immediate()
+        else:
+            await self._resolve_remaining_blocks()
 
-    async def enforce_override(self) -> None:
+    async def enforce_override(self, wake_members: bool = False) -> None:
         """Push the active window override state to deviating members.
 
         Only runs when 'window' is in blocking_sources — SwitchOverrideManager
         handles its own enforcement (always OFF via SwitchCallHandler).
         Uses WindowControlCallHandler (bypasses blocking_sources, respects isolated_members).
+
+        wake_members (cascade path only): with window action TEMPERATURE the
+        payload carries no hvac_mode — members left OFF by a released switch
+        block would ignore the bare setpoint, so the target hvac_mode is
+        injected. Regular deviation enforcement keeps the payload untouched.
         """
         if "window" not in self._group.run_state.blocking_sources:
             return
@@ -328,7 +468,12 @@ class WindowOverrideManager(BaseOverrideManager):
         if "switch" in self._group.run_state.blocking_sources:
             return
         _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
-        await self.call_handler.call_debounced(self._active_data())
+
+        payload = self._active_data()
+        if wake_members:
+            payload = self._inject_wake_mode(payload)
+
+        await self.call_handler.call_debounced(payload)
 
 
 class PresenceOverrideManager(BaseOverrideManager):
@@ -390,16 +535,32 @@ class PresenceOverrideManager(BaseOverrideManager):
 
     async def restore(self) -> None:
         self._unblock()
+        # Cancel our own pending debounced enforce call — it carries a stale payload
+        # that must not land after the restore or the cascade re-assert.
+        await self.call_handler.async_cancel_all()
         if not self._group.run_state.blocking_sources:
-            # Cancel any pending debounced enforce call before sending the restore.
-            await self.call_handler.async_cancel_all()
             await self.call_handler.call_immediate()
+        else:
+            await self._resolve_remaining_blocks()
 
-    async def enforce_override(self) -> None:
+    async def enforce_override(self, wake_members: bool = False) -> None:
+        """Push the away payload to deviating members while 'presence' is active.
+
+        wake_members is set only by _resolve_remaining_blocks(): the released
+        higher-priority block may have left members OFF, and a bare setpoint or
+        preset payload won't wake them — re-assert the target hvac_mode on top.
+        Regular deviation enforcement keeps the payload untouched so a member
+        turned OFF by hand during absence stays OFF.
+        """
         if "presence" not in self._group.run_state.blocking_sources:
             return
         # Window and switch take precedence — their handlers already cover the members.
         if {"switch", "window"} & self._group.run_state.blocking_sources:
             return
         _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
-        await self.call_handler.call_debounced(self._active_data())
+
+        payload = self._active_data()
+        if wake_members:
+            payload = self._inject_wake_mode(payload)
+
+        await self.call_handler.call_debounced(payload)

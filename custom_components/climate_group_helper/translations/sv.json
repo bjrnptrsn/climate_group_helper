@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Lägg till eller ta bort enheter. Att ta bort enheter stoppar dem från att kontrolleras av gruppen.",
-              "master_entity": "Ange en medlem som Master-enhet (ledare). Den används för Master/Lock-synkronisering och centraliserade målvärden.",
+              "master_entity": "Ange en medlem som Master-enhet (ledare). Den används för Master/Lock-synkronisering och centraliserad visning av målvärden.",
               "hvac_mode_strategy": "Strategi för att beräkna gruppens tillstånd från sina medlemmar (t.ex. om en 'heat' och en annan är 'off').",
               "feature_strategy": "Bestämmer vilka funktioner (t.ex. förinställda lägen, fläktlägen) som är tillgängliga på gruppen när medlemmar har olika kapaciteter.",
               "union_out_of_bounds_action": "Vad som ska göras med enheter som inte kan nå måltemperaturen. Gäller endast när funktionsstrategin är inställd på Union.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Hur gruppen beräknar målvärdet att skicka till sina medlemmar.",
-              "temp_use_master": "Använd masterenhetens målvärde istället för att beräkna ett medelvärde. Faller tillbaka till medelvärde om otillgänglig.",
+              "temp_use_master": "Visar masterenhetens målvärde som gruppens måltemperatur istället för medlemsmedelvärdet. Faller tillbaka till medelvärde om masterenheten är otillgänglig. Påverkar endast hur gruppstatus visas — styr eller synkroniserar inte medlemmar (använd Synkroniseringsläge: Master/Lock för det).",
               "temp_target_round": "Gäller endast värden som skickas till enheter, inte aktuella/visade värden.",
               "temp_current_avg": "Hur gruppen sammanfattar sensoravläsningar från sina medlemmar.",
               "min_temp_off": "Skickar enhetens minimitemperatur (t.ex. 5°C) när gruppen stängs av. Detta säkerställer att ventilerna är helt stängda för frostskydd.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Hur gruppen beräknar målvärdet att skicka till sina medlemmar.",
-              "humidity_use_master": "Använd masterenhetens målvärde istället för att beräkna ett medelvärde. Faller tillbaka till medelvärde om otillgänglig.",
+              "humidity_use_master": "Visar masterenhetens målvärde som gruppens målluftfuktighet istället för medlemsmedelvärdet. Faller tillbaka till medelvärde om masterenheten är otillgänglig. Påverkar endast hur gruppstatus visas — styr eller synkroniserar inte medlemmar (använd Synkroniseringsläge: Master/Lock för det).",
               "humidity_target_round": "Gäller endast värden som skickas till enheter, inte aktuella/visade värden.",
               "humidity_current_avg": "Hur gruppen sammanfattar sensoravläsningar från sina medlemmar.",
               "humidity_sensors": "Använd externa sensorer istället för medlemsavläsningar. Dessa blir den enda sanningen för gruppens luftfuktighet.",

@@ -5,7 +5,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.core import callback
-from homeassistant.const import STATE_OFF, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 
 from .const import (
@@ -16,6 +16,7 @@ from .const import (
     CONF_PRESENCE_ZONE,
     DEFAULT_PRESENCE_AWAY_DELAY,
     DEFAULT_PRESENCE_RETURN_DELAY,
+    META_KEY_PRESENCE,
     PresenceMode,
 )
 from .override import PresenceOverrideManager
@@ -54,6 +55,20 @@ class PresenceHandler:
     @property
     def override_manager(self) -> PresenceOverrideManager:
         return self._group.presence_override_manager
+
+    @property
+    def mode(self) -> PresenceMode:
+        """Return the presence mode."""
+        return self._mode
+
+    @property
+    def sensors(self) -> list[str]:
+        """Return the list of presence sensors."""
+        return self._sensors
+
+    def get_collective_presence(self) -> bool:
+        """Return True if collective presence is detected."""
+        return self._get_collective_presence()
 
     async def async_setup(self) -> None:
         if self._mode == PresenceMode.DISABLED or not self._sensors:
@@ -101,11 +116,17 @@ class PresenceHandler:
             return False
         if state_str in (STATE_UNKNOWN, STATE_UNAVAILABLE):
             return True
+        # Binary sensors: "on" = present. Must be checked before zone matching
+        # because binary_sensor states never match a zone entity ID (H7 fix).
+        if state_str == STATE_ON:
+            return True
         if self._zones:
             if state_str == "home" and "zone.home" in self._zones:
                 return True
             for zone_id in self._zones:
                 if state_str == zone_id:
+                    return True
+                if (zone_state := self._hass.states.get(zone_id)) and state_str == zone_state.name:
                     return True
             return False
         return True
@@ -153,7 +174,9 @@ class PresenceHandler:
 
     async def _go_restore(self) -> None:
         self._away_active = False
-        await self.override_manager.restore()
+        # Slot-Away has priority: do not restore if the slot meta-key is active
+        if self._group.run_state.config_overrides.get(META_KEY_PRESENCE) != "away":
+            await self.override_manager.restore()
 
     def _cancel_timer(self) -> None:
         if self._timer_cancel:

@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Přidat nebo odebrat zařízení. Odebrání zařízení zastaví jejich ovládání skupinou.",
-              "master_entity": "Určete jednoho člena jako Master entitu (vůdce). Používá se pro synchronizaci Master/Lock a centralizované cílové hodnoty.",
+              "master_entity": "Určete jednoho člena jako Master entitu (vůdce). Používá se pro synchronizaci Master/Lock a centralizované zobrazení cílových hodnot.",
               "hvac_mode_strategy": "Strategie pro výpočet stavu skupiny z jejích členů (např. pokud jeden 'heat' a další je 'off').",
               "feature_strategy": "Určuje, které funkce (např. přednastavené režimy, režimy ventilátoru) jsou ve skupině dostupné, když mají členové různé možnosti.",
               "union_out_of_bounds_action": "Co dělat se zařízeními, která nemohou dosáhnout cílové teploty. Platí pouze pokud je strategie funkcí nastavena na Sjednocení.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
-              "temp_use_master": "Použít hodnotu hlavního zařízení místo výpočtu průměru. Při nedostupnosti se vrátí k průměrování.",
+              "temp_use_master": "Zobrazí hodnotu hlavního zařízení jako cílovou teplotu skupiny místo průměru členů. Při nedostupnosti se vrátí k průměrování. Ovlivňuje pouze zobrazení stavu skupiny — neřídí ani nesynchronizuje členy (pro to použijte Režim synchronizace: Master/Lock).",
               "temp_target_round": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
               "temp_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
               "min_temp_off": "Při vypnutí skupiny odešle minimální teplotu zařízení (např. 5 °C). Tím je zajištěno úplné uzavření ventilů pro ochranu proti mrazu.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
-              "humidity_use_master": "Použít hodnotu hlavního zařízení místo výpočtu průměru. Při nedostupnosti se vrátí k průměrování.",
+              "humidity_use_master": "Zobrazí hodnotu hlavního zařízení jako cílovou vlhkost skupiny místo průměru členů. Při nedostupnosti se vrátí k průměrování. Ovlivňuje pouze zobrazení stavu skupiny — neřídí ani nesynchronizuje členy (pro to použijte Režim synchronizace: Master/Lock).",
               "humidity_target_round": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
               "humidity_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
               "humidity_sensors": "Použít externí senzory místo údajů od členů. Ty se stanou jediným zdrojem pravdy pro vlhkost skupiny.",

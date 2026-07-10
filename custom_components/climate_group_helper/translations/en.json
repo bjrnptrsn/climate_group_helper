@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Add or remove devices. Removing devices stops them from being controlled by the group.",
-              "master_entity": "Designate one member as the Master Entity (Leader). It is used for Master/Lock synchronization and centralized target values.",
+              "master_entity": "Designate one member as the Master Entity (Leader). It is used for Master/Lock synchronization and centralized target display.",
               "hvac_mode_strategy": "Strategy for calculating the group's state from its members (e.g. if one is 'heat' and another is 'off').",
               "feature_strategy": "Determines which features (e.g. preset modes, fan modes) are available on the group when members have different capabilities.",
               "union_out_of_bounds_action": "What to do with members that cannot reach the target temperature. Only applies when Feature Strategy is set to Union.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "How the group calculates the target setpoint to send to its members.",
-              "temp_use_master": "Use the master entity's setpoint instead of calculating an average. Falls back to averaging if unavailable.",
+              "temp_use_master": "Display the master entity's setpoint as the group's target temperature instead of the member average. Falls back to averaging if the master is unavailable. Affects only how the group state is displayed — it does not control or synchronize members (use Sync Mode: Master/Lock for that).",
               "temp_target_round": "Only applies to values sent to devices, not to current/displayed values.",
               "temp_current_avg": "How the group summarizes sensor readings from its members.",
               "min_temp_off": "Sends the device's minimum temperature (e.g. 5°C) when turning the group off. This ensures valves are fully closed for frost protection.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "How the group calculates the target setpoint to send to its members.",
-              "humidity_use_master": "Use the master entity's setpoint instead of calculating an average. Falls back to averaging if unavailable.",
+              "humidity_use_master": "Display the master entity's setpoint as the group's target humidity instead of the member average. Falls back to averaging if the master is unavailable. Affects only how the group state is displayed — it does not control or synchronize members (use Sync Mode: Master/Lock for that).",
               "humidity_target_round": "Only applies to values sent to devices, not to current/displayed values.",
               "humidity_current_avg": "How the group summarizes sensor readings from its members.",
               "humidity_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's humidity.",

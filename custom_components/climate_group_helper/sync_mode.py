@@ -45,6 +45,11 @@ _TRUSTED_CONTEXT_IDS = frozenset(
     }
 )
 
+# Subset of _TRUSTED_CONTEXT_IDS whose echoes are suppressed wholesale early in
+# resync() (blocking/restore side effects are never external changes). Keep in
+# sync when adding a new blocking-source handler.
+_BLOCKING_ECHO_CONTEXT_IDS = frozenset({"window_control", "isolation", "presence"})
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -185,7 +190,7 @@ class SyncModeHandler:
         # Suppress direct echoes: events fired with our own context IDs
         # Ignore echoes from blocking operations. These side effects
         # (e.g. window_control restore, isolation restore, presence override) are not external changes.
-        if event.context.id in ("window_control", "isolation", "presence"):
+        if event.context.id in _BLOCKING_ECHO_CONTEXT_IDS:
             _LOGGER.debug("[%s] Ignoring '%s' echo", self._group.entity_id, event.context.id)
             return
 

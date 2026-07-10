@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Añadir o eliminar dispositivos. Eliminar dispositivos detiene su control por parte del grupo.",
-              "master_entity": "Designa a un miembro como Entidad Maestra (Líder). Se utiliza para la sincronización Maestro/Bloqueo y valores objetivo centralizados.",
+              "master_entity": "Designa a un miembro como Entidad Maestra (Líder). Se utiliza para la sincronización Maestro/Bloqueo y la visualización centralizada de objetivos.",
               "hvac_mode_strategy": "Estrategia para calcular el estado del grupo desde sus miembros (ej. si uno está 'heat' y otro está 'off').",
               "feature_strategy": "Determina qué funciones (ej. modos preestablecidos, modos ventilador) están disponibles en el grupo cuando los miembros tienen capacidades diferentes.",
               "union_out_of_bounds_action": "Qué hacer con los dispositivos que no pueden alcanzar la temperatura objetivo. Solo se aplica cuando la estrategia de funciones está configurada en Unión.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
-              "temp_use_master": "Usar el punto de ajuste del dispositivo maestro en lugar de calcular un promedio. Vuelve al promedio si no está disponible.",
+              "temp_use_master": "Muestra el punto de ajuste de la entidad maestra como la temperatura objetivo del grupo en lugar del promedio de los miembros. Vuelve al promedio si la entidad maestra no está disponible. Solo afecta la visualización del estado del grupo; no controla ni sincroniza a los miembros (use Modo de sincronización: Master/Lock para eso).",
               "temp_target_round": "Solo se aplica a valores enviados a dispositivos, no a valores actuales/visualizados.",
               "temp_current_avg": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
               "min_temp_off": "Envía la temperatura mínima del dispositivo (ej. 5°C) al apagar el grupo. Esto asegura que las válvulas estén completamente cerradas para la protección contra heladas.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Cómo el grupo calcula el punto de ajuste para enviar a sus miembros.",
-              "humidity_use_master": "Usar el punto de ajuste del dispositivo maestro en lugar de calcular un promedio. Vuelve al promedio si no está disponible.",
+              "humidity_use_master": "Muestra el punto de ajuste de la entidad maestra como la humedad objetivo del grupo en lugar del promedio de los miembros. Vuelve al promedio si la entidad maestra no está disponible. Solo afecta la visualización del estado del grupo; no controla ni sincroniza a los miembros (use Modo de sincronización: Master/Lock para eso).",
               "humidity_target_round": "Solo se aplica a valores enviados a dispositivos, no a valores actuales/visualizados.",
               "humidity_current_avg": "Cómo el grupo resume las lecturas de los sensores de sus miembros.",
               "humidity_sensors": "Usar sensores externos en lugar de lecturas de miembros. Se convierten en la única fuente de verdad para la humedad del grupo.",

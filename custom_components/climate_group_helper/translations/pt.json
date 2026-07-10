@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Adicionar ou remover dispositivos. A remoção de dispositivos para o seu controlo pelo grupo.",
-              "master_entity": "Designe um membro como Entidade Mestre (Líder). É utilizada para sincronização Mestre/Bloqueio e valores de destino centralizados.",
+              "master_entity": "Designe um membro como Entidade Mestre (Líder). É utilizada para sincronização Mestre/Bloqueio e exibição centralizada de alvos.",
               "hvac_mode_strategy": "Estratégia para calcular o estado do grupo a partir dos seus membros (ex. se um está 'heat' e outro está 'off').",
               "feature_strategy": "Determina quais funcionalidades (ex. modos predefinidos, modos ventoinha) estão disponíveis no grupo quando os membros têm capacidades diferentes.",
               "union_out_of_bounds_action": "O que fazer com dispositivos que não conseguem atingir a temperatura alvo. Aplica-se apenas quando a estratégia de funcionalidades está definida como União.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Como o grupo calcula o ponto de ajuste para enviar aos seus membros.",
-              "temp_use_master": "Usar o ponto de ajuste da entidade principal em vez de calcular uma média. Volta à média se indisponível.",
+              "temp_use_master": "Exibe o ponto de ajuste da entidade principal como a temperatura alvo do grupo em vez da média dos membros. Volta à média se a entidade principal estiver indisponível. Afeta apenas a forma como o estado do grupo é exibido — não controla nem sincroniza os membros (use Modo de Sincronização: Master/Lock para isso).",
               "temp_target_round": "Aplica-se apenas a valores enviados a dispositivos, não a valores atuais/visualizados.",
               "temp_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
               "min_temp_off": "Envia a temperatura mínima do dispositivo (ex: 5°C) ao desligar o grupo. Isto garante que as válvulas fiquem totalmente fechadas para proteção contra geada.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Como o grupo calcula o ponto de ajuste para enviar aos seus membros.",
-              "humidity_use_master": "Usar o ponto de ajuste da entidade principal em vez de calcular uma média. Volta à média se indisponível.",
+              "humidity_use_master": "Exibe o ponto de ajuste da entidade principal como a humidade alvo do grupo em vez da média dos membros. Volta à média se a entidade principal estiver indisponível. Afeta apenas a forma como o estado do grupo é exibido — não controla nem sincroniza os membros (use Modo de Sincronização: Master/Lock para isso).",
               "humidity_target_round": "Aplica-se apenas a valores enviados a dispositivos, não a valores atuais/visualizados.",
               "humidity_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
               "humidity_sensors": "Usar sensores externos em vez de leituras de membros. Estes tornam-se a única fonte de verdade para a humidade do grupo.",

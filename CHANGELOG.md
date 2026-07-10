@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.4.4 - 2026-07-10
+
+### ✨ Improvements
+
+*   **Schedule Meta-Key `presence`**: New meta-key `presence: away` that applies the configured Presence Action for the duration of a slot.
+
+### 🔧 Fixes
+
+*   **Main Switch Sync**: Toggling the group off via the `turn_off` schedule meta-key now immediately flips the Main Switch entity to `off` in the UI too, instead of it appearing stuck `on` until an unrelated state update.
+
+*   **Override Snapshot/Restore**: Improved snapshot and restore behavior for overrides (boost) and the bypass layer — ending an override now restores the currently valid schedule state instead of a stale snapshot.
+
+*   **Boost vs. Schedule**: A schedule slot change no longer overwrites the temperature of an active boost. The new slot is applied once the boost expires.
+
+*   **Presence Zones**: Fixed two bugs — zone restrictions failed to match some `person` entities, and `binary_sensor`/`input_boolean` presence sensors could be wrongly treated as "away" when zones were configured.
+
 ## 1.4.3 - 2026-07-03
 
 ### 🔧 Fixes

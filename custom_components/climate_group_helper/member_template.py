@@ -247,18 +247,27 @@ class MemberTemplateManager:
 
         template.entity_ids = frozenset(
             eid for eid in self._group.climate_entity_ids
-            if HVACMode.HEAT_COOL not in (
-                (s := self._group.hass.states.get(eid)) and s.attributes.get(ATTR_HVAC_MODES, []) or []
-            )
+            if (s := self._group.hass.states.get(eid)) is not None
+            and s.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            and HVACMode.HEAT_COOL not in s.attributes.get(ATTR_HVAC_MODES, [])
         )
+        self.initialize_last_modes()
         return list(template.entity_ids)
 
     def initialize_last_modes(self) -> None:
-        """Seed last_physical_mode from current HA states after RestoreEntity has run."""
+        """Seed last_physical_mode for newly-covered members with no entry yet.
+
+        Called from update_members() so it re-runs whenever entity_ids changes
+        (e.g. a member becomes available after being unavailable at startup).
+        setdefault-style: skips entities that already have an entry, so it
+        never overwrites a value the TemplateCallHandler has since set.
+        """
         template = self._range_template
         if template is None:
             return
         for entity_id in template.entity_ids:
+            if entity_id in template.last_physical_mode:
+                continue
             real_state = self._group.hass.states.get(entity_id)
             if real_state and real_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 template.last_physical_mode[entity_id] = real_state.state

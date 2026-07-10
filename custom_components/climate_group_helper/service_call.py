@@ -78,6 +78,7 @@ class BaseServiceCallHandler(ABC):
         self._debouncer: Debouncer[Any] | None = None
         self._active_tasks: set[asyncio.Task[Any]] = set()
         self._call_triggers: list[Callable[[], Any]] = []
+        self._lock = asyncio.Lock()
 
     @property
     def target_state(self) -> TargetState:
@@ -109,7 +110,8 @@ class BaseServiceCallHandler(ABC):
 
     async def call_immediate(self, data: dict[str, Any] | None = None) -> None:
         """Execute a service call immediately without debouncing."""
-        await self._execute_calls(data)
+        async with self._lock:
+            await self._execute_calls(data)
 
     def _call_trigger(self) -> None:
         """Trigger all registered execution callbacks."""
@@ -138,7 +140,8 @@ class BaseServiceCallHandler(ABC):
             if task:
                 self._active_tasks.add(task)
             try:
-                await self._execute_calls(data)
+                async with self._lock:
+                    await self._execute_calls(data)
             except asyncio.CancelledError:
                 pass  # Cancelled by a newer command — exit silently.
             finally:
@@ -173,6 +176,13 @@ class BaseServiceCallHandler(ABC):
         # Trigger hook for calls
         self._call_trigger()
 
+        # Note: the retry loop deliberately has no success-break. Diff-based handlers
+        # terminate naturally once members report the target state (no pending calls).
+        # Non-diffing handlers (ClimateCallHandler, force_retry) resend on every
+        # attempt — that blind resend IS the retry feature for unreliable devices
+        # ("Always retry sending commands ... even if they already report the target
+        # state"), since HA service calls don't raise when a device silently ignores
+        # a command.
         for attempt in range(attempts):
             try:
                 calls = self._generate_calls(data)
@@ -510,9 +520,10 @@ class BaseServiceCallHandler(ABC):
 
     def _process_unsupported_hvac(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Union strategy: handle members that don't support the requested HVAC mode."""
-        if (self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION or
-            self._group.config.get(CONF_UNION_UNSUPPORTED_HVAC_ACTION) != UnsupportedHvacAction.OFF):
+        if self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
             return calls
+
+        action = self._group.config.get(CONF_UNION_UNSUPPORTED_HVAC_ACTION, UnsupportedHvacAction.IGNORE)
 
         # Determine target mode: from call (if present) or current target_state
         hvac_call = next((c for c in calls if ATTR_HVAC_MODE in c["kwargs"]), None)
@@ -524,10 +535,14 @@ class BaseServiceCallHandler(ABC):
         # Identify members that technically do not support the target mode
         unsupported = {
             eid for eid in self._group.climate_entity_ids
-            if (state := self._group.read_member_state(eid)) and 
-               (modes := state.attributes.get(ATTR_HVAC_MODES, [])) and 
-               target_mode not in modes
+            if (state := self._group.read_member_state(eid))
+            and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            and (modes := state.attributes.get(ATTR_HVAC_MODES, []))
+            and target_mode not in modes
         }
+
+        if not unsupported:
+            return calls
 
         # Filter unsupported members out of all existing calls (e.g. temperature)
         filtered = [
@@ -535,8 +550,8 @@ class BaseServiceCallHandler(ABC):
             for call in calls
         ]
 
-        # For explicit HVAC_MODE changes, turn unsupported members OFF
-        if hvac_call:
+        # For explicit HVAC_MODE changes, turn unsupported members OFF if configured
+        if hvac_call and action == UnsupportedHvacAction.OFF:
             for entity_id in unsupported:
                 state = self._group.read_member_state(entity_id)
                 if state and state.state != HVACMode.OFF and not self._is_member_blocked(entity_id):
@@ -644,6 +659,10 @@ class BaseServiceCallHandler(ABC):
                 result.append(call)
                 continue
 
+            # Preserve raw (pre-offset) values so downstream stages (range template
+            # cache, stale-call guard) can access the original intent.
+            raw_kwargs = {attr: kwargs[attr] for attr in transformable}
+
             # Split by offset: batch no-offset entities, per-entity for offset
             no_offset_ids = []
             for entity_id in call["entity_ids"]:
@@ -662,6 +681,7 @@ class BaseServiceCallHandler(ABC):
                     "kwargs": adjusted_kwargs,
                     "entity_ids": [entity_id],
                     "member_offset_applied": list(transformable),
+                    "raw_kwargs": raw_kwargs,
                 })
 
             if no_offset_ids:
@@ -759,11 +779,14 @@ class BaseServiceCallHandler(ABC):
                 continue
 
             # Cache the commanded range so later hvac_mode=heat_cool without
-            # explicit setpoints can still resolve a band.
-            if ATTR_TARGET_TEMP_LOW in kwargs and kwargs[ATTR_TARGET_TEMP_LOW] is not None:
-                template.low = float(kwargs[ATTR_TARGET_TEMP_LOW])
-            if ATTR_TARGET_TEMP_HIGH in kwargs and kwargs[ATTR_TARGET_TEMP_HIGH] is not None:
-                template.high = float(kwargs[ATTR_TARGET_TEMP_HIGH])
+            # explicit setpoints can still resolve a band. Use raw_kwargs
+            # (pre-offset values) when available — member offsets must not
+            # contaminate the template cache (H4 fix).
+            cache_kwargs = call.get("raw_kwargs", kwargs)
+            if ATTR_TARGET_TEMP_LOW in cache_kwargs and cache_kwargs[ATTR_TARGET_TEMP_LOW] is not None:
+                template.low = float(cache_kwargs[ATTR_TARGET_TEMP_LOW])
+            if ATTR_TARGET_TEMP_HIGH in cache_kwargs and cache_kwargs[ATTR_TARGET_TEMP_HIGH] is not None:
+                template.high = float(cache_kwargs[ATTR_TARGET_TEMP_HIGH])
 
             # Prefer cached template values (with offsets applied by upstream
             # pipeline stages). Fall back to target_state via _resolve_range
@@ -1062,12 +1085,37 @@ class ClimateCallHandler(BaseServiceCallHandler):
     def __init__(self, group: ClimateGroupHelper):
         """Initialize the climate call handler."""
         super().__init__(group)
+        self._turning_off = False
 
     def _generate_calls(self, data: dict[str, Any] | None = None, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
         """Generate calls for user operations."""
         if not data:
             return []
-        return super()._generate_calls(data=data, filter_state=filter_state)
+        self._turning_off = data.get(ATTR_HVAC_MODE) == HVACMode.OFF
+        if self._turning_off and self._group.run_state.blocked:
+            # Only the OFF command itself may pass the block — other attributes
+            # in a combined payload (e.g. set_temperature with hvac_mode: off)
+            # must not reach members while a blocking source is active.
+            data = {ATTR_HVAC_MODE: HVACMode.OFF}
+        try:
+            return super()._generate_calls(data=data, filter_state=filter_state)
+        finally:
+            self._turning_off = False
+
+    def _should_diff(self) -> bool:
+        return False
+
+    def _is_member_blocked(self, entity_id: str) -> bool:
+        """Ignore the global block when turning the group off (isolation still applies).
+
+        Turning the group OFF must reach members even while blocking_sources is
+        active (e.g. window open) — see _block_all_calls below.
+        """
+        if self._turning_off:
+            if entity_id in self._group.run_state.isolated_members:
+                return True
+            return False
+        return super()._is_member_blocked(entity_id)
 
     def _should_diff(self) -> bool:
         return False
@@ -1092,11 +1140,15 @@ class ClimateCallHandler(BaseServiceCallHandler):
         staleness check — their values intentionally deviate from target_state.
         """
         target = self.target_state.to_dict()
-        skip_attrs = set(call.get("injected", [])) | set(call.get("member_offset_applied", []))
+        skip_attrs = set(call.get("injected", []))
+        offset_attrs = set(call.get("member_offset_applied", []))
+        raw_kwargs = call.get("raw_kwargs", {})
         _float_attrs = {"temperature", "humidity", "target_temp_low", "target_temp_high"}
         for attr, value in call["kwargs"].items():
             if attr in skip_attrs:
                 continue
+            if attr in offset_attrs:
+                value = raw_kwargs.get(attr, value)
             if attr in target and target[attr] is not None:
                 t = target[attr]
                 if attr in _float_attrs and isinstance(t, (int, float)) and isinstance(value, (int, float)):

@@ -1454,6 +1454,15 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 self._isolation_rule_count = new_rule_count
                 return await self._show_main_form(self._normalize_options(flattened_input))
 
+            # Validate: the group must keep at least one member
+            if not flattened_input.get(
+                CONF_ENTITIES, self._config_entry.options.get(CONF_ENTITIES, [])
+            ):
+                return await self._show_main_form(
+                    current_config,
+                    form_errors={"members_section": "no_entities"},
+                )
+
             # Suggest a refresh if master changed and hint not yet shown
             new_master = flattened_input.get(CONF_MASTER_ENTITY)
             master_changed = (

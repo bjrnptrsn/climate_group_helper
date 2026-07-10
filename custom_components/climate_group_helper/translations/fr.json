@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Ajouter ou supprimer des appareils. La suppression des appareils arrête leur contrôle par le groupe.",
-              "master_entity": "Désignez un membre comme entité maître (Leader). Elle est utilisée pour la synchronisation Maître/Verrouillage et les valeurs cibles centralisées.",
+              "master_entity": "Désignez un membre comme entité maître (Leader). Elle est utilisée pour la synchronisation Maître/Verrouillage et l'affichage centralisé des cibles.",
               "hvac_mode_strategy": "Stratégie pour calculer l'état du groupe à partir de ses membres (ex. si l'un 'heat' et un autre est 'off').",
               "feature_strategy": "Détermine quelles fonctionnalités (ex. modes prédéfinis, modes ventilateur) sont disponibles sur le groupe lorsque les membres ont des capacités différentes.",
               "union_out_of_bounds_action": "Que faire des appareils qui ne peuvent pas atteindre la température cible. S'applique uniquement si la stratégie de fonctionnalités est définie sur Union.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
-              "temp_use_master": "Utiliser la consigne de l'entité maître au lieu de calculer une moyenne. Revient à la moyenne si indisponible.",
+              "temp_use_master": "Affiche la consigne de l'entité maître comme température cible du groupe au lieu de la moyenne des membres. Revient à la moyenne si l'entité maître est indisponible. Affecte uniquement l'affichage de l'état du groupe — ne contrôle ni ne synchronise les membres (utilisez Mode de synchronisation : Master/Lock pour cela).",
               "temp_target_round": "S'applique uniquement aux valeurs envoyées aux appareils, pas aux valeurs actuelles/affichées.",
               "temp_current_avg": "Comment le groupe résume les relevés des capteurs de ses membres.",
               "min_temp_off": "Envoie la température minimale de l'appareil (ex: 5°C) lors de l'arrêt du groupe. Cela garantit que les vannes sind complètement fermées pour la protection contre le gel.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
-              "humidity_use_master": "Utiliser la consigne de l'entité maître au lieu de calculer une moyenne. Revient à la moyenne si indisponible.",
+              "humidity_use_master": "Affiche la consigne de l'entité maître comme humidité cible du groupe au lieu de la moyenne des membres. Revient à la moyenne si l'entité maître est indisponible. Affecte uniquement l'affichage de l'état du groupe — ne contrôle ni ne synchronise les membres (utilisez Mode de synchronisation : Master/Lock pour cela).",
               "humidity_target_round": "S'applique uniquement aux valeurs envoyées aux appareils, pas aux valeurs actuelles/affichées.",
               "humidity_current_avg": "Comment le groupe résume les relevés des capteurs de ses membres.",
               "humidity_sensors": "Utiliser des capteurs externes au lieu des relevés des membres. Ils deviennent la seule source de vérité pour l'humidité du groupe.",

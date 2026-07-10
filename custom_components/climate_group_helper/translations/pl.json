@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Dodaj lub usuń urządzenia. Usunięcie urządzeń zatrzymuje ich sterowanie przez grupę.",
-              "master_entity": "Wyznacz jednego członka jako encję Master (lidera). Jest ona używana do synchronizacji Master/Lock i scentralizowanych wartości docelowych.",
+              "master_entity": "Wyznacz jednego członka jako encję Master (lidera). Jest ona używana do synchronizacji Master/Lock i scentralizowanego wyświetlania wartości docelowych.",
               "hvac_mode_strategy": "Strategia obliczania stanu grupy na podstawie jej członków (np. jeśli jeden 'heat', a inny jest 'off').",
               "feature_strategy": "Określa, które funkcje (np. tryby wstępne, tryby wentylatora) są dostępne w grupie, gdy członkowie mają różne możliwości.",
               "union_out_of_bounds_action": "Co zrobić z urządzeniami, które nie mogą osiągnąć docelowej temperatury. Dotyczy tylko wtedy, gdy strategia funkcji jest ustawiona na Unię.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
-              "temp_use_master": "Użyj wartości zadanej urządzenia głównego zamiast obliczać średnią. Powraca do średniej, jeśli niedostępne.",
+              "temp_use_master": "Wyświetla wartość zadaną urządzenia głównego jako docelową temperaturę grupy zamiast średniej członków. Powraca do średniej, jeśli urządzenie główne jest niedostępne. Wpływa tylko na sposób wyświetlania stanu grupy — nie steruje ani nie synchronizuje członków (użyj Trybu synchronizacji: Master/Lock w tym celu).",
               "temp_target_round": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
               "temp_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
               "min_temp_off": "Wysyła minimalną temperaturę urządzenia (np. 5°C) podczas wyłączania grupy. Zapewnia to całkowite zamknięcie zaworów w celu ochrony przed zamarzaniem.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
-              "humidity_use_master": "Użyj wartości zadanej urządzenia głównego zamiast obliczać średnią. Powraca do średniej, jeśli niedostępne.",
+              "humidity_use_master": "Wyświetla wartość zadaną urządzenia głównego jako docelową wilgotność grupy zamiast średniej członków. Powraca do średniej, jeśli urządzenie główne jest niedostępne. Wpływa tylko na sposób wyświetlania stanu grupy — nie steruje ani nie synchronizuje członków (użyj Trybu synchronizacji: Master/Lock w tym celu).",
               "humidity_target_round": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
               "humidity_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
               "humidity_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla wilgotności grupy.",

@@ -74,6 +74,12 @@ class CalibrationHandler:
                             self._group.entity_id, target_id, climate_id, entry.device_id,
                         )
                         break
+            if target_id not in self._target_member_map:
+                _LOGGER.debug(
+                    "[%s] Calibration target %s shares no device with any group member — "
+                    "member-specific handling (OFFSET reference, ignore-off, isolation) unavailable",
+                    self._group.entity_id, target_id,
+                )
 
         if (
             self._calibration_heartbeat > 0

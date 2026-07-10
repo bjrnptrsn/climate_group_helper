@@ -42,7 +42,7 @@
             },
             "data_description": {
               "entities": "Legg til eller fjern enheter. Fjerning av enheter stopper kontrollen av dem fra gruppen.",
-              "master_entity": "Angi ett medlem som Master-enhet (leder). Den brukes til Master/Lock-synkronisering og sentraliserte målværdier.",
+              "master_entity": "Angi ett medlem som Master-enhet (leder). Den brukes til Master/Lock-synkronisering og sentralisert visning av målverdier.",
               "hvac_mode_strategy": "Strategi for å beregne gruppens status fra medlemmene (f.eks. hvis en 'heat' og en annen er 'off').",
               "feature_strategy": "Bestemmer hvilke funksjoner (f.eks. forhåndsinnstilte moduser, viftemoduser) som er tilgjengelige i gruppen når medlemmene har forskjellige evner.",
               "union_out_of_bounds_action": "Hva som skal gjøres med enheter som ikke kan nå måltemperaturen. Gjelder kun når funksjonsstrategien er satt til Union.",
@@ -67,7 +67,7 @@
             },
             "data_description": {
               "temp_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
-              "temp_use_master": "Bruk masterenhetens målverdi i stedet for å beregne et gjennomsnitt. Faller tilbake til gjennomsnitt hvis utilgjengelig.",
+              "temp_use_master": "Viser masterenhetens målverdi som gruppens måltemperatur i stedet for medlemsgjennomsnittet. Faller tilbake til gjennomsnitt hvis masterenheten er utilgjengelig. Påvirker kun hvordan gruppestatus vises — den styrer eller synkroniserer ikke medlemmer (bruk Synkroniseringsmodus: Master/Lock for det).",
               "temp_target_round": "Gjelder kun verdier sendt til enheter, ikke nåværende/visningsverdier.",
               "temp_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
               "min_temp_off": "Sender enhetens minimumstemperatur (f.eks. 5°C) når gruppen slås av. Dette sikrer at ventilene er helt lukket for frostbeskyttelse.",
@@ -92,7 +92,7 @@
             },
             "data_description": {
               "humidity_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
-              "humidity_use_master": "Bruk masterenhetens målverdi i stedet for å beregne et gjennomsnitt. Faller tilbake til gjennomsnitt hvis utilgjengelig.",
+              "humidity_use_master": "Viser masterenhetens målverdi som gruppens målfuktighet i stedet for medlemsgjennomsnittet. Faller tilbake til gjennomsnitt hvis masterenheten er utilgjengelig. Påvirker kun hvordan gruppestatus vises — den styrer eller synkroniserer ikke medlemmer (bruk Synkroniseringsmodus: Master/Lock for det).",
               "humidity_target_round": "Gjelder kun verdier sendt til enheter, ikke nåværende/visningsverdier.",
               "humidity_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
               "humidity_sensors": "Bruk eksterne sensorer i stedet for medlemsavlesninger. Disse blir den eneste sannhetskilden for gruppens fuktighet.",

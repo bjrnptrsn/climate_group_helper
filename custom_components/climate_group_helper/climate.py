@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import fields, replace
 from functools import reduce
+import asyncio
 import json
 import logging
 import time
@@ -167,6 +168,7 @@ from .state import (
     ScheduleStateManager,
     SyncModeStateManager,
     WindowControlStateManager,
+    BoostStateManager,
 )
 from .sync_mode import SyncModeHandler
 from .window_control import WindowControlHandler
@@ -361,6 +363,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # State managers
         self.climate_state_manager = ClimateStateManager(self)
+        self.boost_state_manager = BoostStateManager(self)
         self.isolation_state_manager = IsolationStateManager(self)
         self.schedule_state_manager = ScheduleStateManager(self)
         self.sync_mode_state_manager = SyncModeStateManager(self)
@@ -370,6 +373,9 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.climate_call_handler = ClimateCallHandler(self)
         self.offset_entity_id: str | None = None
         self.offset_set_callback: Callable[[float], Awaitable[None]] | None = None
+        # Registered by ControlSwitch so external block changes (e.g. schedule
+        # meta-key turn_off) are written to the switch entity's HA state.
+        self.switch_state_callback: Callable[[], None] | None = None
         self.slot_meta_processor = SlotMetaProcessor(self)
         self.override_call_handler = OverrideCallHandler(self)
         self.presence_call_handler = PresenceCallHandler(self)
@@ -392,6 +398,9 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.override_handler = OverrideHandler(self)
         self.presence_handler = PresenceHandler(self)
         self.presence_override_manager = PresenceOverrideManager(self)
+        self.slot_transition_lock = asyncio.Lock()
+        self.schedule_timer: Callable[[], None] | None = None
+        self.schedule_timer_type: str | None = None
         self.schedule_handler = ScheduleHandler(self)
         self.schedule_bypass_handler = ScheduleBypassHandler(self)
         self.switch_override_manager = SwitchOverrideManager(self)
@@ -470,11 +479,6 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if (last_state := await self.async_get_last_state()) is not None:
              self._restore_state(last_state)
 
-        # Range Template: seed last_physical_mode *after* the target state
-        # has been restored, so the deviation fallback in _expected_mode_for()
-        # is not blind at first start.
-        self.member_template_manager.initialize_last_modes()
-
         # Guard against feedback loops from misconfigured CGH sensors.
         # Filter sensor lists and rebuild _entity_ids so the listener never subscribes to our own sensors.
         self.temp_sensor_entity_ids = filter_cgh_entities(
@@ -514,9 +518,23 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         )
 
         if self.advanced_mode:
-            # Setup calibration handler (builds target→member mapping, starts heartbeat)
+            # Setup calibration handler first (builds target→member mapping, starts
+            # heartbeat) — side-effect-free (no service calls), safe to run before
+            # the Cold-Start-Init update below so the mapping exists once the
+            # startup force-sync fires.
             await self.calibration_handler.async_setup()
 
+        # Cold Start: populate shared_target_state from current (pre-override) member
+        # values *before* any handler below can send a blocking call (Presence-Away,
+        # Window Control OFF, ...). Otherwise a handler that activates immediately
+        # during its own async_setup() (e.g. PresenceOverrideManager with an absent
+        # sensor at startup) forces members OFF first, and Cold-Start-Init would
+        # seed shared_target_state from that already-overridden physical state
+        # instead of the real prior state, so the group could never recover to
+        # the previous mode once the sensor returned.
+        self.async_defer_or_update_ha_state()
+
+        if self.advanced_mode:
             # Setup window control (subscribes to sensor events)
             await self.window_control_handler.async_setup()
 
@@ -534,7 +552,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             for handler in self.member_isolation_handlers:
                 await handler.async_setup()
 
-        # Update initial state
+        # Update state again to reflect any blocking source activated above.
         self.async_defer_or_update_ha_state()
 
         # Register services
@@ -581,6 +599,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
     async def async_service_boost(self, duration: int, temperature: float | None = None, temperature_offset: float | None = None) -> None:
         """Handle boost service call."""
+        if duration <= 0:
+            raise ServiceValidationError("Boost duration must be a positive number of minutes.")
         if (temperature is None) == (temperature_offset is None):
             raise ServiceValidationError("Exactly one of 'temperature' or 'temperature_offset' must be provided.")
         if temperature is None:
@@ -588,7 +608,11 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             if current is None:
                 raise ServiceValidationError("Cannot use 'temperature_offset': group has no current target temperature.")
             temperature = current + temperature_offset  # type: ignore[operator]
-        await self.boost_override_manager.activate(temperature=temperature, duration=duration * 60)
+        started = await self.boost_override_manager.activate(temperature=temperature, duration=duration * 60)
+        if not started:
+            raise ServiceValidationError(
+                f"Boost rejected: a blocking source is active ({', '.join(sorted(self.run_state.blocking_sources))})."
+            )
 
     async def async_service_apply_config(
         self,
@@ -640,7 +664,6 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""
-        await super().async_will_remove_from_hass()
         self._cancel_grace_period_timer()
         await self.climate_call_handler.async_shutdown()
         await self.override_call_handler.async_shutdown()
@@ -662,6 +685,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             self.schedule_handler.async_teardown()
             self.schedule_bypass_handler.async_teardown()
             self.window_control_handler.async_teardown()
+
+        await super().async_will_remove_from_hass()
 
     def _restore_state(self, last_state: State) -> None:
         """Restore state from last known state."""
@@ -1161,8 +1186,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             swing_horizontal_mode=self._attr_swing_horizontal_mode
         )
 
-        # Cold Start: Populate target store from current group state if empty.
-        if self.shared_target_state == TargetState():
+        # Cold Start: Populate target store from current group state if empty and all members are ready.
+        if self.shared_target_state == TargetState() and all_members_ready:
             initial_data = self.current_group_state.to_dict()
             if initial_data:
                 self.shared_target_state = self.shared_target_state.update(**initial_data)
@@ -1180,16 +1205,21 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         Priority: master entity → offset-corrected average → raw member average.
         `states` is provided by the caller — either the full self.states or a pre-filtered
         subset (e.g. without OFF members). Offset correction subtracts each member's
-        per-device offset before averaging so the group shows the logical set point.
+        per-device offset so the group shows the logical set point — in the master
+        path just as in the averaging path (same `member_offset_correction` flag).
         """
-        if use_master and self._master_entity_id and master_value is not None:
-            return master_value
-
-        if (
-            self._temp_offset_map
+        offset_correction = (
+            bool(self._temp_offset_map)
             and self._member_offset_correction
             and attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
-        ):
+        )
+
+        if use_master and self._master_entity_id and master_value is not None:
+            if offset_correction:
+                return master_value - self._temp_offset_map.get(self._master_entity_id, 0.0)
+            return master_value
+
+        if offset_correction:
             values = [
                 val - self._temp_offset_map.get(s.entity_id, 0.0)
                 for s in states
@@ -1358,26 +1388,26 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         """Forward the turn_on command to all climate in the climate group."""
 
         # Set to the last active HVAC mode if available
+        mode_set = False
         if self.run_state.last_active_hvac_mode is not None:
             _LOGGER.debug("[%s] Turn on with the last active HVAC mode: %s", self.entity_id, self.run_state.last_active_hvac_mode)
             try:
                 await self.async_set_hvac_mode(HVACMode(self.run_state.last_active_hvac_mode))
+                mode_set = True
             except ValueError:
                 _LOGGER.warning(
                     "[%s] Restored last_active_hvac_mode '%s' is not a valid HVACMode, falling back",
                     self.entity_id, self.run_state.last_active_hvac_mode,
                 )
 
-        # Try to set the first available HVAC mode
-        elif self._attr_hvac_modes:
+        # Try to set the first available HVAC mode if last_active_hvac_mode failed or unavailable
+        if not mode_set and self._attr_hvac_modes:
             for mode in self._attr_hvac_modes:
                 if mode != HVACMode.OFF:
                     _LOGGER.debug("[%s] Turn on with first available HVAC mode: %s", self.entity_id, mode)
                     await self.async_set_hvac_mode(mode)
                     break
-
-        # No HVAC modes available
-        else:
+        elif not mode_set:
             _LOGGER.debug("[%s] Can't turn on: No HVAC modes available", self.entity_id)
 
     async def async_turn_off(self) -> None:
