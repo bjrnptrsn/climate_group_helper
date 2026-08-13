@@ -97,12 +97,10 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         """Turn switch ON → restore group to target_state."""
         _LOGGER.debug("[%s] Main switch turned ON — restoring group", self._group.entity_id)
         await self.override_manager.restore()
-        self._is_on = True
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn switch OFF → force group to hvac_mode=off."""
         _LOGGER.debug("[%s] Main switch turned OFF — blocking group", self._group.entity_id)
         await self.override_manager.activate()
-        self._is_on = False
         self.async_write_ha_state()

@@ -308,11 +308,15 @@
             "description": "Geeft leden met enkelvoudig instelpunt weer als virtuele warmte/koelte-bereik-entiteiten. De Group Helper vertaalt bereikopdrachten naar passende fysieke warmte/koelte-opdrachten op basis van de huidige temperatuur van elk lid.",
             "data": {
               "range_template_enabled": "Bereiksjabloon inschakelen",
-              "range_template_deadband_action": "Deadband-actie"
+              "range_template_deadband_action": "Deadband-actie",
+              "range_template_heat_entities": "Verwarmingsapparaten",
+              "range_template_cool_entities": "Koelapparaten"
             },
             "data_description": {
               "range_template_enabled": "Geeft automatisch alle leden met één instelpunt (zonder native verwarming/koeling) weer als virtuele apparaten in bereikmodus.",
-              "range_template_deadband_action": "Actie die wordt uitgevoerd wanneer de huidige temperatuur zich binnen het doelbereik (deadband) bevindt."
+              "range_template_deadband_action": "Actie die wordt uitgevoerd wanneer de huidige temperatuur zich binnen het doelbereik (deadband) bevindt.",
+              "range_template_heat_entities": "Leden die mogen verwarmen. Niet-geliste leden zijn onbeperkt (fysieke mogelijkheid bepaalt). Een rol kan een mogelijkheid alleen beperken, nooit uitbreiden.",
+              "range_template_cool_entities": "Leden die mogen koelen. Niet-geliste leden zijn onbeperkt (fysieke mogelijkheid bepaalt). Een rol kan een mogelijkheid alleen beperken, nooit uitbreiden."
             }
           },
           "advanced_section": {

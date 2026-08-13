@@ -308,11 +308,15 @@
             "description": "Renderar medlemmar med enstaka börvärde som virtuella värme/kyla-intervallentiteter. Group Helper översätter intervallkommandon till lämpliga fysiska värme/kyla-kommandon baserat på varje medlems aktuella temperatur.",
             "data": {
               "range_template_enabled": "Aktivera intervallmall",
-              "range_template_deadband_action": "Deadband-åtgärd"
+              "range_template_deadband_action": "Deadband-åtgärd",
+              "range_template_heat_entities": "Värmeanordningar",
+              "range_template_cool_entities": "Kylaggregat"
             },
             "data_description": {
               "range_template_enabled": "Återger automatiskt alla enkelpunktsmedlemmar (utan native värme/kyla) som virtuella enheter i intervallläge.",
-              "range_template_deadband_action": "Åtgärd som utförs när den aktuella temperaturen är inom målintervallet (deadband)."
+              "range_template_deadband_action": "Åtgärd som utförs när den aktuella temperaturen är inom målintervallet (deadband).",
+              "range_template_heat_entities": "Medlemmar som får värma. Ej listade medlemmar är obegränsade (fysisk kapacitet avgör). En roll kan bara begränsa, aldrig utöka en enhets kapacitet.",
+              "range_template_cool_entities": "Medlemmar som får kyla. Ej listade medlemmar är obegränsade (fysisk kapacitet avgör). En roll kan bara begränsa, aldrig utöka en enhets kapacitet."
             }
           },
           "advanced_section": {

@@ -48,7 +48,13 @@ _TRUSTED_CONTEXT_IDS = frozenset(
 # Subset of _TRUSTED_CONTEXT_IDS whose echoes are suppressed wholesale early in
 # resync() (blocking/restore side effects are never external changes). Keep in
 # sync when adding a new blocking-source handler.
-_BLOCKING_ECHO_CONTEXT_IDS = frozenset({"window_control", "isolation", "presence"})
+# INVARIANT BREAK (deliberate): "isolation_restore" is NOT in _TRUSTED_CONTEXT_IDS.
+# Its echo must reach the enforcement branch (own_echo=False → active blocking
+# sources re-apply their state when isolation ends during a block), but it must
+# never be MIRROR-adopted — hence the suppression here.
+_BLOCKING_ECHO_CONTEXT_IDS = frozenset(
+    {"window_control", "isolation", "presence", "isolation_restore"}
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -114,7 +120,18 @@ class SyncModeHandler:
     def filter_state(self) -> FilterState:
         """Return the current filter state (respecting schedule overrides)."""
         if META_KEY_SYNC_ATTRS in self._group.run_state.config_overrides:
-            return FilterState.from_keys(self._group.run_state.config_overrides[META_KEY_SYNC_ATTRS])
+            override_value = self._group.run_state.config_overrides[META_KEY_SYNC_ATTRS]
+            try:
+                return FilterState.from_keys(override_value)
+            except TypeError:
+                # SlotMetaProcessor validates this value before it enters config_overrides,
+                # but this property runs synchronously in the event-callback path — fail
+                # safe to the config baseline instead of raising into resync().
+                _LOGGER.warning(
+                    "[%s] Invalid sync_attributes override %r — falling back to config baseline",
+                    self._group.entity_id, override_value,
+                )
+                return self._filter_state
         return self._filter_state
 
     def async_teardown(self) -> None:
@@ -141,10 +158,10 @@ class SyncModeHandler:
         """
 
         # Block during startup to prevent initial state flood from overwriting target_state.
-        if (
-            not self._group.run_state.startup_time
-            or (time.time() - self._group.run_state.startup_time) < STARTUP_BLOCK_DELAY
-        ):
+        # startup_time is always armed in async_added_to_hass(); the is-not-None guard
+        # keeps the suppression window the only gate — sync can never be blocked forever.
+        startup_time = self._group.run_state.startup_time
+        if startup_time is not None and (time.time() - startup_time) < STARTUP_BLOCK_DELAY:
             _LOGGER.debug("[%s] Startup phase, sync blocked", self._group.entity_id)
             return
 

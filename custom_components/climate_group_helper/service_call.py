@@ -103,8 +103,13 @@ class BaseServiceCallHandler(ABC):
             self._debouncer.async_shutdown()
             self._debouncer = None
 
-    def register_call_trigger(self, callback: Callable[[], Any]) -> None:
-        """Register a callback to be called after successful execution."""
+    def register_call_trigger(self, callback: Callable[[dict[str, Any] | None], Any]) -> None:
+        """Register a callback to be called after successful execution.
+
+        The callback receives the outgoing payload so triggers can react to the
+        command (e.g. BoostOverrideManager.abort() must know when the user
+        commands OFF so it does not restore the pre-boost snapshot over it).
+        """
         if callback not in self._call_triggers:
             self._call_triggers.append(callback)
 
@@ -113,11 +118,11 @@ class BaseServiceCallHandler(ABC):
         async with self._lock:
             await self._execute_calls(data)
 
-    def _call_trigger(self) -> None:
-        """Trigger all registered execution callbacks."""
+    def _call_trigger(self, data: dict[str, Any] | None = None) -> None:
+        """Trigger all registered execution callbacks with the outgoing payload."""
         for callback_func in self._call_triggers:
             try:
-                callback_func()
+                callback_func(data)
             except Exception:
                 _LOGGER.exception("[%s] Error in execution callback", self._group.entity_id)
 
@@ -173,8 +178,9 @@ class BaseServiceCallHandler(ABC):
             _LOGGER.debug("[%s] Calls suppressed (source=%s): Blocking mode active (e.g. Window open)", self._group.entity_id, context_id)
             return
 
-        # Trigger hook for calls
-        self._call_trigger()
+        # Trigger hook for calls — passes the payload so abort() can distinguish
+        # a user OFF command (which must survive) from other manual changes.
+        self._call_trigger(data)
 
         # Note: the retry loop deliberately has no success-break. Diff-based handlers
         # terminate naturally once members report the target state (no pending calls).
@@ -280,12 +286,41 @@ class BaseServiceCallHandler(ABC):
                 if not temp_range_processed:
                     low = data.get(ATTR_TARGET_TEMP_LOW)
                     high = data.get(ATTR_TARGET_TEMP_HIGH)
-                    if low is not None and high is not None:
-                        if (entity_ids := self._get_call_entity_ids(attr, low)):
+                    # A single set bound must still be enforceable — the range branch
+                    # used to require BOTH bounds, silently dropping real deviations
+                    # in a lone bound (e.g. a schedule slot defining only one).
+                    if low is not None or high is not None:
+                        # Diff low and high independently — a member in sync on one but
+                        # deviating on the other must still receive the combined call.
+                        low_entities = self._get_call_entity_ids(ATTR_TARGET_TEMP_LOW, low) if low is not None else []
+                        high_entities = self._get_call_entity_ids(ATTR_TARGET_TEMP_HIGH, high) if high is not None else []
+                        entity_ids = list(dict.fromkeys(low_entities + high_entities))
+                        # HA Core's set_temperature schema requires both bounds together
+                        # (vol.Inclusive) — a lone diffing bound must be completed before
+                        # the call is built, or HA Core rejects the call outright. Prefer
+                        # target_state (group-wide intended value); if target_state itself
+                        # never carries the other bound, fall back per-entity to the
+                        # member's own current value so the call stays valid.
+                        group_low = low if low is not None else self.target_state.target_temp_low
+                        group_high = high if high is not None else self.target_state.target_temp_high
+                        raw = []
+                        if entity_ids and group_low is not None and group_high is not None:
                             raw = [{"service": SERVICE_SET_TEMPERATURE,
-                                    "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
+                                    "kwargs": {ATTR_TARGET_TEMP_LOW: group_low, ATTR_TARGET_TEMP_HIGH: group_high},
                                     "entity_ids": entity_ids}]
-                            processed = self._process_min_temp_off(raw)
+                        elif entity_ids:
+                            for entity_id in entity_ids:
+                                member_state = self._group.read_member_state(entity_id)
+                                member_attrs = member_state.attributes if member_state else {}
+                                entity_low = group_low if group_low is not None else member_attrs.get(ATTR_TARGET_TEMP_LOW)
+                                entity_high = group_high if group_high is not None else member_attrs.get(ATTR_TARGET_TEMP_HIGH)
+                                if entity_low is not None and entity_high is not None:
+                                    raw.append({"service": SERVICE_SET_TEMPERATURE,
+                                                "kwargs": {ATTR_TARGET_TEMP_LOW: entity_low, ATTR_TARGET_TEMP_HIGH: entity_high},
+                                                "entity_ids": [entity_id]})
+                        if raw:
+                            processed = self._process_unsupported_hvac(raw)
+                            processed = self._process_min_temp_off(processed)
                             processed = self._process_member_offset(processed)
                             processed = self._process_group_offset(processed)
                             processed = self._process_range_template(processed)
@@ -716,6 +751,14 @@ class BaseServiceCallHandler(ABC):
                 result.append(call)
                 continue
 
+            # Preserve pre-offset values for downstream consumers (range template
+            # cache) — if _process_member_offset already set raw_kwargs, keep it as
+            # the single source of truth; otherwise seed it from the current
+            # (still offset-free at this point) kwargs before applying group_offset.
+            raw_kwargs = dict(call.get("raw_kwargs", {}))
+            for attr in transformable:
+                raw_kwargs.setdefault(attr, kwargs[attr])
+
             adjusted_kwargs = dict(kwargs)
             for attr in transformable:
                 if adjusted_kwargs[attr] is not None:
@@ -724,6 +767,7 @@ class BaseServiceCallHandler(ABC):
             result.append({
                 **call,
                 "kwargs": adjusted_kwargs,
+                "raw_kwargs": raw_kwargs,
                 "injected": list(injected | transformable),
             })
 
@@ -781,7 +825,7 @@ class BaseServiceCallHandler(ABC):
             # Cache the commanded range so later hvac_mode=heat_cool without
             # explicit setpoints can still resolve a band. Use raw_kwargs
             # (pre-offset values) when available — member offsets must not
-            # contaminate the template cache (H4 fix).
+            # contaminate the template cache.
             cache_kwargs = call.get("raw_kwargs", kwargs)
             if ATTR_TARGET_TEMP_LOW in cache_kwargs and cache_kwargs[ATTR_TARGET_TEMP_LOW] is not None:
                 template.low = float(cache_kwargs[ATTR_TARGET_TEMP_LOW])
@@ -829,7 +873,16 @@ class BaseServiceCallHandler(ABC):
                     continue
                 current_temp = self._group.member_template_manager._read_current_temp(state)
                 supported_modes = state.attributes.get(ATTR_HVAC_MODES)
-                expected_mode, expected_temp = self._group.member_template_manager.expected_mode_for(eid, low_val, high_val, current_temp, supported_modes)
+                # The raw band (cache / target_state) carries no offsets — re-apply
+                # the member's per-entity offset and the handler's group offset so
+                # covered members receive the same physical setpoint the native
+                # members get from the offset-applied kwargs.
+                member_offset = self._group._temp_offset_map.get(eid, 0.0)
+                group_offset = self._group.run_state.group_offset if self._apply_group_offset() else 0.0
+                offset = member_offset + group_offset
+                expected_mode, expected_temp = self._group.member_template_manager.expected_mode_for(
+                    eid, low_val + offset, high_val + offset, current_temp, supported_modes
+                )
 
                 if expected_mode is None:
                     continue
@@ -1117,9 +1170,6 @@ class ClimateCallHandler(BaseServiceCallHandler):
             return False
         return super()._is_member_blocked(entity_id)
 
-    def _should_diff(self) -> bool:
-        return False
-
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
         """Block calls if blocking mode is active, unless turning the group off."""
         blocked = self._group.run_state.blocked
@@ -1149,13 +1199,21 @@ class ClimateCallHandler(BaseServiceCallHandler):
                 continue
             if attr in offset_attrs:
                 value = raw_kwargs.get(attr, value)
-            if attr in target and target[attr] is not None:
-                t = target[attr]
-                if attr in _float_attrs and isinstance(t, (int, float)) and isinstance(value, (int, float)):
-                    if abs(t - value) > FLOAT_TOLERANCE:
-                        return True
-                elif t != value:
+            # target_state.to_dict() excludes None values, so a cleared target
+            # attribute is invisible to the value comparison below — check the
+            # raw attribute instead: a None target means the value was
+            # deliberately cleared (e.g. temperature after an AUTO switch) and
+            # an in-flight call carrying the old value is stale.
+            if getattr(self.target_state, attr, None) is None:
+                return True
+            t = target.get(attr)
+            if t is None:
+                continue
+            if attr in _float_attrs and isinstance(t, (int, float)) and isinstance(value, (int, float)):
+                if abs(t - value) > FLOAT_TOLERANCE:
                     return True
+            elif t != value:
+                return True
         return False
 
     def _block_call_attr(self, data: dict[str, Any], attr: str) -> bool:

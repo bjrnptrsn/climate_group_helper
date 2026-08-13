@@ -117,7 +117,7 @@ class PresenceHandler:
         if state_str in (STATE_UNKNOWN, STATE_UNAVAILABLE):
             return True
         # Binary sensors: "on" = present. Must be checked before zone matching
-        # because binary_sensor states never match a zone entity ID (H7 fix).
+        # because binary_sensor states never match a zone entity ID.
         if state_str == STATE_ON:
             return True
         if self._zones:
@@ -138,15 +138,28 @@ class PresenceHandler:
             return
 
         present = self._get_collective_presence()
+        presence_block_active = "presence" in self._group.run_state.blocking_sources
 
-        if not present and not self._away_active:
+        # The block state (blocking_sources) is the source of truth, not only
+        # _away_active: the schedule meta-key `presence: away` activates the block
+        # directly (bypassing this handler), so the away/restore transitions must
+        # also react to blocks this handler did not start itself.
+        if (
+            not present
+            and not self._away_active
+            and (not presence_block_active or self._timer_cancel is not None)
+        ):
+            # A pending timer with _away_active=False is the handler's own return
+            # timer — a new absence must cancel it and stay away (the block was
+            # never released). A foreign (meta-key) block with no pending timer
+            # is left alone.
             self._cancel_timer()
             self._away_active = True
             if self._away_delay > 0:
                 self._timer_cancel = async_call_later(self._hass, self._away_delay, self._on_away)
             else:
                 self._hass.async_create_task(self._go_away())
-        elif present and self._away_active:
+        elif present and (self._away_active or presence_block_active):
             self._cancel_timer()
             self._away_active = False
             if self._return_delay > 0:
@@ -169,10 +182,24 @@ class PresenceHandler:
         self._hass.async_create_task(self._go_restore())
 
     async def _go_away(self) -> None:
+        # TOCTOU guard: the timer fired, but someone returned before this task
+        # got a scheduling slot — don't activate away against the current state.
+        if self._get_collective_presence():
+            return
         self._away_active = True
         await self.override_manager.activate()
 
     async def _go_restore(self) -> None:
+        # TOCTOU guard: the return timer fired, but everyone left again before
+        # this task got a scheduling slot — don't restore against the current
+        # state (also avoids the spurious full restore on presence blips).
+        if not self._get_collective_presence():
+            return
+        # Blip guard: the person returned before the away delay expired — no
+        # away block was ever activated, so there is nothing to restore (a full
+        # target-state push would be pure Zigbee broadcast spam).
+        if "presence" not in self._group.run_state.blocking_sources:
+            return
         self._away_active = False
         # Slot-Away has priority: do not restore if the slot meta-key is active
         if self._group.run_state.config_overrides.get(META_KEY_PRESENCE) != "away":

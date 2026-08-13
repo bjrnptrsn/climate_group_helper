@@ -17,6 +17,7 @@
 <p align="center">
   🔗 <b>Group devices</b> into one virtual controller.<br>
   🌡️ <b>Fix inaccurate sensors</b> with external calibration.<br>
+  🔄 <b>React to manual changes</b> on members with Mirror, Lock or Master sync modes.<br>
   🪟 <b>Detect open windows</b> to pause heating automatically.<br>
   👤 <b>Automate presence</b> using away offsets and presets.<br>
   📅 <b>Schedule automation</b> via Schedule and Calendar entities.
@@ -165,7 +166,7 @@ Controls what happens when a member device is changed directly (e.g. via its own
 
 Automatically turn off heating or set a frost-protection temperature when windows or doors are opened, and restore the previous state when they close. While windows are open, manual changes are blocked. Supports binary sensors and cover entities.
 
-*   **Room + Zone Sensors:** Supports fast-reacting room sensors vs. slow-reacting zone sensors (e.g. for whole floors).
+*   **Room + Zone Sensors:** Supports fast-reacting room sensors vs. slow-reacting zone sensors (e.g. for whole floors). The room is understood as part of the zone: whenever the room sensor reports open, the zone needs to count as open, too.
 *   **Configurable Delays:** Set custom reaction times for opening and closing.
 *   **Window Action:** Choose between full `off` or a configurable temperature setpoint.
 *   **Adopt Manual Changes:** Optionally allow passive tracking:
@@ -554,7 +555,7 @@ Apply a portable JSON configuration to a group. This is useful for copying logic
 | Field | Required | Description |
 |-------|----------|-------------|
 | `settings` | **Yes** | A JSON object containing the configuration. Source: `settings_json` attribute from a Configuration Sensor. |
-| `include_member_list` | **Yes** | If `true`, overwrites the list of member and isolation entities. |
+| `include_member_list` | **Yes** | If `true`, overwrites the member list, the master entity, and the per-device heat/cool role assignment. |
 | `include_entity_selectors` | **Yes** | If `true`, overwrites linked sensors and per-member offsets. |
 
 By default, only logic settings (Sync Modes, Window Control, Schedules, etc.) are transferred. Set the two inclusion flags to `true` if you also want to copy the list of members and their linked sensors. The group name is always preserved.

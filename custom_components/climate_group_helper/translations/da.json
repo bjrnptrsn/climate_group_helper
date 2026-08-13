@@ -308,11 +308,15 @@
             "description": "Gengiver enkelt-setpunkt-medlemmer som virtuelle varme/køl-rækkevidde-enheder. Group Helper oversætter rækkevidde-kommandoer til passende fysiske varme/køl-kommandoer baseret på hvert medlems aktuelle temperatur.",
             "data": {
               "range_template_enabled": "Aktivér områdeskabelon",
-              "range_template_deadband_action": "Deadband-handling"
+              "range_template_deadband_action": "Deadband-handling",
+              "range_template_heat_entities": "Varmeapparater",
+              "range_template_cool_entities": "Køleapparater"
             },
             "data_description": {
               "range_template_enabled": "Gengiver automatisk alle enkelt-setpunkt-medlemmer (uden native heat/cool) som virtuelle område-enheder.",
-              "range_template_deadband_action": "Handling, der udføres, når den aktuelle temperatur er inden for målrækkevidde (deadband)."
+              "range_template_deadband_action": "Handling, der udføres, når den aktuelle temperatur er inden for målrækkevidde (deadband).",
+              "range_template_heat_entities": "Medlemmer, der må opvarme. Ulistede medlemmer er ubegrænsede (fysisk kapacitet afgør). En rolle kan kun begrænse, aldrig udvide en enheds kapacitet.",
+              "range_template_cool_entities": "Medlemmer, der må køle. Ulistede medlemmer er ubegrænsede (fysisk kapacitet afgør). En rolle kan kun begrænse, aldrig udvide en enheds kapacitet."
             }
           },
           "advanced_section": {

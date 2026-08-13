@@ -112,12 +112,13 @@ class WindowControlHandler:
 
         _LOGGER.debug("[%s] Window control subscribed to: %s", self._group.entity_id, sensors_to_track)
 
-        # Check initial state
+        # Check initial state. _control_state is intentionally left at WINDOW_CLOSE
+        # here — it must only be updated inside _execute_action (like the event path),
+        # otherwise _timer_expired's "mode == self._control_state" skip would suppress
+        # the very activation this timer exists to trigger.
         result = self._window_control_logic()
         if result:
             mode, delay = result
-            if mode == WINDOW_OPEN:
-                self._control_state = WINDOW_OPEN
             if delay <= 0:
                 self._hass.async_create_task(self._execute_action(mode))
             else:

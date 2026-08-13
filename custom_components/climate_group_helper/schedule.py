@@ -53,6 +53,13 @@ _CLIMATE_NUMERIC_ATTRS: frozenset[str] = frozenset(
     }
 )
 
+# Owners of the shared shadow (target_state_snapshot). The shadow answers "what
+# would target_state be without any override layer" and is created by whichever
+# override layer starts first (boost or bypass). It is only ever consumed by the
+# layer that created it — see ScheduleBaseHandler.save_shadow/restore_shadow.
+SHADOW_OWNER_BOOST = "boost"
+SHADOW_OWNER_BYPASS = "bypass"
+
 
 class ScheduleCaller(StrEnum):
     """Caller identifiers for schedule_listener."""
@@ -124,12 +131,12 @@ class ScheduleBaseHandler(ABC):
         """Return the active bypass entity ID."""
 
     @callback
-    def service_call_trigger(self) -> None:
+    def service_call_trigger(self, data: dict[str, Any] | None = None) -> None:  # noqa: ARG002
         """Hook: a genuine user command was executed via climate_call_handler."""
         self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.SERVICE_CALL))
 
     @callback
-    def sync_call_trigger(self) -> None:
+    def sync_call_trigger(self, data: dict[str, Any] | None = None) -> None:  # noqa: ARG002
         """Hook: sync enforcement or MIRROR adoption was executed."""
         self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.SYNC_CALL))
 
@@ -210,11 +217,47 @@ class ScheduleBaseHandler(ABC):
             valid[attr] = value
         return valid
 
-    async def restore_shadow(self) -> None:
-        """Restore target_state from the Shadow (target_state_snapshot) and clear override states."""
+    def save_shadow(self, owner: str) -> None:
+        """Save current target_state as the shadow — only if none exists yet.
+
+        Records `owner` (SHADOW_OWNER_BOOST / SHADOW_OWNER_BYPASS) so restore and
+        clear can be scoped: a shadow is only ever consumed by the layer that
+        created it. A new layer only takes over when no shadow exists.
+        """
+        if self._group.run_state.target_state_snapshot is None:
+            self._group.run_state = replace(
+                self._group.run_state,
+                target_state_snapshot=self._group.shared_target_state,
+                shadow_owner=owner,
+            )
+
+    def clear_shadow(self, owner: str) -> bool:
+        """Clear the shadow and its owner — only if `owner` created it.
+
+        Returns True when the shadow was actually cleared; False when it belongs
+        to another layer (e.g. a boost abort must not clear a bypass shadow).
+        """
+        if self._group.run_state.shadow_owner != owner:
+            return False
+        self._group.run_state = self._group.run_state.clear_snapshot()
+        return True
+
+    async def restore_shadow(self, owner: str | None = None) -> bool:
+        """Restore target_state from the Shadow (target_state_snapshot) and clear override states.
+
+        With `owner` given, the shadow is only consumed when that layer created
+        it — a bypass shadow is never consumed by the boost and vice versa.
+        Returns True when a restore actually ran.
+        """
         snapshot = self._group.run_state.target_state_snapshot
         if not snapshot:
-            return
+            return False
+        if owner is not None and self._group.run_state.shadow_owner != owner:
+            _LOGGER.debug(
+                "[%s] Shadow restore skipped (owner=%s, caller=%s)",
+                self._group.entity_id, self._group.run_state.shadow_owner, owner,
+            )
+            return False
 
         _LOGGER.debug("[%s] Restoring shadow state: %s", self._group.entity_id, snapshot)
 
@@ -234,6 +277,7 @@ class ScheduleBaseHandler(ABC):
         # 4. Restart resync timer if schedule entity is present
         if self.schedule_entity_id:
             self._start_timer("resync")
+        return True
 
     def _cancel_timer(self) -> None:
         """Cancel the active timer and clear any associated schedule_override RunState.
@@ -257,6 +301,18 @@ class ScheduleBaseHandler(ABC):
             duration = 60 * (
                 self._resync_interval if timer_type == "resync" else self._override_duration
             )
+        # A running OVERRIDE timer must survive a resync start: it counts down
+        # the manual-override revert, and its deadline is the documented
+        # invariant ("revert after override_duration from the FIRST manual
+        # change"). Replacing it here would e.g. let a boost expiry mid-override
+        # silently drop the revert deadline (resync_interval=0 → the manual
+        # change sticks forever).
+        if timer_type == "resync" and self._group.schedule_timer_type == "override":
+            _LOGGER.debug(
+                "[%s] Override timer running — resync timer start skipped",
+                self._group.entity_id,
+            )
+            return
         # Cancel first: a non-positive duration means "no timer configured" —
         # any previously running timer must not survive the call.
         self._cancel_timer()
@@ -393,10 +449,7 @@ class ScheduleBaseHandler(ABC):
                 # target_state), so BoostOverrideManager.activate() creates it via
                 # _save_snapshot() before writing the temperature.
                 if bypass_active and self._group.run_state.target_state_snapshot is None:
-                    self._group.run_state = replace(
-                        self._group.run_state,
-                        target_state_snapshot=self._group.shared_target_state,
-                    )
+                    self.save_shadow(SHADOW_OWNER_BYPASS)
                     _LOGGER.debug("[%s] Override stack activated — Shadow saved", self._group.entity_id)
 
                 effective_payload = {}
@@ -430,8 +483,10 @@ class ScheduleBaseHandler(ABC):
                     await self.call_handler.call_immediate(effective_payload)
 
             # 3. No override active but a shadow exists -> last layer just ended.
+            # The shadow's owner IS the layer that ended — restore scoped to it,
+            # so a foreign (e.g. boost) shadow is never consumed here.
             elif self._group.run_state.target_state_snapshot is not None:
-                await self.restore_shadow()
+                await self.restore_shadow(self._group.run_state.shadow_owner)
 
             # 4. No override, no shadow -> plain basis operation (slot_only as before).
             else:
@@ -534,6 +589,19 @@ class ScheduleHandler(ScheduleBaseHandler):
         if self._schedule_entity:
             self._subscribe()
             await self.schedule_listener(caller=ScheduleCaller.SWITCH)
+        else:
+            # Reset to "no schedule at all": unwind the meta-key state left by the
+            # last slot. schedule_listener() early-returns without an entity, so
+            # drive on_slot_change() directly — with empty basis data the meta
+            # processor clears its active keys (sync_mode, group_offset, presence)
+            # and the shadow branch unwinds a leftover bypass shadow. Without this
+            # the overrides would stick until reload (same bug class the bypass
+            # reset fixed).
+            _LOGGER.debug(
+                "[%s] Schedule reset to none — running meta-key unwind",
+                self._group.entity_id,
+            )
+            await self.on_slot_change(caller=ScheduleCaller.SWITCH)
 
 
 class ScheduleBypassHandler(ScheduleBaseHandler):

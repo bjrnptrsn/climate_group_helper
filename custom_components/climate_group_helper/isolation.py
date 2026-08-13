@@ -86,6 +86,13 @@ class MemberIsolationHandler:
 
         # Per-entity call handlers — created in async_setup, keyed by entity_id
         self._call_handlers: dict[str, IsolationCallHandler] = {}
+        self._restore_call_handlers: dict[str, IsolationRestoreCallHandler] = {}
+
+        # Per-device preset captured BEFORE the pre-action was sent (PRESET_MODE
+        # action only) — the "Vor-Preset". Only preset_mode is snapshotted
+        # ("nur snapshoten, was wir ändern"); hvac_mode is covered by the
+        # target_state restore.
+        self._pre_action_presets: dict[str, str | None] = {}
 
         _LOGGER.debug(
             "[%s] MemberIsolation initialized. trigger=%s, sensor=%s, hvac_modes=%s, entities=%s, activate_delay=%ss, restore_delay=%ss",
@@ -115,6 +122,7 @@ class MemberIsolationHandler:
         # Create per-entity call handlers
         for entity_id in self._isolation_entity_ids:
             self._call_handlers[entity_id] = IsolationCallHandler(self._group, entity_id)
+            self._restore_call_handlers[entity_id] = IsolationRestoreCallHandler(self._group, entity_id)
 
         if self._trigger == IsolationTrigger.MEMBER_OFF:
             _LOGGER.debug(
@@ -131,8 +139,11 @@ class MemberIsolationHandler:
                 self._hass, [self._sensor_id], self._state_change_listener,
             )
             _LOGGER.debug("[%s] Member isolation subscribed to sensor: %s", self._group.entity_id, self._sensor_id)
-            # Check initial sensor state
+            # Check initial sensor state (same pattern as the HVAC_MODE check below:
+            # _trigger_active must reflect the active rule so still_claimed and the
+            # change-guard in _state_change_listener stay consistent).
             if (state := self._hass.states.get(self._sensor_id)) and state.state == STATE_ON:
+                self._trigger_active = True
                 _LOGGER.debug("[%s] Isolation sensor already ON at startup, activating immediately", self._group.entity_id)
                 await self._activate_isolation()
         else:
@@ -167,7 +178,13 @@ class MemberIsolationHandler:
 
     @callback
     def _state_change_listener(self, event: Event[EventStateChangedData]) -> None:
-        """Handle sensor state change (SENSOR trigger only)."""
+        """Handle sensor state change (SENSOR trigger only).
+
+        Only actual on/off transitions are tracked — attribute-only updates
+        (e.g. periodic Zigbee battery reports) carry the same state and must not
+        restart the activation/restore timer, otherwise a sensor reporting
+        attributes more often than the configured delay would never activate.
+        """
         new_state = event.data.get("new_state")
         if new_state is None:
             return
@@ -176,6 +193,8 @@ class MemberIsolationHandler:
             return
 
         now_active = new_state.state == STATE_ON
+        if now_active == self._trigger_active:
+            return  # no change — attribute-only update
         _LOGGER.debug("[%s] Isolation sensor %s changed to: %s", self._group.entity_id, self._sensor_id, new_state.state)
         self._trigger_active = now_active
         self._schedule_trigger(now_active)
@@ -241,8 +260,64 @@ class MemberIsolationHandler:
             return None  # already in target mode
         return {"hvac_mode": self._action_hvac_mode}
 
+    def _read_current_preset(self, entity_id: str) -> str | None:
+        """Read the device's current preset_mode (None if unavailable or unset)."""
+        state = self._group.read_member_state(entity_id)
+        if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return None
+        return state.attributes.get("preset_mode")
+
+    def _build_restore_preset_payload(self, entity_id: str) -> dict | None:
+        """Return the service call payload restoring the pre-action preset.
+
+        Returns None if no pre-preset was captured, the device is unavailable,
+        the preset is not supported by the device, or the device already carries
+        the preset (skip logic, consistent with _build_isolation_payload).
+
+        The call is also skipped when the target_state restore will cover the
+        preset itself (group preset is set AND supported by the device AND no
+        block is active that would suppress the restore).
+
+        Known limit: a captured None (device had NO preset before the pre-action)
+        cannot be restored — set_preset_mode requires a concrete value, so the
+        device stays on the pre-action preset.
+        """
+        pre_preset = self._pre_action_presets.get(entity_id)
+        if not pre_preset:
+            return None
+        state = self._group.read_member_state(entity_id)
+        if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return None
+        supported = state.attributes.get("preset_modes", [])
+        if (
+            self.target_state.preset_mode is not None
+            and self.target_state.preset_mode in supported
+            and not self._group.run_state.blocked
+        ):
+            return None  # target_state restore covers the preset
+        if pre_preset not in supported:
+            _LOGGER.warning(
+                "[%s] Pre-action preset %r not supported by %s (supported: %s) — skipping restore",
+                self._group.entity_id, pre_preset, entity_id, supported,
+            )
+            return None
+        if state.attributes.get("preset_mode") == pre_preset:
+            return None  # already set
+        return {"preset_mode": pre_preset}
+
     async def _activate_isolation(self) -> None:
-        """Add entities to isolated_members and trigger pre-action."""
+        """Add entities to isolated_members and trigger pre-action.
+
+        Re-validates the trigger state on entry and between the sequential
+        pre-action calls: the sensor may have flipped while the coroutine was
+        queued or between awaits — a stale activation must not re-add entities
+        or send OFF commands after the deactivation already won (whichever
+        coroutine runs LAST must not override the current trigger state).
+        """
+        if not self._trigger_active:
+            _LOGGER.debug("[%s] Stale isolation activation skipped (trigger no longer active)", self._group.entity_id)
+            return
+
         new_isolated = self._group.run_state.isolated_members | frozenset(self._isolation_entity_ids)
         self._group.run_state = replace(
             self._group.run_state,
@@ -251,7 +326,14 @@ class MemberIsolationHandler:
         _LOGGER.debug("[%s] Isolation activated for: %s", self._group.entity_id, self._isolation_entity_ids)
 
         for entity_id in self._isolation_entity_ids:
+            if not self._trigger_active:
+                _LOGGER.debug("[%s] Isolation activation aborted mid-flight (trigger flipped)", self._group.entity_id)
+                return
             if handler := self._call_handlers.get(entity_id):
+                # Capture the pre-action preset BEFORE sending the pre-action —
+                # only preset_mode changes need a device-side restore point.
+                if self._action_type == IsolationActionType.PRESET_MODE:
+                    self._pre_action_presets[entity_id] = self._read_current_preset(entity_id)
                 payload = self._build_isolation_payload(entity_id)
                 if payload:
                     await handler.call_immediate(payload)
@@ -259,20 +341,65 @@ class MemberIsolationHandler:
         self._group.async_defer_or_update_ha_state()
 
     async def _deactivate_isolation(self) -> None:
-        """Remove entities from isolated_members and restore to target_state."""
-        new_isolated = self._group.run_state.isolated_members - frozenset(self._isolation_entity_ids)
+        """Remove entities from isolated_members and restore to target_state.
+
+        Excludes entities still claimed by another currently-active rule — two
+        rules covering the same entity must not cancel each other out when only
+        one of them deactivates.
+
+        Re-validates the trigger state on entry: the sensor may have flipped
+        while the coroutine was queued — a stale deactivation must not release
+        entities or send restore commands after the activation already won.
+        """
+        if self._trigger_active:
+            _LOGGER.debug("[%s] Stale isolation deactivation skipped (trigger active again)", self._group.entity_id)
+            return
+
+        still_claimed = frozenset(
+            eid
+            for other in self._group.member_isolation_handlers
+            if other is not self and other._trigger_active
+            for eid in other._isolation_entity_ids
+        )
+        new_isolated = self._group.run_state.isolated_members - (
+            frozenset(self._isolation_entity_ids) - still_claimed
+        )
         self._group.run_state = replace(
             self._group.run_state,
             isolated_members=new_isolated,
         )
         _LOGGER.debug("[%s] Isolation deactivated for: %s", self._group.entity_id, self._isolation_entity_ids)
 
+        # Entities still claimed by another active rule stay isolated — the
+        # bookkeeping above keeps them in isolated_members, and the restore
+        # calls below must not reach them either: a full target-state restore
+        # (e.g. heat 21°) would physically undo the other rule's protection on
+        # an OFF device that isolated_members still marks as protected.
+        release_entities = [eid for eid in self._isolation_entity_ids if eid not in still_claimed]
+
+        # Restore the pre-action preset FIRST — always, even when globally blocked.
+        # Last-Call-Wins: the authoritative target_state values are sent afterwards
+        # and cannot be overwritten by the preset call. While blocked, the preset
+        # echo reaches the enforcement loop (own_echo=False) which re-applies the
+        # active block (OFF/temperature); when the block lifts, the device already
+        # carries the pre-preset and the block-restore needs to know nothing about it.
+        for entity_id in self._isolation_entity_ids:
+            if entity_id in still_claimed:
+                self._pre_action_presets.pop(entity_id, None)
+                continue
+            payload = self._build_restore_preset_payload(entity_id)
+            if payload:
+                if restore_handler := self._restore_call_handlers.get(entity_id):
+                    await restore_handler.call_immediate(payload)
+            # Entry is stale once deactivation runs — discard per device.
+            self._pre_action_presets.pop(entity_id, None)
+
         # Skip restore if globally blocked (e.g. window open) — Window Control
         # will restore all members (including the newly un-isolated one) when the block is lifted.
         if not self._group.run_state.blocked:
-            for entity_id in self._isolation_entity_ids:
-                if handler := self._call_handlers.get(entity_id):
-                    await handler.call_immediate()
+            for entity_id in release_entities:
+                if call_handler := self._call_handlers.get(entity_id):
+                    await call_handler.call_immediate()
 
         self._group.async_defer_or_update_ha_state()
 
@@ -340,6 +467,12 @@ class MemberIsolationHandler:
 
         Handles the "last active member" edge case: releases all isolated members
         instead (group goes OFF naturally).
+
+        NOTE: This path clears isolated_members WITHOUT
+        _deactivate_isolation(), so no pre-action preset restore runs here. This
+        is deliberate: MEMBER_OFF never sends a pre-action (the member turned
+        itself off — there is nothing to restore), and pre-action presets from
+        other rules are unwound by their own rule deactivation.
         """
         remaining_active = [
             eid for eid in self._group.climate_entity_ids
@@ -347,11 +480,26 @@ class MemberIsolationHandler:
             and eid != entity_id
             and (s := self._hass.states.get(eid))
             and s.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            and s.state != HVACMode.OFF
         ]
         if not remaining_active:
             _LOGGER.debug("[%s] Last active member %s going OFF — clearing all isolated members", self._group.entity_id, entity_id)
             self.state_manager.update(hvac_mode=HVACMode.OFF, entity_id=entity_id)
-            self._group.run_state = replace(self._group.run_state, isolated_members=frozenset())
+            # Preserve entities still claimed by another currently-active rule
+            # (mirror of _deactivate_isolation's still_claimed guard). LMS must
+            # release THIS rule's own isolations, but a foreign rule (e.g. a
+            # SENSOR rule) stays active and keeps its claim — otherwise its
+            # protection is silently dropped until the rule deactivates.
+            still_claimed = frozenset(
+                eid
+                for other in self._group.member_isolation_handlers
+                if other is not self and other._trigger_active
+                for eid in other._isolation_entity_ids
+            )
+            self._group.run_state = replace(
+                self._group.run_state,
+                isolated_members=self._group.run_state.isolated_members & still_claimed,
+            )
         else:
             new_isolated = self._group.run_state.isolated_members | frozenset([entity_id])
             self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
@@ -416,3 +564,15 @@ class IsolationCallHandler(BaseServiceCallHandler):
         elif attr not in state.attributes:
             return []
         return [self._entity_id]
+
+
+class IsolationRestoreCallHandler(IsolationCallHandler):
+    """Call handler restoring the pre-action preset when isolation ends.
+
+    Carries the dedicated context_id "isolation_restore" so its echo reaches the
+    blocking-enforcement loop (own_echo=False — NOT in _TRUSTED_CONTEXT_IDS) while
+    being suppressed from MIRROR adoption (_BLOCKING_ECHO_CONTEXT_IDS). See the
+    invariant note in sync_mode.py.
+    """
+
+    CONTEXT_ID = "isolation_restore"

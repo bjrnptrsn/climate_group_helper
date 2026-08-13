@@ -1,0 +1,702 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "İklim Grubu Yardımcısı",
+        "description": "Birden fazla ısıtma/soğutma ünitesini senkronize eden sanal bir kontrolör oluşturur. Bu grup, kontrol panelinizde ve otomasyonlarınızda tek bir akıllı varlık olarak davranır, durumları ve komutları birleştirir.",
+        "data": {
+          "name": "Grup Adı",
+          "entities": "İklim Cihazları"
+        },
+        "data_description": {
+          "name": "Grubunuz için kolay bir isim (örn. 'Oturma Odası' veya 'Tüm Ev').",
+          "entities": "Bu gruba dahil edilecek iklim cihazlarını (termostatlar, klimalar) seçin."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "En az bir iklim cihazı seçmelisiniz."
+    },
+    "abort": {
+      "already_configured": "Bu grup zaten yapılandırılmış.",
+      "single_instance_allowed": "Yalnızca bir örneğe izin verilir.",
+      "no_changes": "Herhangi bir değişiklik yapılmadı."
+    }
+  },
+  "options": {
+    "flow_title": "Grubu Yapılandır",
+    "step": {
+      "init": {
+        "title": "İklim Grubunu Yapılandır",
+        "sections": {
+          "members_section": {
+            "name": "Üyeler ve Modlar",
+            "description": "İklim cihazları ekleyin ve özelliklerin nasıl birleştirileceğini seçin. Gelişmiş özellikler bir Ana Varlık (Master Entity) desteği ekler.",
+            "data": {
+              "entities": "İklim Cihazları",
+              "master_entity": "Ana Varlık",
+              "hvac_mode_strategy": "HVAC Modu Stratejisi",
+              "feature_strategy": "Özellik Stratejisi",
+              "union_out_of_bounds_action": "Sınır Dışı Eylemi",
+              "union_unsupported_hvac_action": "Desteklenmeyen HVAC Modu Eylemi"
+            },
+            "data_description": {
+              "entities": "Cihaz ekleyin veya kaldırın. Bir cihazı kaldırmak, grubun onu kontrol etmesini durdurur.",
+              "master_entity": "Bir üyeyi Ana Varlık (Master Entity, lider) olarak belirleyin. Master/Lock senkronizasyonu ve merkezi hedef değer gösterimi için kullanılır.",
+              "hvac_mode_strategy": "Grubun durumunun üyelerinden nasıl hesaplanacağına dair strateji (örn. biri 'heat', diğeri 'off' ise).",
+              "feature_strategy": "Üyelerin farklı yeteneklere sahip olduğu durumlarda grupta hangi özelliklerin (örn. ön ayar modları, fan modları) kullanılabilir olacağını belirler.",
+              "union_out_of_bounds_action": "Hedef sıcaklığa ulaşamayan üyelerle ne yapılacağı. Yalnızca Özellik Stratejisi Union olarak ayarlandığında geçerlidir.",
+              "union_unsupported_hvac_action": "Grubun hedef HVAC modunu teknik olarak desteklemeyen üyelerle ne yapılacağı (örn. ısıtma sırasında klima). Yalnızca Özellik Stratejisi Union olarak ayarlandığında geçerlidir."
+            }
+          },
+          "temperature_section": {
+            "name": "Sıcaklık Ayarları",
+            "description": "Sıcaklık birleştirme ve hassasiyeti yapılandırın. Gelişmiş özellikler harici sensörler, kalibrasyon ve donma koruması desteği ekler.",
+            "data": {
+              "temp_target_avg": "Hedef Sıcaklık",
+              "temp_use_master": "Ana Varlığın Hedef Sıcaklığını Kullan",
+              "temp_target_round": "Hedef Sıcaklık Hassasiyeti",
+              "temp_current_avg": "Mevcut Sıcaklık",
+              "min_temp_off": "Kapalıyken Minimum Sıcaklık",
+              "temp_sensors": "Harici Sıcaklık Sensörleri",
+              "temp_update_targets": "Harici Sıcaklığı Varlıklara Yaz",
+              "temp_calibration_mode": "Kalibrasyon Modu",
+              "calibration_heartbeat": "Kalibrasyon Nabzı (dk)",
+              "calibration_ignore_off": "Kapalı Üyeleri Yoksay",
+              "ignore_off_members_temperature": "Kapalı Üyeleri Sıcaklıktan Hariç Tut"
+            },
+            "data_description": {
+              "temp_target_avg": "Grubun üyelerine gönderilecek hedef değeri nasıl hesapladığı.",
+              "temp_use_master": "Üye ortalaması yerine ana varlığın ayar noktasını grubun hedef sıcaklığı olarak göster. Ana varlık kullanılamıyorsa ortalamaya geri döner. Yalnızca grup durumunun nasıl görüntülendiğini etkiler — üyeleri kontrol etmez veya senkronize etmez (bunun için Sync Mode: Master/Lock kullanın).",
+              "temp_target_round": "Yalnızca cihazlara gönderilen değerler için geçerlidir, mevcut/görüntülenen değerler için değil.",
+              "temp_current_avg": "Grubun üyelerinin sensör okumalarını nasıl özetlediği.",
+              "min_temp_off": "Grup kapatıldığında cihazın minimum sıcaklığını (örn. 5°C) gönderir. Bu, donma korumasi için vanaların tamamen kapalı olmasını sağlar.",
+              "temp_sensors": "Üye okumaları yerine harici sensörler kullanın. Bunlar grubun sıcaklığı için tek doğruluk kaynağı olur.",
+              "temp_update_targets": "Harici sensör değerini number varlıklarına yazın (örn. TRV kalibrasyon ofsetleri). Termostatları gerçek oda sıcaklığından haberdar tutmak için kullanışlıdır.",
+              "temp_calibration_mode": "Mutlak: değeri doğrudan gönder. Ofset: farkı gönder (Harici - TRV Dahili). Ölçekli: Tam sayı x100 olarak gönder (örn. 21.5 -> 2150).",
+              "calibration_heartbeat": "Sıcaklık değişmese bile kalibrasyonu periyodik olarak varlıklara zorla senkronize edin. Devre dışı bırakmak için 0 olarak ayarlayın.",
+              "calibration_ignore_off": "Şu anda kapalı olan üyelere kalibrasyon güncellemeleri gönderme.",
+              "ignore_off_members_temperature": "Şu anda kapalı olan üyeleri mevcut ve hedef sıcaklık hesaplamalarından hariç tutun."
+            }
+          },
+          "humidity_section": {
+            "name": "Nem Ayarları",
+            "description": "Nem birleştirme ve hassasiyeti yapılandırın. Gelişmiş özellikler harici sensörler desteği ekler.",
+            "data": {
+              "humidity_target_avg": "Hedef Nem",
+              "humidity_use_master": "Ana Varlığın Hedef Nemini Kullan",
+              "humidity_target_round": "Hedef Nem Hassasiyeti",
+              "humidity_current_avg": "Mevcut Nem",
+              "humidity_sensors": "Harici Nem Sensörleri",
+              "humidity_update_targets": "Harici Nemi Varlıklara Yaz"
+            },
+            "data_description": {
+              "humidity_target_avg": "Grubun üyelerine gönderilecek hedef değeri nasıl hesapladığı.",
+              "humidity_use_master": "Üye ortalaması yerine ana varlığın ayar noktasını grubun hedef nemi olarak göster. Ana varlık kullanılamıyorsa ortalamaya geri döner. Yalnızca grup durumunun nasıl görüntülendiğini etkiler — üyeleri kontrol etmez veya senkronize etmez (bunun için Sync Mode: Master/Lock kullanın).",
+              "humidity_target_round": "Yalnızca cihazlara gönderilen değerler için geçerlidir, mevcut/görüntülenen değerler için değil.",
+              "humidity_current_avg": "Grubun üyelerinin sensör okumalarını nasıl özetlediği.",
+              "humidity_sensors": "Üye okumaları yerine harici sensörler kullanın. Bunlar grubun nemi için tek doğruluk kaynağı olur.",
+              "humidity_update_targets": "Harici sensör değerini number varlıklarına yazın. Nem alma cihazı kalibrasyonu için kullanışlıdır."
+            }
+          },
+          "sync_section": {
+            "name": "Senkronizasyon Modu",
+            "description": "Bir üye cihazı doğrudan değiştirildiğinde ne olacağını tanımlar (örn. kendi uygulaması veya fiziksel düğmeleri aracılığıyla) — grubu kendiniz kontrol ettiğinizde değil. Hangi özniteliklerin uygulanacağını seçin.",
+            "data": {
+              "sync_mode": "Senkronizasyon Modu",
+              "sync_attributes": "Senkronize Öznitelikler",
+              "ignore_off_members_sync": "Üyenin Kapalı Durumuna Saygı Göster (Senkronizasyon)"
+            },
+            "data_description": {
+              "sync_mode": "Bir üye grup dışından değiştirildiğinde ne yapılacağı. Devre dışı: yoksay. Yansıt: değişiklikleri yansıt. Kilitle: değişiklikleri geri al. Yansıt/Kilitle: seçilen öznitelikleri yansıt, diğerlerini geri al. Master/Kilitle: ana varlığı yansıt, diğerlerini geri al.",
+              "sync_attributes": "Senkronizasyon Modunun hangi özniteliklerde etkili olduğunu tanımlar. Seçilen ve seçilmeyen özniteliklerin işlenmesi (Yansıtma, Geri Alma veya Yoksayma) seçilen moda bağlıdır.",
+              "ignore_off_members_sync": "Manuel olarak kapatılan üyeler kendi haline bırakılır. Durumları ne yansıtılır ne de geri alınır. Not: doğrudan grup komutları bu ayardan bağımsız olarak her zaman tüm üyelere ulaşır."
+            }
+          },
+          "window_section": {
+            "name": "Pencere Kontrolü",
+            "description": "Pencereler açıldığında kapatın veya belirli bir sıcaklık ayarlayın. Kapandığında geri yükleyin.",
+            "data": {
+              "window_mode": "Pencere Kontrol Modu",
+              "window_adopt_manual_changes": "Manuel Değişiklikleri Kabul Et",
+              "window_action": "Pencere Açık Eylemi",
+              "window_temperature": "Pencere Açık Sıcaklığı",
+              "room_sensor": "Oda Pencere Sensörü",
+              "zone_sensor": "Bölge Pencere Sensörü",
+              "room_open_delay": "Oda Açılma Gecikmesi (saniye)",
+              "zone_open_delay": "Bölge Açılma Gecikmesi (saniye)",
+              "close_delay": "Kapanma Gecikmesi (saniye)"
+            },
+            "data_description": {
+              "window_mode": "İklim grubunu pencere/kapı sensörlerine göre etkinleştirin veya devre dışı bırakın. Etkinleştirildiğinde, pencere açıldığında HVAC modu 'off' olarak ayarlanır ve kapandığında önceki duruma geri döner.",
+              "window_adopt_manual_changes": "Pencereler açıkken hedef durum değişikliklerine izin ver.",
+              "window_action": "Pencere açıldığında ne yapılacağı: tamamen kapat veya belirli bir sıcaklık ayarla (örn. donma koruması).",
+              "window_temperature": "'Sıcaklık' eylemi seçildiğinde ayarlanacak hedef sıcaklık.",
+              "room_sensor": "(İsteğe bağlı) Odanın kendi penceresi/kapısı için binary sensör.",
+              "zone_sensor": "(İsteğe bağlı) Bölgedeki/kattaki pencereler/kapılar için binary sensör. Bölge sensörü, oda sensörünü içermelidir.",
+              "room_open_delay": "Oda penceresi açıldıktan sonra ısıtmayı kapatmadan önce beklenecek süre.",
+              "zone_open_delay": "Bölge penceresi açıldıktan sonra ısıtmayı kapatmadan önce beklenecek süre.",
+              "close_delay": "Tüm pencereler kapandıktan sonra ısıtmayı geri yüklemeden önce beklenecek süre."
+            }
+          },
+          "presence_section": {
+            "name": "Varlık Kontrolü",
+            "description": "Oda varlığına göre iklim ayarlarını yönetin. Yapılandırılan süre boyunca yokluk algılandığında, uzakta eylemi tetiklenir. Geri dönüşte önceki ayarlar geri yüklenir.",
+            "data": {
+              "presence_mode": "Varlık Kontrol Modu",
+              "presence_sensor": "Varlık Tetikleyicisi",
+              "presence_zone": "Varlık Bölgesi",
+              "presence_action": "Uzakta Eylemi",
+              "presence_away_offset": "Uzakta Sıcaklık Ofseti (°C)",
+              "presence_away_temperature": "Uzakta Sıcaklığı (°C)",
+              "presence_away_preset": "Uzakta Ön Ayarı",
+              "presence_away_delay": "Uzakta Gecikmesi (saniye)",
+              "presence_return_delay": "Dönüş Gecikmesi (saniye)"
+            },
+            "data_description": {
+              "presence_mode": "Yokluk algılandığında otomatik uzakta-yedek eylemini etkinleştirin veya devre dışı bırakın.",
+              "presence_sensor": "Oda varlığını bildiren varlık. Birden fazla sensör seçebilirsiniz (örn. hareket sensörü ve telefon). Herhangi bir 'on' veya 'home' durumu mevcut olarak kabul edilir.",
+              "presence_zone": "(İsteğe bağlı) Varlığın sayıldığı bölgeleri seçin. Tanımlanmışsa, bir kişi yalnızca bu bölgelerden birindeyken 'mevcut'tur. Boşsa, kişi herhangi bir bölgede 'mevcut'tur ('not_home' hariç).",
+              "presence_action": "Yokluk algılandığında gerçekleştirilecek yedek eylem.",
+              "presence_away_offset": "Uzaktayken mevcut hedeften ofset (örn. -2° veya +2°). Yokluk sırasındaki program değişiklikleri otomatik olarak uygulanır.",
+              "presence_away_temperature": "Uzaktayken ayarlanacak sabit sıcaklık.",
+              "presence_away_preset": "Uzaktayken etkinleştirilecek ön ayar modu.",
+              "presence_away_delay": "Sensör yokluğu bildirdikten sonra uzakta modunu etkinleştirmeden önce beklenecek süre.",
+              "presence_return_delay": "Sensör varlığı bildirdikten sonra geri yüklemeden önce beklenecek süre."
+            }
+          },
+          "schedule_section": {
+            "name": "Program Otomasyonu",
+            "description": "İklim ayarlarını otomatikleştirmek için bir program veya takvim varlığı bağlayın. Zaman aralığı verileri, grup davranışını zaman aralığı bazında ayarlamak için iklim özniteliklerini (temperature, hvac_mode) ve meta anahtarları (turn_off, sync_mode, sync_attributes) içerebilir.",
+            "data": {
+              "schedule_entity": "Program/Takvim Varlığı",
+              "schedule_bypass_entity": "Bypass Varlığı",
+              "resync_interval": "Yeniden Senkronizasyon Aralığı (dakika)",
+              "override_duration": "Geçersiz Kılma Süresi (dakika)",
+              "persist_changes": "Kalıcı Geçersiz Kılma",
+              "persist_active_schedule": "Program Geçersiz Kılmasını Koru",
+              "ignore_off_members_schedule": "Üyenin Kapalı Durumuna Saygı Göster (Program)"
+            },
+            "data_description": {
+              "schedule_entity": "Bir schedule.* veya calendar.* varlığı seçin. Program varlıkları için zaman aralığı verileri, aralığın özniteliklerinden okunur. Takvim varlıkları için zaman aralığı verileri, etkinliğin description alanından YAML olarak okunur. Desteklenen anahtarlar: iklim öznitelikleri ve meta anahtarlar.",
+              "schedule_bypass_entity": "İsteğe bağlı daha yüksek öncelikli katman (örn. bir tatil takvimi). Etkin olduğunda, zaman aralığı verileri ana programı geçersiz kılar. Zaman aralığı verileri aynı şekilde okunur: schedule.* varlıkları için öznitelikler, calendar.* varlıkları için YAML açıklaması.",
+              "resync_interval": "Üyeleri her X dakikada bir hedef duruma zorla senkronize edin. Cihazların manuel olarak ayarlansa veya komutlar kaçırılsa bile programda kalmasını sağlar. Devre dışı bırakmak için 0 olarak ayarlayın.",
+              "override_duration": "Manuel geçersiz kılmaların süresi. Bu süreden sonra grup otomatik olarak mevcut programa geri döner. Geçersiz kılma süresini atlamak için 0 olarak ayarlayın.",
+              "persist_changes": "Manuel geçersiz kılma etkinken programın kendisindeki değişiklikler yoksayılır. Mevcut program yalnızca geçersiz kılma süresi dolduktan sonra yeniden uygulanır.",
+              "persist_active_schedule": "Hizmet aracılığıyla değiştirildiğinde etkin programı yeniden başlatma sonrasında koruyun. Aksi takdirde varsayılana sıfırlanır.",
+              "ignore_off_members_schedule": "Program, şu anda kapalı olan üyeleri AÇMAZ."
+            }
+          },
+          "temp_offsets_section": {
+            "name": "Üye Ofsetleri",
+            "description": "Belirli üyelerin grup hedefine göre orantılı olarak daha sıcak veya daha soğuk çalışması için bireysel sıcaklık ofsetleri uygulayın.",
+            "data": {
+              "member_offset_correction": "Üye Ofsetini Düzelt"
+            },
+            "data_description": {
+              "member_offset_correction": "Etkinleştirildiğinde, ortalama hesaplanmadan önce her üyenin ofseti çıkarılır, böylece grup ham ortalama yerine mantıksal ayar noktasını gösterir."
+            }
+          },
+          "isolation_section": {
+            "name": "Üye İzolasyonu",
+            "description": "Bir tetikleyici etkinken belirli üyeleri geçici olarak izole edin. İzole edilmiş üyeler kapatılır ve grup hesaplamalarından hariç tutulur.",
+            "data": {
+              "isolation_rule_count": "Kural Sayısı",
+              "isolation_rule_1_entities": "İzole Edilecek Varlıklar",
+              "isolation_rule_1_trigger": "Tetikleyici Türü",
+              "isolation_rule_1_sensor": "İzolasyon Sensörü",
+              "isolation_rule_1_hvac_modes": "HVAC Modu Tetikleyicisi",
+              "isolation_rule_1_activate_delay": "Etkinleştirme Gecikmesi (saniye)",
+              "isolation_rule_1_restore_delay": "Geri Yükleme Gecikmesi (saniye)",
+              "isolation_rule_1_action_type": "İzolasyon Eylemi",
+              "isolation_rule_1_action_hvac_mode": "HVAC Modu",
+              "isolation_rule_1_action_preset_mode": "Ön Ayar Modu"
+            },
+            "data_description": {
+              "isolation_rule_count": "Kaç bağımsız izolasyon kuralının gösterileceği. Ek kural yuvalarını göstermek veya gizlemek için değiştirdikten sonra kaydedin.",
+              "isolation_rule_1_entities": "Tetikleyici etkinken izole edilecek grup üyeleri.",
+              "isolation_rule_1_trigger": "İzolasyonu neyin etkinleştireceğini seçin: bir binary sensör veya grubun belirli bir HVAC modu.",
+              "isolation_rule_1_sensor": "(Sensör tetikleyicisi) ON olduğunda izolasyonu tetikleyen binary sensör.",
+              "isolation_rule_1_hvac_modes": "(HVAC modu tetikleyicisi) Grubun hedef modu bunlardan biri olduğunda izolasyon etkinleşir.",
+              "isolation_rule_1_activate_delay": "(Yalnızca sensör/HVAC modu tetikleyicisi) Üyeleri izole etmeden önce tetikleyici etkinleştikten sonra beklenecek süre.",
+              "isolation_rule_1_restore_delay": "(Yalnızca sensör/HVAC modu tetikleyicisi) Üyeleri grubun hedef durumuna geri yüklemeden önce tetikleyici devre dışı kaldıktan sonra beklenecek süre.",
+              "isolation_rule_1_action_type": "Bu üye izole edildiğinde ne yapılacağını seçin: bir HVAC modu veya ön ayar modu ayarlayın.",
+              "isolation_rule_1_action_hvac_mode": "İzole edilmiş üyeye uygulanacak HVAC modu.",
+              "isolation_rule_1_action_preset_mode": "İzole edilmiş üyeye uygulanacak ön ayar modu."
+            }
+          },
+          "isolation_rule_2_section": {
+            "name": "Üye İzolasyonu – Kural 2",
+            "description": "Bağımsız bir tetikleyici ve üye listesine sahip isteğe bağlı ikinci izolasyon kuralı.",
+            "data": {
+              "isolation_rule_2_entities": "İzole Edilecek Varlıklar",
+              "isolation_rule_2_trigger": "Tetikleyici Türü",
+              "isolation_rule_2_sensor": "İzolasyon Sensörü",
+              "isolation_rule_2_hvac_modes": "HVAC Modu Tetikleyicisi",
+              "isolation_rule_2_activate_delay": "Etkinleştirme Gecikmesi (saniye)",
+              "isolation_rule_2_restore_delay": "Geri Yükleme Gecikmesi (saniye)",
+              "isolation_rule_2_action_type": "İzolasyon Eylemi",
+              "isolation_rule_2_action_hvac_mode": "HVAC Modu",
+              "isolation_rule_2_action_preset_mode": "Ön Ayar Modu"
+            },
+            "data_description": {
+              "isolation_rule_2_entities": "Tetikleyici etkinken izole edilecek grup üyeleri.",
+              "isolation_rule_2_trigger": "İzolasyonu neyin etkinleştireceğini seçin: bir binary sensör veya grubun belirli bir HVAC modu.",
+              "isolation_rule_2_sensor": "(Sensör tetikleyicisi) ON olduğunda izolasyonu tetikleyen binary sensör.",
+              "isolation_rule_2_hvac_modes": "(HVAC modu tetikleyicisi) Grubun hedef modu bunlardan biri olduğunda izolasyon etkinleşir.",
+              "isolation_rule_2_activate_delay": "(Yalnızca sensör/HVAC modu tetikleyicisi) Üyeleri izole etmeden önce tetikleyici etkinleştikten sonra beklenecek süre.",
+              "isolation_rule_2_restore_delay": "(Yalnızca sensör/HVAC modu tetikleyicisi) Üyeleri grubun hedef durumuna geri yüklemeden önce tetikleyici devre dışı kaldıktan sonra beklenecek süre.",
+              "isolation_rule_2_action_type": "Bu üye izole edildiğinde ne yapılacağını seçin: bir HVAC modu veya ön ayar modu ayarlayın.",
+              "isolation_rule_2_action_hvac_mode": "İzole edilmiş üyeye uygulanacak HVAC modu.",
+              "isolation_rule_2_action_preset_mode": "İzole edilmiş üyeye uygulanacak ön ayar modu."
+            }
+          },
+          "isolation_rule_3_section": {
+            "name": "Üye İzolasyonu – Kural 3",
+            "description": "Bağımsız bir tetikleyici ve üye listesine sahip isteğe bağlı üçüncü izolasyon kuralı.",
+            "data": {
+              "isolation_rule_3_entities": "İzole Edilecek Varlıklar",
+              "isolation_rule_3_trigger": "Tetikleyici Türü",
+              "isolation_rule_3_sensor": "İzolasyon Sensörü",
+              "isolation_rule_3_hvac_modes": "HVAC Modu Tetikleyicisi",
+              "isolation_rule_3_activate_delay": "Etkinleştirme Gecikmesi (saniye)",
+              "isolation_rule_3_restore_delay": "Geri Yükleme Gecikmesi (saniye)",
+              "isolation_rule_3_action_type": "İzolasyon Eylemi",
+              "isolation_rule_3_action_hvac_mode": "HVAC Modu",
+              "isolation_rule_3_action_preset_mode": "Ön Ayar Modu"
+            },
+            "data_description": {
+              "isolation_rule_3_entities": "Tetikleyici etkinken izole edilecek grup üyeleri.",
+              "isolation_rule_3_trigger": "İzolasyonu neyin etkinleştireceğini seçin: bir binary sensör veya grubun belirli bir HVAC modu.",
+              "isolation_rule_3_sensor": "(Sensör tetikleyicisi) ON olduğunda izolasyonu tetikleyen binary sensör.",
+              "isolation_rule_3_hvac_modes": "(HVAC modu tetikleyicisi) Grubun hedef modu bunlardan biri olduğunda izolasyon etkinleşir.",
+              "isolation_rule_3_activate_delay": "(Yalnızca sensör/HVAC modu tetikleyicisi) Üyeleri izole etmeden önce tetikleyici etkinleştikten sonra beklenecek süre.",
+              "isolation_rule_3_restore_delay": "(Yalnızca sensör/HVAC modu tetikleyicisi) Üyeleri grubun hedef durumuna geri yüklemeden önce tetikleyici devre dışı kaldıktan sonra beklenecek süre.",
+              "isolation_rule_3_action_type": "Bu üye izole edildiğinde ne yapılacağını seçin: bir HVAC modu veya ön ayar modu ayarlayın.",
+              "isolation_rule_3_action_hvac_mode": "İzole edilmiş üyeye uygulanacak HVAC modu.",
+              "isolation_rule_3_action_preset_mode": "İzole edilmiş üyeye uygulanacak ön ayar modu."
+            }
+          },
+          "isolation_rule_4_section": {
+            "name": "Üye İzolasyonu – Kural 4",
+            "description": "Bağımsız bir tetikleyici ve üye listesine sahip isteğe bağlı dördüncü izolasyon kuralı.",
+            "data": {
+              "isolation_rule_4_entities": "İzole Edilecek Varlıklar",
+              "isolation_rule_4_trigger": "Tetikleyici Türü",
+              "isolation_rule_4_sensor": "İzolasyon Sensörü",
+              "isolation_rule_4_hvac_modes": "HVAC Modu Tetikleyicisi",
+              "isolation_rule_4_activate_delay": "Etkinleştirme Gecikmesi (saniye)",
+              "isolation_rule_4_restore_delay": "Geri Yükleme Gecikmesi (saniye)",
+              "isolation_rule_4_action_type": "İzolasyon Eylemi",
+              "isolation_rule_4_action_hvac_mode": "HVAC Modu",
+              "isolation_rule_4_action_preset_mode": "Ön Ayar Modu"
+            },
+            "data_description": {
+              "isolation_rule_4_entities": "Tetikleyici etkinken izole edilecek grup üyeleri.",
+              "isolation_rule_4_trigger": "İzolasyonu neyin etkinleştireceğini seçin: bir binary sensör veya grubun belirli bir HVAC modu.",
+              "isolation_rule_4_sensor": "(Sensör tetikleyicisi) ON olduğunda izolasyonu tetikleyen binary sensör.",
+              "isolation_rule_4_hvac_modes": "(HVAC modu tetikleyicisi) Grubun hedef modu bunlardan biri olduğunda izolasyon etkinleşir.",
+              "isolation_rule_4_activate_delay": "(Yalnızca sensör/HVAC modu tetikleyicisi) Üyeleri izole etmeden önce tetikleyici etkinleştikten sonra beklenecek süre.",
+              "isolation_rule_4_restore_delay": "(Yalnızca sensör/HVAC modu tetikleyicisi) Üyeleri grubun hedef durumuna geri yüklemeden önce tetikleyici devre dışı kaldıktan sonra beklenecek süre.",
+              "isolation_rule_4_action_type": "Bu üye izole edildiğinde ne yapılacağını seçin: bir HVAC modu veya ön ayar modu ayarlayın.",
+              "isolation_rule_4_action_hvac_mode": "İzole edilmiş üyeye uygulanacak HVAC modu.",
+              "isolation_rule_4_action_preset_mode": "İzole edilmiş üyeye uygulanacak ön ayar modu."
+            }
+          },
+          "member_template_section": {
+            "name": "Üye Şablonu",
+            "description": "Tek ayar noktalı üyeleri sanal ısıtma/soğutma aralığı varlıkları olarak oluşturur. Grup yardımcısı, aralık komutlarını her üyenin mevcut sıcaklığına göre uygun fiziksel ısıtma/soğutma komutlarına çevirir.",
+            "data": {
+              "range_template_enabled": "Aralık Şablonunu Etkinleştir",
+              "range_template_deadband_action": "Ölü Bant Eylemi",
+              "range_template_heat_entities": "Isıtma Cihazları",
+              "range_template_cool_entities": "Soğutma Cihazları"
+            },
+            "data_description": {
+              "range_template_enabled": "Tüm tek ayar noktalı üyeleri (yerel ısıtma/soğutma desteği olmadan) otomatik olarak sanal aralık modu cihazları olarak oluşturur.",
+              "range_template_deadband_action": "Mevcut sıcaklık hedef aralığın içindeyken (ölü bant) gerçekleştirilecek eylem.",
+              "range_template_heat_entities": "Isıtmasına izin verilen üyeler. Listede olmayan üyeler sınırsızdır (fiziksel kapasite karar verir). Bir rol yalnızca kısıtlayabilir, bir cihazın yeteneklerini asla genişletemez.",
+              "range_template_cool_entities": "Soğutmasına izin verilen üyeler. Listede olmayan üyeler sınırsızdır (fiziksel kapasite karar verir). Bir rol yalnızca kısıtlayabilir, bir cihazın yeteneklerini asla genişletemez."
+            }
+          },
+          "advanced_section": {
+            "name": "Gelişmiş Ayarlar",
+            "description": "Komut zamanlamasını, yeniden deneme davranışını ve kademeli çağrıları ince ayarlayın. Tanılama özniteliklerini ve yapılandırma sensörlerini değiştirin.",
+            "data": {
+              "debounce_delay": "Debounce Gecikmesi (saniye)",
+              "retry_attempts": "Yeniden Deneme Sayısı",
+              "retry_delay": "Yeniden Deneme Gecikmesi (saniye)",
+              "force_retry": "Yeniden Denemeyi Zorla",
+              "staggered_call_delay": "Kademeli Çağrı Gecikmesi (saniye)",
+              "grace_period": "İyimser Arayüz Tolerans Süresi (saniye)",
+              "expose_smart_sensors": "Akıllı Sensörleri Göster",
+              "expose_member_entities": "Üye Listesini Göster",
+              "expose_config": "Yapılandırma Sensörünü Göster"
+            },
+            "data_description": {
+              "debounce_delay": "Komutları göndermeden önce beklenecek süre. Daha yüksek değerler, kontrolleri kaydırırken 'hızlı ateş' komutlarını önler, ancak daha yavaş hissettirir.",
+              "retry_attempts": "Bir cihaz yanıt vermezse bir komutun kaç kez yeniden gönderileceği. Devre dışı bırakmak için 0 olarak ayarlayın.",
+              "retry_delay": "Yeniden deneme girişimleri arasındaki duraklama. Cihazlara toparlanmaları için bir an vermek güvenilirliği artırabilir.",
+              "force_retry": "Hedef durumu zaten bildiriyor olsalar bile komutları her zaman tüm üyelere yeniden gönder.",
+              "staggered_call_delay": "Grup üyelerine gönderilen tek tek komutlar arasında beklenecek süre. Çağrıları kademelendirmek, Zigbee/Matter ortamlarında ağ tıkanıklığını önler. Devre dışı bırakmak için 0 olarak ayarlayın.",
+              "grace_period": "Grubun, üye ortalamasına geçmeden önce komut verilen değeri ne kadar süreyle göstereceği. Yavaş cihazlar (bulut köprüleri, Zigbee) eski durumlarını geri yansıttığında arayüz titremesini önler. Devre dışı bırakmak için 0 olarak ayarlayın.",
+              "expose_smart_sensors": "Grubun sıcaklığı ve nemi için ekstra sensör varlıkları oluşturur (grafikler için kullanışlıdır).",
+              "expose_member_entities": "Tüm üye varlık kimliklerini listeleyen bir öznitelik oluşturur.",
+              "expose_config": "Taşınabilir ayarları bir JSON özniteliği olarak açığa çıkaran bir tanılama sensörü (sensor.*_configuration) oluşturur. Otomasyonlar aracılığıyla gruplar arasında ayarları kopyalamak için kullanışlıdır."
+            }
+          }
+        },
+        "data": {
+          "advanced_mode": "Gelişmiş Özellikler",
+          "expand_sections": "Tüm bölümleri varsayılan olarak genişlet"
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Grupta en az bir iklim cihazı kalmalıdır.",
+      "calibration_requires_sensors": "Kalibrasyon hedefleri en az bir harici sıcaklık sensörü gerektirir.",
+      "master_refresh_notice": "Ana Varlık eklendi. Yeni seçenekler kullanılabilir.",
+      "master_options_notice": "Yeni Ana Varlık seçeneği",
+      "isolation_all_selected": "En az bir üye izolasyon dışında kalmalıdır.",
+      "isolation_entity_overlap": "Her üye yalnızca bir izolasyon kuralında görünebilir.",
+      "isolation_action_preset_required": "İzolasyon eylemi için bir ön ayar modu seçin.",
+      "sensor_loop_protection": "Bir Climate Group Helper varlığı harici sensör veya kalibrasyon hedefi olarak kullanılamaz — bu bir geri besleme döngüsü oluşturur."
+    },
+    "abort": {
+      "no_changes": "Herhangi bir değişiklik algılanmadı."
+    }
+  },
+  "selector": {
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal – Grup en yaygın üye modunu benimser",
+        "off_priority": "Kapalı Önceliği – Herhangi bir üye kapalıysa, tüm grup kapalıdır",
+        "auto": "Otomatik – Normal ve Kapalı Önceliği arasında akıllı geçiş"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Kesişim – Özellikleri yalnızca TÜM üyelerde varsa destekle",
+        "union": "Birleşim – HERHANGİ bir üyede bulunan tüm özellikleri destekle"
+      }
+    },
+    "temp_target_avg": {
+      "options": {
+        "mean": "Ortalama",
+        "median": "Medyan (Orta Değer)",
+        "min": "Minimum (En Düşük)",
+        "max": "Maksimum (En Yüksek)"
+      }
+    },
+    "temp_target_round": {
+      "options": {
+        "none": "Yuvarlama Yok (Tam)",
+        "half": "Yarım Derece (0.5°)",
+        "integer": "Tam Sayılar (1°)"
+      }
+    },
+    "temp_current_avg": {
+      "options": {
+        "mean": "Ortalama",
+        "median": "Medyan (Aykırı Değerleri Yoksay)",
+        "min": "Minimum (En Düşük)",
+        "max": "Maksimum (En Yüksek)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Mutlak – değeri doğrudan gönder (Standart)",
+        "offset": "Ofset – farkı gönder (Harici - TRV Dahili)",
+        "scaled": "Ölçekli – Tam sayı x100 (Danfoss Ally)"
+      }
+    },
+    "humidity_target_avg": {
+      "options": {
+        "mean": "Ortalama",
+        "median": "Medyan (Orta Değer)",
+        "min": "Minimum (En Düşük)",
+        "max": "Maksimum (En Yüksek)"
+      }
+    },
+    "humidity_target_round": {
+      "options": {
+        "none": "Yuvarlama Yok (Tam)",
+        "half": "Yarım Yüzde (0.5%)",
+        "integer": "Tam Sayılar (1%)"
+      }
+    },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "Ortalama",
+        "median": "Medyan (Aykırı Değerleri Yoksay)",
+        "min": "Minimum (En Düşük)",
+        "max": "Maksimum (En Yüksek)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "disabled": "Devre Dışı – Üyeler arasında otomatik senkronizasyon yok",
+        "mirror": "Yansıt – Bir cihazdaki manuel değişiklikler tüm üyeleri günceller",
+        "lock": "Kilitle – Manuel değişiklikleri grup durumuna uyacak şekilde geri alır",
+        "mirror_lock": "Yansıt/Kilitle – Seçilen öznitelikler yansıtılır, diğerleri sıkı bir şekilde kilitlenir",
+        "master_lock": "Master/Kilitle – Yalnızca ana varlık grup hedefini değiştirebilir"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "HVAC Modu",
+        "preset_mode": "Ön Ayar Modu",
+        "temperature": "Sıcaklık (Hedef)",
+        "target_temp_high": "Hedef Sıcaklık Üst (Aralık)",
+        "target_temp_low": "Hedef Sıcaklık Alt (Aralık)",
+        "fan_mode": "Fan Modu",
+        "swing_mode": "Dikey Salınım",
+        "swing_horizontal_mode": "Yatay Salınım",
+        "humidity": "Nem (Hedef)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "disabled": "Devre Dışı – Pencere kontrolü etkin değil",
+        "enabled": "Etkin – Pencere kontrolü aktif"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Kapalı – Tüm değişiklikleri engelle",
+        "all": "Tümü – Tüm manuel değişiklikleri kabul et",
+        "master_only": "Yalnızca Ana Varlık – Yalnızca ana varlığı kabul et"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Kapat",
+        "temperature": "Sıcaklık Ayarla"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Kapat",
+        "clamp": "Sınıra Sabitle"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Yoksay",
+        "off": "Kapat"
+      }
+    },
+    "isolation_rule_count": {
+      "options": {
+        "1": "1 Kural",
+        "2": "2 Kural",
+        "3": "3 Kural",
+        "4": "4 Kural"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "disabled": "Devre Dışı – Üye izolasyonu devre dışı",
+        "sensor": "Binary Sensör – Sensör ON olduğunda izole et",
+        "hvac_mode": "HVAC Modu – Grup modu eşleştiğinde izole et",
+        "member_off": "Üye Kapalı – Üye manuel olarak kapatıldığında izole et"
+      }
+    },
+    "isolation_action_type": {
+      "options": {
+        "hvac_mode": "HVAC Modu Ayarla",
+        "preset_mode": "Ön Ayar Modu Ayarla"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Devre Dışı – Varlık kontrolü etkin değil",
+        "enabled": "Etkin – Uzakta yedek eylemi"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Kapat",
+        "away_offset": "Uzakta Ofseti",
+        "away_temperature": "Uzakta Sıcaklığı",
+        "away_preset": "Uzakta Ön Ayarı"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "none": "Hiçbiri",
+        "off": "Kapat",
+        "fan_only": "Yalnızca Fan"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group_helper": {
+        "name": "İklim Grubu",
+        "state_attributes": {
+          "last_active_hvac_mode": {
+            "name": "Son Aktif Mod"
+          },
+          "target_hvac_mode": {
+            "name": "Hedef HVAC Modu"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Uzakta",
+              "home": "Ev",
+              "sleep": "Uyku",
+              "comfort": "Comfort",
+              "activity": "Aktivite",
+              "standby": "Standby",
+              "economy": "Ekonomi",
+              "building_protection": "Bina Koruması",
+              "boost": "Boost"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Grup Ofseti"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Sıcaklık"
+      },
+      "humidity": {
+        "name": "Nem"
+      },
+      "configuration": {
+        "name": "Yapılandırma"
+      }
+    },
+    "switch": {
+      "main_switch": {
+        "name": "Ana Anahtar"
+      }
+    }
+  },
+  "services": {
+    "set_temperature": {
+      "name": "Sıcaklığı Ayarla",
+      "description": "Tüm grup için hedef sıcaklığı ayarlayın.",
+      "fields": {
+        "entity_id": {
+          "name": "İklim Grubu",
+          "description": "Kontrol edilecek grup."
+        },
+        "temperature": {
+          "name": "Hedef Sıcaklık",
+          "description": "İstenen sıcaklık."
+        },
+        "target_temp_high": {
+          "name": "Hedef Üst",
+          "description": "Isıtma/soğutma modu için üst sınır."
+        },
+        "target_temp_low": {
+          "name": "Hedef Alt",
+          "description": "Isıtma/soğutma modu için alt sınır."
+        },
+        "hvac_mode": {
+          "name": "HVAC Modu",
+          "description": "İsteğe bağlı olarak modu değiştirin."
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "Program Varlığını Ayarla",
+      "description": "Aktif program varlığını dinamik olarak değiştirin. Atlanırsa veya null olarak ayarlanırsa, grup yapılandırılmış varsayılana döner.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Program/Takvim Varlığı",
+          "description": "Etkinleştirilecek schedule.* veya calendar.* varlığı (örn. schedule.holiday veya calendar.vacation). Yapılandırılmış varsayılanı geri yüklemek için null veya boş bırakın."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Program Bypass Varlığını Ayarla",
+      "description": "Etkin bypass varlığını çalışma zamanında değiştirin (örn. farklı tatil takvimleri arasında geçiş yapmak için). Yapılandırılmış varsayılanı geri yüklemek için null olarak ayarlayın.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Bypass Varlığı",
+          "description": "Bypass olarak kullanılacak schedule.* veya calendar.* varlığı (örn. calendar.vacation). Yapılandırılmış varsayılanı geri yüklemek için null veya boş bırakın."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Grubu geçici olarak bir hedef sıcaklığa ayarlar. Zamanlayıcı sona erdiğinde grup otomatik olarak aktif programa veya önceki duruma geri döner.",
+      "fields": {
+        "temperature": {
+          "name": "Sıcaklık",
+          "description": "Boost sırasında mutlak hedef sıcaklık (örn. 24.0). temperature_offset ile birlikte kullanılamaz."
+        },
+        "temperature_offset": {
+          "name": "Sıcaklık Ofseti",
+          "description": "Mevcut hedef sıcaklığa eklenen göreceli ofset (örn. +3.0 veya -2.0). temperature ile birlikte kullanılamaz."
+        },
+        "duration": {
+          "name": "Süre (dakika)",
+          "description": "Boost'un dakika cinsinden ne kadar süreceği."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Yapılandırmayı Uygula",
+      "description": "Bir gruba taşınabilir bir JSON yapılandırması uygular. Gruplar arasında mantık ayarlarını kopyalamak veya bir yedeği geri yüklemek için kullanışlıdır.",
+      "fields": {
+        "settings": {
+          "name": "Ayarlar (JSON)",
+          "description": "Uygulanacak JSON yapılandırma nesnesi. Bir Yapılandırma Sensöründen 'settings_json' özniteliğini kullanın."
+        },
+        "include_member_list": {
+          "name": "Üye Listesini Dahil Et",
+          "description": "Doğruysa, üye varlıkları ve izolasyon varlıkları listesini de üzerine yazar."
+        },
+        "include_entity_selectors": {
+          "name": "Varlık Seçicilerini Dahil Et",
+          "description": "Doğruysa, bağlantılı sensörleri (sıcaklık, nem, varlık, pencere vb.) ve üye başına ofsetleri de üzerine yazar."
+        }
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Üye Cihaz Kullanılamıyor",
+      "description": "{group_name} grubundaki bir veya daha fazla cihaz çevrimdışı. Grup, mevcut olanlarla çalışmaya devam edecek.\n\nKullanılamıyor: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "Kullanılabilir Üye Yok",
+      "description": "{group_name} grubunun aktif üyesi yok ve fiilen çevrimdışı.\n\nKontrol edin: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Özellik Çakışmaları",
+      "description": "{group_name} grubunun farklı özelliklere sahip üyeleri var. İşlevsellik, herkesin desteklediği şeylerle sınırlı olabilir.\n\nÇakışan: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC modu değişti",
+      "temperature_target_changed": "Hedef sıcaklık değişti",
+      "current_temperature_changed": "Mevcut sıcaklık değişti",
+      "group_turned_on": "Grup açıldı",
+      "group_turned_off": "Grup kapatıldı"
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC modu şu",
+      "is_temperature_above": "Sıcaklık şundan yüksek",
+      "is_temperature_below": "Sıcaklık şundan düşük",
+      "is_group_available": "Grup kullanılabilir"
+    },
+    "action_type": {
+      "set_hvac_mode": "HVAC Modu Ayarla",
+      "set_temperature": "Sıcaklık Ayarla",
+      "turn_on": "Aç",
+      "turn_off": "Kapat"
+    }
+  }
+}

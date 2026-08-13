@@ -308,11 +308,15 @@
             "description": "将单设定点成员渲染为虚拟冷暖范围实体。群组助手根据每个成员的当前温度，将范围命令转换为适当的物理冷暖命令。",
             "data": {
               "range_template_enabled": "启用范围模板",
-              "range_template_deadband_action": "死区动作"
+              "range_template_deadband_action": "死区动作",
+              "range_template_heat_entities": "制热设备",
+              "range_template_cool_entities": "制冷设备"
             },
             "data_description": {
               "range_template_enabled": "自动将所有单设定点成员（不支持原生制热/制冷）呈现为虚拟范围模式设备。",
-              "range_template_deadband_action": "当前温度在目标范围（死区）内时执行的动作。"
+              "range_template_deadband_action": "当前温度在目标范围（死区）内时执行的动作。",
+              "range_template_heat_entities": "允许制热的成员。未列出的成员不受限制（由物理能力决定）。角色只能限制，绝不能扩展设备的能力。",
+              "range_template_cool_entities": "允许制冷的成员。未列出的成员不受限制（由物理能力决定）。角色只能限制，绝不能扩展设备的能力。"
             }
           },
           "advanced_section": {

@@ -53,6 +53,7 @@ class RunState:
     oob_members: frozenset[str] = field(default_factory=frozenset)
     startup_time: float | None = None
     target_state_snapshot: TargetState | None = None
+    shadow_owner: str | None = None
 
     @property
     def blocked(self) -> bool:
@@ -82,8 +83,8 @@ class RunState:
         return replace(self, active_override=None, active_override_end=None)
 
     def clear_snapshot(self) -> RunState:
-        """Return a new RunState with target_state_snapshot cleared."""
-        return replace(self, target_state_snapshot=None)
+        """Return a new RunState with target_state_snapshot and its owner cleared."""
+        return replace(self, target_state_snapshot=None, shadow_owner=None)
 
 
 @dataclass(frozen=True)
@@ -250,7 +251,7 @@ class BaseStateManager:
         """Return the current target state from central source."""
         return self._group.shared_target_state
 
-    def update(self, entity_id: str | None = None, **kwargs: Any) -> bool:
+    def update(self, entity_id: str | None = None, *, source: str | None = None, **kwargs: Any) -> bool:
         """Update target_state with source tracking.
         
         Template Method workflow:
@@ -260,6 +261,11 @@ class BaseStateManager:
         
         Args:
             entity_id: The specific entity that caused the update (optional)
+            source: Explicit source attribution override. Used by restore paths
+                    that must not leave the manager's own SOURCE behind (e.g. a
+                    boost restore attributed as "schedule" so the sticky-override
+                    guard releases the schedule again — a restore means the user
+                    is NOT in control).
             **kwargs: Attributes to update (hvac_mode, temperature, etc.)
             
         Returns:
@@ -274,7 +280,9 @@ class BaseStateManager:
 
         # Inject source metadata (source, entity, timestamp)
         context = self._group._context
-        if self.SOURCE == "group" and bool(context and context.user_id and not context.parent_id):
+        if source is not None:
+            kwargs["last_source"] = source
+        elif self.SOURCE == "group" and bool(context and context.user_id and not context.parent_id):
             kwargs["last_source"] = "ui"
         else:
             kwargs["last_source"] = self.SOURCE

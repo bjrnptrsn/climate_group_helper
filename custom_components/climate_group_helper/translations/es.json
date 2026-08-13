@@ -308,11 +308,15 @@
             "description": "Renderiza miembros de punto de ajuste único como entidades virtuales de rango calor/frío. El Group Helper traduce los comandos de rango en comandos físicos de calor/frío apropiados basados en la temperatura actual de cada miembro.",
             "data": {
               "range_template_enabled": "Activar plantilla de rango",
-              "range_template_deadband_action": "Acción en zona muerta"
+              "range_template_deadband_action": "Acción en zona muerta",
+              "range_template_heat_entities": "Dispositivos de calefacción",
+              "range_template_cool_entities": "Dispositivos de refrigeración"
             },
             "data_description": {
               "range_template_enabled": "Representa automáticamente todos los miembros de punto de ajuste único (sin calor/frío nativo) como dispositivos virtuales en modo rango.",
-              "range_template_deadband_action": "Acción a realizar cuando la temperatura actual está dentro del rango objetivo (zona muerta)."
+              "range_template_deadband_action": "Acción a realizar cuando la temperatura actual está dentro del rango objetivo (zona muerta).",
+              "range_template_heat_entities": "Miembros que pueden calentar. Los miembros no listados no tienen restricciones (decide la capacidad física). Un rol solo puede restringir, nunca ampliar las capacidades de un dispositivo.",
+              "range_template_cool_entities": "Miembros que pueden enfriar. Los miembros no listados no tienen restricciones (decide la capacidad física). Un rol solo puede restringir, nunca ampliar las capacidades de un dispositivo."
             }
           },
           "advanced_section": {

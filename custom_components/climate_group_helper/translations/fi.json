@@ -1,0 +1,702 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ilmastointiryhmän Avustaja",
+        "description": "Luo virtuaalinen ohjain, joka synkronoi useita lämmitys-/jäähdytysyksiköitä. Ryhmä toimii yhtenä älykkäänä entiteettinä kojelaudassa ja automaatioissa, yhdistäen tilat ja komennot.",
+        "data": {
+          "name": "Ryhmän nimi",
+          "entities": "Ilmastointilaitteet"
+        },
+        "data_description": {
+          "name": "Ryhmän ystävällinen nimi (esim. 'Olohuone' tai 'Koko talo').",
+          "entities": "Valitse ryhmään sisällytettävät ilmastointilaitteet (termostaatit, ilmastointilaitteet)."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Sinun on valittava vähintään yksi ilmastointilaite."
+    },
+    "abort": {
+      "already_configured": "Tämä ryhmä on jo määritetty.",
+      "single_instance_allowed": "Vain yksi instanssi on sallittu.",
+      "no_changes": "Muutoksia ei tehty."
+    }
+  },
+  "options": {
+    "flow_title": "Määritä ryhmä",
+    "step": {
+      "init": {
+        "title": "Määritä ilmastointiryhmä",
+        "sections": {
+          "members_section": {
+            "name": "Jäsenet ja tilat",
+            "description": "Lisää ilmastointilaitteita ja valitse, miten ominaisuudet yhdistetään. Lisäominaisuudet tuovat tuen pää­yksikölle (Master Entity).",
+            "data": {
+              "entities": "Ilmastointilaitteet",
+              "master_entity": "Pääyksikkö",
+              "hvac_mode_strategy": "HVAC-tilan strategia",
+              "feature_strategy": "Ominaisuusstrategia",
+              "union_out_of_bounds_action": "Rajojen ulkopuolinen toiminto",
+              "union_unsupported_hvac_action": "Ei-tuettu HVAC-tila -toiminto"
+            },
+            "data_description": {
+              "entities": "Lisää tai poista laitteita. Laitteen poistaminen lopettaa sen ohjaamisen ryhmästä.",
+              "master_entity": "Määritä yksi jäsen pääyksiköksi (Master Entity, johtaja). Sitä käytetään Master/Lock-synkronoinnissa ja keskitetyn tavoitearvon näyttämisessä.",
+              "hvac_mode_strategy": "Strategia ryhmän tilan laskemiseksi sen jäsenistä (esim. jos yksi on 'heat' ja toinen 'off').",
+              "feature_strategy": "Määrittää, mitkä ominaisuudet (esim. esiasetustilat, puhallintilat) ovat käytettävissä ryhmässä, kun jäsenillä on eri ominaisuudet.",
+              "union_out_of_bounds_action": "Mitä tehdä jäsenille, jotka eivät voi saavuttaa tavoitelämpötilaa. Koskee vain, kun ominaisuusstrategia on asetettu arvoon Union.",
+              "union_unsupported_hvac_action": "Mitä tehdä jäsenille, jotka eivät teknisesti tue ryhmän tavoite-HVAC-tilaa (esim. ilmastointilaite lämmitettäessä). Koskee vain, kun ominaisuusstrategia on asetettu arvoon Union."
+            }
+          },
+          "temperature_section": {
+            "name": "Lämpötila-asetukset",
+            "description": "Määritä lämpötilan yhdistäminen ja tarkkuus. Lisäominaisuudet tuovat tuen ulkoisille antureille, kalibroinnille ja jäätymissuojalle.",
+            "data": {
+              "temp_target_avg": "Tavoitelämpötila",
+              "temp_use_master": "Käytä pääyksikön tavoitelämpötilaa",
+              "temp_target_round": "Tavoitelämpötilan tarkkuus",
+              "temp_current_avg": "Nykyinen lämpötila",
+              "min_temp_off": "Minimilämpötila pois päältä",
+              "temp_sensors": "Ulkoiset lämpötila-anturit",
+              "temp_update_targets": "Kirjoita ulkoinen lämpötila entiteetteihin",
+              "temp_calibration_mode": "Kalibrointitila",
+              "calibration_heartbeat": "Kalibroinnin sykäys (min)",
+              "calibration_ignore_off": "Ohita pois päältä olevat jäsenet",
+              "ignore_off_members_temperature": "Sulje pois päältä olevat jäsenet lämpötilasta"
+            },
+            "data_description": {
+              "temp_target_avg": "Miten ryhmä laskee jäsenilleen lähetettävän tavoitearvon.",
+              "temp_use_master": "Näytä pääyksikön asetusarvo ryhmän tavoitelämpötilana jäsenten keskiarvon sijaan. Palaa keskiarvoon, jos pääyksikkö ei ole käytettävissä. Vaikuttaa vain siihen, miten ryhmän tila näytetään — ei ohjaa tai synkronoi jäseniä (käytä siihen Sync Mode: Master/Lock).",
+              "temp_target_round": "Koskee vain laitteille lähetettäviä arvoja, ei nykyisiä/näytettäviä arvoja.",
+              "temp_current_avg": "Miten ryhmä tiivistää jäsentensä anturilukemat.",
+              "min_temp_off": "Lähettää laitteen minimilämpötilan (esim. 5°C), kun ryhmä sammutetaan. Tämä varmistaa, että venttiilit ovat täysin kiinni jäätymissuojaa varten.",
+              "temp_sensors": "Käytä ulkoisia antureita jäsenten lukemien sijaan. Näistä tulee ryhmän lämpötilan ainoa totuudenlähde.",
+              "temp_update_targets": "Kirjoita ulkoisen anturin arvo number-entiteetteihin (esim. TRV-kalibrointisiirtymät). Hyödyllinen pitämään termostaatit tietoisina todellisesta huonelämpötilasta.",
+              "temp_calibration_mode": "Absoluuttinen: lähetä arvo suoraan. Siirtymä: lähetä erotus (ulkoinen - TRV sisäinen). Skaalattu: lähetä kokonaislukuna x100 (esim. 21.5 -> 2150).",
+              "calibration_heartbeat": "Pakota kalibroinnin synkronointi entiteetteihin ajoittain, vaikka lämpötila ei olisi muuttunut. Aseta 0 poistaaksesi käytöstä.",
+              "calibration_ignore_off": "Älä lähetä kalibrointipäivityksiä jäsenille, jotka ovat tällä hetkellä pois päältä.",
+              "ignore_off_members_temperature": "Sulje pois nykyisen ja tavoitelämpötilan laskennasta jäsenet, jotka ovat tällä hetkellä pois päältä."
+            }
+          },
+          "humidity_section": {
+            "name": "Kosteusasetukset",
+            "description": "Määritä kosteuden yhdistäminen ja tarkkuus. Lisäominaisuudet tuovat tuen ulkoisille antureille.",
+            "data": {
+              "humidity_target_avg": "Tavoitekosteus",
+              "humidity_use_master": "Käytä pääyksikön tavoitekosteutta",
+              "humidity_target_round": "Tavoitekosteuden tarkkuus",
+              "humidity_current_avg": "Nykyinen kosteus",
+              "humidity_sensors": "Ulkoiset kosteusanturit",
+              "humidity_update_targets": "Kirjoita ulkoinen kosteus entiteetteihin"
+            },
+            "data_description": {
+              "humidity_target_avg": "Miten ryhmä laskee jäsenilleen lähetettävän tavoitearvon.",
+              "humidity_use_master": "Näytä pääyksikön asetusarvo ryhmän tavoitekosteutena jäsenten keskiarvon sijaan. Palaa keskiarvoon, jos pääyksikkö ei ole käytettävissä. Vaikuttaa vain siihen, miten ryhmän tila näytetään — ei ohjaa tai synkronoi jäseniä (käytä siihen Sync Mode: Master/Lock).",
+              "humidity_target_round": "Koskee vain laitteille lähetettäviä arvoja, ei nykyisiä/näytettäviä arvoja.",
+              "humidity_current_avg": "Miten ryhmä tiivistää jäsentensä anturilukemat.",
+              "humidity_sensors": "Käytä ulkoisia antureita jäsenten lukemien sijaan. Näistä tulee ryhmän kosteuden ainoa totuudenlähde.",
+              "humidity_update_targets": "Kirjoita ulkoisen anturin arvo number-entiteetteihin. Hyödyllinen kosteudenpoistajan kalibrointiin."
+            }
+          },
+          "sync_section": {
+            "name": "Synkronointitila",
+            "description": "Määrittää, mitä tapahtuu, kun jäsenlaitetta muutetaan suoraan (esim. sen omalla sovelluksella tai fyysisillä painikkeilla) — ei silloin, kun ohjaat ryhmää itse. Valitse, mitä attribuutteja valvotaan.",
+            "data": {
+              "sync_mode": "Synkronointitila",
+              "sync_attributes": "Synkronoitavat attribuutit",
+              "ignore_off_members_sync": "Kunnioita jäsenen pois-tilaa (synkronointi)"
+            },
+            "data_description": {
+              "sync_mode": "Mitä tehdä, kun jäsentä muutetaan ryhmän ulkopuolelta. Ei käytössä: ohita. Peilaus: peilaa muutokset. Lukitus: peru muutokset. Peilaus/Lukitus: peilaa valitut attribuutit, peru muut. Master/Lukitus: peilaa pääyksikköä, peru muut.",
+              "sync_attributes": "Määrittää, mihin attribuutteihin synkronointitila vaikuttaa. Valittujen ja valitsemattomien attribuuttien käsittely (peilaus, peruutus tai ohitus) riippuu valitusta tilasta.",
+              "ignore_off_members_sync": "Manuaalisesti pois päältä kytketyt jäsenet jätetään rauhaan. Niiden tilaa ei peilata eikä peruta. Huom: suorat ryhmäkomennot tavoittavat aina kaikki jäsenet tästä asetuksesta riippumatta."
+            }
+          },
+          "window_section": {
+            "name": "Ikkunanohjaus",
+            "description": "Sammuta tai aseta yksilöllinen lämpötila, kun ikkunat avataan. Palauta, kun suljetaan.",
+            "data": {
+              "window_mode": "Ikkunanohjaustila",
+              "window_adopt_manual_changes": "Hyväksy manuaaliset muutokset",
+              "window_action": "Ikkuna auki -toiminto",
+              "window_temperature": "Ikkuna auki -lämpötila",
+              "room_sensor": "Huoneen ikkuna-anturi",
+              "zone_sensor": "Vyöhykkeen ikkuna-anturi",
+              "room_open_delay": "Huoneen avautumisen viive (sekuntia)",
+              "zone_open_delay": "Vyöhykkeen avautumisen viive (sekuntia)",
+              "close_delay": "Sulkemisviive (sekuntia)"
+            },
+            "data_description": {
+              "window_mode": "Ota käyttöön tai poista käytöstä ilmastointiryhmä ikkuna-/oviantureiden perusteella. Kun käytössä, HVAC-tila asetetaan arvoon 'off', kun ikkuna avataan, ja palautetaan edelliseen tilaan, kun se suljetaan.",
+              "window_adopt_manual_changes": "Salli tavoitetilan muutokset ikkunoiden ollessa auki.",
+              "window_action": "Mitä tehdä, kun ikkuna avataan: sammuta kokonaan tai aseta tietty lämpötila (esim. jäätymissuoja).",
+              "window_temperature": "Tavoitelämpötila, kun 'Lämpötila'-toiminto on valittu.",
+              "room_sensor": "(Valinnainen) Binäärianturi huoneen omalle ikkunalle/ovelle.",
+              "zone_sensor": "(Valinnainen) Binäärianturi vyöhykkeen/kerroksen ikkunoille/oville. Vyöhykeanturin tulisi sisältää huoneanturi.",
+              "room_open_delay": "Odotusaika huoneen ikkunan avautumisen jälkeen ennen lämmityksen sammuttamista.",
+              "zone_open_delay": "Odotusaika vyöhykkeen ikkunan avautumisen jälkeen ennen lämmityksen sammuttamista.",
+              "close_delay": "Odotusaika kaikkien ikkunoiden sulkeutumisen jälkeen ennen lämmityksen palauttamista."
+            }
+          },
+          "presence_section": {
+            "name": "Läsnäolonohjaus",
+            "description": "Hallitse ilmastointiasetuksia huoneen läsnäolon perusteella. Kun poissaolo havaitaan määritetyn ajan, poissaolotoiminto laukaistaan. Aiemmat asetukset palautetaan paluun yhteydessä.",
+            "data": {
+              "presence_mode": "Läsnäolonohjaustila",
+              "presence_sensor": "Läsnäolon laukaisin",
+              "presence_zone": "Läsnäolovyöhyke",
+              "presence_action": "Poissaolotoiminto",
+              "presence_away_offset": "Poissaolon lämpötilasiirtymä (°C)",
+              "presence_away_temperature": "Poissaololämpötila (°C)",
+              "presence_away_preset": "Poissaoloesiasetus",
+              "presence_away_delay": "Poissaoloviive (sekuntia)",
+              "presence_return_delay": "Paluuviive (sekuntia)"
+            },
+            "data_description": {
+              "presence_mode": "Ota käyttöön tai poista käytöstä automaattinen poissaolo-varatoiminto, kun poissaolo havaitaan.",
+              "presence_sensor": "Huoneen läsnäoloa ilmoittava entiteetti. Voit valita useita antureita (esim. liiketunnistin ja puhelin). Mikä tahansa 'on'- tai 'home'-tila tulkitaan läsnäolevaksi.",
+              "presence_zone": "(Valinnainen) Valitse vyöhykkeet, joilla läsnäolo lasketaan. Jos määritetty, henkilö on 'läsnä' vain, kun hän on jollain näistä vyöhykkeistä. Jos tyhjä, henkilö on 'läsnä' millä tahansa vyöhykkeellä (paitsi 'not_home').",
+              "presence_action": "Varatoiminto, joka suoritetaan, kun poissaolo havaitaan.",
+              "presence_away_offset": "Siirtymä nykyisestä tavoitteesta poissa ollessa (esim. -2° tai +2°). Aikataulumuutokset poissaolon aikana sovelletaan automaattisesti.",
+              "presence_away_temperature": "Kiinteä lämpötila asetettavaksi poissa ollessa.",
+              "presence_away_preset": "Esiasetustila, joka aktivoidaan poissa ollessa.",
+              "presence_away_delay": "Odotusaika sen jälkeen, kun anturi ilmoittaa poissaolosta, ennen poissaolotilan aktivointia.",
+              "presence_return_delay": "Odotusaika sen jälkeen, kun anturi ilmoittaa läsnäolosta, ennen palautusta."
+            }
+          },
+          "schedule_section": {
+            "name": "Aikataulun automaatio",
+            "description": "Linkitä aikataulu- tai kalenteri-entiteetti automatisoimaan ilmastointiasetuksia. Aikavälin tiedot voivat sisältää ilmastointiattribuutteja (lämpötila, hvac_mode) ja meta-avaimia (turn_off, sync_mode, sync_attributes) ryhmän käyttäytymisen säätämiseksi aikavälikohtaisesti.",
+            "data": {
+              "schedule_entity": "Aikataulu-/kalenteri-entiteetti",
+              "schedule_bypass_entity": "Ohitusentiteetti",
+              "resync_interval": "Uudelleensynkronoinnin väli (minuuttia)",
+              "override_duration": "Ohituksen kesto (minuuttia)",
+              "persist_changes": "Pysyvä ohitus",
+              "persist_active_schedule": "Säilytä aikataulun ohitus",
+              "ignore_off_members_schedule": "Kunnioita jäsenen pois-tilaa (aikataulu)"
+            },
+            "data_description": {
+              "schedule_entity": "Valitse schedule.* tai calendar.* -entiteetti. Aikatauluentiteeteillä aikavälin tiedot luetaan aikavälin attribuuteista. Kalenterientiteeteillä aikavälin tiedot luetaan tapahtuman description-kentästä YAML-muodossa. Tuetut avaimet: ilmastointiattribuutit ja meta-avaimet.",
+              "schedule_bypass_entity": "Valinnainen korkeamman prioriteetin taso (esim. loma-kalenteri). Kun aktiivinen, sen aikavälin tiedot ohittavat pääaikataulun. Aikavälin tiedot luetaan samalla tavalla: attribuutit schedule.*-entiteeteille, YAML-kuvaus calendar.*-entiteeteille.",
+              "resync_interval": "Pakota jäsenten synkronointi tavoitetilaan X minuutin välein. Varmistaa, että laitteet pysyvät aikataulussa, vaikka niitä säädettäisiin manuaalisesti tai komentoja jäisi väliin. Aseta 0 poistaaksesi käytöstä.",
+              "override_duration": "Manuaalisten ohitusten kesto. Tämän ajan jälkeen ryhmä palaa automaattisesti nykyiseen aikatauluun. Aseta 0 ohittaaksesi ohitusjakson.",
+              "persist_changes": "Itse aikatauluun tehdyt muutokset ohitetaan manuaalisen ohituksen ollessa aktiivinen. Nykyinen aikataulu otetaan uudelleen käyttöön vasta ohituksen päätyttyä.",
+              "persist_active_schedule": "Säilytä aktiivinen aikataulu uudelleenkäynnistyksen jälkeen, kun sitä on muutettu palvelun kautta. Muuten se palautuu oletusarvoon.",
+              "ignore_off_members_schedule": "Aikataulu EI kytke päälle jäseniä, jotka ovat tällä hetkellä pois päältä."
+            }
+          },
+          "temp_offsets_section": {
+            "name": "Jäsenten lämpötilasiirtymät",
+            "description": "Käytä jäsenkohtaisia lämpötilaoffsetteja, jotta tietyt jäsenet toimivat suhteessa lämpimämmin tai viileämmin kuin ryhmän tavoite.",
+            "data": {
+              "member_offset_correction": "Korjaa jäsenen siirtymä"
+            },
+            "data_description": {
+              "member_offset_correction": "Kun käytössä, kunkin jäsenen offset vähennetään ennen keskiarvon laskemista, jolloin ryhmä näyttää loogisen asetusarvon raa'an keskiarvon sijaan."
+            }
+          },
+          "isolation_section": {
+            "name": "Jäsenen eristäminen",
+            "description": "Eristä tilapäisesti tiettyjä jäseniä, kun laukaisin on aktiivinen. Eristetyt jäsenet sammutetaan ja jätetään pois ryhmälaskennoista.",
+            "data": {
+              "isolation_rule_count": "Sääntöjen määrä",
+              "isolation_rule_1_entities": "Eristettävät entiteetit",
+              "isolation_rule_1_trigger": "Laukaisintyyppi",
+              "isolation_rule_1_sensor": "Eristysanturi",
+              "isolation_rule_1_hvac_modes": "HVAC-tilan laukaisin",
+              "isolation_rule_1_activate_delay": "Aktivointiviive (sekuntia)",
+              "isolation_rule_1_restore_delay": "Palautusviive (sekuntia)",
+              "isolation_rule_1_action_type": "Eristystoiminto",
+              "isolation_rule_1_action_hvac_mode": "HVAC-tila",
+              "isolation_rule_1_action_preset_mode": "Esiasetustila"
+            },
+            "data_description": {
+              "isolation_rule_count": "Kuinka monta itsenäistä eristyssääntöä näytetään. Tallenna muutoksen jälkeen näyttääksesi tai piilottaaksesi lisää sääntöpaikkoja.",
+              "isolation_rule_1_entities": "Ryhmän jäsenet, jotka eristetään laukaisimen ollessa aktiivinen.",
+              "isolation_rule_1_trigger": "Valitse, mikä aktivoi eristyksen: binäärianturi tai ryhmän tietty HVAC-tila.",
+              "isolation_rule_1_sensor": "(Anturilaukaisin) Binäärianturi, joka laukaisee eristyksen ollessaan ON.",
+              "isolation_rule_1_hvac_modes": "(HVAC-tilan laukaisin) Eristys aktivoituu, kun ryhmän tavoitetila on jokin näistä.",
+              "isolation_rule_1_activate_delay": "(Vain anturi-/HVAC-tilalaukaisin) Odotusaika laukaisimen aktivoitumisen jälkeen ennen jäsenten eristämistä.",
+              "isolation_rule_1_restore_delay": "(Vain anturi-/HVAC-tilalaukaisin) Odotusaika laukaisimen deaktivoitumisen jälkeen ennen jäsenten palauttamista ryhmän tavoitetilaan.",
+              "isolation_rule_1_action_type": "Valitse, mitä tehdä kun tämä jäsen on eristetty: aseta HVAC-tila tai esiasetustila.",
+              "isolation_rule_1_action_hvac_mode": "Eristetylle jäsenelle asetettava HVAC-tila.",
+              "isolation_rule_1_action_preset_mode": "Eristetylle jäsenelle asetettava esiasetustila."
+            }
+          },
+          "isolation_rule_2_section": {
+            "name": "Jäsenen eristäminen – Sääntö 2",
+            "description": "Valinnainen toinen eristyssääntö itsenäisellä laukaisimella ja jäsenluettelolla.",
+            "data": {
+              "isolation_rule_2_entities": "Eristettävät entiteetit",
+              "isolation_rule_2_trigger": "Laukaisintyyppi",
+              "isolation_rule_2_sensor": "Eristysanturi",
+              "isolation_rule_2_hvac_modes": "HVAC-tilan laukaisin",
+              "isolation_rule_2_activate_delay": "Aktivointiviive (sekuntia)",
+              "isolation_rule_2_restore_delay": "Palautusviive (sekuntia)",
+              "isolation_rule_2_action_type": "Eristystoiminto",
+              "isolation_rule_2_action_hvac_mode": "HVAC-tila",
+              "isolation_rule_2_action_preset_mode": "Esiasetustila"
+            },
+            "data_description": {
+              "isolation_rule_2_entities": "Ryhmän jäsenet, jotka eristetään laukaisimen ollessa aktiivinen.",
+              "isolation_rule_2_trigger": "Valitse, mikä aktivoi eristyksen: binäärianturi tai ryhmän tietty HVAC-tila.",
+              "isolation_rule_2_sensor": "(Anturilaukaisin) Binäärianturi, joka laukaisee eristyksen ollessaan ON.",
+              "isolation_rule_2_hvac_modes": "(HVAC-tilan laukaisin) Eristys aktivoituu, kun ryhmän tavoitetila on jokin näistä.",
+              "isolation_rule_2_activate_delay": "(Vain anturi-/HVAC-tilalaukaisin) Odotusaika laukaisimen aktivoitumisen jälkeen ennen jäsenten eristämistä.",
+              "isolation_rule_2_restore_delay": "(Vain anturi-/HVAC-tilalaukaisin) Odotusaika laukaisimen deaktivoitumisen jälkeen ennen jäsenten palauttamista ryhmän tavoitetilaan.",
+              "isolation_rule_2_action_type": "Valitse, mitä tehdä kun tämä jäsen on eristetty: aseta HVAC-tila tai esiasetustila.",
+              "isolation_rule_2_action_hvac_mode": "Eristetylle jäsenelle asetettava HVAC-tila.",
+              "isolation_rule_2_action_preset_mode": "Eristetylle jäsenelle asetettava esiasetustila."
+            }
+          },
+          "isolation_rule_3_section": {
+            "name": "Jäsenen eristäminen – Sääntö 3",
+            "description": "Valinnainen kolmas eristyssääntö itsenäisellä laukaisimella ja jäsenluettelolla.",
+            "data": {
+              "isolation_rule_3_entities": "Eristettävät entiteetit",
+              "isolation_rule_3_trigger": "Laukaisintyyppi",
+              "isolation_rule_3_sensor": "Eristysanturi",
+              "isolation_rule_3_hvac_modes": "HVAC-tilan laukaisin",
+              "isolation_rule_3_activate_delay": "Aktivointiviive (sekuntia)",
+              "isolation_rule_3_restore_delay": "Palautusviive (sekuntia)",
+              "isolation_rule_3_action_type": "Eristystoiminto",
+              "isolation_rule_3_action_hvac_mode": "HVAC-tila",
+              "isolation_rule_3_action_preset_mode": "Esiasetustila"
+            },
+            "data_description": {
+              "isolation_rule_3_entities": "Ryhmän jäsenet, jotka eristetään laukaisimen ollessa aktiivinen.",
+              "isolation_rule_3_trigger": "Valitse, mikä aktivoi eristyksen: binäärianturi tai ryhmän tietty HVAC-tila.",
+              "isolation_rule_3_sensor": "(Anturilaukaisin) Binäärianturi, joka laukaisee eristyksen ollessaan ON.",
+              "isolation_rule_3_hvac_modes": "(HVAC-tilan laukaisin) Eristys aktivoituu, kun ryhmän tavoitetila on jokin näistä.",
+              "isolation_rule_3_activate_delay": "(Vain anturi-/HVAC-tilalaukaisin) Odotusaika laukaisimen aktivoitumisen jälkeen ennen jäsenten eristämistä.",
+              "isolation_rule_3_restore_delay": "(Vain anturi-/HVAC-tilalaukaisin) Odotusaika laukaisimen deaktivoitumisen jälkeen ennen jäsenten palauttamista ryhmän tavoitetilaan.",
+              "isolation_rule_3_action_type": "Valitse, mitä tehdä kun tämä jäsen on eristetty: aseta HVAC-tila tai esiasetustila.",
+              "isolation_rule_3_action_hvac_mode": "Eristetylle jäsenelle asetettava HVAC-tila.",
+              "isolation_rule_3_action_preset_mode": "Eristetylle jäsenelle asetettava esiasetustila."
+            }
+          },
+          "isolation_rule_4_section": {
+            "name": "Jäsenen eristäminen – Sääntö 4",
+            "description": "Valinnainen neljäs eristyssääntö itsenäisellä laukaisimella ja jäsenluettelolla.",
+            "data": {
+              "isolation_rule_4_entities": "Eristettävät entiteetit",
+              "isolation_rule_4_trigger": "Laukaisintyyppi",
+              "isolation_rule_4_sensor": "Eristysanturi",
+              "isolation_rule_4_hvac_modes": "HVAC-tilan laukaisin",
+              "isolation_rule_4_activate_delay": "Aktivointiviive (sekuntia)",
+              "isolation_rule_4_restore_delay": "Palautusviive (sekuntia)",
+              "isolation_rule_4_action_type": "Eristystoiminto",
+              "isolation_rule_4_action_hvac_mode": "HVAC-tila",
+              "isolation_rule_4_action_preset_mode": "Esiasetustila"
+            },
+            "data_description": {
+              "isolation_rule_4_entities": "Ryhmän jäsenet, jotka eristetään laukaisimen ollessa aktiivinen.",
+              "isolation_rule_4_trigger": "Valitse, mikä aktivoi eristyksen: binäärianturi tai ryhmän tietty HVAC-tila.",
+              "isolation_rule_4_sensor": "(Anturilaukaisin) Binäärianturi, joka laukaisee eristyksen ollessaan ON.",
+              "isolation_rule_4_hvac_modes": "(HVAC-tilan laukaisin) Eristys aktivoituu, kun ryhmän tavoitetila on jokin näistä.",
+              "isolation_rule_4_activate_delay": "(Vain anturi-/HVAC-tilalaukaisin) Odotusaika laukaisimen aktivoitumisen jälkeen ennen jäsenten eristämistä.",
+              "isolation_rule_4_restore_delay": "(Vain anturi-/HVAC-tilalaukaisin) Odotusaika laukaisimen deaktivoitumisen jälkeen ennen jäsenten palauttamista ryhmän tavoitetilaan.",
+              "isolation_rule_4_action_type": "Valitse, mitä tehdä kun tämä jäsen on eristetty: aseta HVAC-tila tai esiasetustila.",
+              "isolation_rule_4_action_hvac_mode": "Eristetylle jäsenelle asetettava HVAC-tila.",
+              "isolation_rule_4_action_preset_mode": "Eristetylle jäsenelle asetettava esiasetustila."
+            }
+          },
+          "member_template_section": {
+            "name": "Jäsenmalli",
+            "description": "Renderöi yhden asetusarvon jäsenet virtuaalisiksi lämmitys-/jäähdytysalue-entiteeteiksi. Ryhmäapuri kääntää aluekomennot sopiviksi fyysisiksi lämmitys-/jäähdytyskomennoiksi kunkin jäsenen nykyisen lämpötilan perusteella.",
+            "data": {
+              "range_template_enabled": "Ota käyttöön aluemalli",
+              "range_template_deadband_action": "Kuolleen vyöhykkeen toiminto",
+              "range_template_heat_entities": "Lämmityslaitteet",
+              "range_template_cool_entities": "Jäähdytyslaitteet"
+            },
+            "data_description": {
+              "range_template_enabled": "Renderöi automaattisesti kaikki yhden asetusarvon jäsenet (ilman natiivia lämmitys/jäähdytys-tukea) virtuaalisiksi aluetilalaitteiksi.",
+              "range_template_deadband_action": "Toiminto, joka suoritetaan, kun nykyinen lämpötila on tavoitealueen sisällä (kuollut vyöhyke).",
+              "range_template_heat_entities": "Jäsenet, jotka saavat lämmittää. Listaamattomat jäsenet ovat rajoittamattomia (fyysinen ominaisuus ratkaisee). Rooli voi vain rajoittaa, ei koskaan laajentaa laitteen ominaisuuksia.",
+              "range_template_cool_entities": "Jäsenet, jotka saavat jäähdyttää. Listaamattomat jäsenet ovat rajoittamattomia (fyysinen ominaisuus ratkaisee). Rooli voi vain rajoittaa, ei koskaan laajentaa laitteen ominaisuuksia."
+            }
+          },
+          "advanced_section": {
+            "name": "Lisäasetukset",
+            "description": "Hienosäädä komentojen ajoitusta, uudelleenyritysten käyttäytymistä ja porrastettuja kutsuja. Vaihda diagnostiikka-attribuutteja ja konfiguraatioantureita.",
+            "data": {
+              "debounce_delay": "Viiveen tasoitus (sekuntia)",
+              "retry_attempts": "Uudelleenyritysten määrä",
+              "retry_delay": "Uudelleenyrityksen viive (sekuntia)",
+              "force_retry": "Pakota uudelleenyritys",
+              "staggered_call_delay": "Porrastetun kutsun viive (sekuntia)",
+              "grace_period": "Optimistisen käyttöliittymän armonaika (sekuntia)",
+              "expose_smart_sensors": "Näytä älykkäät anturit",
+              "expose_member_entities": "Näytä jäsenluettelo",
+              "expose_config": "Näytä konfiguraatioanturi"
+            },
+            "data_description": {
+              "debounce_delay": "Odotusaika ennen komentojen lähettämistä. Suuremmat arvot estävät 'nopeat sarjatulet' säätimiä liu'utettaessa, mutta tuntuvat hitaammilta.",
+              "retry_attempts": "Kuinka monta kertaa komento lähetetään uudelleen, jos laite ei vastaa. Aseta 0 poistaaksesi käytöstä.",
+              "retry_delay": "Tauko uudelleenyritysten välillä. Hetken antaminen laitteille toipua voi parantaa luotettavuutta.",
+              "force_retry": "Yritä aina lähettää komentoja uudelleen kaikille jäsenille, vaikka ne jo ilmoittaisivat tavoitetilan.",
+              "staggered_call_delay": "Odotusaika yksittäisten ryhmän jäsenille lähetettävien komentojen välillä. Kutsujen porrastaminen estää verkkoruuhkat Zigbee/Matter-ympäristöissä. Aseta 0 poistaaksesi käytöstä.",
+              "grace_period": "Kuinka kauan ryhmä näyttää komennetun arvon ennen siirtymistä jäsenten keskiarvoon. Estää käyttöliittymän välkkymisen, kun hitaat laitteet (pilvisillat, Zigbee) kaikuttavat vanhan tilansa takaisin. Aseta 0 poistaaksesi käytöstä.",
+              "expose_smart_sensors": "Luo ylimääräisiä anturientiteettejä ryhmän lämpötilalle ja kosteudelle (hyödyllinen kaavioihin).",
+              "expose_member_entities": "Luo attribuutin, joka listaa kaikki jäsenentiteettien ID:t.",
+              "expose_config": "Luo diagnostiikka-anturin (sensor.*_configuration), joka paljastaa siirrettävät asetukset JSON-attribuuttina. Hyödyllinen asetusten kopioimiseen ryhmien välillä automaatioiden avulla."
+            }
+          }
+        },
+        "data": {
+          "advanced_mode": "Lisäominaisuudet",
+          "expand_sections": "Laajenna kaikki osiot oletuksena"
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Vähintään yhden ilmastointilaitteen on pysyttävä ryhmässä.",
+      "calibration_requires_sensors": "Kalibrointikohteet vaativat vähintään yhden ulkoisen lämpötila-anturin.",
+      "master_refresh_notice": "Pääyksikkö lisätty. Uusia asetuksia saatavilla.",
+      "master_options_notice": "Uusi pääyksikön asetus",
+      "isolation_all_selected": "Vähintään yhden jäsenen on pysyttävä eristyksen ulkopuolella.",
+      "isolation_entity_overlap": "Jokainen jäsen voi esiintyä vain yhdessä eristyssäännössä.",
+      "isolation_action_preset_required": "Valitse esiasetustila eristystoiminnolle.",
+      "sensor_loop_protection": "Climate Group Helper -entiteettiä ei voi käyttää ulkoisena anturina tai kalibrointikohteena — tämä loisi takaisinkytkentäsilmukan."
+    },
+    "abort": {
+      "no_changes": "Muutoksia ei havaittu."
+    }
+  },
+  "selector": {
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normaali – Ryhmä omaksuu yleisimmän jäsentilan",
+        "off_priority": "Pois päältä -prioriteetti – Jos jokin jäsen on pois päältä, koko ryhmä on pois päältä",
+        "auto": "Automaattinen – Älykäs vaihto Normaalin ja Pois päältä -prioriteetin välillä"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Leikkaus – Tue ominaisuuksia vain, jos KAIKILLA jäsenillä on ne",
+        "union": "Yhdiste – Tue kaikkia ominaisuuksia, jotka ovat MILLÄ TAHANSA jäsenellä"
+      }
+    },
+    "temp_target_avg": {
+      "options": {
+        "mean": "Keskiarvo",
+        "median": "Mediaani (keskimmäinen arvo)",
+        "min": "Minimi (alin)",
+        "max": "Maksimi (korkein)"
+      }
+    },
+    "temp_target_round": {
+      "options": {
+        "none": "Ei pyöristystä (tarkka)",
+        "half": "Puoli astetta (0.5°)",
+        "integer": "Kokonaisluvut (1°)"
+      }
+    },
+    "temp_current_avg": {
+      "options": {
+        "mean": "Keskiarvo",
+        "median": "Mediaani (jättää poikkeamat huomiotta)",
+        "min": "Minimi (alin)",
+        "max": "Maksimi (korkein)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absoluuttinen – lähetä arvo suoraan (vakio)",
+        "offset": "Siirtymä – lähetä erotus (ulkoinen - TRV sisäinen)",
+        "scaled": "Skaalattu – kokonaisluku x100 (Danfoss Ally)"
+      }
+    },
+    "humidity_target_avg": {
+      "options": {
+        "mean": "Keskiarvo",
+        "median": "Mediaani (keskimmäinen arvo)",
+        "min": "Minimi (alin)",
+        "max": "Maksimi (korkein)"
+      }
+    },
+    "humidity_target_round": {
+      "options": {
+        "none": "Ei pyöristystä (tarkka)",
+        "half": "Puoli prosenttia (0.5%)",
+        "integer": "Kokonaisluvut (1%)"
+      }
+    },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "Keskiarvo",
+        "median": "Mediaani (jättää poikkeamat huomiotta)",
+        "min": "Minimi (alin)",
+        "max": "Maksimi (korkein)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "disabled": "Ei käytössä – Ei automaattista synkronointia jäsenten välillä",
+        "mirror": "Peilaus – Manuaaliset muutokset yhdessä laitteessa päivittävät kaikki jäsenet",
+        "lock": "Lukitus – Peruu manuaaliset muutokset vastaamaan ryhmän tilaa",
+        "mirror_lock": "Peilaus/Lukitus – Valitut attribuutit peilataan, muut lukitaan tiukasti",
+        "master_lock": "Master/Lukitus – Vain pääyksikkö voi muuttaa ryhmän tavoitetta"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "HVAC-tila",
+        "preset_mode": "Esiasetustila",
+        "temperature": "Lämpötila (tavoite)",
+        "target_temp_high": "Tavoitelämpötila yläraja (alue)",
+        "target_temp_low": "Tavoitelämpötila alaraja (alue)",
+        "fan_mode": "Puhallintila",
+        "swing_mode": "Pystysuuntainen heilahdus",
+        "swing_horizontal_mode": "Vaakasuuntainen heilahdus",
+        "humidity": "Kosteus (tavoite)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "disabled": "Ei käytössä – Ikkunanohjaus on pois päältä",
+        "enabled": "Käytössä – Ikkunanohjaus on aktiivinen"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Pois – Estä kaikki muutokset",
+        "all": "Kaikki – Hyväksy kaikki manuaaliset muutokset",
+        "master_only": "Vain pääyksikkö – Hyväksy vain pääyksikkö"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Sammuta",
+        "temperature": "Aseta lämpötila"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Sammuta",
+        "clamp": "Rajoita raja-arvoon"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Ohita",
+        "off": "Sammuta"
+      }
+    },
+    "isolation_rule_count": {
+      "options": {
+        "1": "1 sääntö",
+        "2": "2 sääntöä",
+        "3": "3 sääntöä",
+        "4": "4 sääntöä"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "disabled": "Ei käytössä – Jäsenen eristys on pois päältä",
+        "sensor": "Binäärianturi – Eristä anturin ollessa ON",
+        "hvac_mode": "HVAC-tila – Eristä, kun ryhmän tila täsmää",
+        "member_off": "Jäsen pois – Eristä, kun jäsen sammutetaan manuaalisesti"
+      }
+    },
+    "isolation_action_type": {
+      "options": {
+        "hvac_mode": "Aseta HVAC-tila",
+        "preset_mode": "Aseta esiasetustila"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Ei käytössä – Läsnäolonohjaus on pois päältä",
+        "enabled": "Käytössä – Poissaolo-varatoiminto"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Sammuta",
+        "away_offset": "Poissaolosiirtymä",
+        "away_temperature": "Poissaololämpötila",
+        "away_preset": "Poissaoloesiasetus"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "none": "Ei mitään",
+        "off": "Sammuta",
+        "fan_only": "Vain puhallin"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group_helper": {
+        "name": "Ilmastointiryhmä",
+        "state_attributes": {
+          "last_active_hvac_mode": {
+            "name": "Viimeisin aktiivinen tila"
+          },
+          "target_hvac_mode": {
+            "name": "Tavoite-HVAC-tila"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Poissa",
+              "home": "Koti",
+              "sleep": "Uni",
+              "comfort": "Comfort",
+              "activity": "Aktiviteetti",
+              "standby": "Standby",
+              "economy": "Säästö",
+              "building_protection": "Rakennussuoja",
+              "boost": "Boost"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Ryhmän siirtymä"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Lämpötila"
+      },
+      "humidity": {
+        "name": "Kosteus"
+      },
+      "configuration": {
+        "name": "Kokoonpano"
+      }
+    },
+    "switch": {
+      "main_switch": {
+        "name": "Pääkytkin"
+      }
+    }
+  },
+  "services": {
+    "set_temperature": {
+      "name": "Aseta lämpötila",
+      "description": "Aseta koko ryhmän tavoitelämpötila.",
+      "fields": {
+        "entity_id": {
+          "name": "Ilmastointiryhmä",
+          "description": "Ohjattava ryhmä."
+        },
+        "temperature": {
+          "name": "Tavoitelämpötila",
+          "description": "Haluttu lämpötila."
+        },
+        "target_temp_high": {
+          "name": "Tavoite yläraja",
+          "description": "Yläraja heat/cool-tilalle."
+        },
+        "target_temp_low": {
+          "name": "Tavoite alaraja",
+          "description": "Alaraja heat/cool-tilalle."
+        },
+        "hvac_mode": {
+          "name": "HVAC-tila",
+          "description": "Vaihda tila valinnaisesti."
+        }
+      }
+    },
+    "set_schedule_entity": {
+      "name": "Aseta aikataulu-entiteetti",
+      "description": "Vaihda aktiivinen aikataulu-entiteetti dynaamisesti. Jos jätetään pois tai asetetaan arvoon null, ryhmä palaa määritettyyn oletusarvoon.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Aikataulu-/kalenteri-entiteetti",
+          "description": "Aktivoitava schedule.* tai calendar.* -entiteetti (esim. schedule.holiday tai calendar.vacation). Aseta null tai tyhjä palauttaaksesi määritetyn oletusarvon."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Aseta aikataulun ohitusentiteetti",
+      "description": "Vaihda aktiivinen ohitusentiteetti ajon aikana (esim. vaihtaaksesi eri loma-kalentereiden välillä). Aseta null palauttaaksesi määritetyn oletusarvon.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Ohitusentiteetti",
+          "description": "Ohituksena käytettävä schedule.* tai calendar.* -entiteetti (esim. calendar.vacation). Aseta null tai tyhjä palauttaaksesi määritetyn oletusarvon."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Asettaa ryhmän väliaikaisesti tavoitelämpötilaan. Ajastimen umpeuduttua ryhmä palaa automaattisesti aktiiviseen aikatauluun tai edelliseen tilaan.",
+      "fields": {
+        "temperature": {
+          "name": "Lämpötila",
+          "description": "Absoluuttinen tavoitelämpötila boostin aikana (esim. 24.0). Ei voi käyttää yhdessä temperature_offsetin kanssa."
+        },
+        "temperature_offset": {
+          "name": "Lämpötilasiirtymä",
+          "description": "Suhteellinen siirtymä lisättynä nykyiseen tavoitelämpötilaan (esim. +3.0 tai -2.0). Ei voi käyttää yhdessä temperaturen kanssa."
+        },
+        "duration": {
+          "name": "Kesto (minuuttia)",
+          "description": "Kuinka kauan boostin tulisi kestää minuutteina."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Ota käyttöön kokoonpano",
+      "description": "Ottaa käyttöön siirrettävän JSON-konfiguraation ryhmässä. Hyödyllinen asetusten kopioimiseen ryhmien välillä tai varmuuskopion palauttamiseen.",
+      "fields": {
+        "settings": {
+          "name": "Asetukset (JSON)",
+          "description": "Käyttöön otettava JSON-konfiguraatio-objekti. Käytä konfiguraatioanturin 'settings_json'-attribuuttia."
+        },
+        "include_member_list": {
+          "name": "Sisällytä jäsenluettelo",
+          "description": "Jos true, ylikirjoittaa myös jäsenentiteettien ja eristysentiteettien luettelon."
+        },
+        "include_entity_selectors": {
+          "name": "Sisällytä entiteettivalitsimet",
+          "description": "Jos true, ylikirjoittaa myös linkitetyt anturit (lämpötila, kosteus, läsnäolo, ikkuna jne.) ja jäsenkohtaiset siirtymät."
+        }
+      }
+    }
+  },
+  "issues": {
+    "member_unavailable": {
+      "title": "Jäsenlaite ei käytettävissä",
+      "description": "Yksi tai useampi laite ryhmässä {group_name} on offline-tilassa. Ryhmä jatkaa toimintaansa niillä, jotka ovat käytettävissä.\n\nEi käytettävissä: {unavailable_entities}"
+    },
+    "no_members_available": {
+      "title": "Ei jäseniä käytettävissä",
+      "description": "Ryhmällä {group_name} ei ole aktiivisia jäseniä ja se on käytännössä offline-tilassa.\n\nTarkista: {member_entities}"
+    },
+    "conflicting_features": {
+      "title": "Ominaisuusristiriidat",
+      "description": "Ryhmällä {group_name} on jäseniä, joilla on erilaiset ominaisuudet. Toiminnallisuus saattaa rajoittua siihen, mitä kaikki tukevat.\n\nRistiriitaiset: {conflicting_entities}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC-tila muuttui",
+      "temperature_target_changed": "Tavoitelämpötila muuttui",
+      "current_temperature_changed": "Nykyinen lämpötila muuttui",
+      "group_turned_on": "Ryhmä kytkettiin päälle",
+      "group_turned_off": "Ryhmä sammutettiin"
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC-tila on",
+      "is_temperature_above": "Lämpötila on yli",
+      "is_temperature_below": "Lämpötila on alle",
+      "is_group_available": "Ryhmä on käytettävissä"
+    },
+    "action_type": {
+      "set_hvac_mode": "Aseta HVAC-tila",
+      "set_temperature": "Aseta lämpötila",
+      "turn_on": "Kytke päälle",
+      "turn_off": "Sammuta"
+    }
+  }
+}

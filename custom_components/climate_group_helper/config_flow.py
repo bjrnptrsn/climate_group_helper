@@ -81,6 +81,8 @@ from .const import (
     CONF_PRESENCE_ZONE,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_RANGE_TEMPLATE_ENABLED,
+    CONF_RANGE_TEMPLATE_COOL_ENTITIES,
+    CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
     CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
@@ -319,58 +321,73 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         if not current_config.get(CONF_PRESENCE_SENSOR) and advanced_mode:
             current_config[CONF_PRESENCE_MODE] = PresenceMode.DISABLED.value
 
-        # Isolation logic: assemble CONF_ISOLATION_RULES from the slot keys
+        # Isolation logic: assemble CONF_ISOLATION_RULES from the slot keys.
+        # Slot keys only exist transiently in the rendered form (never persisted to
+        # options), so this must only run while the isolation section was actually
+        # rendered — otherwise an unrelated save (e.g. simple-mode form, or advanced
+        # mode with fewer than 2 members — _section_factory_isolation's own render
+        # gate) would find no slot keys and silently wipe previously saved rules.
         valid_members = set(current_config.get(CONF_ENTITIES, []))
-        # rule_count comes as string from SelectSelector — keep as string for round-trip safety,
-        # use int only for range() logic
-        raw_count = current_config.get(CONF_ISOLATION_RULES_COUNT, "1")
-        rule_count = max(1, min(4, int(raw_count)))
-        current_config[CONF_ISOLATION_RULES_COUNT] = str(rule_count)
-        rules: list[dict[str, Any]] = []
-        for i in range(1, rule_count + 1):
-            slot_trigger = current_config.get(f"isolation_rule_{i}_trigger", IsolationTrigger.DISABLED)
-            if slot_trigger == IsolationTrigger.DISABLED:
-                continue
-            rule: dict[str, Any] = {
-                CONF_ISOLATION_TRIGGER: slot_trigger,
-                CONF_ISOLATION_ACTION_TYPE: current_config.get(
-                    f"isolation_rule_{i}_action_type", IsolationActionType.HVAC_MODE.value
-                ),
-                CONF_ISOLATION_ACTION_HVAC_MODE: current_config.get(
-                    f"isolation_rule_{i}_action_hvac_mode", HVACMode.OFF.value
-                ),
-                CONF_ISOLATION_ACTION_PRESET_MODE: current_config.get(
-                    f"isolation_rule_{i}_action_preset_mode"
-                ),
-            }
-            entities = [
-                e for e in current_config.get(f"isolation_rule_{i}_entities", [])
-                if e in valid_members
-            ]
-            if slot_trigger == IsolationTrigger.SENSOR:
-                sensor = current_config.get(f"isolation_rule_{i}_sensor")
-                if not sensor:
-                    continue  # no sensor configured — skip rule
-                rule[CONF_ISOLATION_SENSOR] = sensor
-                rule[CONF_ISOLATION_ENTITIES] = entities
-                rule[CONF_ISOLATION_ACTIVATE_DELAY] = current_config.get(f"isolation_rule_{i}_activate_delay", 0)
-                rule[CONF_ISOLATION_RESTORE_DELAY] = current_config.get(f"isolation_rule_{i}_restore_delay", 0)
-            elif slot_trigger == IsolationTrigger.HVAC_MODE:
-                hvac_modes = current_config.get(f"isolation_rule_{i}_hvac_modes", [])
-                if not hvac_modes:
-                    continue  # no modes configured — skip rule
-                rule[CONF_ISOLATION_TRIGGER_HVAC_MODES] = hvac_modes
-                rule[CONF_ISOLATION_ENTITIES] = entities
-                rule[CONF_ISOLATION_ACTIVATE_DELAY] = current_config.get(f"isolation_rule_{i}_activate_delay", 0)
-                rule[CONF_ISOLATION_RESTORE_DELAY] = current_config.get(f"isolation_rule_{i}_restore_delay", 0)
-            elif slot_trigger == IsolationTrigger.MEMBER_OFF:
-                # MEMBER_OFF: no sensor/hvac_modes, no delays
-                rule[CONF_ISOLATION_ENTITIES] = entities or list(valid_members)
-                rule[CONF_ISOLATION_ACTIVATE_DELAY] = 0
-                rule[CONF_ISOLATION_RESTORE_DELAY] = 0
-            rules.append(rule)
+        if advanced_mode and len(valid_members) >= 2:
+            # rule_count comes as string from SelectSelector — keep as string for round-trip safety,
+            # use int only for range() logic
+            raw_count = current_config.get(CONF_ISOLATION_RULES_COUNT, "1")
+            try:
+                rule_count = max(1, min(4, int(raw_count)))
+            except (TypeError, ValueError):
+                rule_count = 1
+                current_config[CONF_ISOLATION_RULES_COUNT] = "1"
+            current_config[CONF_ISOLATION_RULES_COUNT] = str(rule_count)
+            rules: list[dict[str, Any]] = []
+            for i in range(1, rule_count + 1):
+                slot_trigger = current_config.get(f"isolation_rule_{i}_trigger", IsolationTrigger.DISABLED)
+                if slot_trigger == IsolationTrigger.DISABLED:
+                    continue
+                rule: dict[str, Any] = {
+                    CONF_ISOLATION_TRIGGER: slot_trigger,
+                    CONF_ISOLATION_ACTION_TYPE: current_config.get(
+                        f"isolation_rule_{i}_action_type", IsolationActionType.HVAC_MODE.value
+                    ),
+                    CONF_ISOLATION_ACTION_HVAC_MODE: current_config.get(
+                        f"isolation_rule_{i}_action_hvac_mode", HVACMode.OFF.value
+                    ),
+                    CONF_ISOLATION_ACTION_PRESET_MODE: current_config.get(
+                        f"isolation_rule_{i}_action_preset_mode"
+                    ),
+                }
+                entities = [
+                    e for e in current_config.get(f"isolation_rule_{i}_entities", [])
+                    if e in valid_members
+                ]
+                if slot_trigger == IsolationTrigger.SENSOR:
+                    sensor = current_config.get(f"isolation_rule_{i}_sensor")
+                    if not sensor:
+                        continue  # no sensor configured — skip rule
+                    rule[CONF_ISOLATION_SENSOR] = sensor
+                    rule[CONF_ISOLATION_ENTITIES] = entities
+                    rule[CONF_ISOLATION_ACTIVATE_DELAY] = current_config.get(f"isolation_rule_{i}_activate_delay", 0)
+                    rule[CONF_ISOLATION_RESTORE_DELAY] = current_config.get(f"isolation_rule_{i}_restore_delay", 0)
+                elif slot_trigger == IsolationTrigger.HVAC_MODE:
+                    hvac_modes = current_config.get(f"isolation_rule_{i}_hvac_modes", [])
+                    if not hvac_modes:
+                        continue  # no modes configured — skip rule
+                    rule[CONF_ISOLATION_TRIGGER_HVAC_MODES] = hvac_modes
+                    rule[CONF_ISOLATION_ENTITIES] = entities
+                    rule[CONF_ISOLATION_ACTIVATE_DELAY] = current_config.get(f"isolation_rule_{i}_activate_delay", 0)
+                    rule[CONF_ISOLATION_RESTORE_DELAY] = current_config.get(f"isolation_rule_{i}_restore_delay", 0)
+                elif slot_trigger == IsolationTrigger.MEMBER_OFF:
+                    # MEMBER_OFF: no sensor/hvac_modes, no delays
+                    rule[CONF_ISOLATION_ENTITIES] = entities or list(valid_members)
+                    rule[CONF_ISOLATION_ACTIVATE_DELAY] = 0
+                    rule[CONF_ISOLATION_RESTORE_DELAY] = 0
+                rules.append(rule)
 
-        current_config[CONF_ISOLATION_RULES] = rules
+            # Rules beyond the chosen count are hidden, not deleted: keep the
+            # previously saved tail so a later count increase reveals the old
+            # rules again (matches the "reveal or hide" UI description). Only
+            # the visible slots were rebuilt above.
+            hidden_rules = list(current_config.get(CONF_ISOLATION_RULES, []))[rule_count:]
+            current_config[CONF_ISOLATION_RULES] = rules + hidden_rules
 
         # Remove all slot keys and legacy flat isolation keys from stored config
         for i in range(1, 5):
@@ -406,11 +423,16 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         elif advanced_mode:
             current_config.pop(CONF_MEMBER_TEMP_OFFSETS, None)
 
-        # Range Template logic
-        if advanced_mode:
+        # Range Template logic. Only clear when the section was actually rendered
+        # (CONF_RANGE_TEMPLATE_ENABLED present in user_input) — the factory omits the
+        # section entirely when no member needs it (e.g. all members natively support
+        # heat_cool), and a save in that state must not wipe a saved legacy config.
+        if advanced_mode and CONF_RANGE_TEMPLATE_ENABLED in user_input:
             if not user_input.get(CONF_RANGE_TEMPLATE_ENABLED, False):
                 current_config.pop(CONF_RANGE_TEMPLATE_ENABLED, None)
                 current_config.pop(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, None)
+                current_config.pop(CONF_RANGE_TEMPLATE_HEAT_ENTITIES, None)
+                current_config.pop(CONF_RANGE_TEMPLATE_COOL_ENTITIES, None)
 
         return current_config
 
@@ -975,7 +997,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         ): selector.NumberSelector(
                             selector.NumberSelectorConfig(
                                 min=0,
-                                max=300,
+                                max=3600,
                                 step=1,
                                 unit_of_measurement="s",
                                 mode=selector.NumberSelectorMode.SLIDER,
@@ -987,7 +1009,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         ): selector.NumberSelector(
                             selector.NumberSelectorConfig(
                                 min=0,
-                                max=300,
+                                max=3600,
                                 step=1,
                                 unit_of_measurement="s",
                                 mode=selector.NumberSelectorMode.SLIDER,
@@ -1250,10 +1272,16 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
 
         saved_rules: list[dict[str, Any]] = config.get(CONF_ISOLATION_RULES, [])
         saved_count = config.get(CONF_ISOLATION_RULES_COUNT, str(max(len(saved_rules), 1)))
-        rule_count = max(int(saved_count), max(len(saved_rules), 1))
+        # Only render the chosen number of slots. Rules beyond the count are
+        # HIDDEN, not deleted — _normalize_options keeps them in
+        # CONF_ISOLATION_RULES so increasing the count later reveals them again
+        # (matches the "reveal or hide" UI description).
+        try:
+            rule_count = max(int(saved_count), 1)
+        except (TypeError, ValueError):
+            rule_count = max(len(saved_rules), 1)
 
-        slots: list[dict[str, Any]] = list(saved_rules) + [{}] * (rule_count - len(saved_rules))
-        slots = slots[:rule_count]
+        slots: list[dict[str, Any]] = (list(saved_rules) + [{}] * rule_count)[:rule_count]
 
         collapsed = not config.get(CONF_EXPAND_SECTIONS)
 
@@ -1309,6 +1337,28 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         if not has_single_setpoint:
             return {}
 
+        # Role lists offer only members that could plausibly run the mode.
+        # Hidden are only provably incapable members (state present, hvac_modes
+        # reported, neither the mode nor heat_cool included). Unknown devices
+        # (offline, no hvac_modes) stay selectable — the role still restricts
+        # them at runtime. Saved values are always kept in the options so a
+        # legacy entry is never lost on save.
+        def _mode_selectable(entity_id: str, mode: str) -> bool:
+            state = self.hass.states.get(entity_id)
+            if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                return True  # unknown/offline — capability not trustworthy, stay selectable
+            modes = state.attributes.get(ATTR_HVAC_MODES)
+            if not modes:
+                return True  # no capability report — treated as "supports everything"
+            return HVACMode.HEAT_COOL in modes or mode in modes
+
+        heat_options = [{"value": eid, "label": eid} for eid in members if _mode_selectable(eid, HVACMode.HEAT)]
+        cool_options = [{"value": eid, "label": eid} for eid in members if _mode_selectable(eid, HVACMode.COOL)]
+        heat_options += [{"value": eid, "label": eid} for eid in config.get(CONF_RANGE_TEMPLATE_HEAT_ENTITIES, [])
+                         if eid not in {o["value"] for o in heat_options}]
+        cool_options += [{"value": eid, "label": eid} for eid in config.get(CONF_RANGE_TEMPLATE_COOL_ENTITIES, [])
+                         if eid not in {o["value"] for o in cool_options}]
+
         return {
             vol.Required("member_template_section"): section(
                 vol.Schema(
@@ -1328,6 +1378,26 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                                 options=[opt.value for opt in RangeTemplateDeadbandAction],
                                 mode=selector.SelectSelectorMode.DROPDOWN,
                                 translation_key="range_template_deadband_action",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
+                            default=config.get(CONF_RANGE_TEMPLATE_HEAT_ENTITIES, []),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=heat_options,  # type: ignore[typeddict-item]
+                                multiple=True,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_RANGE_TEMPLATE_COOL_ENTITIES,
+                            default=config.get(CONF_RANGE_TEMPLATE_COOL_ENTITIES, []),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=cool_options,  # type: ignore[typeddict-item]
+                                multiple=True,
+                                mode=selector.SelectSelectorMode.DROPDOWN,
                             )
                         ),
                     }

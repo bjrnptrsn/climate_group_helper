@@ -61,13 +61,17 @@ class RangeTemplate:
     `low`/`high` cache the most recently commanded range so a follow-up
     `hvac_mode=heat_cool` without explicit setpoints can still resolve a band.
     `last_physical_mode` is used as a fallback when `current_temperature` is
-    unavailable.
+    unavailable. `heat_entities`/`cool_entities` hold the explicit role
+    assignment — members may be restricted to heating and/or cooling. A member
+    in neither set is unrestricted ("auto": physical capability decides).
     """
 
     entity_ids: frozenset[str]
     deadband_action: str  # "none" | "off" | "fan_only"
     low: float | None = None
     high: float | None = None
+    heat_entities: set[str] = field(default_factory=set)
+    cool_entities: set[str] = field(default_factory=set)
     last_physical_mode: dict[str, str] = field(default_factory=dict)
 
     def covers(self, entity_id: str | None) -> bool:
@@ -135,10 +139,21 @@ class MemberTemplateManager:
     gateway (apply_state) and output pipeline (resolve_range / expected_mode_for).
     """
 
-    def __init__(self, group: ClimateGroupHelper, deadband_action: str | None) -> None:
+    def __init__(
+        self,
+        group: ClimateGroupHelper,
+        deadband_action: str | None,
+        heat_entities: set[str] | None = None,
+        cool_entities: set[str] | None = None,
+    ) -> None:
         self._group = group
         self._range_template: RangeTemplate | None = (
-            RangeTemplate(entity_ids=frozenset(), deadband_action=deadband_action)
+            RangeTemplate(
+                entity_ids=frozenset(),
+                deadband_action=deadband_action,
+                heat_entities=heat_entities or set(),
+                cool_entities=cool_entities or set(),
+            )
             if deadband_action is not None
             else None
         )
@@ -225,15 +240,47 @@ class MemberTemplateManager:
         deadband = None if template.deadband_action == RangeTemplateDeadbandAction.NONE else template.deadband_action
 
         if current_temp is None:
-            return template.last_physical_mode.get(entity_id, deadband), None
+            last_mode = template.last_physical_mode.get(entity_id)
+            if (
+                last_mode in (HVACMode.HEAT, HVACMode.COOL)
+                and not self._mode_allowed(last_mode, supported_modes, entity_id)
+            ):
+                return deadband, None
+            return last_mode if last_mode is not None else deadband, None
 
         if current_temp < low:
-            if supported_modes is None or HVACMode.HEAT in supported_modes:
+            if self._mode_allowed(HVACMode.HEAT, supported_modes, entity_id):
                 return HVACMode.HEAT, low
         elif current_temp > high:
-            if supported_modes is None or HVACMode.COOL in supported_modes:
+            if self._mode_allowed(HVACMode.COOL, supported_modes, entity_id):
                 return HVACMode.COOL, high
         return deadband, None
+
+    def _mode_allowed(
+        self, mode: str, supported_modes: list[str] | None, entity_id: str
+    ) -> bool:
+        """Physical capability AND role assignment — role only restricts, never extends.
+
+        A member without an entry in either role list behaves as before ("auto"):
+        physical capability is authoritative. A role-assigned member may only use
+        the modes its role grants. Modes other than `heat`/`cool` are never
+        governed by roles.
+        """
+        if mode not in (HVACMode.HEAT, HVACMode.COOL):
+            return True
+        if supported_modes is not None and mode not in supported_modes:
+            return False
+        template = self._range_template
+        if template is None:
+            return True  # Template disabled — no role can restrict
+        if (
+            entity_id not in template.heat_entities
+            and entity_id not in template.cool_entities
+        ):
+            return True  # Auto: no role assigned, capability check above is authoritative
+        if mode == HVACMode.HEAT:
+            return entity_id in template.heat_entities
+        return entity_id in template.cool_entities
 
     # ------------------------------------------------------------------
     # Lifecycle

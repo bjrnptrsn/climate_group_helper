@@ -308,11 +308,15 @@
             "description": "Renderiza membros de ponto de ajuste único como entidades virtuais de intervalo calor/frio. O Group Helper traduz os comandos de intervalo em comandos físicos de calor/frio apropriados com base na temperatura atual de cada membro.",
             "data": {
               "range_template_enabled": "Ativar modelo de intervalo",
-              "range_template_deadband_action": "Ação na zona morta"
+              "range_template_deadband_action": "Ação na zona morta",
+              "range_template_heat_entities": "Dispositivos de aquecimento",
+              "range_template_cool_entities": "Dispositivos de arrefecimento"
             },
             "data_description": {
               "range_template_enabled": "Renderiza automaticamente todos os membros de ponto de ajuste único (sem aquecimento/arrefecimento nativo) como dispositivos virtuais em modo de intervalo.",
-              "range_template_deadband_action": "Ação a executar quando a temperatura atual estiver dentro do intervalo alvo (zona morta)."
+              "range_template_deadband_action": "Ação a executar quando a temperatura atual estiver dentro do intervalo alvo (zona morta).",
+              "range_template_heat_entities": "Membros autorizados a aquecer. Membros não listados não têm restrições (a capacidade física decide). Um papel só pode restringir, nunca ampliar as capacidades de um dispositivo.",
+              "range_template_cool_entities": "Membros autorizados a arrefecer. Membros não listados não têm restrições (a capacidade física decide). Um papel só pode restringir, nunca ampliar as capacidades de um dispositivo."
             }
           },
           "advanced_section": {

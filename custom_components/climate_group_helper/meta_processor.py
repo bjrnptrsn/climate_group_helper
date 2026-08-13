@@ -161,14 +161,25 @@ class SlotMetaProcessor:
         if keys_to_clear:
             await self._cleanup(keys_to_clear)
 
-        # Apply all keys present in this slot (idempotent for continuing keys)
-        for key in new_meta_keys:
-            value = meta_candidates[key]
-            self._group.run_state = self._group.run_state.set_config_override(key, value)
-            await self._apply(key, value)
-
-        # Remember which keys are active so the next call can diff against them
-        self._active_keys = new_meta_keys
+        # Apply all keys present in this slot (idempotent for continuing keys).
+        # config_overrides is updated per-key before _apply() runs, so _active_keys must
+        # track the same set even if a later key's _apply() raises — otherwise a failed
+        # key would leak in config_overrides forever without ever being cleaned up.
+        applied_keys: set[str] = set()
+        try:
+            for key in new_meta_keys:
+                value = meta_candidates[key]
+                self._group.run_state = self._group.run_state.set_config_override(key, value)
+                applied_keys.add(key)
+                await self._apply(key, value)
+        except Exception:
+            _LOGGER.exception(
+                "[%s] Meta-Key apply failed while processing %s — continuing with keys applied so far",
+                self._group.entity_id, sorted(new_meta_keys),
+            )
+        finally:
+            # Remember which keys are active so the next call can diff against them
+            self._active_keys = applied_keys
 
         # Trigger a state update so that changes to config_overrides or other
         # RunState fields are immediately visible in HA attributes.

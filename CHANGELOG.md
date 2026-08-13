@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.5.0 - 2026-08-13
+
+### 🌟 New Features
+
+*   **Finnish & Turkish Translations**: Added full translations for Finnish (`fi`) and Turkish (`tr`), bringing the total to 17 supported languages.
+
+*   **Range Template — Heat/Cool Role Assignment**: You can now restrict individual members to heating only or cooling only within a Range Template group — useful when a device can technically do both, but should only handle one for efficiency reasons. Members left unassigned keep working automatically based on what they support.
+
+### ✨ Improvements
+
+*   **Member Isolation — Preset Restored on Return**: When an isolation rule's pre-action sets a preset, the device's preset from before isolation is now restored automatically once isolation ends.
+
+*   **Presence Delays**: Raised the slider maximum for Away Delay and Return Delay from 5 to 60 minutes, allowing longer presence-detection debounce times.
+
 ## 1.4.4 - 2026-07-10
 
 ### ✨ Improvements

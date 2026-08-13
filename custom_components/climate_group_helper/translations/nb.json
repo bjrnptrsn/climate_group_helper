@@ -308,11 +308,15 @@
             "description": "Gjengir enkelt-settpunkt-medlemmer som virtuelle varme/kjøl-rekkevidde-enheter. Group Helper oversetter rekkevidde-kommandoer til passende fysiske varme/kjøl-kommandoer basert på hvert medlems nåværende temperatur.",
             "data": {
               "range_template_enabled": "Aktiver områdemal",
-              "range_template_deadband_action": "Deadband-handling"
+              "range_template_deadband_action": "Deadband-handling",
+              "range_template_heat_entities": "Varmeenheter",
+              "range_template_cool_entities": "Kjøleenheter"
             },
             "data_description": {
               "range_template_enabled": "Gjengir automatisk alle enkelt-settpunkt-medlemmer (uten native varme/kjøling) som virtuelle områdeenheter.",
-              "range_template_deadband_action": "Handling som utføres når gjeldende temperatur er innenfor målrekkevidde (deadband)."
+              "range_template_deadband_action": "Handling som utføres når gjeldende temperatur er innenfor målrekkevidde (deadband).",
+              "range_template_heat_entities": "Medlemmer som har lov til å varme. Ulistede medlemmer er ubegrensede (fysisk kapasitet avgjør). En rolle kan bare begrense, aldri utvide en enhets kapasitet.",
+              "range_template_cool_entities": "Medlemmer som har lov til å kjøle. Ulistede medlemmer er ubegrensede (fysisk kapasitet avgjør). En rolle kan bare begrense, aldri utvide en enhets kapasitet."
             }
           },
           "advanced_section": {

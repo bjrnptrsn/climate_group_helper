@@ -92,14 +92,17 @@ from .const import (
     CONF_IGNORE_OFF_MEMBERS_TEMPERATURE,
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_RULES,
+    CONF_ISOLATION_RULES_COUNT,
     CONF_ISOLATION_SENSOR,
     CONF_MASTER_ENTITY,
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
+    CONF_OVERRIDE_DURATION,
     CONF_PERSIST_ACTIVE_SCHEDULE,
     CONF_PRESENCE_SENSOR,
     CONF_PRESENCE_ZONE,
+    CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_ROOM_SENSOR,
@@ -116,6 +119,8 @@ from .const import (
     CONF_ZONE_SENSOR,
     CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
+    CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
+    CONF_RANGE_TEMPLATE_COOL_ENTITIES,
     DEFAULT_GRACE_PERIOD,
     DOMAIN,
     ENTITY_SELECTOR_KEYS,
@@ -327,7 +332,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self._feature_strategy = config.get(CONF_FEATURE_STRATEGY, FeatureStrategy.INTERSECTION)
         self.debounce_delay = config.get(CONF_DEBOUNCE_DELAY, 0)
         self.retry_attempts = int(config.get(CONF_RETRY_ATTEMPTS, 0))
-        self.retry_delay = config.get(CONF_RETRY_DELAY, 1)
+        self.retry_delay = config.get(CONF_RETRY_DELAY, 2.5)
         self.stagger_delay = config.get(CONF_STAGGERED_CALL_DELAY, 0.0)
         self.temp_sensor_entity_ids = _get_adv(CONF_TEMP_SENSORS, [])
         self.temp_update_target_entity_ids = _get_adv(CONF_TEMP_UPDATE_TARGETS, [])
@@ -345,7 +350,12 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         deadband_action = None
         if _get_adv(CONF_RANGE_TEMPLATE_ENABLED, False):
             deadband_action = config.get(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, RangeTemplateDeadbandAction.NONE)
-        self.member_template_manager = MemberTemplateManager(group=self, deadband_action=deadband_action)
+        self.member_template_manager = MemberTemplateManager(
+            group=self,
+            deadband_action=deadband_action,
+            heat_entities=set(config.get(CONF_RANGE_TEMPLATE_HEAT_ENTITIES, [])),
+            cool_entities=set(config.get(CONF_RANGE_TEMPLATE_COOL_ENTITIES, [])),
+        )
 
         self.calibration_handler = CalibrationHandler(self)
 
@@ -357,6 +367,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.master_state: State | None = None
         self.current_master_state = CurrentState()
         self.run_state = RunState()
+        self._startup_initialized = False
         self._grace_period = float(config.get(CONF_GRACE_PERIOD, DEFAULT_GRACE_PERIOD))
         self._grace_period_unsub: Callable[[], None] | None = None
         self._grace_period_last_ts: float | None = None
@@ -388,10 +399,19 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Modules
         self.boost_override_manager = BoostOverrideManager(self)
+        # Only the rules up to CONF_ISOLATION_RULES_COUNT are instantiated:
+        # rules beyond the chosen count are hidden (kept in the config so the
+        # options flow can reveal them again) and must NOT act on the group.
+        # Entries without an explicit count default to all rules active.
+        isolation_rules = self.config.get(CONF_ISOLATION_RULES, [])
+        try:
+            isolation_rule_count = max(1, int(self.config.get(CONF_ISOLATION_RULES_COUNT, len(isolation_rules))))
+        except (TypeError, ValueError):
+            isolation_rule_count = len(isolation_rules)
         self.member_isolation_handlers: list[MemberIsolationHandler] = (
             [
                 MemberIsolationHandler(self, rule)
-                for rule in self.config.get(CONF_ISOLATION_RULES, [])
+                for rule in isolation_rules[:isolation_rule_count]
             ]
             if self.advanced_mode else []
         )
@@ -472,6 +492,13 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         """Restore states before registering listeners."""
         if self.platform:
             self.entry = self.platform.config_entry
+
+        # startup_time only gates the short sync-suppression window (sync_mode.py);
+        # it must be armed at setup regardless of member readiness — otherwise a
+        # permanently unavailable member (empty battery, unpaired device) would
+        # leave it unset forever and block ALL sync/enforcement indefinitely.
+        if self.run_state.startup_time is None:
+            self.run_state = replace(self.run_state, startup_time=time.time())
 
         # Some integrations, such as HomeKit, Google Home, and Alexa
         # require final property lists during the initialization process e.g. hvac_modes.
@@ -638,6 +665,30 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             for key, value in new_settings.items()
             if key in VALID_CONFIG_KEYS
         }
+
+        # Type guard: these keys are coerced to int/float during entry setup or in
+        # timer arithmetic (climate.py retry_attempts/grace_period, schedule.py
+        # resync_interval/override_duration). A bad value (e.g. a string) would only
+        # surface as a crash later — on reload or when the timer next fires — instead
+        # of being rejected here where the user can see it.
+        numeric_keys = {
+            CONF_RETRY_ATTEMPTS: int,
+            CONF_RETRY_DELAY: float,
+            CONF_GRACE_PERIOD: float,
+            CONF_DEBOUNCE_DELAY: float,
+            CONF_STAGGERED_CALL_DELAY: float,
+            CONF_RESYNC_INTERVAL: int,
+            CONF_OVERRIDE_DURATION: int,
+        }
+        for key, caster in numeric_keys.items():
+            if key not in filtered:
+                continue
+            try:
+                filtered[key] = caster(filtered[key])
+            except (TypeError, ValueError):
+                raise ServiceValidationError(
+                    f"Invalid value for '{key}': {filtered[key]!r} is not a valid number."
+                ) from None
 
         # Protection: always remove identity keys
         for key in IDENTITY_KEYS:
@@ -1067,9 +1118,12 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Check if there are any valid states
         self.states, all_members_ready = self._get_valid_member_states(self.climate_entity_ids)
 
-        # Set startup time if all members are ready
-        if not self.run_state.startup_time and all_members_ready:
-            self.run_state = replace(self.run_state, startup_time=time.time())
+        # One-time startup trigger once all members are ready: startup resync +
+        # calibration force-sync. startup_time itself is armed in
+        # async_added_to_hass() (independent of readiness) — this flag only guards
+        # the once-semantics of the startup resync.
+        if all_members_ready and not self._startup_initialized:
+            self._startup_initialized = True
             if self.advanced_mode:
                 self.hass.async_create_background_task(
                     self.schedule_handler.schedule_listener(caller=ScheduleCaller.RESYNC),
@@ -1387,18 +1441,24 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
     async def async_turn_on(self) -> None:
         """Forward the turn_on command to all climate in the climate group."""
 
-        # Set to the last active HVAC mode if available
+        # Set to the last active HVAC mode if available — but only when the group
+        # still supports it. A valid mode no member supports (e.g. cool after a
+        # TRV swap) produces zero calls via the capability filter while
+        # mode_set=True would block the fallback, leaving the group stuck OFF.
         mode_set = False
+        last_mode: HVACMode | None = None
         if self.run_state.last_active_hvac_mode is not None:
-            _LOGGER.debug("[%s] Turn on with the last active HVAC mode: %s", self.entity_id, self.run_state.last_active_hvac_mode)
             try:
-                await self.async_set_hvac_mode(HVACMode(self.run_state.last_active_hvac_mode))
-                mode_set = True
+                last_mode = HVACMode(self.run_state.last_active_hvac_mode)
             except ValueError:
                 _LOGGER.warning(
                     "[%s] Restored last_active_hvac_mode '%s' is not a valid HVACMode, falling back",
                     self.entity_id, self.run_state.last_active_hvac_mode,
                 )
+        if last_mode is not None and last_mode in self._attr_hvac_modes:
+            _LOGGER.debug("[%s] Turn on with the last active HVAC mode: %s", self.entity_id, last_mode)
+            await self.async_set_hvac_mode(last_mode)
+            mode_set = True
 
         # Try to set the first available HVAC mode if last_active_hvac_mode failed or unavailable
         if not mode_set and self._attr_hvac_modes:

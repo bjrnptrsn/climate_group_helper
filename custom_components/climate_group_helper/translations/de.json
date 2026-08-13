@@ -308,11 +308,15 @@
             "description": "Rendert Einzelsollwert-Mitglieder als virtuelle Heat/Cool-Range-Entitäten. Der Group Helper übersetzt Range-Befehle in geeignete physische Heat/Cool-Befehle basierend auf der aktuellen Temperatur jedes Mitglieds.",
             "data": {
               "range_template_enabled": "Bereichsvorlage aktivieren",
-              "range_template_deadband_action": "Deadband-Aktion"
+              "range_template_deadband_action": "Deadband-Aktion",
+              "range_template_heat_entities": "Geräte, die heizen dürfen",
+              "range_template_cool_entities": "Geräte, die kühlen dürfen"
             },
             "data_description": {
               "range_template_enabled": "Stellt alle Einzelsollwert-Mitglieder (ohne natives Heizen/Kühlen) automatisch als virtuelle Bereichsgeräte dar.",
-              "range_template_deadband_action": "Aktion, die ausgeführt wird, wenn die aktuelle Temperatur innerhalb des Zielbereichs (Deadband) liegt."
+              "range_template_deadband_action": "Aktion, die ausgeführt wird, wenn die aktuelle Temperatur innerhalb des Zielbereichs (Deadband) liegt.",
+              "range_template_heat_entities": "Mitglieder, die heizen dürfen. Nicht gelistete Mitglieder sind uneingeschränkt (die physische Fähigkeit entscheidet). Eine Rolle kann eine Fähigkeit nur einschränken, nie erweitern.",
+              "range_template_cool_entities": "Mitglieder, die kühlen dürfen. Nicht gelistete Mitglieder sind uneingeschränkt (die physische Fähigkeit entscheidet). Eine Rolle kann eine Fähigkeit nur einschränken, nie erweitern."
             }
           },
           "advanced_section": {

@@ -5,7 +5,7 @@ import logging
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later
@@ -20,7 +20,7 @@ from .const import (
     PresenceAction,
     WindowControlAction,
 )
-from .schedule import ScheduleCaller
+from .schedule import SHADOW_OWNER_BOOST, ScheduleCaller
 from .state import BoostStateManager, TargetState
 
 if TYPE_CHECKING:
@@ -61,12 +61,16 @@ class OverrideHandler:
         self.override_manager._cancel_timer()
 
     @callback
-    def _on_service_call(self) -> None:
-        """Abort boost on any direct user command."""
-        self.override_manager.abort()
+    def _on_service_call(self, data: dict[str, Any] | None = None) -> None:
+        """Abort boost on any direct user command.
+
+        The payload is forwarded so abort() can tell a user OFF command apart
+        from other manual changes (an OFF command must survive the abort).
+        """
+        self.override_manager.abort(data)
 
     @callback
-    def _on_sync_call(self) -> None:
+    def _on_sync_call(self, data: dict[str, Any] | None = None) -> None:  # noqa: ARG002
         """Abort boost on MIRROR/MASTER adoption, not LOCK enforcement.
 
         MIRROR/MASTER sets last_source="sync_mode" on target_state before the
@@ -153,24 +157,27 @@ class BaseOverrideManager:
         )
 
     def _save_snapshot(self) -> None:
-        """Save current target_state as target_state snapshot (only if none exists yet).
+        """Save current target_state as the shadow via the central lifecycle.
 
         Only gated on snapshot existence so consecutive overrides preserve the
-        original reference state. Deliberately NOT gated on active_override: a boost
-        started while a schedule_override timer runs must still capture the current
-        target_state — it is a valid pre-boost reference, and skipping it would leave
-        the shadow to be created later from a target_state that already carries the
-        boost temperature.
+        original reference state — deliberately NOT gated on active_override: a
+        boost started while a schedule_override timer runs must still capture the
+        current target_state — it is a valid pre-boost reference, and skipping it
+        would leave the shadow to be created later from a target_state that
+        already carries the boost temperature. The shadow is recorded with
+        owner=SHADOW_OWNER_BOOST; when a bypass layer already owns it, this is a
+        no-op.
         """
-        if self._group.run_state.target_state_snapshot is None:
-            self._group.run_state = replace(
-                self._group.run_state,
-                target_state_snapshot=self._group.shared_target_state,
-            )
+        self._group.schedule_handler.save_shadow(SHADOW_OWNER_BOOST)
 
     def _restore_snapshot(self) -> None:
-        """Clear active_override, active_override_end, and target_state_snapshot."""
-        self._group.run_state = self._group.run_state.clear_override().clear_snapshot()
+        """Clear active_override, active_override_end, and the boost-owned shadow.
+
+        Scoped via the central lifecycle (clear_shadow): only clears when the
+        shadow belongs to the boost — a bypass-owned shadow is never touched.
+        """
+        self._group.run_state = self._group.run_state.clear_override()
+        self._group.schedule_handler.clear_shadow(SHADOW_OWNER_BOOST)
 
     @property
     def _snapshot(self) -> TargetState | None:
@@ -184,13 +191,18 @@ class BaseOverrideManager:
         target_state_snapshot is preserved — consecutive boosts keep the original
         snapshot. Full teardown (including snapshot) is done by the caller via
         clear_snapshot().
+
+        clear_state runs even if the timer already fired (self._timer is None) —
+        e.g. abort() racing a just-expired timer whose _on_expired task hasn't run
+        yet. Gating clear_override() on self._timer would leave active_override
+        stuck until that stale task happens to clear it.
         """
         if self._timer:
             self._timer()
             self._timer = None
-            if clear_state:
-                self._group.run_state = self._group.run_state.clear_override()
             _LOGGER.debug("[%s] %s timer cancelled", self._group.entity_id, self.OVERRIDE_NAME)
+        if clear_state:
+            self._group.run_state = self._group.run_state.clear_override()
 
     def _inject_wake_mode(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Add the target hvac_mode to a payload that lacks one.
@@ -272,14 +284,27 @@ class BoostOverrideManager(BaseOverrideManager):
             self._group.run_state = replace(self._group.run_state, boost_temperature=None)
 
     def _restore_snapshot_to_target(self) -> None:
-        """Restore snapshot values back to target state and clear snapshot from run_state."""
+        """Restore snapshot values back to target state and clear snapshot from run_state.
+
+        Only valid when the shadow is owned by the boost (abort() routes here
+        exclusively after checking shadow_owner) — a bypass-owned shadow must
+        never be written into target_state or cleared from here.
+
+        The restore is attributed with source="schedule" instead of the boost
+        SOURCE: a restore means the user is NOT in control anymore, and the
+        sticky-override guard (schedule.py) keys on last_source to decide
+        whether slot transitions may be applied. Leaving last_source="boost"
+        behind would kill the basis schedule for good (no slot transition is
+        accepted until a user command or reload resets the source).
+        """
         snapshot = self._snapshot
         if snapshot:
-            self._group.run_state = self._group.run_state.clear_override().clear_snapshot()
+            self._group.run_state = self._group.run_state.clear_override()
+            self._group.schedule_handler.clear_shadow(SHADOW_OWNER_BOOST)
             restore_kwargs = self._group.schedule_handler._snapshot_to_kwargs(snapshot)
-            self.state_manager.update(**restore_kwargs)
+            self.state_manager.update(source="schedule", **restore_kwargs)
 
-    def abort(self) -> None:
+    def abort(self, data: dict[str, Any] | None = None) -> None:
         """Abort active boost.
 
         Restores the pre-boost snapshot ONLY if the boost temperature was never
@@ -291,17 +316,73 @@ class BoostOverrideManager(BaseOverrideManager):
         both sides carry the same verbatim-written value (no float drift).
 
         Deliberate consequence: manually setting EXACTLY the boost temperature
-        during a boost also restores the pre-boost snapshot. The visible jump
-        back doubles as UI confirmation that the boost was aborted.
+        during a boost also restores the snapshot — the visible jump back
+        doubles as UI confirmation that the boost was aborted.
+
+        OFF commands are the exception: a user turning the group OFF during a
+        boost wants OFF, not the pre-boost state back. target_state already
+        carries hvac_mode=off (written by the climate state manager before the
+        trigger fired) — the snapshot must not overwrite it, otherwise the
+        stale-call guard would discard the very OFF call the user issued and
+        the abort sync would push the restored mode to all members.
+
+        Shadow ownership: the shadow is only consumed when the boost created it
+        (shadow_owner == SHADOW_OWNER_BOOST). With a bypass layer active the
+        shadow belongs to the bypass — it is left untouched and the bypass layer
+        re-asserts itself via the slot-change path (same as boost expiry), so the
+        boost temperature leaves target_state and the members.
         """
         if self._group.run_state.active_override == "boost":
             boost_temperature = self._group.run_state.boost_temperature
             self._cancel_timer()
-            if self._group.shared_target_state.temperature == boost_temperature:
+
+            if self._group.run_state.shadow_owner != SHADOW_OWNER_BOOST:
+                _LOGGER.debug(
+                    "[%s] Boost aborted — shadow kept (owned by %s)",
+                    self._group.entity_id, self._group.run_state.shadow_owner,
+                )
+                # Re-assert the bypass layer: with the boost gone, the bypass is
+                # the only remaining override — its payload must overwrite the
+                # boost temperature on target_state and the members. NOTE: this
+                # also overwrites a manual change that triggered the abort —
+                # deliberate, the documented hierarchy is Bypass > User Commands.
+                self._hass.async_create_task(
+                    self._group.schedule_handler.on_slot_change(ScheduleCaller.RESYNC)
+                )
+                return
+
+            if data and data.get(ATTR_HVAC_MODE) == HVACMode.OFF:
+                _LOGGER.debug(
+                    "[%s] Boost aborted by user OFF command — mode preserved, boost setpoint discarded",
+                    self._group.entity_id,
+                )
+                # User command OFF: keep the OFF mode (already written to
+                # target_state by the climate state manager before this trigger
+                # fired) and discard the shadow, but roll the boost setpoint back
+                # to the pre-boost value — otherwise turning the group back on
+                # later would jump to the boost temperature.
+                snapshot = self._snapshot
+                self._restore_snapshot()
+                if snapshot:
+                    restore_kwargs = self._group.schedule_handler._snapshot_to_kwargs(snapshot)
+                    restore_kwargs.pop(ATTR_HVAC_MODE, None)
+                    # Attributed to the user command, not the boost: the user is
+                    # in control (the sticky guard must keep blocking slot
+                    # transitions) and the boost setpoint must not linger.
+                    self.state_manager.update(source="group", **restore_kwargs)
+            elif self._group.shared_target_state.temperature == boost_temperature:
                 self._restore_snapshot_to_target()
+                # Members must follow the restored target_state. abort() is
+                # synchronous (called from the override call triggers), so the
+                # member sync runs asynchronously.
+                self._hass.async_create_task(self._sync_after_abort())
             else:
                 self._restore_snapshot()
             _LOGGER.debug("[%s] Boost aborted", self._group.entity_id)
+
+    async def _sync_after_abort(self) -> None:
+        """Sync members to the (restored) target_state after a boost abort."""
+        await self.call_handler.call_immediate()
 
     async def _on_expired(self) -> None:
         """Boost timer expired — restore shadow or delegate to schedule listener."""
@@ -336,6 +417,11 @@ class BoostOverrideManager(BaseOverrideManager):
             await schedule.on_slot_change(ScheduleCaller.RESYNC)
         else:
             async with schedule.slot_transition_lock:
+                # No override layer is active anymore (no basis schedule, no
+                # bypass) — this is always the LAST consumer, regardless of who
+                # created the shadow: a bypass that ended while the boost ran
+                # left a bypass-owned shadow behind, and nobody else will ever
+                # consume it. Restoring unscoped here is therefore correct.
                 await schedule.restore_shadow()
 
 
@@ -432,8 +518,17 @@ class WindowOverrideManager(BaseOverrideManager):
 
         Sends OFF or the configured window temperature, depending on window_action.
         Skipped if already OFF and action is OFF (no-op guard based on member states).
+
+        Switch precedence: while the master switch is OFF, the window payload
+        (especially a window TEMPERATURE) must not reach the members — the
+        switch enforcement would immediately push OFF again (on/off flapping).
+        The window push happens when the switch falls (switch restore re-asserts
+        the window via _resolve_remaining_blocks).
         """
         self._block()
+        if "switch" in self._group.run_state.blocking_sources:
+            _LOGGER.debug("[%s] Window activation skipped — switch block takes precedence", self._group.entity_id)
+            return
         payload = self._active_data()
         if payload.get("hvac_mode") == HVACMode.OFF and not self._any_member_not_off():
             return

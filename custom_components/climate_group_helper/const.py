@@ -124,8 +124,10 @@ CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
 CONF_FORCE_RETRY = "force_retry"
 CONF_GRACE_PERIOD = "grace_period"
 CONF_MIN_TEMP_OFF = "min_temp_off"
+CONF_RANGE_TEMPLATE_COOL_ENTITIES = "range_template_cool_entities"
 CONF_RANGE_TEMPLATE_DEADBAND_ACTION = "range_template_deadband_action"
 CONF_RANGE_TEMPLATE_ENABLED = "range_template_enabled"
+CONF_RANGE_TEMPLATE_HEAT_ENTITIES = "range_template_heat_entities"
 CONF_RETRY_ATTEMPTS = "retry_attempts"
 CONF_RETRY_DELAY = "retry_delay"
 DEFAULT_GRACE_PERIOD = 3.0
@@ -311,6 +313,8 @@ IDENTITY_KEYS: frozenset[str] = frozenset({CONF_NAME})
 MEMBER_LIST_KEYS: frozenset[str] = frozenset({
     CONF_ENTITIES,
     CONF_MASTER_ENTITY,
+    CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
+    CONF_RANGE_TEMPLATE_COOL_ENTITIES,
 })
 
 ENTITY_SELECTOR_KEYS: frozenset[str] = frozenset({

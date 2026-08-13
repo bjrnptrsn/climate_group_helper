@@ -308,11 +308,15 @@
             "description": "Rende i membri a punto di impostazione singolo come entità virtuali di intervallo caldo/freddo. Il Group Helper traduce i comandi di intervallo in comandi fisici caldo/freddo appropriati in base alla temperatura attuale di ciascun membro.",
             "data": {
               "range_template_enabled": "Abilita modello intervallo",
-              "range_template_deadband_action": "Azione nella zona morta"
+              "range_template_deadband_action": "Azione nella zona morta",
+              "range_template_heat_entities": "Dispositivi di riscaldamento",
+              "range_template_cool_entities": "Dispositivi di raffreddamento"
             },
             "data_description": {
               "range_template_enabled": "Visualizza automaticamente tutti i membri a setpoint singolo (senza caldo/freddo nativo) come dispositivi virtuali in modalità intervallo.",
-              "range_template_deadband_action": "Azione da eseguire quando la temperatura attuale è all'interno dell'intervallo target (zona morta)."
+              "range_template_deadband_action": "Azione da eseguire quando la temperatura attuale è all'interno dell'intervallo target (zona morta).",
+              "range_template_heat_entities": "Membri autorizzati a riscaldare. I membri non elencati non hanno restrizioni (decide la capacità fisica). Un ruolo può solo limitare, mai estendere le capacità di un dispositivo.",
+              "range_template_cool_entities": "Membri autorizzati a raffreddare. I membri non elencati non hanno restrizioni (decide la capacità fisica). Un ruolo può solo limitare, mai estendere le capacità di un dispositivo."
             }
           },
           "advanced_section": {

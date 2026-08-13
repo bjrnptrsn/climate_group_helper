@@ -62,6 +62,8 @@ from .const import (
     CONF_ROOM_SENSOR,
     CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
+    CONF_RANGE_TEMPLATE_COOL_ENTITIES,
+    CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
     CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_ENTITY,
     CONF_STAGGERED_CALL_DELAY,
@@ -165,6 +167,8 @@ VALID_CONFIG_KEYS = {
     CONF_EXPAND_SECTIONS,
     CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
+    CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
+    CONF_RANGE_TEMPLATE_COOL_ENTITIES,
 
     # Member Isolation options — flat isolation_* keys are migrated into
     # CONF_ISOLATION_RULES (v11→v12) and intentionally excluded from the whitelist.
@@ -271,6 +275,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 }]
             else:
                 old_config[CONF_ISOLATION_RULES] = []
+            # Keep the count in sync with the rules just written — otherwise the options
+            # flow (which defaults the count to "1" when absent) diverges from the actual
+            # rule list until the user opens and saves it once.
+            old_config[CONF_ISOLATION_RULES_COUNT] = str(max(len(old_config[CONF_ISOLATION_RULES]), 1))
         # Drop the old flat keys (removed from VALID_CONFIG_KEYS) so they don't linger.
         for key in (CONF_ISOLATION_TRIGGER, CONF_ISOLATION_ENTITIES, CONF_ISOLATION_TRIGGER_HVAC_MODES,
                     CONF_ISOLATION_SENSOR, CONF_ISOLATION_ACTIVATE_DELAY, CONF_ISOLATION_RESTORE_DELAY):

@@ -308,11 +308,15 @@
             "description": "Renderuje elementy z jednym punktem nastawy jako wirtualne encje zakresu ciepło/chłód. Group Helper tłumaczy polecenia zakresu na odpowiednie fizyczne polecenia ciepło/chłód na podstawie aktualnej temperatury każdego elementu.",
             "data": {
               "range_template_enabled": "Włącz szablon zakresu",
-              "range_template_deadband_action": "Akcja w martwej strefie"
+              "range_template_deadband_action": "Akcja w martwej strefie",
+              "range_template_heat_entities": "Urządzenia grzewcze",
+              "range_template_cool_entities": "Urządzenia chłodzące"
             },
             "data_description": {
               "range_template_enabled": "Automatycznie renderuje wszystkich członków z jednym punktem nastawy (bez natywnego ogrzewania/chłodzenia) jako wirtualne urządzenia w trybie zakresu.",
-              "range_template_deadband_action": "Akcja wykonywana, gdy aktualna temperatura znajduje się wewnątrz zakresu docelowego (martwa strefa)."
+              "range_template_deadband_action": "Akcja wykonywana, gdy aktualna temperatura znajduje się wewnątrz zakresu docelowego (martwa strefa).",
+              "range_template_heat_entities": "Członkowie, którzy mogą grzać. Niewymienieni członkowie nie mają ograniczeń (decyduje fizyczna zdolność). Rola może tylko ograniczać, nigdy nie rozszerzać możliwości urządzenia.",
+              "range_template_cool_entities": "Członkowie, którzy mogą chłodzić. Niewymienieni członkowie nie mają ograniczeń (decyduje fizyczna zdolność). Rola może tylko ograniczać, nigdy nie rozszerzać możliwości urządzenia."
             }
           },
           "advanced_section": {

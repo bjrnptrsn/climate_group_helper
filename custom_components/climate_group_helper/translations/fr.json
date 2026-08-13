@@ -308,11 +308,15 @@
             "description": "Rend les membres à point de consigne unique comme des entités virtuelles de plage chaud/froid. Le Group Helper traduit les commandes de plage en commandes physiques chaud/froid appropriées en fonction de la température actuelle de chaque membre.",
             "data": {
               "range_template_enabled": "Activer le modèle de plage",
-              "range_template_deadband_action": "Action en zone morte"
+              "range_template_deadband_action": "Action en zone morte",
+              "range_template_heat_entities": "Appareils de chauffage",
+              "range_template_cool_entities": "Appareils de climatisation"
             },
             "data_description": {
               "range_template_enabled": "Affiche automatiquement tous les membres à consigne unique (sans chauffage/refroidissement natif) comme des appareils virtuels en mode plage.",
-              "range_template_deadband_action": "Action à effectuer lorsque la température actuelle se trouve dans la plage cible (zone morte)."
+              "range_template_deadband_action": "Action à effectuer lorsque la température actuelle se trouve dans la plage cible (zone morte).",
+              "range_template_heat_entities": "Membres autorisés à chauffer. Les membres non listés ne sont pas restreints (la capacité physique décide). Un rôle ne peut que restreindre, jamais étendre les capacités d'un appareil.",
+              "range_template_cool_entities": "Membres autorisés à refroidir. Les membres non listés ne sont pas restreints (la capacité physique décide). Un rôle ne peut que restreindre, jamais étendre les capacités d'un appareil."
             }
           },
           "advanced_section": {

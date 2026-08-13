@@ -47,3 +47,6 @@ htmlcov/
 
 # MyPy
 .mypy_cache/
+
+# Fetched HA logs (scripts/fetch_logs.sh)
+logs/

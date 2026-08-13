@@ -308,11 +308,15 @@
             "description": "Render single-setpoint members as virtual heat/cool range entities. The group helper translates range commands into appropriate physical heat/cool commands based on each member's current temperature.",
             "data": {
               "range_template_enabled": "Enable Range Template",
-              "range_template_deadband_action": "Deadband Action"
+              "range_template_deadband_action": "Deadband Action",
+              "range_template_heat_entities": "Heating Devices",
+              "range_template_cool_entities": "Cooling Devices"
             },
             "data_description": {
               "range_template_enabled": "Automatically render all single-setpoint members (without native heat/cool) as virtual range-mode devices.",
-              "range_template_deadband_action": "Action to perform when the current temperature is inside the target range (deadband)."
+              "range_template_deadband_action": "Action to perform when the current temperature is inside the target range (deadband). If set to 'None', a role-restricted member inside the band receives no command and keeps its current state — even if that state was reached by manual operation outside its role. Use 'Turn Off' to avoid this.",
+              "range_template_heat_entities": "Members that are allowed to heat. Unlisted members are unrestricted (physical capability decides). A role can only restrict, never extend a device's capabilities.",
+              "range_template_cool_entities": "Members that are allowed to cool. Unlisted members are unrestricted (physical capability decides). A role can only restrict, never extend a device's capabilities."
             }
           },
           "advanced_section": {

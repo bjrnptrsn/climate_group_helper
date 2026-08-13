@@ -77,6 +77,12 @@ class OffsetNumber(RestoreNumber, NumberEntity):
                 except (ValueError, TypeError):
                     _LOGGER.warning("[%s] Could not restore group offset from '%s' — using default 0.0", self._group.entity_id, last.native_value)
 
+    async def async_will_remove_from_hass(self) -> None:
+        """Deregister the offset callback and entity ID."""
+        await super().async_will_remove_from_hass()
+        self._group.offset_set_callback = None
+        self._group.offset_entity_id = None
+
     async def _set_offset(self, value: float) -> None:
         """Set group offset and update both entities for UI consistency."""
         _LOGGER.debug("[%s] External offset update: %s", self._group.entity_id, value)

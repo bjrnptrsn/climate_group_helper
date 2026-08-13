@@ -308,11 +308,15 @@
             "description": "Vykresluje členy s jedným žiadaným bodom ako virtuálne entity s rozsahom teplo/chlad. Group Helper prekladá príkazy rozsahu na zodpovedajúce fyzické príkazy teplo/chlad podľa aktuálnej teploty každého člena.",
             "data": {
               "range_template_enabled": "Povoliť šablónu rozsahu",
-              "range_template_deadband_action": "Akcia v mŕtvom pásme"
+              "range_template_deadband_action": "Akcia v mŕtvom pásme",
+              "range_template_heat_entities": "Vykurovacie zariadenia",
+              "range_template_cool_entities": "Chladiace zariadenia"
             },
             "data_description": {
               "range_template_enabled": "Automaticky zobrazuje všetkých členov s jedným nastavením (bez natívneho kúrenia/chladenia) ako virtuálne zariadenia v režime rozsahu.",
-              "range_template_deadband_action": "Akcia, ktorá sa vykoná, keď je aktuálna teplota v rámci cieľového rozsahu (mŕtve pásmo)."
+              "range_template_deadband_action": "Akcia, ktorá sa vykoná, keď je aktuálna teplota v rámci cieľového rozsahu (mŕtve pásmo).",
+              "range_template_heat_entities": "Členovia, ktorí môžu vykurovať. Neuvedení členovia sú neobmedzení (rozhoduje fyzická schopnosť). Rola môže schopnosť len obmedziť, nikdy nie rozšíriť.",
+              "range_template_cool_entities": "Členovia, ktorí môžu chladiť. Neuvedení členovia sú neobmedzení (rozhoduje fyzická schopnosť). Rola môže schopnosť len obmedziť, nikdy nie rozšíriť."
             }
           },
           "advanced_section": {
