@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "Du musst mindestens ein Klimagerät auswählen."
+      "no_entities": "Du musst mindestens ein Klimagerät auswählen.",
+      "empty_name": "Gib einen Namen für die Gruppe ein."
     },
     "abort": {
       "already_configured": "Diese Gruppe ist bereits konfiguriert.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Präsenz-Trigger",
               "presence_zone": "Anwesenheitszone",
               "presence_action": "Abwesenheits-Aktion",
-              "presence_away_offset": "Abwesenheits-Temperaturversatz (°C)",
-              "presence_away_temperature": "Abwesenheits-Temperatur (°C)",
+              "presence_away_offset": "Abwesenheits-Temperaturversatz",
+              "presence_away_temperature": "Abwesenheits-Temperatur",
               "presence_away_preset": "Abwesenheits-Preset",
               "presence_away_delay": "Abwesenheits-Verzögerung (Sekunden)",
               "presence_return_delay": "Rückkehr-Verzögerung (Sekunden)"
@@ -169,21 +170,17 @@
             "name": "Zeitplan-Automatisierung",
             "description": "Verknüpfe eine Zeitplan- oder Kalender-Entität, um Klimaeinstellungen zu automatisieren. Slot-Daten können Klima-Attribute (temperature, hvac_mode) und Meta-Keys (turn_off, sync_mode, sync_attributes) enthalten, um das Gruppenverhalten pro Slot anzupassen.",
             "data": {
-              "schedule_entity": "Zeitplan- / Kalender-Entität",
-              "schedule_bypass_entity": "Bypass-Entität",
-              "resync_interval": "Resync-Intervall (Minuten)",
-              "override_duration": "Override-Dauer (Minuten)",
-              "persist_changes": "Dauerhafter Override (Sticky)",
-              "persist_active_schedule": "Zeitplan-Überschreibung beibehalten",
+              "schedule_entity": "Basis-Zeitplan / Kalenderentität",
+              "schedule_fallback_payload": "Fallback-Zustand bei inaktivem Basis-Zeitplan / Kalender (YAML)",
+              "schedule_bypass_entity": "Bypass-Zeitplan / Kalenderentität",
+              "retain_service_changes_schedule": "Per Dienst geänderte Werte beibehalten (Zeitplan)",
               "ignore_off_members_schedule": "Respektiere 'Aus'-Status der Mitglieder (Zeitplan)"
             },
             "data_description": {
               "schedule_entity": "Wähle eine schedule.*- oder calendar.*-Entität. Bei Zeitplan-Entitäten werden die Slot-Daten aus den Slot-Attributen gelesen. Bei Kalender-Entitäten werden die Slot-Daten als YAML aus dem Beschreibungsfeld des Ereignisses gelesen. Unterstützte Schlüssel: Klima-Attribute und Meta-Keys.",
+              "schedule_fallback_payload": "Springt außerhalb der aktiven Zeitblöcke für den Basis-Zeitplan ein, sodass keine lückenlosen 24/7-Zeitpläne nötig sind. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist. Gleiches YAML-Format wie oben (z. B. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optionale Prioritätsebene (z.B. ein Urlaubskalender). Wenn aktiv, überschreiben ihre Slot-Daten den Basisplan. Slot-Daten werden gleich gelesen: Attribute für schedule.*-, YAML-Beschreibung für calendar.*-Entitäten.",
-              "resync_interval": "Erzwinge alle X Minuten den Zielzustand der Gruppe. Stellt sicher, dass alle Geräte dem Zeitplan folgen. Auf 0 setzen zum Deaktivieren.",
-              "override_duration": "Die Dauer für manuelle Änderungen. Nach dieser Zeit kehrt die Gruppe automatisch zum Zeitplan zurück. Auf 0 setzen, um die Schonfrist zu überspringen.",
-              "persist_changes": "Änderungen am Zeitplan selbst werden ignoriert, solange ein manueller Override aktiv ist. Wendet den aktuellen Zeitplan erst nach Ablauf des Overrides wieder an.",
-              "persist_active_schedule": "Behält den über den Dienst geänderten Zeitplan nach einem Neustart bei. Andernfalls wird auf den konfigurierten Standardzeitplan zurückgesetzt.",
+              "retain_service_changes_schedule": "Behält per Dienst geänderten Basis-Zeitplan, Bypass und Fallback-Zustand nach einem Neustart bei. Andernfalls wird auf die konfigurierten Standardwerte zurückgesetzt.",
               "ignore_off_members_schedule": "Der Zeitplan schaltet keine Mitglieder ein, die aktuell ausgeschaltet sind."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Mindestens ein Mitglied muss außerhalb der Isolierung bleiben.",
       "isolation_entity_overlap": "Jedes Mitglied darf nur in einer Isolationsregel vorkommen.",
       "isolation_action_preset_required": "Wähle einen Preset-Modus für die Isolieraktion.",
+      "window_temperature_required": "Lege eine Fenstertemperatur fest oder ändere die Fensteraktion.",
+      "presence_action_value_required": "Lege einen Wert für die gewählte Abwesenheitsaktion fest oder ändere die Aktion.",
+      "schedule_fallback_payload_invalid": "Ungültiges YAML-Format im Fallback-Zeitplan-Payload. Es muss ein gültiges Schlüssel-Wert-Mapping sein.",
       "sensor_loop_protection": "Eine Climate Group Helper-Entität kann nicht als externer Sensor oder Kalibrierungsziel verwendet werden — dies würde eine Rückkopplungsschleife erzeugen."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Bypass-Entität",
           "description": "Die zu verwendende schedule.*- oder calendar.*-Entität als Bypass (z.B. calendar.urlaub). Leer lassen oder null, um den konfigurierten Standard wiederherzustellen."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Zeitplan-Fallback-Payload setzen",
+      "description": "Setzt oder löscht einen Fallback-Payload, der angewendet wird, wenn der Basis-Zeitplan inaktiv ist. Überschreibt den konfigurierten Fallback-Payload.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Fallback-Payload",
+          "description": "Der Fallback-Klimazustand als YAML oder Mapping (z.B. 'temperature: 17.0\\nhvac_mode: heat'). Leer lassen oder null, um den konfigurierten Standard wiederherzustellen."
         }
       }
     },

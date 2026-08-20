@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "您必须至少选择一个空调设备。"
+      "no_entities": "您必须至少选择一个空调设备。",
+      "empty_name": "请输入群组名称。"
     },
     "abort": {
       "already_configured": "此组已配置。",
@@ -147,8 +148,8 @@
               "presence_sensor": "存在触发器",
               "presence_zone": "存在区域",
               "presence_action": "离开时操作",
-              "presence_away_offset": "离开温度偏移 (°C)",
-              "presence_away_temperature": "离开温度 (°C)",
+              "presence_away_offset": "离开温度偏移",
+              "presence_away_temperature": "离开温度",
               "presence_away_preset": "离开预设",
               "presence_away_delay": "离开延迟 (秒)",
               "presence_return_delay": "返回延迟 (秒)"
@@ -169,21 +170,17 @@
             "name": "日程自动化",
             "description": "链接日程或日历实体以自动化气候设置。时段数据可以包含气候属性（temperature、hvac_mode）和 meta-keys（turn_off、sync_mode、sync_attributes）以按时段调整群组行为。",
             "data": {
-              "schedule_entity": "日程 / 日历实体",
-              "schedule_bypass_entity": "旁路实体",
-              "resync_interval": "重新同步间隔 (分钟)",
-              "override_duration": "手动覆盖时长 (分钟)",
-              "persist_changes": "保持手动覆盖 (Sticky)",
-              "persist_active_schedule": "保留日程覆盖",
+              "schedule_entity": "基础日程/日历实体",
+              "schedule_fallback_payload": "基础日程/日历未激活时的后备状态 (YAML)",
+              "schedule_bypass_entity": "旁路日程/日历实体",
+              "retain_service_changes_schedule": "保留通过服务所做的更改（计划）",
               "ignore_off_members_schedule": "尊重成员关闭状态（计划）"
             },
             "data_description": {
               "schedule_entity": "选择一个 schedule.* 或 calendar.* 实体。对于日程实体，时段数据从时段属性中读取。对于日历实体，时段数据从事件描述字段中以 YAML 格式读取。支持的键：气候属性和 meta-keys。",
+              "schedule_fallback_payload": "在基础日程的活动时段之外代替其生效，因此无需编排全天候无间隙的日程。旁路层照常工作，并在其激活期间覆盖该状态。YAML 格式与上方相同（例如 temperature: 17、hvac_mode: heat）。",
               "schedule_bypass_entity": "可选的高优先级层（例如假期日历）。当激活时，其时段数据将覆盖基础日程。时段数据的读取方式相同：schedule.* 实体使用属性，calendar.* 实体使用 YAML 描述。",
-              "resync_interval": "每 X 分钟强制将成员同步到群组的目标状态。防止设备错过命令或由于手动调整而导致的偏离。设置为 0 以禁用。",
-              "override_duration": "手动覆盖的持续时间。在此时间过后，群组将自动恢复到当前日程表。设置为 0 以跳过覆盖期。",
-              "persist_changes": "只要手动覆盖处于活动状态，日程表本身的更改将被忽略。仅在覆盖期结束后才重新应用当前日程表。",
-              "persist_active_schedule": "通过服务更改日程后，在重启后保留活动日程。否则，它将恢复为配置的默认值。",
+              "retain_service_changes_schedule": "重启后保留通过服务更改的基础日程、旁路和后备状态。否则将恢复为配置的默认值。",
               "ignore_off_members_schedule": "计划不会打开当前处于关闭状态的成员。"
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "至少一个成员必须保留在隔离之外。",
       "isolation_entity_overlap": "每个成员只能出现在一条隔离规则中。",
       "isolation_action_preset_required": "请为隔离动作选择一个预设模式。",
+      "window_temperature_required": "请设置开窗温度，或更改开窗动作。",
+      "presence_action_value_required": "请为所选的离开动作设置数值，或更改该动作。",
+      "schedule_fallback_payload_invalid": "后备计划有效负载中的 YAML 格式无效。必须是有效的键值映射。",
       "sensor_loop_protection": "不能将 Climate Group Helper 实体用作外部传感器或校准目标——这会产生反馈回路。"
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "旁路实体",
           "description": "用作旁路的 schedule.* 或 calendar.* 实体（例如 calendar.vacation）。设置为 null 或空以恢复配置的默认值。"
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "设置日程后备有效负载",
+      "description": "设置或清除在基础日程关闭时应用的后备有效负载。覆盖配置的后备有效负载。",
+      "fields": {
+        "fallback_payload": {
+          "name": "后备有效负载",
+          "description": "作为 YAML 或映射的后备气候数据（例如 'temperature: 17.0\\nhvac_mode: heat'）。设为 null 或留空以恢复配置的默认值。"
         }
       }
     },

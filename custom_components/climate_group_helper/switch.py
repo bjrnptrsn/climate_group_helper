@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import STATE_OFF
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -78,8 +79,11 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         # schedule meta-key turn_off) so is_on stays in sync in the HA state machine.
         self._group.switch_state_callback = self.async_write_ha_state
 
+        # Only an explicit "off" restores the block. A restored unavailable/unknown
+        # state (unclean shutdown) carries no user intent — treating it as "off"
+        # would turn the whole group off on the next restart.
         if (last := await self.async_get_last_state()) is not None:
-            if last.state != "on":
+            if last.state == STATE_OFF:
                 _LOGGER.debug("[%s] Restoring control switch OFF state", self._group.entity_id)
                 await self.override_manager.activate()
 

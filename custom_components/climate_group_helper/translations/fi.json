@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "Sinun on valittava vähintään yksi ilmastointilaite."
+      "no_entities": "Sinun on valittava vähintään yksi ilmastointilaite.",
+      "empty_name": "Anna ryhmälle nimi."
     },
     "abort": {
       "already_configured": "Tämä ryhmä on jo määritetty.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Läsnäolon laukaisin",
               "presence_zone": "Läsnäolovyöhyke",
               "presence_action": "Poissaolotoiminto",
-              "presence_away_offset": "Poissaolon lämpötilasiirtymä (°C)",
-              "presence_away_temperature": "Poissaololämpötila (°C)",
+              "presence_away_offset": "Poissaolon lämpötilasiirtymä",
+              "presence_away_temperature": "Poissaololämpötila",
               "presence_away_preset": "Poissaoloesiasetus",
               "presence_away_delay": "Poissaoloviive (sekuntia)",
               "presence_return_delay": "Paluuviive (sekuntia)"
@@ -169,21 +170,17 @@
             "name": "Aikataulun automaatio",
             "description": "Linkitä aikataulu- tai kalenteri-entiteetti automatisoimaan ilmastointiasetuksia. Aikavälin tiedot voivat sisältää ilmastointiattribuutteja (lämpötila, hvac_mode) ja meta-avaimia (turn_off, sync_mode, sync_attributes) ryhmän käyttäytymisen säätämiseksi aikavälikohtaisesti.",
             "data": {
-              "schedule_entity": "Aikataulu-/kalenteri-entiteetti",
-              "schedule_bypass_entity": "Ohitusentiteetti",
-              "resync_interval": "Uudelleensynkronoinnin väli (minuuttia)",
-              "override_duration": "Ohituksen kesto (minuuttia)",
-              "persist_changes": "Pysyvä ohitus",
-              "persist_active_schedule": "Säilytä aikataulun ohitus",
+              "schedule_entity": "Perusaikataulu-/kalenteriobjekti",
+              "schedule_fallback_payload": "Varatila epäaktiiviselle perusaikataululle/kalenterille (YAML)",
+              "schedule_bypass_entity": "Ohitusaikataulu-/kalenteriobjekti",
+              "retain_service_changes_schedule": "Säilytä palvelun kautta tehdyt muutokset (aikataulu)",
               "ignore_off_members_schedule": "Kunnioita jäsenen pois-tilaa (aikataulu)"
             },
             "data_description": {
               "schedule_entity": "Valitse schedule.* tai calendar.* -entiteetti. Aikatauluentiteeteillä aikavälin tiedot luetaan aikavälin attribuuteista. Kalenterientiteeteillä aikavälin tiedot luetaan tapahtuman description-kentästä YAML-muodossa. Tuetut avaimet: ilmastointiattribuutit ja meta-avaimet.",
+              "schedule_fallback_payload": "Korvaa perusaikataulun sen aktiivisten jaksojen ulkopuolella, joten aukottomia 24/7-aikatauluja ei tarvita. Ohituskerros toimii ennallaan ja ohittaa sen ollessaan aktiivinen. Sama YAML-muoto kuin yllä (esim. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valinnainen korkeamman prioriteetin taso (esim. loma-kalenteri). Kun aktiivinen, sen aikavälin tiedot ohittavat pääaikataulun. Aikavälin tiedot luetaan samalla tavalla: attribuutit schedule.*-entiteeteille, YAML-kuvaus calendar.*-entiteeteille.",
-              "resync_interval": "Pakota jäsenten synkronointi tavoitetilaan X minuutin välein. Varmistaa, että laitteet pysyvät aikataulussa, vaikka niitä säädettäisiin manuaalisesti tai komentoja jäisi väliin. Aseta 0 poistaaksesi käytöstä.",
-              "override_duration": "Manuaalisten ohitusten kesto. Tämän ajan jälkeen ryhmä palaa automaattisesti nykyiseen aikatauluun. Aseta 0 ohittaaksesi ohitusjakson.",
-              "persist_changes": "Itse aikatauluun tehdyt muutokset ohitetaan manuaalisen ohituksen ollessa aktiivinen. Nykyinen aikataulu otetaan uudelleen käyttöön vasta ohituksen päätyttyä.",
-              "persist_active_schedule": "Säilytä aktiivinen aikataulu uudelleenkäynnistyksen jälkeen, kun sitä on muutettu palvelun kautta. Muuten se palautuu oletusarvoon.",
+              "retain_service_changes_schedule": "Säilyttää palvelun kautta muutetun perusaikataulun, ohituksen ja varatilan uudelleenkäynnistyksen jälkeen. Muuten ne palautuvat määritettyihin oletusarvoihin.",
               "ignore_off_members_schedule": "Aikataulu EI kytke päälle jäseniä, jotka ovat tällä hetkellä pois päältä."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Vähintään yhden jäsenen on pysyttävä eristyksen ulkopuolella.",
       "isolation_entity_overlap": "Jokainen jäsen voi esiintyä vain yhdessä eristyssäännössä.",
       "isolation_action_preset_required": "Valitse esiasetustila eristystoiminnolle.",
+      "window_temperature_required": "Aseta ikkunan lämpötila tai vaihda ikkunatoimintoa.",
+      "presence_action_value_required": "Aseta arvo valitulle poissaolotoiminnolle tai vaihda toimintoa.",
+      "schedule_fallback_payload_invalid": "Virheellinen YAML-muoto aikataulun varakuormassa. Sen on oltava kelvollinen avain-arvo-kartoitus.",
       "sensor_loop_protection": "Climate Group Helper -entiteettiä ei voi käyttää ulkoisena anturina tai kalibrointikohteena — tämä loisi takaisinkytkentäsilmukan."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Ohitusentiteetti",
           "description": "Ohituksena käytettävä schedule.* tai calendar.* -entiteetti (esim. calendar.vacation). Aseta null tai tyhjä palauttaaksesi määritetyn oletusarvon."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Aseta aikataulun varakuorma",
+      "description": "Asettaa tai tyhjentää varakuorman, jota käytetään, kun perusaikataulu on pois päältä. Korvaa määritetyn varakuorman.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Varakuorma",
+          "description": "Ilmastoinnin varatiedot YAML-muodossa tai kartoituksena (esim. 'temperature: 17.0\\nhvac_mode: heat'). Aseta arvoksi null tai tyhjä palauttaaksesi oletusarvon."
         }
       }
     },

@@ -9,7 +9,6 @@ from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .state import TargetState
 
 
 async def async_get_config_entry_diagnostics(
@@ -48,8 +47,6 @@ async def async_get_config_entry_diagnostics(
             val = sorted(val)
         elif hasattr(val, "isoformat"):
             val = val.isoformat()
-        elif isinstance(val, TargetState):
-            val = _state_to_dict(val) if val else None
         elif hasattr(val, "items"):
             val = dict(val)
         run_dict[f.name] = val

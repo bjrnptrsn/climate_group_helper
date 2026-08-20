@@ -137,6 +137,16 @@ class PresenceHandler:
         if new_state is None:
             return
 
+        # Attribute-only updates (battery reports, GPS accuracy, …) carry the same
+        # state and must not restart a running timer. The away branch is guarded by
+        # _away_active, but the return branch sets it to False immediately and would
+        # re-arm on every event — a sensor chattier than the return delay could keep
+        # the group in away mode forever. Same protection as isolation.py's sensor
+        # listener.
+        old_state = event.data.get("old_state")
+        if old_state is not None and old_state.state == new_state.state:
+            return
+
         present = self._get_collective_presence()
         presence_block_active = "presence" in self._group.run_state.blocking_sources
 
@@ -158,28 +168,28 @@ class PresenceHandler:
             if self._away_delay > 0:
                 self._timer_cancel = async_call_later(self._hass, self._away_delay, self._on_away)
             else:
-                self._hass.async_create_task(self._go_away())
+                self._hass.async_create_background_task(self._go_away(), name="climate_group_presence_away")
         elif present and (self._away_active or presence_block_active):
             self._cancel_timer()
             self._away_active = False
             if self._return_delay > 0:
                 self._timer_cancel = async_call_later(self._hass, self._return_delay, self._on_return)
             else:
-                self._hass.async_create_task(self._go_restore())
+                self._hass.async_create_background_task(self._go_restore(), name="climate_group_presence_restore")
 
     @callback
     def _on_away(self, _now: Any) -> None:
         self._timer_cancel = None
         if not self._away_active:
             return
-        self._hass.async_create_task(self._go_away())
+        self._hass.async_create_background_task(self._go_away(), name="climate_group_presence_away_timer")
 
     @callback
     def _on_return(self, _now: Any) -> None:
         self._timer_cancel = None
         if self._away_active:
             return
-        self._hass.async_create_task(self._go_restore())
+        self._hass.async_create_background_task(self._go_restore(), name="climate_group_presence_restore_timer")
 
     async def _go_away(self) -> None:
         # TOCTOU guard: the timer fired, but someone returned before this task

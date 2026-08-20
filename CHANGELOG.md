@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.6.0 - 2026-08-20
+
+> ⚡ **Schedule Automation, simplified.** The schedule now only takes effect on slot changes — it no longer reverts your manual changes in between, and the cyclic resync is gone. That made three settings unnecessary: **Manual Override Duration**, **Sticky Manual Override** and **Resync Interval**. If you had them configured, there is nothing to do: your schedules keep working, with less to set up and less that can surprise you.
+
+> ⚠️ **Going back to 1.5.0 is not possible after this update.** Your groups will not load on the older version. Create a backup before updating if you want to keep that option open — otherwise the only way back is to set the groups up again.
+
+### 🌟 New Features
+
+*   **Inactive Schedule Fallback**: Configure an optional fallback state in YAML (e.g. night setback or complete turn off) that automatically applies whenever the schedule is off or no calendar event is active.
+
+*   **Set Schedule Fallback Payload Service**: A new service lets you change or clear the inactive-schedule fallback state at runtime (e.g. for seasonal setpoint changes) without editing the group's settings.
+
+### ✨ Improvements
+
+*   **One Setting for All Schedule Changes Made via Service**: "Retain Changes Made via Service (Schedule)" (formerly "Retain Schedule Override") now decides for the base schedule, the bypass entity and the fallback state alike whether a change made via service survives a restart — previously each behaved differently.
+
+### 🔧 Fixes
+
+*   **Temperature Sliders in Fahrenheit Systems**: The window and away temperature sliders in the group settings now show your system's temperature unit instead of always claiming Celsius.
+
+*   **A Group Can No Longer Contain Itself**: If the group's own entity was picked as one of its members, it is now dropped with a warning instead of quietly feeding its own readings back into itself. Other groups remain valid members.
+
+*   **Isolated Members No Longer Shrink the Group's Options**: Modes, presets, fan and swing options and the temperature range now stay available while a member is isolated — previously the only device offering an option could take it away with it, in one case making the mode that would end the isolation impossible to select.
+
+*   **Preset Restored Correctly When Isolation Rules Overlap**: If two isolation rules covered the same device, the preset it had beforehand could be lost and the device was left on the preset an isolation rule had set — it is now restored whichever rule ends last.
+
 ## 1.5.0 - 2026-08-13
 
 ### 🌟 New Features

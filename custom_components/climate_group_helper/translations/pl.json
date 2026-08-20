@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "Musisz wybrać co najmniej jedno urządzenie klimatyczne."
+      "no_entities": "Musisz wybrać co najmniej jedno urządzenie klimatyczne.",
+      "empty_name": "Wprowadź nazwę grupy."
     },
     "abort": {
       "already_configured": "Ta grupa jest już skonfigurowana.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Wyzwalacz obecności",
               "presence_zone": "Strefa obecności",
               "presence_action": "Akcja przy nieobecności",
-              "presence_away_offset": "Przesunięcie temperatury nieobecności (°C)",
-              "presence_away_temperature": "Temperatura nieobecności (°C)",
+              "presence_away_offset": "Przesunięcie temperatury nieobecności",
+              "presence_away_temperature": "Temperatura nieobecności",
               "presence_away_preset": "Preset nieobecności",
               "presence_away_delay": "Opóźnienie nieobecności (sekundy)",
               "presence_return_delay": "Opóźnienie powrotu (sekundy)"
@@ -169,21 +170,17 @@
             "name": "Automatyzacja harmonogramu",
             "description": "Połącz encję harmonogramu lub kalendarza, aby zautomatyzować ustawienia klimatyczne. Dane slotu mogą zawierać atrybuty klimatyczne (temperature, hvac_mode) i meta-klucze (turn_off, sync_mode, sync_attributes) w celu dostosowania zachowania grupy w każdym slocie.",
             "data": {
-              "schedule_entity": "Encja harmonogramu / kalendarza",
-              "schedule_bypass_entity": "Encja bypass",
-              "resync_interval": "Interwał Resync (minuty)",
-              "override_duration": "Czas trwania Override (minuty)",
-              "persist_changes": "Trwałe nadpisanie (Sticky)",
-              "persist_active_schedule": "Zachowaj nadpisanie harmonogramu",
+              "schedule_entity": "Podstawowa encja harmonogramu/kalendarza",
+              "schedule_fallback_payload": "Stan zapasowy przy nieaktywnym harmonogramie podstawowym/kalendarzu (YAML)",
+              "schedule_bypass_entity": "Encja harmonogramu/kalendarza obejścia",
+              "retain_service_changes_schedule": "Zachowaj zmiany wprowadzone przez usługę (Harmonogram)",
               "ignore_off_members_schedule": "Respektuj stan WYŁ członków (Harmonogram)"
             },
             "data_description": {
               "schedule_entity": "Wybierz encję schedule.* lub calendar.*. Dla encji harmonogramu dane slotu są odczytywane z atrybutów slotu. Dla encji kalendarza dane slotu są odczytywane jako YAML z pola opisu zdarzenia. Obsługiwane klucze: atrybuty klimatyczne i meta-klucze.",
+              "schedule_fallback_payload": "Zastępuje harmonogram podstawowy poza jego aktywnymi blokami, więc nie potrzebujesz ciągłych harmonogramów 24/7. Warstwa obejścia działa bez zmian i zastępuje go, gdy jest aktywna. Ten sam format YAML co powyżej (np. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Opcjonalna warstwa priorytetowa (np. kalendarz wakacyjny). Gdy aktywna, jej dane slotu zastępują podstawowy harmonogram. Dane slotu są odczytywane tak samo: atrybuty dla encji schedule.*, opis YAML dla encji calendar.*.",
-              "resync_interval": "Wymuś synchronizację członków do stanu docelowego co X minut. Zapobiega dryfowaniu, jeśli urządzenia przegapią polecenie lub zostaną ręcznie dostosowane. Ustaw na 0, aby wyłączyć.",
-              "override_duration": "Czas trwania ręcznych override. Po tym czasie grupa automatycznie powraca do aktualnego harmonogramu. Ustaw na 0, aby pominąć okres override.",
-              "persist_changes": "Zmiany w samym harmonogramie będą ignorowane, dopóki aktywny jest ręczny override. Ponownie stosuje aktualny harmonogram dopiero po wygaśnięciu override.",
-              "persist_active_schedule": "Zachowuje aktywny harmonogram po restarcie, jeśli został zmieniony przez usługę. W przeciwnym razie powraca do domyślnego.",
+              "retain_service_changes_schedule": "Zachowuje harmonogram podstawowy, obejście i stan zapasowy zmienione przez usługę po restarcie. W przeciwnym razie wracają do skonfigurowanych wartości domyślnych.",
               "ignore_off_members_schedule": "Harmonogram NIE włączy członków, którzy są obecnie WYŁĄCZENI."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Co najmniej jeden członek musi pozostać poza izolacją.",
       "isolation_entity_overlap": "Każdy członek może znajdować się tylko w jednej regule izolacji.",
       "isolation_action_preset_required": "Wybierz tryb wstępny dla akcji izolacji.",
+      "window_temperature_required": "Ustaw temperaturę przy otwartym oknie lub zmień akcję okna.",
+      "presence_action_value_required": "Ustaw wartość dla wybranej akcji nieobecności lub zmień akcję.",
+      "schedule_fallback_payload_invalid": "Nieprawidłowy format YAML w zapasowych danych harmonogramu. Musi to być prawidłowe mapowanie klucz-wartość.",
       "sensor_loop_protection": "Encja Climate Group Helper nie może być używana jako zewnętrzny czujnik ani cel kalibracji — spowodowałoby to pętlę sprzężenia zwrotnego."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Encja bypass",
           "description": "Encja schedule.* lub calendar.* używana jako bypass (np. calendar.vacation). Ustaw na null lub puste, aby przywrócić skonfigurowaną wartość domyślną."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Ustaw ładunek zapasowy harmonogramu",
+      "description": "Ustawia lub czyści ładunek zapasowy stosowany, gdy harmonogram podstawowy jest wyłączony. Zastępuje skonfigurowany ładunek zapasowy.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Ładunek zapasowy",
+          "description": "Zapasowe dane klimatu jako YAML lub mapowanie (np. 'temperature: 17.0\\nhvac_mode: heat'). Ustaw na null lub puste, aby przywrócić domyślne."
         }
       }
     },

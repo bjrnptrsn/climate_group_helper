@@ -19,12 +19,13 @@ Real-world scenarios, ordered by complexity. Each example describes the situatio
   - [11. Schedule with Temporary Local Overrides](#11-schedule-with-temporary-local-overrides)
   - [12. Seasonal Shutdown via Schedule](#12-seasonal-shutdown-via-schedule)
   - [13. Calendar Bypass on Top of a Base Schedule](#13-calendar-bypass-on-top-of-a-base-schedule)
+  - [14. Night Setback when the Schedule is Inactive](#14-night-setback-when-the-schedule-is-inactive)
 - [Edge Cases](#edge-cases) — mixed hardware, multiple constraints, edge cases from real support issues
-  - [14. Mixed Radiator + AC, One Device per Mode](#14-mixed-radiator--ac-one-device-per-mode)
-  - [15. Underfloor Heating That Can't Turn Off](#15-underfloor-heating-that-cant-turn-off)
-  - [16. Union Group with Out-of-Bounds Devices](#16-union-group-with-out-of-bounds-devices)
-  - [17. Multi-Head Mini-Split, Shared Mode Only](#17-multi-head-mini-split-shared-mode-only)
-  - [18. Interlocking Heat/Cool Across Two Systems](#18-interlocking-heatcool-across-two-systems)
+  - [15. Mixed Radiator + AC, One Device per Mode](#15-mixed-radiator--ac-one-device-per-mode)
+  - [16. Underfloor Heating That Can't Turn Off](#16-underfloor-heating-that-cant-turn-off)
+  - [17. Union Group with Out-of-Bounds Devices](#17-union-group-with-out-of-bounds-devices)
+  - [18. Multi-Head Mini-Split, Shared Mode Only](#18-multi-head-mini-split-shared-mode-only)
+  - [19. Interlocking Heat/Cool Across Two Systems](#19-interlocking-heatcool-across-two-systems)
 
 ---
 
@@ -68,7 +69,7 @@ Two radiators grouped as one entity, controlled by an external automation (not C
 
 ### 3. Multi-Room House with a Weekly Schedule
 
-Three rooms, each with one TRV, following the same weekly schedule. Manual adjustments should be temporary.
+Three rooms, each with one TRV, following the same weekly schedule. Manual adjustments should hold until the schedule takes over again.
 
 **Entities:** `climate.bedroom_trv`, `climate.living_room_trv`, `climate.kitchen_trv`, `schedule.house_weekly`
 
@@ -77,7 +78,6 @@ Three rooms, each with one TRV, following the same weekly schedule. Manual adjus
 | Members | `climate.bedroom_trv`, `climate.living_room_trv`, `climate.kitchen_trv` |
 | Sync Mode | Lock |
 | Schedule Entity | `schedule.house_weekly` |
-| Override Duration | 60 (minutes) |
 
 **Schedule slots (YAML in additional data):**
 ```yaml
@@ -98,7 +98,7 @@ hvac_mode: heat
 temperature: 18.0
 ```
 
-**Result:** The schedule drives all rooms. A manual change is respected for 60 minutes, then the group reverts to whatever the schedule says.
+**Result:** The schedule drives all rooms. A manual change is respected until the next slot begins, which then takes over again.
 
 ---
 
@@ -335,9 +335,51 @@ temperature: 22.0
 
 ---
 
+### 14. Night Setback when the Schedule is Inactive
+
+`schedule.*` entities report `off` without any slot attributes outside the configured time blocks. Instead of building a gapless 24/7 schedule (an explicit low-temperature block for every inactive hour), define one fallback state that the group applies whenever no slot is active.
+
+**Entities:** `climate.living_room_trv`, `schedule.house_weekly`
+
+| Setting | Value |
+|---|---|
+| Members | `climate.living_room_trv` |
+| Schedule Entity | `schedule.house_weekly` |
+| Inactive Schedule Fallback | see below |
+
+**Inactive Schedule Fallback** (options flow → Schedule section, YAML):
+```yaml
+temperature: 17.0
+hvac_mode: heat
+```
+
+**Heating slot (e.g. 06:00–22:00):**
+```yaml
+hvac_mode: heat
+temperature: 21.0
+```
+
+**Result:** During the active slot the room is heated to 21 °C. The moment the slot ends, the group automatically applies the fallback and lowers the setpoint to 17 °C — no 24/7 blocks needed.
+
+> **Note — turning the group fully off:** for a complete shutdown outside active hours, use `hvac_mode: off` as the fallback, not the `turn_off` meta-key. `turn_off: true` is a one-shot trigger for the Main Switch block that stays active until a slot explicitly releases it with `turn_off: false` — put it in the fallback, and the next heating slot would remain blocked.
+
+**Changing the fallback seasonally without touching the options flow:** call `climate_group_helper.set_schedule_fallback_payload` from an automation (e.g. a yearly summer/winter trigger) instead of reconfiguring the group each time:
+```yaml
+service: climate_group_helper.set_schedule_fallback_payload
+target:
+  entity_id: climate.living_room
+data:
+  fallback_payload: |
+    temperature: 19.0
+    hvac_mode: heat
+```
+The override takes effect immediately (if the slot is currently inactive). Enable **Retain Changes Made via Service (Schedule)** if it should also survive a restart. Call the service again with `fallback_payload:` omitted or empty to revert to the configured default.
+
+---
+
 ## Edge Cases
 
-### 14. Mixed Radiator + AC, One Device per Mode
+### 15. Mixed Radiator + AC, One Device per Mode
 
 A room has a heat-only radiator (Wiser) and a heat/cool AC (Daikin/Faikin). The AC must **never** heat, even though it advertises `heat` — and each device needs different handling depending on which mode is active. (Based on a real mixed-hardware report, GitHub #99.)
 
@@ -357,7 +399,7 @@ A room has a heat-only radiator (Wiser) and a heat/cool AC (Daikin/Faikin). The 
 
 ---
 
-### 15. Underfloor Heating That Can't Turn Off
+### 16. Underfloor Heating That Can't Turn Off
 
 Water-based underfloor heating has no `off` mode — it only supports `heat`. When the group needs to stop heating (e.g. switching to cooling elsewhere in summer), the floor loop needs a safe fallback instead of a real `off` call. (Based on GitHub #100.)
 
@@ -374,7 +416,7 @@ Water-based underfloor heating has no `off` mode — it only supports `heat`. Wh
 
 ---
 
-### 16. Union Group with Out-of-Bounds Devices
+### 17. Union Group with Out-of-Bounds Devices
 
 Mixing devices with different temperature ranges — a low-range TRV and an AC with a higher minimum. When the target falls outside a device's range, that device should be excluded rather than clamped to a nonsensical value.
 
@@ -390,7 +432,7 @@ Mixing devices with different temperature ranges — a low-range TRV and an AC w
 
 ---
 
-### 17. Multi-Head Mini-Split, Shared Mode Only
+### 18. Multi-Head Mini-Split, Shared Mode Only
 
 A 4-head mini-split system (e.g. Daikin via Faikin) requires all heads to share the same HVAC mode to function correctly, but each room still needs its own setpoint and fan speed. Full Mirror/Lock would wrongly force temperature and fan speed to match too. (Based on GitHub #36.)
 
@@ -406,7 +448,7 @@ A 4-head mini-split system (e.g. Daikin via Faikin) requires all heads to share 
 
 ---
 
-### 18. Interlocking Heat/Cool Across Two Systems
+### 19. Interlocking Heat/Cool Across Two Systems
 
 An HRV (heat recovery ventilator) with heat/cool/auto acts as the "conductor". Several independent underfloor heating zones must turn fully off whenever the HRV is cooling, and back on when it's heating — pure interlocking, no shared setpoint. (Based on GitHub #66.)
 

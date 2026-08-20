@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "Devi selezionare almeno un dispositivo climatico."
+      "no_entities": "Devi selezionare almeno un dispositivo climatico.",
+      "empty_name": "Inserisci un nome per il gruppo."
     },
     "abort": {
       "already_configured": "Questo gruppo è già configurato.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Attivatore di presenza",
               "presence_zone": "Zona di presenza",
               "presence_action": "Azione in assenza",
-              "presence_away_offset": "Offset temperatura in assenza (°C)",
-              "presence_away_temperature": "Temperatura in assenza (°C)",
+              "presence_away_offset": "Offset temperatura in assenza",
+              "presence_away_temperature": "Temperatura in assenza",
               "presence_away_preset": "Preset in assenza",
               "presence_away_delay": "Ritardo assenza (secondi)",
               "presence_return_delay": "Ritardo ritorno (secondi)"
@@ -169,21 +170,17 @@
             "name": "Automazione programmazione",
             "description": "Collega un'entità di programmazione o calendario per automatizzare le impostazioni climatiche. I dati dello slot possono includere attributi climatici (temperature, hvac_mode) e meta-chiavi (turn_off, sync_mode, sync_attributes) per regolare il comportamento del gruppo per slot.",
             "data": {
-              "schedule_entity": "Entità programmazione / calendario",
-              "schedule_bypass_entity": "Entità bypass",
-              "resync_interval": "Intervallo di Resync (minuti)",
-              "override_duration": "Durata Override (minuti)",
-              "persist_changes": "Sovrascrittura persistente (Sticky)",
-              "persist_active_schedule": "Mantieni forzatura programma",
+              "schedule_entity": "Entità pianificazione/calendario di base",
+              "schedule_fallback_payload": "Stato di riserva per programmazione di base/calendario inattivo (YAML)",
+              "schedule_bypass_entity": "Entità pianificazione/calendario di bypass",
+              "retain_service_changes_schedule": "Mantieni le modifiche effettuate tramite servizio (Pianificazione)",
               "ignore_off_members_schedule": "Rispetta lo stato Off dei membri (Pianificazione)"
             },
             "data_description": {
               "schedule_entity": "Seleziona un'entità schedule.* o calendar.*. Per le entità di programmazione, i dati dello slot vengono letti dagli attributi dello slot. Per le entità calendario, i dati dello slot vengono letti come YAML dal campo descrizione dell'evento. Chiavi supportate: attributi climatici e meta-chiavi.",
+              "schedule_fallback_payload": "Sostituisce la programmazione di base al di fuori delle sue fasce attive, così non servono programmazioni continue 24/7. Il livello di bypass continua a funzionare normalmente e la sovrascrive mentre è attivo. Stesso formato YAML di sopra (es. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Livello di priorità opzionale (es. un calendario vacanze). Quando attivo, i suoi dati di slot sostituiscono il programma base. I dati dello slot vengono letti allo stesso modo: attributi per entità schedule.*, descrizione YAML per entità calendar.*.",
-              "resync_interval": "Forza la sincronizzazione dei membri allo stato target ogni X minuti. Impedisce derive se i dispositivi perdono un comando o vengono regolati manualmente. Imposta a 0 per disabilitare.",
-              "override_duration": "La durata degli override manuali. Dopo questo tempo, il gruppo torna automaticamente alla programmazione attuale. Imposta a 0 per saltare il periodo di override.",
-              "persist_changes": "Le modifiche alla programmazione stessa saranno ignorate finché un override manuale è attivo. Riapplica la programmazione attuale solo dopo la scadenza dell'override.",
-              "persist_active_schedule": "Mantiene il programma attivo dopo un riavvio quando viene modificato tramite il servizio. In caso contrario, torna a quello predefinito.",
+              "retain_service_changes_schedule": "Mantiene la programmazione di base, il bypass e lo stato di riserva modificati tramite servizio dopo un riavvio. In caso contrario tornano ai valori predefiniti configurati.",
               "ignore_off_members_schedule": "La Pianificazione NON accenderà i membri attualmente SPENTI."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Almeno un membro deve rimanere fuori dall'isolamento.",
       "isolation_entity_overlap": "Ogni membro può comparire solo in una regola di isolamento.",
       "isolation_action_preset_required": "Seleziona una modalità predefinita per l'azione di isolamento.",
+      "window_temperature_required": "Imposta una temperatura finestra o cambia l'azione finestra.",
+      "presence_action_value_required": "Imposta un valore per l'azione di assenza selezionata o cambia l'azione.",
+      "schedule_fallback_payload_invalid": "Formato YAML non valido nel payload di riserva della programmazione. Deve essere una mappatura chiave-valore valida.",
       "sensor_loop_protection": "Non è possibile utilizzare un'entità Climate Group Helper come sensore esterno o destinazione di calibrazione — si creerebbe un ciclo di retroazione."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Entità bypass",
           "description": "L'entità schedule.* o calendar.* da usare come bypass (es. calendar.vacation). Impostare su null o vuoto per ripristinare il valore predefinito configurato."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Imposta payload di riserva della programmazione",
+      "description": "Imposta o cancella un payload di riserva applicato quando la programmazione di base è inattiva. Sovrascrive il payload di riserva configurato.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Payload di riserva",
+          "description": "I dati climatici di riserva come YAML o mappatura (es. 'temperature: 17.0\\nhvac_mode: heat'). Imposta su null o vuoto per ripristinare il valore predefinito."
         }
       }
     },

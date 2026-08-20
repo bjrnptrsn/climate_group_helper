@@ -42,9 +42,6 @@ from .const import (
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
-    CONF_OVERRIDE_DURATION,
-    CONF_PERSIST_ACTIVE_SCHEDULE,
-    CONF_PERSIST_CHANGES,
     CONF_PRESENCE_ACTION,
     CONF_PRESENCE_AWAY_DELAY,
     CONF_PRESENCE_AWAY_OFFSET,
@@ -54,7 +51,6 @@ from .const import (
     CONF_PRESENCE_RETURN_DELAY,
     CONF_PRESENCE_SENSOR,
     CONF_PRESENCE_ZONE,
-    CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_FORCE_RETRY,
@@ -64,7 +60,9 @@ from .const import (
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_RANGE_TEMPLATE_COOL_ENTITIES,
     CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
+    CONF_RETAIN_SERVICE_CHANGES_SCHEDULE,
     CONF_SCHEDULE_BYPASS_ENTITY,
+    CONF_SCHEDULE_FALLBACK_PAYLOAD,
     CONF_SCHEDULE_ENTITY,
     CONF_STAGGERED_CALL_DELAY,
     CONF_SYNC_ATTRS,
@@ -156,10 +154,8 @@ VALID_CONFIG_KEYS = {
     # Schedule options
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_BYPASS_ENTITY,
-    CONF_RESYNC_INTERVAL,
-    CONF_OVERRIDE_DURATION,
-    CONF_PERSIST_CHANGES,
-    CONF_PERSIST_ACTIVE_SCHEDULE,
+    CONF_SCHEDULE_FALLBACK_PAYLOAD,
+    CONF_RETAIN_SERVICE_CHANGES_SCHEDULE,
     # Other options
     CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_MEMBER_ENTITIES,
@@ -215,9 +211,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Migrate old config entries to the current version (Soft Reset to v12).
+    """Migrate old config entries to the current version.
 
-    Combines all historical transformations (v7–v12) into a single pass:
+    Two stages: a Soft Reset to v12 for everything older, then v12→v13.
+
+    The Soft Reset combines all historical transformations (v7–v12) into a single pass:
         - Combine data+options (covers pre-v7 entries)
         - v7→v8: split ignore_off_members into _sync / _schedule variants
         - v8→v9: rename SyncMode "standard" → "disabled"
@@ -227,7 +225,16 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                    wrap flat isolation keys into CONF_ISOLATION_RULES list
         - Filter out invalid/renamed configuration keys via VALID_CONFIG_KEYS whitelist
         - Restore defaults for valid keys not present
+
+    v12→v13 renames persist_active_schedule → retain_service_changes_schedule and
+    re-applies the VALID_CONFIG_KEYS whitelist. It runs as its own step (not inside
+    the Soft Reset) because entries already on v12 never enter that block: the
+    rename has to happen before the whitelist would drop the old key, and the
+    whitelist has to run at all — otherwise keys retired after v12 (resync_interval,
+    override_duration, persist_changes) linger in those entries forever.
     """
+    current_options = dict(entry.options)
+
     if entry.version < 12:
         _LOGGER.info("[%s] Migrating config entry from version %s to 12", entry.title, entry.version)
 
@@ -284,6 +291,12 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     CONF_ISOLATION_SENSOR, CONF_ISOLATION_ACTIVATE_DELAY, CONF_ISOLATION_RESTORE_DELAY):
             old_config.pop(key, None)
 
+        # Rename persist_active_schedule → retain_service_changes_schedule before the
+        # whitelist filter runs — the old key is no longer whitelisted, so filtering
+        # first would drop the user's setting instead of carrying it over.
+        if "persist_active_schedule" in old_config:
+            old_config[CONF_RETAIN_SERVICE_CHANGES_SCHEDULE] = old_config.pop("persist_active_schedule")
+
         # Whitelist filter: discard all deprecated/renamed keys
         new_options = {key: value for key, value in old_config.items() if key in VALID_CONFIG_KEYS}
 
@@ -293,6 +306,34 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=12)
         _LOGGER.info("[%s] Migration to v12 complete. %d valid keys preserved.", entry.title, len(new_options))
+
+        # Carry the result into the next stage instead of re-reading entry.options —
+        # the stages must chain regardless of when the entry write becomes visible.
+        current_options = new_options
+
+    if entry.version < 13:
+        _LOGGER.info("[%s] Migrating config entry from version %s to 13", entry.title, entry.version)
+
+        # Rename persist_active_schedule → retain_service_changes_schedule. The flag
+        # now covers every schedule change made via service (base entity, bypass
+        # entity, fallback payload), not just the active schedule entity.
+        # Entries coming through the Soft Reset above were already renamed there
+        # (before the whitelist filter); this stage covers entries already on v12.
+        new_options = dict(current_options)
+        if "persist_active_schedule" in new_options:
+            new_options[CONF_RETAIN_SERVICE_CHANGES_SCHEDULE] = new_options.pop("persist_active_schedule")
+
+        # Re-apply the whitelist. Entries already on v12 never enter the Soft Reset
+        # block, so keys retired after v12 (resync_interval, override_duration,
+        # persist_changes) would linger in their options forever — a stale value
+        # that the options flow no longer shows and nothing ever clears.
+        dropped = sorted(key for key in new_options if key not in VALID_CONFIG_KEYS)
+        if dropped:
+            new_options = {key: value for key, value in new_options.items() if key in VALID_CONFIG_KEYS}
+            _LOGGER.info("[%s] Dropped retired config keys: %s", entry.title, ", ".join(dropped))
+
+        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=13)
+        _LOGGER.info("[%s] Migration to v13 complete.", entry.title)
 
     return True
 

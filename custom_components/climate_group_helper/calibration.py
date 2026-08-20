@@ -212,6 +212,12 @@ class CalibrationHandler:
                         clamped = max(float(entity_min), clamped)
                     if entity_max is not None:
                         clamped = min(float(entity_max), clamped)
+                    # Restore the original type: SCALED produces an int, but the
+                    # float() comparisons above turn a clamped value into a float,
+                    # which would flip the tolerance branch below and send a float
+                    # to a number entity that expects an integer.
+                    if isinstance(target_val, int) and not isinstance(clamped, int):
+                        clamped = int(round(clamped))
                     if clamped != target_val:
                         _LOGGER.warning(
                             "[%s] Clamped calibration value for %s from %s to %s (entity range: %s–%s)",
@@ -253,7 +259,7 @@ class CalibrationHandler:
                 immediate=False,
                 function=self._flush,
             )
-        self._hass.async_create_task(
+        self._hass.async_create_background_task(
             self._debouncer.async_call(),
             name=f"climate_group_calibration_flush:{self._group.entity_id}",
         )

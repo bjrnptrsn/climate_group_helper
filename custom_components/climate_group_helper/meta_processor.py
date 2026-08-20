@@ -35,6 +35,7 @@ from .const import (
     META_STATE_KEYS,
     PresenceMode,
 )
+from .number import async_push_group_offset
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -89,6 +90,10 @@ class SlotMetaProcessor:
         """Initialize with the owning ClimateGroupHelper."""
         self._group = group
         self._active_keys: set[str] = set()  # meta-keys that were active in the last slot
+        # Last group_offset value actually applied from a slot. Lets _apply() tell a
+        # repeat of the same slot (must not override a user takeover) from a genuinely
+        # new slot value (must win). Reset in _cleanup() when the key leaves the slot.
+        self._slot_offset_value: float | None = None
 
     async def process(self, basis_data: dict[str, Any], bypass_data: dict[str, Any]) -> MetaProcessResult:
         """Process basis and bypass slots: merge meta-keys, keep climate payloads separate.
@@ -149,6 +154,19 @@ class SlotMetaProcessor:
                         self._group.entity_id, value,
                     )
                     continue
+                # group_offset is float-converted in _apply(), which runs AFTER the
+                # override marker is written. Without this guard an unparsable value
+                # registers the marker anyway, and the slot-end cleanup then resets a
+                # manually set offset to 0.0 for a value that was never applied.
+                if key == META_KEY_GROUP_OFFSET:
+                    try:
+                        float(value)
+                    except (TypeError, ValueError):
+                        _LOGGER.warning(
+                            "[%s] Invalid value for meta-key 'group_offset': %s (expected a number) — ignored",
+                            self._group.entity_id, value,
+                        )
+                        continue
                 new_meta_keys.add(key)
             elif key not in _HA_SYSTEM_ATTRS:
                 _LOGGER.warning(
@@ -198,19 +216,52 @@ class SlotMetaProcessor:
         is invoked, so manager calls can rely on the new value being visible in RunState.
         """
         if key == META_KEY_GROUP_OFFSET:
-            try:
-                offset_val = float(value)
-                _LOGGER.debug("[%s] Meta-Key apply: group_offset=%s", self._group.entity_id, offset_val)
-                if self._group.offset_set_callback:
-                    # offset_set_callback updates run_state.group_offset and refreshes the
-                    # slider UI (OffsetNumber._set_offset).  config_overrides[META_KEY_GROUP_OFFSET]
-                    # acts as the schedule's ownership marker: as long as it is present, the
-                    # slot-end cleanup will reset the offset to 0.0.  If the user moves the
-                    # slider manually, OffsetNumber.async_set_native_value clears the marker
-                    # (ownership transfer) so the cleanup becomes a deliberate no-op.
-                    await self._group.offset_set_callback(offset_val)
-            except (ValueError, TypeError):
-                _LOGGER.warning("[%s] Invalid group_offset in schedule slot: %s", self._group.entity_id, value)
+            # Validated in process() before the marker was written — safe to convert.
+            offset_val = float(value)
+
+            # Ownership: the user moved the slider during this slot, which cleared the
+            # marker (OffsetNumber.async_set_native_value). Re-applying the unchanged
+            # slot value would silently take the offset back from them — and every
+            # re-processing of the SAME slot (resync timer, bypass event, boost end)
+            # runs through here, so the transfer would rarely survive more than one
+            # resync interval. A genuinely NEW slot value still wins: it is a fresh
+            # schedule instruction, not a repeat of the one already handed over.
+            if (
+                self._slot_offset_value is not None
+                and offset_val == self._slot_offset_value
+                and self._group.run_state.group_offset != offset_val
+            ):
+                _LOGGER.debug(
+                    "[%s] Meta-Key apply: group_offset=%s skipped — ownership held by user",
+                    self._group.entity_id, offset_val,
+                )
+                # process() writes the ownership marker before calling us, so skipping
+                # the apply is not enough: the marker alone makes the slot-end cleanup
+                # reset the user's value to 0.0. Withdraw it again — the schedule does
+                # not own this offset anymore.
+                self._group.run_state = self._group.run_state.clear_config_overrides(
+                    {META_KEY_GROUP_OFFSET}
+                )
+                return
+
+            _LOGGER.debug("[%s] Meta-Key apply: group_offset=%s", self._group.entity_id, offset_val)
+            self._slot_offset_value = offset_val
+            if self._group.offset_set_callback:
+                # offset_set_callback updates run_state.group_offset and refreshes the
+                # slider UI (OffsetNumber._set_offset).  config_overrides[META_KEY_GROUP_OFFSET]
+                # acts as the schedule's ownership marker: as long as it is present, the
+                # slot-end cleanup will reset the offset to 0.0.  If the user moves the
+                # slider manually, OffsetNumber.async_set_native_value clears the marker
+                # (ownership transfer) so the cleanup becomes a deliberate no-op.
+                await self._group.offset_set_callback(offset_val)
+            else:
+                self._group.run_state = replace(self._group.run_state, group_offset=offset_val)
+
+            # The slider pushes the new offset to the members; the meta-key path must do
+            # the same. Otherwise a slot that only sets group_offset updates RunState and
+            # the UI while the devices keep their old setpoints until some unrelated sync
+            # happens to run — the state looks correct while the room stays wrong.
+            await async_push_group_offset(self._group)
 
         elif key in (META_KEY_SYNC_MODE, META_KEY_SYNC_ATTRS):
             # Pure config shadowing: was written during slot processing to config_overrides.
@@ -240,6 +291,9 @@ class SlotMetaProcessor:
             else len(_CLEANUP_ORDER)
         ):
             if key == META_KEY_GROUP_OFFSET:
+                # The key left the slot — the next occurrence is a fresh instruction,
+                # not a repeat, so the takeover comparison in _apply() starts over.
+                self._slot_offset_value = None
                 # Ownership guard: only reset if config_overrides still contains the marker.
                 # A missing marker means the user moved the slider during this slot, which
                 # cleared the marker (OffsetNumber.async_set_native_value) and transferred
@@ -248,6 +302,9 @@ class SlotMetaProcessor:
                     _LOGGER.debug("[%s] Meta-Key cleanup: group_offset absent → reset to 0.0", self._group.entity_id)
                     if self._group.offset_set_callback:
                         await self._group.offset_set_callback(0.0)
+                    else:
+                        self._group.run_state = replace(self._group.run_state, group_offset=0.0)
+                    await async_push_group_offset(self._group)
                 else:
                     _LOGGER.debug("[%s] Meta-Key cleanup: group_offset skipped — ownership transferred to user", self._group.entity_id)
 

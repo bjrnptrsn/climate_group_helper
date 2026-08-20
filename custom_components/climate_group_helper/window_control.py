@@ -115,12 +115,17 @@ class WindowControlHandler:
         # Check initial state. _control_state is intentionally left at WINDOW_CLOSE
         # here — it must only be updated inside _execute_action (like the event path),
         # otherwise _timer_expired's "mode == self._control_state" skip would suppress
-        # the very activation this timer exists to trigger.
+        # the very activation this timer exists to trigger. The mode == self._control_state
+        # skip itself still applies here, same as the event path: a window that is
+        # already closed at startup (the default _control_state) must not trigger a
+        # restore() broadcast to every member on each reboot.
         result = self._window_control_logic()
         if result:
             mode, delay = result
-            if delay <= 0:
-                self._hass.async_create_task(self._execute_action(mode))
+            if mode == self._control_state:
+                _LOGGER.debug("[%s] Control state is already '%s' at startup, skipping", self._group.entity_id, mode)
+            elif delay <= 0:
+                self._hass.async_create_background_task(self._execute_action(mode), name="climate_group_window_control")
             else:
                 self._timer_cancel = async_call_later(self._hass, delay, self._timer_expired)
 
@@ -147,7 +152,7 @@ class WindowControlHandler:
             _LOGGER.debug("[%s] Scheduling action in %.1fs", self._group.entity_id, delay)
             self._timer_cancel = async_call_later(self._hass, delay, self._timer_expired)
         else:
-            self._hass.async_create_task(self._execute_action(mode))
+            self._hass.async_create_background_task(self._execute_action(mode), name="climate_group_window_control")
 
     @callback
     def _timer_expired(self, now: Any) -> None:
@@ -162,7 +167,7 @@ class WindowControlHandler:
             _LOGGER.debug("[%s] Control state already '%s' on timer expiry, skipping", self._group.entity_id, mode)
             return
         if mode:
-            self._hass.async_create_task(self._execute_action(mode))
+            self._hass.async_create_background_task(self._execute_action(mode), name="climate_group_window_control")
 
     def _cancel_timer(self) -> None:
         """Cancel any pending timer."""

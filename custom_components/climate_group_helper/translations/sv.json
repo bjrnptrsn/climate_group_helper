@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "Du måste välja minst en klimatenhet."
+      "no_entities": "Du måste välja minst en klimatenhet.",
+      "empty_name": "Ange ett namn för gruppen."
     },
     "abort": {
       "already_configured": "Denna grupp är redan konfigurerad.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Närvaroutlösare",
               "presence_zone": "Närvaro-zon",
               "presence_action": "Åtgärd vid frånvaro",
-              "presence_away_offset": "Frånvaro-temperaturförskjutning (°C)",
-              "presence_away_temperature": "Frånvaro-temperatur (°C)",
+              "presence_away_offset": "Frånvaro-temperaturförskjutning",
+              "presence_away_temperature": "Frånvaro-temperatur",
               "presence_away_preset": "Frånvaro-förinställning",
               "presence_away_delay": "Frånvarofördröjning (sekunder)",
               "presence_return_delay": "Återkomstfördröjning (sekunder)"
@@ -169,21 +170,17 @@
             "name": "Schema-automatisering",
             "description": "Länka en schema- eller kalenderenhet för att automatisera klimatinställningar. Slot-data kan inkludera klimatattribut (temperature, hvac_mode) och meta-nycklar (turn_off, sync_mode, sync_attributes) för att justera gruppens beteende per slot.",
             "data": {
-              "schedule_entity": "Schema- / kalenderenhet",
-              "schedule_bypass_entity": "Bypass-enhet",
-              "resync_interval": "Resync Intervall (minuter)",
-              "override_duration": "Override Varaktighet (minuter)",
-              "persist_changes": "Bestående åsidosättning (Sticky)",
-              "persist_active_schedule": "Behåll schemaunderkännande",
+              "schedule_entity": "Grundläggande schema-/kalenderentitet",
+              "schedule_fallback_payload": "Reservtillstånd vid inaktivt grundschema/kalender (YAML)",
+              "schedule_bypass_entity": "Bypass-schema-/kalenderentitet",
+              "retain_service_changes_schedule": "Behåll ändringar gjorda via tjänst (Schema)",
               "ignore_off_members_schedule": "Respektera medlemmars AV-status (Schema)"
             },
             "data_description": {
               "schedule_entity": "Välj en schedule.*- eller calendar.*-enhet. För schemaenheter läses slot-data från slot-attributen. För kalenderenheter läses slot-data som YAML från händelsens beskrivelsfält. Stödda nycklar: klimatattribut och meta-nycklar.",
+              "schedule_fallback_payload": "Träder in för grundschemat utanför dess aktiva tidsblock, så du slipper heltäckande 24/7-scheman. Bypass-lagret fungerar som vanligt och åsidosätter det medan det är aktivt. Samma YAML-format som ovan (t.ex. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valfritt prioritetslager (t.ex. en semesterkalender). När aktivt ersätter dess slot-data basschemat. Slot-data läses på samma sätt: attribut för schedule.*-, YAML-beskrivning för calendar.*-enheter.",
-              "resync_interval": "Tvinga synkronisering av medlemmar till måltillståndet var X minut. Förhindrar avvikelser om enheter missar ett kommando eller justeras manuellt. Sätt till 0 för att inaktivera.",
-              "override_duration": "Varaktigheten för manuella overrides. Efter denna tid återgår gruppen automatiskt till det aktuella schemat. Sätt till 0 för att hoppa över override-perioden.",
-              "persist_changes": "Om aktiverat kommer ändringar i schemat att ignoreras så länge en manuell override är aktiv. Återaktiverar det aktuella schemat först efter att overriden har gått ut.",
-              "persist_active_schedule": "Behåller det aktiva schemat efter en omstart när det ändras via tjänsten. Annars återgår det till standardinställningen.",
+              "retain_service_changes_schedule": "Behåller grundschema, bypass och reservtillstånd som ändrats via tjänsten efter en omstart. Annars återställs de till de konfigurerade standardvärdena.",
               "ignore_off_members_schedule": "Schemat kommer INTE att slå på medlemmar som för närvarande är AVSTÄNGDA."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Minst en medlem måste förbli utanför isoleringen.",
       "isolation_entity_overlap": "Varje medlem får bara förekomma i en isoleringsregel.",
       "isolation_action_preset_required": "Välj ett förinställt läge för isoleringsåtgärden.",
+      "window_temperature_required": "Ange en fönstertemperatur eller ändra fönsteråtgärden.",
+      "presence_action_value_required": "Ange ett värde för den valda frånvaroåtgärden eller ändra åtgärden.",
+      "schedule_fallback_payload_invalid": "Ogiltigt YAML-format i reservnyttolast för schema. Måste vara en giltig nyckel-värde-mappning.",
       "sensor_loop_protection": "En Climate Group Helper-entitet kan inte användas som extern sensor eller kalibreringsmål — det skulle skapa en återkopplingsslinga."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Bypass-enhet",
           "description": "Den schedule.*- eller calendar.*-enhet som används som bypass (t.ex. calendar.vacation). Ange null eller tomt för att återställa den konfigurerade standarden."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Ställ in reservnyttolast för schema",
+      "description": "Ställer in eller rensar en reservnyttolast som tillämpas när grundschemat är inaktivt. Åsidosätter den konfigurerade reservnyttolasten.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Reservnyttolast",
+          "description": "Klimatreservdata som YAML eller mappning (t.ex. 'temperature: 17.0\\nhvac_mode: heat'). Sätt till null eller tomt för att återställa standardkonfigurationen."
         }
       }
     },

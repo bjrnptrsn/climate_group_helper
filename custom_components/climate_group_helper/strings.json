@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "You must select at least one climate device."
+      "no_entities": "You must select at least one climate device.",
+      "empty_name": "Enter a name for the group."
     },
     "abort": {
       "already_configured": "This group is already configured.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Presence Trigger",
               "presence_zone": "Presence Zone",
               "presence_action": "Away Action",
-              "presence_away_offset": "Away Temperature Offset (°C)",
-              "presence_away_temperature": "Away Temperature (°C)",
+              "presence_away_offset": "Away Temperature Offset",
+              "presence_away_temperature": "Away Temperature",
               "presence_away_preset": "Away Preset",
               "presence_away_delay": "Away Delay (seconds)",
               "presence_return_delay": "Return Delay (seconds)"
@@ -169,21 +170,17 @@
             "name": "Schedule Automation",
             "description": "Link a schedule or calendar entity to automate climate settings. Slot data can include climate attributes (temperature, hvac_mode) and meta-keys (turn_off, sync_mode, sync_attributes) to adjust group behavior per slot.",
             "data": {
-              "schedule_entity": "Schedule / Calendar Entity",
-              "schedule_bypass_entity": "Bypass Entity",
-              "resync_interval": "Resync Interval (minutes)",
-              "override_duration": "Override Duration (minutes)",
-              "persist_changes": "Sticky Override",
-              "persist_active_schedule": "Retain Schedule Override",
+              "schedule_entity": "Base Schedule / Calendar Entity",
+              "schedule_fallback_payload": "Fallback State for Inactive Base Schedule / Calendar (YAML)",
+              "schedule_bypass_entity": "Bypass Schedule / Calendar Entity",
+              "retain_service_changes_schedule": "Retain Changes Made via Service (Schedule)",
               "ignore_off_members_schedule": "Respect Member Off State (Schedule)"
             },
             "data_description": {
               "schedule_entity": "Select a schedule.* or calendar.* entity. For schedule entities, slot data is read from the slot's attributes. For calendar entities, slot data is read from the event's description field as YAML. Supported keys: climate attributes and meta-keys.",
+              "schedule_fallback_payload": "Stands in for the base schedule outside its active slots, so you don't need gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active. Same YAML format as above (e.g. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optional higher-priority layer (e.g. a vacation calendar). When active, its slot data overrides the main schedule. Slot data is read the same way: attributes for schedule.* entities, YAML description for calendar.* entities.",
-              "resync_interval": "Force-sync members to the target state every X minutes. Ensures devices stay on schedule even if adjusted manually or commands are missed. Set to 0 to disable.",
-              "override_duration": "The duration for manual overrides. After this time, the group automatically reverts to the current schedule. Set to 0 to skip the override period.",
-              "persist_changes": "Changes to the schedule itself will be ignored while a manual override is active. Re-applies the current schedule only after the override expires.",
-              "persist_active_schedule": "Retain the active schedule after a restart when changed via service. Otherwise, it resets to the default.",
+              "retain_service_changes_schedule": "Keep base schedule, bypass and fallback state changes made via service after a restart. Otherwise they reset to the configured defaults.",
               "ignore_off_members_schedule": "The Schedule will NOT turn on members that are currently Off."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "At least one member must remain outside isolation.",
       "isolation_entity_overlap": "Each member can only appear in one isolation rule.",
       "isolation_action_preset_required": "Select a preset mode for the isolation action.",
+      "window_temperature_required": "Set a window temperature, or change the window action.",
+      "presence_action_value_required": "Set a value for the selected away action, or change the action.",
+      "schedule_fallback_payload_invalid": "Invalid YAML format in fallback schedule payload. Must be a valid key-value mapping.",
       "sensor_loop_protection": "Cannot use a Climate Group Helper entity as an external sensor or calibration target — this would create a feedback loop."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Bypass Entity",
           "description": "The schedule.* or calendar.* entity to use as bypass (e.g. calendar.vacation). Set to null or empty to restore the configured default."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Set Schedule Fallback Payload",
+      "description": "Sets or clears a fallback payload applied when the base schedule is off. Overrides the configured fallback payload.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Fallback Payload",
+          "description": "The fallback climate payload as YAML or mapping (e.g. 'temperature: 17.0\nhvac_mode: heat'). Set to null or empty to restore the configured default."
         }
       }
     },

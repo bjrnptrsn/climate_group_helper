@@ -28,7 +28,7 @@ from .service_call import BaseServiceCallHandler
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
-    from .state import IsolationStateManager, TargetState
+    from .state import TargetState
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -88,11 +88,6 @@ class MemberIsolationHandler:
         self._call_handlers: dict[str, IsolationCallHandler] = {}
         self._restore_call_handlers: dict[str, IsolationRestoreCallHandler] = {}
 
-        # Per-device preset captured BEFORE the pre-action was sent (PRESET_MODE
-        # action only) — the "Vor-Preset". Only preset_mode is snapshotted
-        # ("nur snapshoten, was wir ändern"); hvac_mode is covered by the
-        # target_state restore.
-        self._pre_action_presets: dict[str, str | None] = {}
 
         _LOGGER.debug(
             "[%s] MemberIsolation initialized. trigger=%s, sensor=%s, hvac_modes=%s, entities=%s, activate_delay=%ss, restore_delay=%ss",
@@ -101,14 +96,28 @@ class MemberIsolationHandler:
         )
 
     @property
-    def state_manager(self) -> IsolationStateManager:
-        """Return the state manager for sync mode operations."""
-        return self._group.isolation_state_manager
-
-    @property
     def target_state(self) -> TargetState:
         """Return the current target state (from central source)."""
-        return self.state_manager.target_state
+        return self._group.shared_target_state
+
+    @property
+    def _pre_action_presets(self) -> dict[str, str | None]:
+        """Per-device preset from before the first rule isolated the device.
+
+        Shared across all isolation rules (owned by the group): a device has
+        exactly one original preset, and every rule after the first only ever
+        finds a pre-action value on it. Keeping the snapshot per rule loses it
+        as soon as that rule releases first — it discards its entry while the
+        device stays claimed, leaving the final release with nothing to
+        restore.
+        """
+        return self._group.isolation_pre_action_presets
+
+    def would_fully_isolate(self, entities_to_isolate: set[str] | list[str] | frozenset[str]) -> bool:
+        """Return True if isolating entities_to_isolate would isolate all members in the group."""
+        new_set = self._group.run_state.isolated_members | frozenset(entities_to_isolate)
+        all_members = frozenset(self._group.climate_entity_ids)
+        return all_members.issubset(new_set)
 
     async def async_setup(self) -> None:
         """Subscribe to the configured trigger."""
@@ -208,16 +217,18 @@ class MemberIsolationHandler:
             _LOGGER.debug("[%s] Scheduling isolation %s in %.1fs", self._group.entity_id, "activation" if activate else "restore", delay)
             self._pending_timer = async_call_later(self._hass, delay, self._timer_expired)
         else:
-            self._hass.async_create_task(
-                self._activate_isolation() if activate else self._deactivate_isolation()
+            self._hass.async_create_background_task(
+                self._activate_isolation() if activate else self._deactivate_isolation(),
+                name="climate_group_isolation_trigger",
             )
 
     @callback
     def _timer_expired(self, _now: Any) -> None:
         """Timer callback — activate or deactivate based on current trigger state."""
         self._pending_timer = None
-        self._hass.async_create_task(
-            self._activate_isolation() if self._trigger_active else self._deactivate_isolation()
+        self._hass.async_create_background_task(
+            self._activate_isolation() if self._trigger_active else self._deactivate_isolation(),
+            name="climate_group_isolation_timer_expired",
         )
 
     def _cancel_timer(self) -> None:
@@ -226,6 +237,37 @@ class MemberIsolationHandler:
             self._pending_timer()
             self._pending_timer = None
             _LOGGER.debug("[%s] Isolation timer cancelled", self._group.entity_id)
+
+    def _get_call_handler(self, entity_id: str) -> IsolationCallHandler | None:
+        """Return the isolation call handler for a member, creating it on demand.
+
+        async_setup() pre-creates handlers for the configured entity list, but a
+        MEMBER_OFF rule with an EMPTY list means "watch every member" — that path
+        would otherwise find no handler and silently skip the restore call,
+        leaving the device physically off after the release.
+
+        Only members of this group are served; anything else returns None.
+        """
+        if entity_id not in self._group.climate_entity_ids:
+            return None
+        if entity_id not in self._call_handlers:
+            self._call_handlers[entity_id] = IsolationCallHandler(self._group, entity_id)
+        return self._call_handlers[entity_id]
+
+    def _foreign_claims(self) -> frozenset[str]:
+        """Return entities claimed by another currently-active isolation rule.
+
+        Two rules may cover the same entity; when only one of them releases it, the
+        other rule's claim must survive — both in the isolated_members bookkeeping
+        and in the restore calls (a full target-state restore would physically undo
+        the other rule's protection).
+        """
+        return frozenset(
+            eid
+            for other in self._group.member_isolation_handlers
+            if other is not self and other._trigger_active
+            for eid in other._isolation_entity_ids
+        )
 
     def _build_isolation_payload(self, entity_id: str) -> dict | None:
         """Return the service call payload for the isolation pre-action.
@@ -318,7 +360,21 @@ class MemberIsolationHandler:
             _LOGGER.debug("[%s] Stale isolation activation skipped (trigger no longer active)", self._group.entity_id)
             return
 
-        new_isolated = self._group.run_state.isolated_members | frozenset(self._isolation_entity_ids)
+        if self.would_fully_isolate(self._isolation_entity_ids):
+            _LOGGER.warning(
+                "[%s] Isolation skipped for %s: would isolate all members in group",
+                self._group.entity_id, self._isolation_entity_ids,
+            )
+            return
+
+        # Entities another rule already isolated carry that rule's action
+        # preset, not the user's original — there is nothing left to snapshot
+        # for them (the shared entry from the first isolation already holds the
+        # only correct value). Captured before the own entities join
+        # isolated_members.
+        already_isolated = self._group.run_state.isolated_members
+
+        new_isolated = already_isolated | frozenset(self._isolation_entity_ids)
         self._group.run_state = replace(
             self._group.run_state,
             isolated_members=new_isolated,
@@ -332,7 +388,10 @@ class MemberIsolationHandler:
             if handler := self._call_handlers.get(entity_id):
                 # Capture the pre-action preset BEFORE sending the pre-action —
                 # only preset_mode changes need a device-side restore point.
-                if self._action_type == IsolationActionType.PRESET_MODE:
+                if (
+                    self._action_type == IsolationActionType.PRESET_MODE
+                    and entity_id not in already_isolated
+                ):
                     self._pre_action_presets[entity_id] = self._read_current_preset(entity_id)
                 payload = self._build_isolation_payload(entity_id)
                 if payload:
@@ -355,12 +414,7 @@ class MemberIsolationHandler:
             _LOGGER.debug("[%s] Stale isolation deactivation skipped (trigger active again)", self._group.entity_id)
             return
 
-        still_claimed = frozenset(
-            eid
-            for other in self._group.member_isolation_handlers
-            if other is not self and other._trigger_active
-            for eid in other._isolation_entity_ids
-        )
+        still_claimed = self._foreign_claims()
         new_isolated = self._group.run_state.isolated_members - (
             frozenset(self._isolation_entity_ids) - still_claimed
         )
@@ -384,14 +438,17 @@ class MemberIsolationHandler:
         # active block (OFF/temperature); when the block lifts, the device already
         # carries the pre-preset and the block-restore needs to know nothing about it.
         for entity_id in self._isolation_entity_ids:
+            # Still claimed by another rule: the device stays isolated, so the
+            # snapshot must survive for whichever rule releases it last. This
+            # rule may be the one that captured it — discarding it here would
+            # leave the final release with nothing to restore.
             if entity_id in still_claimed:
-                self._pre_action_presets.pop(entity_id, None)
                 continue
             payload = self._build_restore_preset_payload(entity_id)
             if payload:
                 if restore_handler := self._restore_call_handlers.get(entity_id):
                     await restore_handler.call_immediate(payload)
-            # Entry is stale once deactivation runs — discard per device.
+            # Final release for this device — the entry is consumed.
             self._pre_action_presets.pop(entity_id, None)
 
         # Skip restore if globally blocked (e.g. window open) — Window Control
@@ -436,8 +493,18 @@ class MemberIsolationHandler:
             return
         # Transient old_state + new OFF: member came back online already OFF (e.g. after a
         # brief disconnect). Treat as a deliberate OFF — isolation should fire.
-        # Transient old_state + new active: not a deliberate user change — skip release.
-        if old_hvac_mode in (STATE_UNAVAILABLE, STATE_UNKNOWN) and new_hvac_mode != HVACMode.OFF:
+        # Transient old_state + new active: not a deliberate user change, so it must not
+        # start anything — but a member we ALREADY hold isolated is a different matter.
+        # MEMBER_OFF means "the member is off, leave it alone"; once it reports an active
+        # mode that premise is gone, no matter how it got there. Keeping it isolated would
+        # mark a physically running device as off — invisible to sync and aggregation while
+        # it heats. The release is therefore exempt from this guard; adoption of the
+        # reconnected state into target_state stays blocked in sync_mode.py.
+        if (
+            old_hvac_mode in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            and new_hvac_mode != HVACMode.OFF
+            and entity_id not in self._group.run_state.isolated_members
+        ):
             return
 
         if self._trigger != IsolationTrigger.MEMBER_OFF:
@@ -454,9 +521,14 @@ class MemberIsolationHandler:
         elif new_hvac_mode and new_hvac_mode != HVACMode.OFF:
             # Member switched to an active mode → release isolation synchronously,
             # then send restore call async.
+            # The restore call only follows an actual release — a member still
+            # claimed by another active rule must not be pushed back to target_state.
             if entity_id in self._group.run_state.isolated_members:
-                self.release_member_sync(entity_id)
-                self._hass.async_create_task(self.send_restore_call(entity_id))
+                if self.release_member_sync(entity_id):
+                    self._hass.async_create_background_task(
+                        self.send_restore_call(entity_id),
+                        name="climate_group_isolation_restore",
+                    )
 
     def isolate_member_sync(self, entity_id: str) -> None:
         """Synchronously add a member to isolated_members (MEMBER_OFF trigger).
@@ -465,57 +537,45 @@ class MemberIsolationHandler:
         task that runs immediately after sees the updated run_state and skips the
         member — preventing a send→echo→re-isolate loop.
 
-        Handles the "last active member" edge case: releases all isolated members
-        instead (group goes OFF naturally).
-
-        NOTE: This path clears isolated_members WITHOUT
-        _deactivate_isolation(), so no pre-action preset restore runs here. This
-        is deliberate: MEMBER_OFF never sends a pre-action (the member turned
-        itself off — there is nothing to restore), and pre-action presets from
-        other rules are unwound by their own rule deactivation.
+        Guarded by would_fully_isolate to prevent full group isolation.
         """
-        remaining_active = [
-            eid for eid in self._group.climate_entity_ids
-            if eid not in self._group.run_state.isolated_members
-            and eid != entity_id
-            and (s := self._hass.states.get(eid))
-            and s.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
-            and s.state != HVACMode.OFF
-        ]
-        if not remaining_active:
-            _LOGGER.debug("[%s] Last active member %s going OFF — clearing all isolated members", self._group.entity_id, entity_id)
-            self.state_manager.update(hvac_mode=HVACMode.OFF, entity_id=entity_id)
-            # Preserve entities still claimed by another currently-active rule
-            # (mirror of _deactivate_isolation's still_claimed guard). LMS must
-            # release THIS rule's own isolations, but a foreign rule (e.g. a
-            # SENSOR rule) stays active and keeps its claim — otherwise its
-            # protection is silently dropped until the rule deactivates.
-            still_claimed = frozenset(
-                eid
-                for other in self._group.member_isolation_handlers
-                if other is not self and other._trigger_active
-                for eid in other._isolation_entity_ids
+        if self.would_fully_isolate({entity_id}):
+            _LOGGER.warning(
+                "[%s] MEMBER_OFF isolation skipped for %s: would isolate all members in group",
+                self._group.entity_id, entity_id,
             )
-            self._group.run_state = replace(
-                self._group.run_state,
-                isolated_members=self._group.run_state.isolated_members & still_claimed,
-            )
-        else:
-            new_isolated = self._group.run_state.isolated_members | frozenset([entity_id])
-            self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
-            _LOGGER.debug("[%s] MEMBER_OFF: isolated %s", self._group.entity_id, entity_id)
+            return
 
-    def release_member_sync(self, entity_id: str) -> None:
+        new_isolated = self._group.run_state.isolated_members | frozenset([entity_id])
+        self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
+        _LOGGER.debug("[%s] MEMBER_OFF: isolated %s", self._group.entity_id, entity_id)
+
+    def release_member_sync(self, entity_id: str) -> bool:
         """Synchronously remove a member from isolated_members (MEMBER_OFF trigger).
 
         Called from SyncModeHandler before dispatching send_restore_call() so that
         subsequent LOCK enforcement does not skip the newly active member.
+
+        Entities still claimed by another currently-active rule are NOT released —
+        same guard as _deactivate_isolation() and the Last-Man-Standing branch.
+        Without it, a member turning itself back on would silently cancel a foreign
+        rule's protection (e.g. a SENSOR rule that deliberately holds it isolated).
+
+        Returns True when the member was actually released, so the caller can skip
+        the restore call for a member that stays isolated.
         """
         if entity_id not in self._group.run_state.isolated_members:
-            return
+            return False
+        if entity_id in self._foreign_claims():
+            _LOGGER.debug(
+                "[%s] MEMBER_OFF: release of %s skipped — still claimed by another active rule",
+                self._group.entity_id, entity_id,
+            )
+            return False
         new_isolated = self._group.run_state.isolated_members - frozenset([entity_id])
         self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
         _LOGGER.debug("[%s] MEMBER_OFF: sync-released %s", self._group.entity_id, entity_id)
+        return True
 
     async def send_restore_call(self, entity_id: str) -> None:
         """Send a restore call to a single member (MEMBER_OFF trigger).
@@ -524,7 +584,7 @@ class MemberIsolationHandler:
         """
         if self._group.run_state.blocked:
             return
-        if handler := self._call_handlers.get(entity_id):
+        if handler := self._get_call_handler(entity_id):
             await handler.call_immediate()
         self._group.async_defer_or_update_ha_state()
 

@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "U moet ten minste één klimaatapparaat selecteren."
+      "no_entities": "U moet ten minste één klimaatapparaat selecteren.",
+      "empty_name": "Voer een naam in voor de groep."
     },
     "abort": {
       "already_configured": "Deze groep is al geconfigureerd.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Aanwezigheidstrigger",
               "presence_zone": "Aanwezigheidszone",
               "presence_action": "Actie bij afwezigheid",
-              "presence_away_offset": "Afwezigheids-temperatuurverschuiving (°C)",
-              "presence_away_temperature": "Afwezigheids-temperatuur (°C)",
+              "presence_away_offset": "Afwezigheids-temperatuurverschuiving",
+              "presence_away_temperature": "Afwezigheids-temperatuur",
               "presence_away_preset": "Afwezigheids-voorinstelling",
               "presence_away_delay": "Afwezigheidsvertraging (seconden)",
               "presence_return_delay": "Terugkeervertraging (seconden)"
@@ -169,21 +170,17 @@
             "name": "Schema-automatisering",
             "description": "Koppel een schema- of kalender-entiteit om klimaatinstellingen te automatiseren. Slot-gegevens kunnen klimaatkenmerken (temperature, hvac_mode) en meta-sleutels (turn_off, sync_mode, sync_attributes) bevatten om het groepsgedrag per slot aan te passen.",
             "data": {
-              "schedule_entity": "Schema- / kalender-entiteit",
-              "schedule_bypass_entity": "Bypass-entiteit",
-              "resync_interval": "Resync Interval (minuten)",
-              "override_duration": "Override Duur (minuten)",
-              "persist_changes": "Persistente Override (Sticky)",
-              "persist_active_schedule": "Schema-overschrijving behouden",
+              "schedule_entity": "Basis schema-/agenda-entiteit",
+              "schedule_fallback_payload": "Terugvalstatus bij inactief basisschema/agenda (YAML)",
+              "schedule_bypass_entity": "Bypass schema-/agenda-entiteit",
+              "retain_service_changes_schedule": "Wijzigingen via de service behouden (Planning)",
               "ignore_off_members_schedule": "Respecteer de UIT-status van leden (Planning)"
             },
             "data_description": {
               "schedule_entity": "Selecteer een schedule.*- of calendar.*-entiteit. Voor schema-entiteiten worden slot-gegevens gelezen uit de slot-attributen. Voor kalender-entiteiten worden slot-gegevens als YAML gelezen uit het beschrijvingsveld van de gebeurtenis. Ondersteunde sleutels: klimaatkenmerken en meta-sleutels.",
+              "schedule_fallback_payload": "Neemt de plaats in van het basisschema buiten de actieve blokken, zodat sluitende 24/7-schema's niet nodig zijn. De bypass-laag werkt gewoon door en overschrijft het zolang die actief is. Zelfde YAML-formaat als hierboven (bijv. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optionele prioriteitslaag (bijv. een vakantiekalender). Wanneer actief overschrijven de slot-gegevens het basisschema. Slot-gegevens worden op dezelfde manier gelezen: attributen voor schedule.*-, YAML-beschrijving voor calendar.*-entiteiten.",
-              "resync_interval": "Dwing leden elke X minuten naar de doelstatus van de groep. Voorkomt verloop als apparaten een commando missen of handmatig worden aangepast. Stel in op 0 om uit te schakelen.",
-              "override_duration": "De duur van handmatige overrides. Na deze tijd keert de groep automatisch terug naar het schema. Stel in op 0 om de override-periode over te slaan.",
-              "persist_changes": "Worden wijzigingen in het schema zelf genegeerd zolang een handmatige override actief is. Past het huidige schema pas opnieuw toe nadat de override is verlopen.",
-              "persist_active_schedule": "Behoudt het actieve schema na een herstart wanneer gewijzigd via de service. Anders wordt het hersteld naar de standaard.",
+              "retain_service_changes_schedule": "Behoudt het basisschema, de bypass en de terugvalstatus die via de service zijn gewijzigd na een herstart. Anders worden ze hersteld naar de geconfigureerde standaardwaarden.",
               "ignore_off_members_schedule": "De Planning zal GEEN leden inschakelen die momenteel UIT staan."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Ten minste één lid moet buiten de isolatie blijven.",
       "isolation_entity_overlap": "Elk lid mag slechts in één isolatieregel voorkomen.",
       "isolation_action_preset_required": "Selecteer een vooringestelde modus voor de isolatieactie.",
+      "window_temperature_required": "Stel een raamtemperatuur in of wijzig de raamactie.",
+      "presence_action_value_required": "Stel een waarde in voor de gekozen afwezigheidsactie of wijzig de actie.",
+      "schedule_fallback_payload_invalid": "Ongeldig YAML-formaat in terugval-schema-payload. Moet een geldige sleutel-waarde-toewijzing zijn.",
       "sensor_loop_protection": "Een Climate Group Helper-entiteit kan niet worden gebruikt als externe sensor of kalibratiedoel — dit zou een feedbacklus veroorzaken."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Bypass-entiteit",
           "description": "De schedule.*- of calendar.*-entiteit die als bypass wordt gebruikt (bijv. calendar.vacation). Laat leeg of stel in op null om de geconfigureerde standaard te herstellen."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Stel schema-terugvalpayload in",
+      "description": "Stelt een terugvalpayload in of wist deze, toegepast wanneer het basisschema inactief is. Overschrijft de geconfigureerde terugvalpayload.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Terugvalpayload",
+          "description": "De klimaat-terugvalgegevens als YAML of mapping (bijv. 'temperature: 17.0\\nhvac_mode: heat'). Stel in op null of leeg om de geconfigureerde standaard te herstellen."
         }
       }
     },

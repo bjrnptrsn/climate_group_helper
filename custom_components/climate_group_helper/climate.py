@@ -68,12 +68,17 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
+    ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY,
     ATTR_ACTIVE_SCHEDULE_ENTITY,
+    ATTR_BYPASS_DELTA,
+    ATTR_FALLBACK_PAYLOAD,
     ATTR_GROUP_OFFSET,
     ATTR_INCLUDE_ENTITY_SELECTORS,
     ATTR_INCLUDE_MEMBER_LIST,
+    ATTR_ISOLATED_MEMBERS,
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_SCHEDULE_BYPASS_ENTITY,
+    ATTR_SCHEDULE_FALLBACK_PAYLOAD,
     ATTR_SCHEDULE_ENTITY,
     ATTR_SETTINGS,
     ATTR_TARGET_STATE,
@@ -98,11 +103,9 @@ from .const import (
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
-    CONF_OVERRIDE_DURATION,
-    CONF_PERSIST_ACTIVE_SCHEDULE,
+    CONF_RETAIN_SERVICE_CHANGES_SCHEDULE,
     CONF_PRESENCE_SENSOR,
     CONF_PRESENCE_ZONE,
-    CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_ROOM_SENSOR,
@@ -131,6 +134,7 @@ from .const import (
     SERVICE_BOOST,
     SERVICE_SET_SCHEDULE_BYPASS_ENTITY,
     SERVICE_SET_SCHEDULE_ENTITY,
+    SERVICE_SET_SCHEDULE_FALLBACK_PAYLOAD,
     AdoptManualChanges,
     AverageOption,
     FeatureStrategy,
@@ -150,7 +154,7 @@ from .override import (
 )
 from .presence import PresenceHandler, PresenceOverrideManager
 from .member_template import MemberTemplateManager
-from .schedule import ScheduleCaller, ScheduleHandler, ScheduleBypassHandler
+from .schedule import ScheduleHandler, ScheduleBypassHandler, normalize_yaml_bool_modes
 from .service_call import (
     ClimateCallHandler,
     OverrideCallHandler,
@@ -169,11 +173,9 @@ from .state import (
     RunState,
     TargetState,
     ClimateStateManager,
-    IsolationStateManager,
     ScheduleStateManager,
     SyncModeStateManager,
     WindowControlStateManager,
-    BoostStateManager,
 )
 from .sync_mode import SyncModeHandler
 from .window_control import WindowControlHandler
@@ -360,7 +362,10 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.calibration_handler = CalibrationHandler(self)
 
         # State variables
+        # states: drives the group's *current state* — excludes isolated members.
+        # capability_states: drives what the group *can do* — includes them.
         self.states: list[State] = []
+        self.capability_states: list[State] = []
         self.shared_target_state = TargetState()
         self.current_group_state = CurrentState()
         self.change_state: ChangeState | None = None
@@ -374,8 +379,6 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # State managers
         self.climate_state_manager = ClimateStateManager(self)
-        self.boost_state_manager = BoostStateManager(self)
-        self.isolation_state_manager = IsolationStateManager(self)
         self.schedule_state_manager = ScheduleStateManager(self)
         self.sync_mode_state_manager = SyncModeStateManager(self)
         self.window_control_state_manager = WindowControlStateManager(self)
@@ -408,6 +411,13 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             isolation_rule_count = max(1, int(self.config.get(CONF_ISOLATION_RULES_COUNT, len(isolation_rules))))
         except (TypeError, ValueError):
             isolation_rule_count = len(isolation_rules)
+        # Preset each device carried before the FIRST isolation rule touched it
+        # (PRESET_MODE pre-action only). Owned by the group, not by a rule: a
+        # device has exactly one original preset, while several rules may cover
+        # it — every rule after the first only ever sees a pre-action value.
+        # Written by the rule that isolates a free device, consumed by the rule
+        # that performs the final release. See isolation.py.
+        self.isolation_pre_action_presets: dict[str, str | None] = {}
         self.member_isolation_handlers: list[MemberIsolationHandler] = (
             [
                 MemberIsolationHandler(self, rule)
@@ -419,8 +429,6 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.presence_handler = PresenceHandler(self)
         self.presence_override_manager = PresenceOverrideManager(self)
         self.slot_transition_lock = asyncio.Lock()
-        self.schedule_timer: Callable[[], None] | None = None
-        self.schedule_timer_type: str | None = None
         self.schedule_handler = ScheduleHandler(self)
         self.schedule_bypass_handler = ScheduleBypassHandler(self)
         self.switch_override_manager = SwitchOverrideManager(self)
@@ -498,13 +506,32 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # permanently unavailable member (empty battery, unpaired device) would
         # leave it unset forever and block ALL sync/enforcement indefinitely.
         if self.run_state.startup_time is None:
-            self.run_state = replace(self.run_state, startup_time=time.time())
+            self.run_state = replace(self.run_state, startup_time=time.monotonic())
+
+        # Guard against the group having itself as a member (selectable in the
+        # config flow, which only filters by domain — and a group is a climate
+        # entity like any other). Self-reference makes the group aggregate its own
+        # output and command itself. Other CGH groups stay allowed: nesting a floor
+        # group out of room groups is a legitimate setup ("Climate Wars" is a
+        # separate, documented concern about two groups fighting over one device).
+        #
+        # Runs before _restore_state(): the restored full-isolation invariant check
+        # counts climate_entity_ids, so it must not see the self-reference entry.
+        if self.entity_id in self.climate_entity_ids:
+            _LOGGER.warning(
+                "[%s] Loop protection: the group is listed as its own member — ignoring. "
+                "Remove it from the member list in the integration options.",
+                self.entity_id,
+            )
+            self.climate_entity_ids = [
+                eid for eid in self.climate_entity_ids if eid != self.entity_id
+            ]
 
         # Some integrations, such as HomeKit, Google Home, and Alexa
         # require final property lists during the initialization process e.g. hvac_modes.
         # Therefore, we restore some of the last known states before registering the listeners.
         if (last_state := await self.async_get_last_state()) is not None:
-             self._restore_state(last_state)
+            self._restore_state(last_state)
 
         # Guard against feedback loops from misconfigured CGH sensors.
         # Filter sensor lists and rebuild _entity_ids so the listener never subscribes to our own sensors.
@@ -595,6 +622,11 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
                 "async_service_set_schedule_bypass_entity",
             )
             self.platform.async_register_entity_service(
+                SERVICE_SET_SCHEDULE_FALLBACK_PAYLOAD,
+                {vol.Optional(ATTR_FALLBACK_PAYLOAD): vol.Any(cv.string, dict, None)},
+                "async_service_set_schedule_fallback_payload",
+            )
+            self.platform.async_register_entity_service(
                 SERVICE_BOOST,
                 {
                     vol.Optional("temperature"): vol.Coerce(float),
@@ -623,6 +655,10 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
     async def async_service_set_schedule_bypass_entity(self, schedule_bypass_entity: str | None = None) -> None:
         """Handle set_schedule_bypass_entity service."""
         await self.schedule_bypass_handler.update_bypass_entity(schedule_bypass_entity)
+
+    async def async_service_set_schedule_fallback_payload(self, fallback_payload: Any = None) -> None:
+        """Handle set_schedule_fallback_payload service."""
+        await self.schedule_handler.update_fallback_payload(fallback_payload)
 
     async def async_service_boost(self, duration: int, temperature: float | None = None, temperature_offset: float | None = None) -> None:
         """Handle boost service call."""
@@ -667,18 +703,15 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         }
 
         # Type guard: these keys are coerced to int/float during entry setup or in
-        # timer arithmetic (climate.py retry_attempts/grace_period, schedule.py
-        # resync_interval/override_duration). A bad value (e.g. a string) would only
-        # surface as a crash later — on reload or when the timer next fires — instead
-        # of being rejected here where the user can see it.
+        # retry/debounce arithmetic. A bad value (e.g. a string) would only surface
+        # as a crash later — on reload or when the value is next used — instead of
+        # being rejected here where the user can see it.
         numeric_keys = {
             CONF_RETRY_ATTEMPTS: int,
             CONF_RETRY_DELAY: float,
             CONF_GRACE_PERIOD: float,
             CONF_DEBOUNCE_DELAY: float,
             CONF_STAGGERED_CALL_DELAY: float,
-            CONF_RESYNC_INTERVAL: int,
-            CONF_OVERRIDE_DURATION: int,
         }
         for key, caster in numeric_keys.items():
             if key not in filtered:
@@ -805,17 +838,48 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if ATTR_TARGET_HUMIDITY_STEP in last_attrs:
             self._attr_target_humidity_step = last_attrs.get(ATTR_TARGET_HUMIDITY_STEP)
 
-        # Restore persisted active schedule entity
-        if (
-            self.config.get(CONF_PERSIST_ACTIVE_SCHEDULE)
-            and (restored_schedule := last_attrs.get(ATTR_ACTIVE_SCHEDULE_ENTITY))
-        ):
-            self.schedule_handler._schedule_entity = restored_schedule
-            _LOGGER.debug("[%s] Restored active schedule entity: %s", self.entity_id, restored_schedule)
+        # Restore schedule changes made via service (base entity, bypass entity,
+        # fallback payload). All three are governed by the same flag — without it
+        # the group falls back to its configured defaults after a restart.
+        if self.config.get(CONF_RETAIN_SERVICE_CHANGES_SCHEDULE):
+            if restored_schedule := last_attrs.get(ATTR_ACTIVE_SCHEDULE_ENTITY):
+                self.schedule_handler.restore_schedule_entity(restored_schedule)
+                _LOGGER.debug("[%s] Restored active schedule entity: %s", self.entity_id, restored_schedule)
+
+            if restored_bypass := last_attrs.get(ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY):
+                self.schedule_bypass_handler.restore_bypass_entity(restored_bypass)
+                _LOGGER.debug("[%s] Restored active bypass entity: %s", self.entity_id, restored_bypass)
+
+            if (
+                (restored_fallback := last_attrs.get(ATTR_SCHEDULE_FALLBACK_PAYLOAD)) is not None
+                and isinstance(restored_fallback, dict)
+            ):
+                # Re-normalize in case the persisted attribute predates the YAML on/off-as-boolean fix.
+                restored_fallback = normalize_yaml_bool_modes(restored_fallback)
+                if restored_fallback != self.schedule_handler.config_fallback_payload:
+                    self.schedule_handler.restore_fallback_payload(restored_fallback)
+                    _LOGGER.debug("[%s] Restored schedule fallback payload override: %s", self.entity_id, restored_fallback)
 
         # Restore last active HVAC mode
         if (last_active := last_attrs.get(ATTR_LAST_ACTIVE_HVAC_MODE)) is not None:
             self.run_state = replace(self.run_state, last_active_hvac_mode=last_active)
+
+        # Restore bypass delta
+        if (saved_delta := last_attrs.get(ATTR_BYPASS_DELTA)) and isinstance(saved_delta, dict):
+            delta_map = {}
+            for k, v in saved_delta.items():
+                if isinstance(v, (list, tuple)) and len(v) == 2:
+                    delta_map[k] = (v[0], v[1])
+            if delta_map:
+                self.run_state = self.run_state.set_bypass_delta(delta_map)
+                _LOGGER.debug("[%s] Restored bypass delta: %s", self.entity_id, delta_map)
+
+        # Restore isolated members (with defensive full-isolation invariant check)
+        if (saved_isolated := last_attrs.get(ATTR_ISOLATED_MEMBERS)) and isinstance(saved_isolated, (list, set, tuple)):
+            valid_isolated = set(saved_isolated) & set(self.climate_entity_ids)
+            if len(valid_isolated) < len(self.climate_entity_ids):
+                self.run_state = replace(self.run_state, isolated_members=frozenset(valid_isolated))
+                _LOGGER.debug("[%s] Restored isolated members: %s", self.entity_id, valid_isolated)
 
     def _reduce_attributes(self, attributes: list[Any], default: Any = None) -> list[Any] | int:
         """Reduce a list of attributes (modes or features) based on the feature strategy."""
@@ -1018,15 +1082,22 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         old_wrapped = manager.apply_state(entity_id, old_state) if old_state else None
         return new_wrapped, old_wrapped
 
-    def _get_valid_member_states(self, entity_ids: list[str]) -> tuple[list[State], bool]:
+    def _get_valid_member_states(
+        self, entity_ids: list[str], skip_isolated: bool = True
+    ) -> tuple[list[State], bool]:
         """Get valid states for provided entities.
 
         Excludes isolated members (e.g. curtain closed) from all calculations.
+
+        `skip_isolated=False` keeps them in — used for capability aggregation
+        (see `capability_states`): isolation says "don't touch this device right
+        now", it does not change what the device can do.
+
         Returns:
             Tuple of (valid_states, all_ready) where all_ready is True when
             all entity_ids have a valid (not unavailable/unknown) state.
         """
-        excluded = self.run_state.isolated_members
+        excluded = self.run_state.isolated_members if skip_isolated else frozenset()
         expected_entity_ids = [entity_id for entity_id in entity_ids if entity_id not in excluded]
 
         all_states = [
@@ -1117,6 +1188,13 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Check if there are any valid states
         self.states, all_members_ready = self._get_valid_member_states(self.climate_entity_ids)
+        # Capability aggregation keeps isolated members: what a device *can* do
+        # does not change while it is isolated. Without this, isolating the only
+        # member that supports a mode/feature removes it from the group — and an
+        # HVAC_MODE rule would strip the very mode needed to release it.
+        self.capability_states, _ = self._get_valid_member_states(
+            self.climate_entity_ids, skip_isolated=False
+        )
 
         # One-time startup trigger once all members are ready: startup resync +
         # calibration force-sync. startup_time itself is armed in
@@ -1126,8 +1204,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             self._startup_initialized = True
             if self.advanced_mode:
                 self.hass.async_create_background_task(
-                    self.schedule_handler.schedule_listener(caller=ScheduleCaller.RESYNC),
-                    name="climate_group_startup_resync"
+                    self.schedule_handler.on_slot_change(),
+                    name="climate_group_startup_slot"
                 )
                 self.calibration_handler.update("temperature", force_sync=True)
                 self.calibration_handler.update("humidity", force_sync=True)
@@ -1137,6 +1215,12 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if not self.states:
             self._attr_hvac_mode = None
             self._attr_available = False
+            # Same cleanup as the regular path below: an event must not survive a
+            # completed update cycle, or the next event-less caller (boost,
+            # isolation, group offset, schedule, ...) re-enters and re-processes it.
+            self.change_state = None
+            self.event = None
+            self._event_entity_id = None
             return
 
         # Load master entity state
@@ -1188,7 +1272,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
                     self._trigger_template_changeover()
 
         # All available HVAC modes --> list of HVACMode (str), e.g. [<HVACMode.OFF: 'off'>, <HVACMode.HEAT: 'heat'>, <HVACMode.AUTO: 'auto'>, ...]
-        hvac_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_HVAC_MODES)))
+        hvac_modes = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_HVAC_MODES)))
         hvac_modes_list = hvac_modes if isinstance(hvac_modes, list) else []
         template_member_ids = self.member_template_manager.update_members()
         if template_member_ids and HVACMode.HEAT_COOL not in hvac_modes_list:
@@ -1287,8 +1371,9 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         """Calculate and set all temperature-related attributes.
 
         temp_states excludes OFF members when CONF_IGNORE_OFF_MEMBERS_TEMPERATURE is set.
-        min_temp, max_temp, and temp_step always use self.states — device capability limits
-        must reflect the full group regardless of which members are currently active.
+        min_temp, max_temp, and temp_step use capability_states — device limits must
+        reflect the full group regardless of which members are currently active or
+        isolated.
         """
         temp_states = (
             [
@@ -1334,15 +1419,15 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
                 setattr(self, attr, self.mean_round(val, self._temp_round))
 
         # Temperature limits and step
-        self._attr_target_temperature_step = reduce_attribute(self.states, ATTR_TARGET_TEMP_STEP, reduce=max)
+        self._attr_target_temperature_step = reduce_attribute(self.capability_states, ATTR_TARGET_TEMP_STEP, reduce=max)
         if self._feature_strategy == FeatureStrategy.UNION:
             # Union: widest range — lowest min, highest max
-            self._attr_min_temp = reduce_attribute(self.states, ATTR_MIN_TEMP, reduce=min, default=DEFAULT_MIN_TEMP)
-            self._attr_max_temp = reduce_attribute(self.states, ATTR_MAX_TEMP, reduce=max, default=DEFAULT_MAX_TEMP)
+            self._attr_min_temp = reduce_attribute(self.capability_states, ATTR_MIN_TEMP, reduce=min, default=DEFAULT_MIN_TEMP)
+            self._attr_max_temp = reduce_attribute(self.capability_states, ATTR_MAX_TEMP, reduce=max, default=DEFAULT_MAX_TEMP)
         else:
             # Intersection (default): narrowest range — highest min, lowest max
-            self._attr_min_temp = reduce_attribute(self.states, ATTR_MIN_TEMP, reduce=max, default=DEFAULT_MIN_TEMP)
-            self._attr_max_temp = reduce_attribute(self.states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
+            self._attr_min_temp = reduce_attribute(self.capability_states, ATTR_MIN_TEMP, reduce=max, default=DEFAULT_MIN_TEMP)
+            self._attr_max_temp = reduce_attribute(self.capability_states, ATTR_MAX_TEMP, reduce=min, default=DEFAULT_MAX_TEMP)
 
     def _update_humidity_attributes(self) -> None:
         """Calculate and set all humidity-related attributes."""
@@ -1369,34 +1454,34 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             self._attr_target_humidity = self.mean_round(self._attr_target_humidity, self._humidity_round)
 
         # Humidity limits and step
-        self._attr_min_humidity = reduce_attribute(self.states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY)
-        self._attr_max_humidity = reduce_attribute(self.states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
-        self._attr_target_humidity_step = reduce_attribute(self.states, ATTR_TARGET_HUMIDITY_STEP, reduce=max)
+        self._attr_min_humidity = reduce_attribute(self.capability_states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY)
+        self._attr_max_humidity = reduce_attribute(self.capability_states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY)
+        self._attr_target_humidity_step = reduce_attribute(self.capability_states, ATTR_TARGET_HUMIDITY_STEP, reduce=max)
 
     def _update_mode_attributes(self) -> None:
         """Calculate and set fan, preset, swing modes and supported features."""
-        fan_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_FAN_MODES)))
+        fan_modes = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_FAN_MODES)))
         self._attr_fan_modes = sorted(fan_modes) if isinstance(fan_modes, list) else []
         val = self._get_optimistic_value("fan_mode")
         self._attr_fan_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_FAN_MODE)
 
-        preset_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_PRESET_MODES)))
+        preset_modes = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_PRESET_MODES)))
         self._attr_preset_modes = sorted(preset_modes) if isinstance(preset_modes, list) else []
         val = self._get_optimistic_value("preset_mode")
         self._attr_preset_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_PRESET_MODE)
 
-        swing_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_MODES)))
+        swing_modes = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_SWING_MODES)))
         self._attr_swing_modes = sorted(swing_modes) if isinstance(swing_modes, list) else []
         val = self._get_optimistic_value("swing_mode")
         self._attr_swing_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_SWING_MODE)
 
-        swing_horizontal_modes = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SWING_HORIZONTAL_MODES)))
+        swing_horizontal_modes = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_SWING_HORIZONTAL_MODES)))
         self._attr_swing_horizontal_modes = sorted(swing_horizontal_modes) if isinstance(swing_horizontal_modes, list) else []
         val = self._get_optimistic_value("swing_horizontal_mode")
         self._attr_swing_horizontal_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_SWING_HORIZONTAL_MODE)
 
         # Supported features
-        attr_supported_features = self._reduce_attributes(list(find_state_attributes(self.states, ATTR_SUPPORTED_FEATURES)), default=0)
+        attr_supported_features = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_SUPPORTED_FEATURES)), default=0)
         features = attr_supported_features if isinstance(attr_supported_features, int) else 0
         range_template = self.member_template_manager.range_template
         if range_template is not None and range_template.entity_ids:

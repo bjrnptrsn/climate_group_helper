@@ -200,7 +200,7 @@ class MemberTemplateManager:
 
         low, high = self.resolve_range()
         if low is None or high is None:
-            expected_mode = state.state
+            expected_mode: str | None = state.state
             expected_temp = state.attributes.get(ATTR_TEMPERATURE)
             return RangeTemplateState(state, None, None, expected_mode, expected_temp)
 
@@ -237,6 +237,10 @@ class MemberTemplateManager:
     ) -> tuple[str | None, float | None]:
         """Compute the expected physical (mode, setpoint) for one member."""
         template = self._range_template
+        if template is None:
+            # Every current caller guards on an active template; this keeps the
+            # contract honest for future ones instead of raising on attribute access.
+            return None, None
         deadband = None if template.deadband_action == RangeTemplateDeadbandAction.NONE else template.deadband_action
 
         if current_temp is None:

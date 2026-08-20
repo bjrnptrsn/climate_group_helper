@@ -34,6 +34,21 @@ set_schedule_bypass_entity:
             - domain: calendar
       required: false
 
+set_schedule_fallback_payload:
+  name: Set Schedule Fallback Payload
+  description: Sets or clears a runtime fallback payload applied when the basis schedule is off. Overrides the configured fallback payload.
+  target:
+    entity:
+      integration: climate_group_helper
+      domain: climate
+  fields:
+    fallback_payload:
+      name: Fallback Payload
+      description: "The fallback climate payload as YAML or mapping (e.g. 'temperature: 17.0\\nhvac_mode: heat'). Set to null or empty to restore the configured default."
+      selector:
+        object:
+      required: false
+
 boost:
   name: Boost
   description: Temporarily sets the group to a target temperature for a specified duration, then restores the previous state. Specify either an absolute temperature or a relative offset.

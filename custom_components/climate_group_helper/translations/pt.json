@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "Você deve selecionar pelo menos um dispositivo climático."
+      "no_entities": "Você deve selecionar pelo menos um dispositivo climático.",
+      "empty_name": "Introduza um nome para o grupo."
     },
     "abort": {
       "already_configured": "Este grupo já está configurado.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Ativador de presença",
               "presence_zone": "Zona de presença",
               "presence_action": "Ação em ausência",
-              "presence_away_offset": "Desvio de temperatura na ausência (°C)",
-              "presence_away_temperature": "Temperatura na ausência (°C)",
+              "presence_away_offset": "Desvio de temperatura na ausência",
+              "presence_away_temperature": "Temperatura na ausência",
               "presence_away_preset": "Predefinição na ausência",
               "presence_away_delay": "Atraso de ausência (segundos)",
               "presence_return_delay": "Atraso de regresso (segundos)"
@@ -169,21 +170,17 @@
             "name": "Automação de agendamento",
             "description": "Ligue uma entidade de agendamento ou calendário para automatizar as definições climáticas. Os dados do slot podem incluir atributos climáticos (temperature, hvac_mode) e meta-keys (turn_off, sync_mode, sync_attributes) para ajustar o comportamento do grupo por slot.",
             "data": {
-              "schedule_entity": "Entidade de agendamento / calendário",
-              "schedule_bypass_entity": "Entidade de bypass",
-              "resync_interval": "Intervalo de Resync (minutos)",
-              "override_duration": "Duração do Override (minutos)",
-              "persist_changes": "Override Persistente (Sticky)",
-              "persist_active_schedule": "Manter anulação de agendamento",
+              "schedule_entity": "Entidade de agenda/calendário base",
+              "schedule_fallback_payload": "Estado de reserva para agenda base/calendário inativo (YAML)",
+              "schedule_bypass_entity": "Entidade de agenda/calendário de substituição",
+              "retain_service_changes_schedule": "Manter alterações feitas via serviço (Agendamento)",
               "ignore_off_members_schedule": "Respeitar estado Off dos membros (Agendamento)"
             },
             "data_description": {
               "schedule_entity": "Selecione uma entidade schedule.* ou calendar.*. Para entidades de agendamento, os dados do slot são lidos dos atributos do slot. Para entidades de calendário, os dados do slot são lidos como YAML do campo de descrição do evento. Chaves suportadas: atributos climáticos e meta-keys.",
+              "schedule_fallback_payload": "Substitui a agenda base fora dos seus blocos ativos, dispensando agendas contínuas 24/7. A camada de derivação continua a funcionar normalmente e sobrepõe-se enquanto estiver ativa. Mesmo formato YAML acima (por ex. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Camada de prioridade opcional (ex. um calendário de férias). Quando ativa, os seus dados de slot substituem o agendamento principal. Os dados do slot são lidos da mesma forma: atributos para entidades schedule.*, descrição YAML para entidades calendar.*.",
-              "resync_interval": "Sincroniza forçadamente os membros com o estado alvo a cada X minutos. Evita desvios se os dispositivos perderem um comando ou forem ajustados manualmente. Definir como 0 para desativar.",
-              "override_duration": "A duração dos overrides manuais. Após este tempo, o grupo regressa automaticamente à agenda atual. Definir como 0 para saltar o período de override.",
-              "persist_changes": "As alterações na agenda serão ignoradas enquanto um override manual estiver ativo. Reaplica a agenda atual apenas após a expiração do override.",
-              "persist_active_schedule": "Mantém o agendamento ativo após um reinício quando alterado via serviço. Caso contrário, reverte para o padrão configurado.",
+              "retain_service_changes_schedule": "Mantém a agenda base, a derivação e o estado de reserva alterados via serviço após um reinício. Caso contrário, revertem para os valores predefinidos configurados.",
               "ignore_off_members_schedule": "O Agendamento NÃO ligará os membros que estão atualmente DESLIGADOS."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Pelo menos um membro deve permanecer fora do isolamento.",
       "isolation_entity_overlap": "Cada membro só pode aparecer numa regra de isolamento.",
       "isolation_action_preset_required": "Selecione um modo pré-definido para a ação de isolamento.",
+      "window_temperature_required": "Defina uma temperatura de janela ou altere a ação de janela.",
+      "presence_action_value_required": "Defina um valor para a ação de ausência selecionada ou altere a ação.",
+      "schedule_fallback_payload_invalid": "Formato YAML inválido nos dados de reserva do horário. Deve ser um mapeamento chave-valor válido.",
       "sensor_loop_protection": "Não é possível usar uma entidade Climate Group Helper como sensor externo ou alvo de calibração — isso criaria um ciclo de retroalimentação."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Entidade de bypass",
           "description": "A entidade schedule.* ou calendar.* a usar como bypass (ex. calendar.vacation). Defina como null ou vazio para restaurar o valor predefinido configurado."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Definir dados de reserva da agenda",
+      "description": "Define ou limpa dados de reserva aplicados quando a agenda base está inativa. Substitui os dados de reserva configurados.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Dados de reserva",
+          "description": "Os dados climáticos de reserva como YAML ou mapeamento (ex. 'temperature: 17.0\\nhvac_mode: heat'). Defina como null ou vazio para restaurar o padrão configurado."
         }
       }
     },

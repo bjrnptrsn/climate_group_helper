@@ -7,20 +7,20 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.climate import HVACMode
 from homeassistant.util import dt as dt_util
 from homeassistant.const import (
-    ATTR_ENTITY_ID,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
 
 from .const import (
     ATTR_ACTIVE_MEMBER_COUNT,
-    ATTR_ACTIVE_OVERRIDE,
-    ATTR_ACTIVE_OVERRIDE_END,
+    ATTR_BOOST_TEMPERATURE,
+    ATTR_BOOST_UNTIL,
     ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY,
     ATTR_ACTIVE_SCHEDULE_ENTITY,
     ATTR_ACTIVE_SCHEDULE_SLOT_TITLE,
     ATTR_ASSUMED_STATE,
     ATTR_BLOCKING_SOURCES,
+    ATTR_BYPASS_DELTA,
     ATTR_CONFIG_OVERRIDES,
     ATTR_CURRENT_HVAC_MODES,
     ATTR_EFFECTIVE_SYNC_ATTRIBUTES,
@@ -34,8 +34,11 @@ from .const import (
     ATTR_LAST_ENTITY,
     ATTR_LAST_SOURCE,
     ATTR_MASTER_FALLBACK_ACTIVE,
+    ATTR_MEMBER_ENTITIES,
     ATTR_OOB_MEMBERS,
     ATTR_PRESENCE_FALLBACK,
+    ATTR_SCHEDULE_FALLBACK_PAYLOAD,
+    ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE,
     ATTR_TARGET_STATE,
     ATTR_TOTAL_MEMBER_COUNT,
     CONF_PRESENCE_MODE,
@@ -79,13 +82,14 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         attrs[ATTR_LAST_ENTITY] = target.last_entity
 
     # --- Member statistics ---
-    if group.states:
-        active = sum(
-            1 for s in group.states
-            if s.state not in (HVACMode.OFF, STATE_UNAVAILABLE, STATE_UNKNOWN)
-        )
-        attrs[ATTR_ACTIVE_MEMBER_COUNT] = active
-        attrs[ATTR_TOTAL_MEMBER_COUNT] = len(group.climate_entity_ids)
+    # Both counts are always emitted: the total is derived from the configured
+    # member list, not from live states, and an all-members-unavailable group is
+    # exactly the situation where a dashboard needs to show "0 of N active".
+    attrs[ATTR_ACTIVE_MEMBER_COUNT] = sum(
+        1 for s in (group.states or ())
+        if s.state not in (HVACMode.OFF, STATE_UNAVAILABLE, STATE_UNKNOWN)
+    )
+    attrs[ATTR_TOTAL_MEMBER_COUNT] = len(group.climate_entity_ids)
 
     # --- Blocking sources ---
     if run_state.blocking_sources:
@@ -116,7 +120,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
 
     # --- Expose member entity IDs ---
     if group._expose_member_entities:
-        attrs[ATTR_ENTITY_ID] = group.climate_entity_ids
+        attrs[ATTR_MEMBER_ENTITIES] = group.climate_entity_ids
 
     # Configured features — always emitted (even as []) so the card knows the
     # attribute exists and can distinguish "not configured" from "not yet received".
@@ -154,15 +158,23 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # Schedule entities
     if group.schedule_handler.schedule_entity_id:
         attrs[ATTR_ACTIVE_SCHEDULE_ENTITY] = group.schedule_handler.schedule_entity_id
+        if group.schedule_handler.active_layer == "fallback":
+            attrs[ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE] = True
+    if group.schedule_handler.fallback_payload:
+        attrs[ATTR_SCHEDULE_FALLBACK_PAYLOAD] = dict(group.schedule_handler.fallback_payload)
     if group.schedule_bypass_handler.bypass_entity_id:
         attrs[ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY] = group.schedule_bypass_handler.bypass_entity_id
     if run_state.active_slot_title:
         attrs[ATTR_ACTIVE_SCHEDULE_SLOT_TITLE] = run_state.active_slot_title
 
-    # Active override (boost / schedule_override)
-    if run_state.active_override:
-        attrs[ATTR_ACTIVE_OVERRIDE] = run_state.active_override
-    if run_state.active_override_end:
-        attrs[ATTR_ACTIVE_OVERRIDE_END] = run_state.active_override_end.isoformat()
+    # Boost attributes (temporary override)
+    if run_state.boost_temperature is not None:
+        attrs[ATTR_BOOST_TEMPERATURE] = run_state.boost_temperature
+    if run_state.boost_until is not None:
+        attrs[ATTR_BOOST_UNTIL] = run_state.boost_until.isoformat()
+
+    # Persisted bypass delta (for restore)
+    if run_state.bypass_delta:
+        attrs[ATTR_BYPASS_DELTA] = {k: list(v) for k, v in run_state.bypass_delta.items()}
 
     return attrs

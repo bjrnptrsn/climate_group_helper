@@ -1,6 +1,7 @@
 """Config flow for Climate Group Helper integration."""
 
 from __future__ import annotations
+import yaml  # type: ignore[import-untyped]
 from typing import Any
 
 import voluptuous as vol
@@ -23,7 +24,9 @@ from homeassistant.const import (
     CONF_NAME,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
+    UnitOfTemperature,
 )
+from homeassistant.util.unit_conversion import TemperatureConverter
 from homeassistant.core import callback
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.data_entry_flow import section
@@ -67,9 +70,7 @@ from .const import (
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
-    CONF_OVERRIDE_DURATION,
-    CONF_PERSIST_ACTIVE_SCHEDULE,
-    CONF_PERSIST_CHANGES,
+    CONF_RETAIN_SERVICE_CHANGES_SCHEDULE,
     CONF_PRESENCE_ACTION,
     CONF_PRESENCE_AWAY_DELAY,
     CONF_PRESENCE_AWAY_OFFSET,
@@ -83,12 +84,12 @@ from .const import (
     CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_COOL_ENTITIES,
     CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
-    CONF_RESYNC_INTERVAL,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
     CONF_ROOM_SENSOR,
     CONF_SCHEDULE_BYPASS_ENTITY,
+    CONF_SCHEDULE_FALLBACK_PAYLOAD,
     CONF_SCHEDULE_ENTITY,
     CONF_STAGGERED_CALL_DELAY,
     CONF_SYNC_ATTRS,
@@ -139,7 +140,7 @@ from .climate import filter_cgh_entities
 class ClimateGroupHelperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 12
+    VERSION = 13
 
     @staticmethod
     @callback
@@ -158,6 +159,10 @@ class ClimateGroupHelperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if not user_input.get(CONF_ENTITIES):
                 errors[CONF_ENTITIES] = "no_entities"
+
+            # A whitespace-only name collapses to an empty unique_id below.
+            if not user_input.get(CONF_NAME, "").strip():
+                errors[CONF_NAME] = "empty_name"
 
             if not errors:
                 await self.async_set_unique_id(
@@ -194,6 +199,9 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self._config_entry = config_entry
+        # Placeholder values only — `_update_dynamic_limits()` recomputes both
+        # in the system unit before any form is built (`self.hass` is not
+        # available yet at this point).
         self._min_temp: float = DEFAULT_MIN_TEMP
         self._max_temp: float = DEFAULT_MAX_TEMP
         self._refresh_hint_shown = False
@@ -204,10 +212,37 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             config_entry.options.get(CONF_ISOLATION_RULES_COUNT, "1")
         )
 
+    @property
+    def _temp_unit(self) -> str:
+        """Return the system temperature unit for slider labels.
+
+        A hard-coded °C mislabels every temperature slider in Fahrenheit
+        setups: the member limits below already come in system units, so the
+        scale would be °F while the label claims °C.
+        """
+        return self.hass.config.units.temperature_unit
+
+    def _default_temp_limits(self) -> tuple[float, float]:
+        """Return the HA climate defaults converted to the system unit.
+
+        `DEFAULT_MIN_TEMP`/`DEFAULT_MAX_TEMP` are Celsius constants; HA core
+        converts them the same way for entities without explicit limits.
+        """
+        unit = self._temp_unit
+        return (
+            TemperatureConverter.convert(
+                DEFAULT_MIN_TEMP, UnitOfTemperature.CELSIUS, unit
+            ),
+            TemperatureConverter.convert(
+                DEFAULT_MAX_TEMP, UnitOfTemperature.CELSIUS, unit
+            ),
+        )
+
     def _update_dynamic_limits(self) -> None:
         """Calculate dynamic temperature limits from member entities."""
-        self._min_temp = DEFAULT_MIN_TEMP
-        self._max_temp = DEFAULT_MAX_TEMP
+        default_min, default_max = self._default_temp_limits()
+        self._min_temp = default_min
+        self._max_temp = default_max
 
         # Try to get limits from member entities
         entities = self._config_entry.options.get(CONF_ENTITIES)
@@ -222,7 +257,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 # Min = Highest minimum
                 try:
                     min_temps = [
-                        float(state.attributes.get(ATTR_MIN_TEMP, DEFAULT_MIN_TEMP))
+                        float(state.attributes.get(ATTR_MIN_TEMP, default_min))
                         for state in valid_states
                     ]
                     if min_temps:
@@ -233,7 +268,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 # Max = Lowest maximum
                 try:
                     max_temps = [
-                        float(state.attributes.get(ATTR_MAX_TEMP, DEFAULT_MAX_TEMP))
+                        float(state.attributes.get(ATTR_MAX_TEMP, default_max))
                         for state in valid_states
                     ]
                     if max_temps:
@@ -275,6 +310,18 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             ]:
                 if key not in user_input or user_input.get(key) is None:
                     current_config.pop(key, None)
+
+            # Optional text fields return no key when cleared in the UI (same
+            # suggested_value pattern as the entity selectors above) — a previously
+            # stored value must be removed even when the key is absent, otherwise
+            # deleting the field is silently ignored.
+            fallback_val = user_input.get(CONF_SCHEDULE_FALLBACK_PAYLOAD)
+            if (
+                CONF_SCHEDULE_FALLBACK_PAYLOAD not in user_input
+                or not fallback_val
+                or (isinstance(fallback_val, str) and not fallback_val.strip())
+            ):
+                current_config.pop(CONF_SCHEDULE_FALLBACK_PAYLOAD, None)
 
         # Master Entity Logic
         # Explicitly check for empty/None in input to allow deletion
@@ -819,7 +866,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                                 min=self._min_temp,
                                 max=self._max_temp,
                                 step=0.5,
-                                unit_of_measurement="°C",
+                                unit_of_measurement=self._temp_unit,
                                 mode=selector.NumberSelectorMode.SLIDER,
                             )
                         ),
@@ -959,7 +1006,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                                 min=-10,
                                 max=10,
                                 step=0.5,
-                                unit_of_measurement="°C",
+                                unit_of_measurement=self._temp_unit,
                                 mode=selector.NumberSelectorMode.SLIDER,
                             )
                         ),
@@ -975,7 +1022,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                                 min=self._min_temp,
                                 max=self._max_temp,
                                 step=0.5,
-                                unit_of_measurement="°C",
+                                unit_of_measurement=self._temp_unit,
                                 mode=selector.NumberSelectorMode.SLIDER,
                             )
                         ),
@@ -1038,6 +1085,16 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                             )
                         ),
                         vol.Optional(
+                            CONF_SCHEDULE_FALLBACK_PAYLOAD,
+                            description={
+                                "suggested_value": config.get(
+                                    CONF_SCHEDULE_FALLBACK_PAYLOAD, ""
+                                )
+                            },
+                        ): selector.TextSelector(
+                            selector.TextSelectorConfig(multiline=True)
+                        ),
+                        vol.Optional(
                             CONF_SCHEDULE_BYPASS_ENTITY,
                             description={
                                 "suggested_value": config.get(
@@ -1050,36 +1107,8 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                             )
                         ),
                         vol.Optional(
-                            CONF_RESYNC_INTERVAL,
-                            default=config.get(CONF_RESYNC_INTERVAL, 0),
-                        ): selector.NumberSelector(
-                            selector.NumberSelectorConfig(
-                                min=0,
-                                max=120,
-                                step=1,
-                                unit_of_measurement="min",
-                                mode=selector.NumberSelectorMode.SLIDER,
-                            )
-                        ),
-                        vol.Optional(
-                            CONF_OVERRIDE_DURATION,
-                            default=config.get(CONF_OVERRIDE_DURATION, 0),
-                        ): selector.NumberSelector(
-                            selector.NumberSelectorConfig(
-                                min=0,
-                                max=120,
-                                step=1,
-                                unit_of_measurement="min",
-                                mode=selector.NumberSelectorMode.SLIDER,
-                            )
-                        ),
-                        vol.Optional(
-                            CONF_PERSIST_CHANGES,
-                            default=config.get(CONF_PERSIST_CHANGES, False),
-                        ): selector.BooleanSelector(),
-                        vol.Optional(
-                            CONF_PERSIST_ACTIVE_SCHEDULE,
-                            default=config.get(CONF_PERSIST_ACTIVE_SCHEDULE, False),
+                            CONF_RETAIN_SERVICE_CHANGES_SCHEDULE,
+                            default=config.get(CONF_RETAIN_SERVICE_CHANGES_SCHEDULE, False),
                         ): selector.BooleanSelector(),
                         vol.Optional(
                             CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
@@ -1136,7 +1165,6 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         i: int,
         slot: dict[str, Any],
         members: list[str],
-        seen: set[str],
         hvac_mode_options: list[str],
         member_options: list[dict[str, Any]],
         preset_options: list[str],
@@ -1144,7 +1172,18 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         """Return the voluptuous fields for one isolation rule slot (i=1..4)."""
         slot_trigger = slot.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
         slot_entities = [e for e in slot.get(CONF_ISOLATION_ENTITIES, []) if e in members]
-        slot_hvac_modes = [m for m in slot.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, []) if m in seen]
+        # The saved configuration is the truth, not the current device states: a
+        # member that is offline while the form renders advertises no hvac_modes,
+        # so filtering the default against the live modes would silently drop the
+        # configured mode — including when only one member advertises it. The
+        # rule would then be saved back with a shortened mode list — or dropped
+        # entirely once the list runs empty — without the user ever noticing.
+        # Configured modes are therefore kept and, if missing, appended to the
+        # options (a default outside `options` is rejected by the selector).
+        slot_hvac_modes = list(slot.get(CONF_ISOLATION_TRIGGER_HVAC_MODES, []))
+        missing_modes = [m for m in slot_hvac_modes if m not in hvac_mode_options]
+        if missing_modes:
+            hvac_mode_options = hvac_mode_options + missing_modes
         slot_sensor = slot.get(CONF_ISOLATION_SENSOR)
         slot_activate_delay = slot.get(CONF_ISOLATION_ACTIVATE_DELAY, 0)
         slot_restore_delay = slot.get(CONF_ISOLATION_RESTORE_DELAY, 0)
@@ -1286,7 +1325,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         collapsed = not config.get(CONF_EXPAND_SECTIONS)
 
         # Rule 1 is embedded directly in the isolation_section
-        rule_1_fields = self._isolation_rule_schema(1, slots[0], members, seen, hvac_mode_options, member_options, preset_options)
+        rule_1_fields = self._isolation_rule_schema(1, slots[0], members, hvac_mode_options, member_options, preset_options)
         isolation_section_fields: dict[Any, Any] = {
             vol.Required(CONF_ISOLATION_RULES_COUNT, default=str(rule_count)): selector.SelectSelector(
                 selector.SelectSelectorConfig(
@@ -1309,7 +1348,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         for i, slot in enumerate(slots[1:], start=2):
             result[vol.Required(f"isolation_rule_{i}_section")] = section(  # type: ignore[index]
                 vol.Schema(
-                    self._isolation_rule_schema(i, slot, members, seen, hvac_mode_options, member_options, preset_options)
+                    self._isolation_rule_schema(i, slot, members, hvac_mode_options, member_options, preset_options)
                 ),
                 {"collapsed": collapsed},
             )
@@ -1608,6 +1647,47 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     )
                 seen_isolation_entities |= slot_entities
 
+            # Validate: an action that needs a value must have one. Without it the
+            # runtime silently falls back to OFF (with a log warning) — the user gets
+            # something other than what they configured and only finds out from the log.
+            # Keyed on the *effective* mode: both modes are forced to DISABLED during
+            # normalization when no sensor is configured, so a prepared-but-inactive
+            # action must not block the save.
+            window_enabled = (
+                flattened_input.get(CONF_WINDOW_MODE) == WindowControlMode.ENABLED
+                and (
+                    flattened_input.get(CONF_ROOM_SENSOR)
+                    or flattened_input.get(CONF_ZONE_SENSOR)
+                )
+            )
+            if (
+                window_enabled
+                and flattened_input.get(CONF_WINDOW_ACTION) == WindowControlAction.TEMPERATURE
+                and flattened_input.get(CONF_WINDOW_TEMPERATURE) is None
+            ):
+                return await self._show_main_form(
+                    current_config,
+                    form_errors={"window_section": "window_temperature_required"},
+                )
+
+            presence_enabled = (
+                flattened_input.get(CONF_PRESENCE_MODE) == PresenceMode.ENABLED
+                and flattened_input.get(CONF_PRESENCE_SENSOR)
+            )
+            if presence_enabled:
+                presence_action = flattened_input.get(CONF_PRESENCE_ACTION)
+                if (
+                    presence_action == PresenceAction.AWAY_TEMPERATURE
+                    and flattened_input.get(CONF_PRESENCE_AWAY_TEMPERATURE) is None
+                ) or (
+                    presence_action == PresenceAction.AWAY_PRESET
+                    and not flattened_input.get(CONF_PRESENCE_AWAY_PRESET)
+                ):
+                    return await self._show_main_form(
+                        current_config,
+                        form_errors={"presence_section": "presence_action_value_required"},
+                    )
+
             # Validate: own CGH sensors must not be used as external sensors (feedback loop)
             for conf_key in (CONF_TEMP_SENSORS, CONF_HUMIDITY_SENSORS):
                 selected = flattened_input.get(conf_key, [])
@@ -1640,6 +1720,22 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         form_errors={
                             section_key: "sensor_loop_protection",
                         },
+                    )
+
+            # Validate: schedule_fallback_payload must be valid YAML mapping if provided
+            fallback_payload_raw = flattened_input.get(CONF_SCHEDULE_FALLBACK_PAYLOAD)
+            if fallback_payload_raw and isinstance(fallback_payload_raw, str) and fallback_payload_raw.strip():
+                try:
+                    parsed = yaml.safe_load(fallback_payload_raw)
+                    if not isinstance(parsed, dict):
+                        return await self._show_main_form(
+                            current_config,
+                            form_errors={"schedule_section": "schedule_fallback_payload_invalid"},
+                        )
+                except yaml.YAMLError:
+                    return await self._show_main_form(
+                        current_config,
+                        form_errors={"schedule_section": "schedule_fallback_payload_invalid"},
                     )
 
             new_adv_mode = bool(flattened_input.get(CONF_ADVANCED_MODE))

@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "Debes seleccionar al menos un dispositivo climático."
+      "no_entities": "Debes seleccionar al menos un dispositivo climático.",
+      "empty_name": "Introduce un nombre para el grupo."
     },
     "abort": {
       "already_configured": "Este grupo ya está configurado.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Activador de presencia",
               "presence_zone": "Zona de presencia",
               "presence_action": "Acción en ausencia",
-              "presence_away_offset": "Desplazamiento de temperatura en ausencia (°C)",
-              "presence_away_temperature": "Temperatura en ausencia (°C)",
+              "presence_away_offset": "Desplazamiento de temperatura en ausencia",
+              "presence_away_temperature": "Temperatura en ausencia",
               "presence_away_preset": "Preset en ausencia",
               "presence_away_delay": "Retardo de ausencia (segundos)",
               "presence_return_delay": "Retardo de regreso (segundos)"
@@ -169,21 +170,17 @@
             "name": "Automatización de horarios",
             "description": "Vincula una entidad de programación o calendario para automatizar los ajustes climáticos. Los datos del slot pueden incluir atributos climáticos (temperature, hvac_mode) y meta-keys (turn_off, sync_mode, sync_attributes) para ajustar el comportamiento del grupo por slot.",
             "data": {
-              "schedule_entity": "Entidad de programación / calendario",
-              "schedule_bypass_entity": "Entidad de bypass",
-              "resync_interval": "Intervalo de Resincronización (minutos)",
-              "override_duration": "Duración de Anulación (minutos)",
-              "persist_changes": "Anulación Persistente (Sticky)",
-              "persist_active_schedule": "Mantener anulación de horario",
+              "schedule_entity": "Entidad de horario/calendario base",
+              "schedule_fallback_payload": "Estado de reserva para horario base/calendario inactivo (YAML)",
+              "schedule_bypass_entity": "Entidad de horario/calendario de anulación",
+              "retain_service_changes_schedule": "Mantener cambios realizados mediante servicio (Programación)",
               "ignore_off_members_schedule": "Respetar estado Off de miembros (Programación)"
             },
             "data_description": {
               "schedule_entity": "Selecciona una entidad schedule.* o calendar.*. Para entidades de programación, los datos del slot se leen de los atributos del slot. Para entidades de calendario, los datos del slot se leen como YAML del campo de descripción del evento. Claves admitidas: atributos climáticos y meta-keys.",
+              "schedule_fallback_payload": "Sustituye al horario base fuera de sus franjas activas, por lo que no necesitas horarios continuos 24/7. La capa de anulación sigue funcionando igual y lo reemplaza mientras está activa. Mismo formato YAML que arriba (p. ej. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Capa de prioridad opcional (p. ej. un calendario de vacaciones). Cuando está activa, sus datos de slot anulan el programa base. Los datos del slot se leen igual: atributos para entidades schedule.*, descripción YAML para entidades calendar.*.",
-              "resync_interval": "Fuerza la sincronización de los miembros al estado objetivo cada X minutes. Evita desviaciones si los dispositivos pierden un comando o se ajustan manualmente. Establece en 0 para desactivar.",
-              "override_duration": "La duración de las anulaciones manuales. Después de este tiempo, el grupo vuelve automáticamente a la programación actual. Establece en 0 para omitir el periodo de anulación.",
-              "persist_changes": "Los cambios en la programación se ignorarán mientras haya una anulación manual activa. Vuelve a aplicar la programación actual solo tras caducar la anulación.",
-              "persist_active_schedule": "Mantiene el horario activo después de un reinicio cuando se cambia mediante el servicio. De lo contrario, vuelve al valor predeterminado.",
+              "retain_service_changes_schedule": "Mantiene el horario base, el bypass y el estado de reserva cambiados mediante servicio tras un reinicio. De lo contrario, vuelven a los valores predeterminados configurados.",
               "ignore_off_members_schedule": "La Programación NO encenderá los miembros que estén actualmente APAGADOS."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Al menos un miembro debe permanecer fuera del aislamiento.",
       "isolation_entity_overlap": "Cada miembro solo puede aparecer en una regla de aislamiento.",
       "isolation_action_preset_required": "Selecciona un modo de ajuste previo para la acción de aislamiento.",
+      "window_temperature_required": "Establece una temperatura de ventana o cambia la acción de ventana.",
+      "presence_action_value_required": "Establece un valor para la acción de ausencia seleccionada o cambia la acción.",
+      "schedule_fallback_payload_invalid": "Formato YAML no válido en el contenido de reserva del horario. Debe ser una asignación de clave-valor válida.",
       "sensor_loop_protection": "No se puede usar una entidad Climate Group Helper como sensor externo o destino de calibración — esto crearía un bucle de retroalimentación."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Entidad de bypass",
           "description": "La entidad schedule.* o calendar.* a usar como bypass (p. ej. calendar.vacation). Establecer en null o vacío para restaurar el valor predeterminado configurado."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Establecer carga útil de reserva del horario",
+      "description": "Establece o borra una carga útil de reserva aplicada cuando el horario base está inactivo. Invalida la carga útil de reserva configurada.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Carga útil de reserva",
+          "description": "Los datos de climatización de reserva como YAML o mapeo (p. ej. 'temperature: 17.0\\nhvac_mode: heat'). Establecer en null o vacío para restaurar el valor predeterminado."
         }
       }
     },

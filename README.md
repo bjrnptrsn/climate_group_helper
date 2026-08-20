@@ -193,11 +193,12 @@ Schedules can be switched on the fly via service (e.g. for "Vacation" or "Guest"
 
 *   **Calendar support:** `calendar.*` entities work the same as `schedule.*` entities. Slot data is read from each event's **Description** field using the same `key: value` YAML format as schedule Additional data. See [Schedule Configuration & Meta-Keys](#schedule-configuration--meta-keys) for details.
 *   **Bypass Layer:** A second `schedule.*` or `calendar.*` entity can act as a **priority layer** on top of your base schedule. When a bypass slot is active, its attributes override the base slot (bypass wins on conflicts).
-*   **Manual Overrides:** Manual adjustments temporarily pause the schedule for a set **Override Duration**. By default, the group returns to the schedule as soon as the timer expires OR the next scheduled slot begins.
-*   **Sticky Override:** Ensures your manual setting persists for the full duration. If enabled, upcoming schedule transitions are ignored while the timer is running. The group only returns to the schedule once the timer actually expires.
-*   **Periodic Resync:** Force-sync all members every X minutes to ensure they match the target state.
-*   **Schedule Persistence:** Ensures that a schedule changed via service survives a Home Assistant restart. If disabled, the group always reverts to its configured default schedule after a restart.
-*   **Respect Member Off State (Schedule):** Members that are manually turned `off` are skipped during scheduled changes and periodic resyncs — they are not forced back on.
+*   **Inactive Schedule Fallback:** An optional state (e.g. night setback or turning off) that stands in for the base schedule outside its active slots — no need for gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active.
+*   **Manual Overrides:** Manual adjustments simply hold until the next scheduled slot begins, which then takes over again. No timer to configure.
+*   **Retain Changes Made via Service (Schedule):** Ensures that the base schedule, bypass entity and fallback state — when changed via service — survive a Home Assistant restart. If disabled, the group always reverts to its configured defaults after a restart.
+*   **Respect Member Off State (Schedule):** Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on.
+
+> **Note — turning off outside active slots:** to shut the group down in the inactive period, set `hvac_mode: off` in the fallback. Do **not** use the `turn_off` meta-key here — it is a one-shot trigger for the Main Switch block that stays active until a slot explicitly releases it with `turn_off: false`, so a `turn_off: true` fallback would keep the next heating slot blocked.
 
 ### Schedule Configuration & Meta-Keys
 
@@ -231,7 +232,7 @@ temperature: 21.5
 
 You can use any climate attribute or meta-key in both schedule and calendar slots — the format is identical.
 
-You can omit attributes you don't need — for example, use only `hvac_mode: "off"` for a slot that turns heating off.
+You can omit attributes you don't need — for example, use only `hvac_mode: off` for a slot that turns heating off.
 
 **Supported climate attributes:**
 
@@ -416,12 +417,10 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | Option | Description |
 |--------|-------------|
 | **Schedule Entity** | A Home Assistant `schedule.*` or `calendar.*` entity to control the group. |
+| **Fallback State for Inactive Base Schedule / Calendar (YAML)** | *(Optional)* State that stands in for the base schedule outside its active slots (e.g. night setback or complete turn off). The bypass layer overrides it while active. |
 | **Bypass Entity** | *(Optional)* A second `schedule.*` or `calendar.*` entity acting as a priority layer. When a bypass slot is active, it overrides the base schedule. |
-| **Resync Interval** | Force-sync members to the desired group setting every X minutes (0 = disabled). |
-| **Override Duration** | Delay before returning to schedule after manual changes (0 = disabled). |
-| **Sticky Override** | Ignore schedule changes while a manual override is active. |
-| **Respect Member Off State (Schedule)** | Members that are manually turned `off` are skipped during scheduled changes and periodic resyncs — they are not forced back on. Direct group commands always reach all members regardless of this setting. |
-| **Retain Schedule Override** | Persist the active schedule entity across restarts when changed via `set_schedule_entity` service. Without this, the group always reverts to the configured default on restart. |
+| **Respect Member Off State (Schedule)** | Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on. Direct group commands always reach all members regardless of this setting. |
+| **Retain Changes Made via Service (Schedule)** | Keep the base schedule, bypass entity and fallback state across restarts when changed via service. Without this, the group always reverts to its configured defaults on restart. |
 
 ### Member Offsets
 
@@ -463,7 +462,7 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | **Staggered Call Delay** | Time to wait between individual commands to group members (0–2s, default: 0). Staggering calls prevents radio flooding in large Zigbee/Matter networks. Also applies to calibration writes. |
 | **UI Grace Period** | Duration (seconds) for which the group displays the commanded value immediately after a UI action, before slow member devices echo their state back. Prevents visual flicker on the dashboard. Applies to all attributes: HVAC mode, temperature, humidity, fan/preset/swing modes. |
 | **Expose Smart Sensors** | Create additional temperature and humidity sensor entities that reflect the group's current aggregated state (useful for historical graphs and dashboards). |
-| **Expose Member List** | Add the `entity_id` attribute containing the list of all member entity IDs to the climate group helper entity (enables use of `expand()` templates). |
+| **Expose Member List** | Add the `member_entities` attribute containing the list of all member entity IDs to the climate group helper entity (enables use of `expand()` templates). |
 | **Expose Configuration Sensor** | Create a diagnostic configuration sensor entity (`sensor.*_configuration`) containing a portable JSON snapshot of all group settings under the `settings_json` attribute. |
 
 ## Services
@@ -506,7 +505,7 @@ data:
 
 ### `climate_group_helper.set_schedule_entity`
 
-Dynamically change the active schedule entity for a group.
+Dynamically change the active schedule entity for a group. With **Retain Changes Made via Service (Schedule)** enabled, the entity you set here survives a restart.
 
 **Service Fields:**
 
@@ -514,7 +513,7 @@ Dynamically change the active schedule entity for a group.
 |-------|----------|-------------|
 | `schedule_entity` | No | The entity ID of the new schedule or calendar (e.g. `schedule.*` or `calendar.*`). If omitted, the group reverts to its configured default schedule entity. |
 
-Calling this service without an entity cancels any active override timers (including boost) and immediately re-applies the current schedule slot.
+Calling this service without an entity aborts any active boost and immediately re-applies the current schedule slot.
 
 **Example:**
 ```yaml
@@ -527,7 +526,7 @@ data:
 
 ### `climate_group_helper.set_schedule_bypass_entity`
 
-Dynamically change the active bypass schedule entity for a group at runtime. The bypass schedule acts as a priority layer that overrides the base schedule. While a bypass is active, the group keeps tracking the base schedule in the background; when the bypass ends, the currently valid base state is restored (attributes only the bypass changed fall back to their pre-bypass values).
+Dynamically change the active bypass schedule entity for a group at runtime. The bypass schedule acts as a priority layer that overrides the base schedule. While a bypass is active, the group keeps tracking the base schedule in the background; when the bypass ends, the currently valid base state is restored (attributes only the bypass changed fall back to their pre-bypass values). With **Retain Changes Made via Service (Schedule)** enabled, the entity you set here survives a restart.
 
 **Service Fields:**
 
@@ -545,6 +544,27 @@ data:
 ```
 
 Calling this service without an entity clears the bypass schedule and immediately re-applies the current schedule slot.
+
+### `climate_group_helper.set_schedule_fallback_payload`
+
+Set or clear the fallback state applied whenever the schedule is off (see "Inactive Schedule Fallback" above) at runtime, without editing the group's settings. Useful for seasonal setpoint changes or automations. With "Retain Changes Made via Service (Schedule)" enabled, the fallback state you set is remembered across restarts.
+
+**Service Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `fallback_payload` | No | The new fallback state in the same YAML format as the "Inactive Schedule Fallback" setting (e.g. `temperature: 17.0`, `hvac_mode: heat`). If omitted or empty, the group reverts to its configured fallback state. |
+
+**Example:**
+```yaml
+service: climate_group_helper.set_schedule_fallback_payload
+target:
+  entity_id: climate.my_group
+data:
+  fallback_payload: |
+    temperature: 19.0
+    hvac_mode: heat
+```
 
 ### `climate_group_helper.apply_config`
 

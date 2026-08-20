@@ -4,12 +4,11 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import asdict, dataclass, field, fields, replace
-from datetime import datetime, timedelta
+from datetime import datetime
 from types import MappingProxyType
 from typing import Any, Self, TYPE_CHECKING
 
 from homeassistant.core import Event
-from homeassistant.util import dt as dt_util
 
 from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
@@ -34,17 +33,18 @@ class RunState:
     - blocked: derived property — True if any blocking source is active
     - isolated_members: per-member isolation (e.g. curtain closed)
     - oob_members: members currently out-of-bounds (union strategy)
-    - startup_time: unix timestamp of initialisation completion
+    - startup_time: monotonic timestamp of initialisation completion (only ever
+      used as an interval, so it must not be affected by wall-clock jumps)
     - last_active_hvac_mode: cache of last mode other than OFF
 
     Updates are performed via dataclasses.replace(), consistent with TargetState.
     """
 
-    active_override_end: datetime | None = None
-    active_override: str | None = None
     active_slot_title: str | None = None
     blocking_sources: frozenset[str] = field(default_factory=frozenset)
     boost_temperature: float | None = None
+    boost_until: datetime | None = None
+    bypass_delta: MappingProxyType[str, tuple[Any, Any]] = field(default_factory=lambda: MappingProxyType({}))
     config_overrides: MappingProxyType[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     group_offset: float = 0.0
     isolated_members: frozenset[str] = field(default_factory=frozenset)
@@ -52,13 +52,16 @@ class RunState:
     master_fallback_active: bool = False
     oob_members: frozenset[str] = field(default_factory=frozenset)
     startup_time: float | None = None
-    target_state_snapshot: TargetState | None = None
-    shadow_owner: str | None = None
 
     @property
     def blocked(self) -> bool:
         """True if any blocking source is active."""
         return bool(self.blocking_sources)
+
+    @property
+    def temporary_state_active(self) -> bool:
+        """True if any temporary state (blocking source or boost) is active."""
+        return bool(self.blocking_sources) or self.boost_temperature is not None
 
     def set_config_override(self, key: str, value: Any) -> RunState:
         """Return a new RunState with a config override added/updated."""
@@ -73,18 +76,13 @@ class RunState:
             new_overrides.pop(key, None)
         return replace(self, config_overrides=MappingProxyType(new_overrides))
 
-    def set_override(self, name: str, duration: float) -> RunState:
-        """Return a new RunState with the override set and end time computed."""
-        end = dt_util.now() + timedelta(seconds=duration)
-        return replace(self, active_override=name, active_override_end=end)
+    def set_bypass_delta(self, delta: dict[str, tuple[Any, Any]]) -> RunState:
+        """Return a new RunState with updated bypass delta."""
+        return replace(self, bypass_delta=MappingProxyType(dict(delta)))
 
-    def clear_override(self) -> RunState:
-        """Return a new RunState with active_override and active_override_end cleared."""
-        return replace(self, active_override=None, active_override_end=None)
-
-    def clear_snapshot(self) -> RunState:
-        """Return a new RunState with target_state_snapshot and its owner cleared."""
-        return replace(self, target_state_snapshot=None, shadow_owner=None)
+    def clear_bypass_delta(self) -> RunState:
+        """Return a new RunState with cleared bypass delta."""
+        return replace(self, bypass_delta=MappingProxyType({}))
 
 
 @dataclass(frozen=True)
@@ -102,9 +100,17 @@ class ClimateState:
     swing_horizontal_mode: str | None = None
 
     def update(self, **kwargs: Any) -> Self:
-        """Return a new state with updated values."""
+        """Return a new state with updated values.
+
+        Unknown keys are dropped rather than raising: callers pass whole
+        attribute dicts (schedule payloads, member states) that legitimately
+        carry keys this state does not model. A typo at a `StateManager.update()`
+        call site looks the same from here, so log what was discarded.
+        """
         valid_fields = {f.name for f in fields(self)}
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
+        if _LOGGER.isEnabledFor(logging.DEBUG) and (dropped := set(kwargs) - valid_fields):
+            _LOGGER.debug("%s.update() ignored unknown keys: %s", type(self).__name__, sorted(dropped))
         return replace(self, **filtered_kwargs)
 
     def to_dict(self, attributes: list[str] | None = None) -> dict[str, Any]:
@@ -460,28 +466,4 @@ class ScheduleStateManager(BaseStateManager):
 
     def __init__(self, group: ClimateGroupHelper) -> None:
         """Initialize the schedule state manager."""
-        super().__init__(group)
-
-
-class BoostStateManager(BaseStateManager):
-    """State Manager for Boost updates.
-
-    Like Schedule, Boost updates (restores) are always allowed to bypass blocking filters.
-    """
-
-    SOURCE = "boost"
-
-    def __init__(self, group: ClimateGroupHelper) -> None:
-        """Initialize the boost state manager."""
-        super().__init__(group)
-
-
-class IsolationStateManager(BaseStateManager):
-    """State Manager for Isolation updates.
-    """
-
-    SOURCE = "isolation"
-
-    def __init__(self, group: ClimateGroupHelper) -> None:
-        """Initialize the isolation state manager."""
         super().__init__(group)

@@ -6,8 +6,7 @@ import logging
 import asyncio
 from abc import ABC, abstractmethod
 import yaml  # type: ignore[import-untyped]
-from dataclasses import fields, replace
-from enum import StrEnum
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import (
@@ -19,21 +18,26 @@ from homeassistant.components.climate import (
     ATTR_SWING_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
-    HVACMode,
 )
 from homeassistant.const import ATTR_TEMPERATURE, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import callback
-from homeassistant.helpers.event import async_track_state_change_event, async_call_later
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import (
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_BYPASS_ENTITY,
-    CONF_RESYNC_INTERVAL,
-    CONF_OVERRIDE_DURATION,
-    CONF_PERSIST_CHANGES,
+    CONF_SCHEDULE_FALLBACK_PAYLOAD,
+    FLOAT_TOLERANCE,
 )
 from .meta_processor import MetaProcessResult
-from .state import ClimateState
+
+
+def _attr_values_match(val1: Any, val2: Any) -> bool:
+    """Compare attribute values with float tolerance for numeric attributes."""
+    if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
+        return abs(val1 - val2) <= FLOAT_TOLERANCE
+    return val1 == val2
 
 _CLIMATE_MODE_ATTRS: frozenset[str] = frozenset(
     {
@@ -53,24 +57,6 @@ _CLIMATE_NUMERIC_ATTRS: frozenset[str] = frozenset(
     }
 )
 
-# Owners of the shared shadow (target_state_snapshot). The shadow answers "what
-# would target_state be without any override layer" and is created by whichever
-# override layer starts first (boost or bypass). It is only ever consumed by the
-# layer that created it — see ScheduleBaseHandler.save_shadow/restore_shadow.
-SHADOW_OWNER_BOOST = "boost"
-SHADOW_OWNER_BYPASS = "bypass"
-
-
-class ScheduleCaller(StrEnum):
-    """Caller identifiers for schedule_listener."""
-
-    SLOT = "slot"
-    SERVICE_CALL = "service_call"  # Genuine user command (climate_call_handler)
-    SYNC_CALL = "sync_call"        # Sync enforcement / MIRROR adoption (sync_mode_call_handler)
-    RESYNC = "resync"
-    SWITCH = "switch"
-
-
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
     from .state import ScheduleStateManager, TargetState
@@ -80,28 +66,66 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
+def normalize_yaml_bool_modes(payload: dict[str, Any]) -> dict[str, Any]:
+    """Fix the YAML pitfall where unquoted 'on'/'off' is parsed as True/False.
+
+    Only applied to mode attributes (hvac_mode, fan_mode, …) — numeric/other
+    attributes must keep their native type.
+    """
+    return {
+        attr: ("on" if value else "off") if attr in _CLIMATE_MODE_ATTRS and isinstance(value, bool) else value
+        for attr, value in payload.items()
+    }
+
+
+def _parse_fallback_payload(raw: Any, entity_id: str, raise_on_error: bool = False) -> dict[str, Any]:
+    """Parse and validate a fallback schedule payload (dict or YAML string)."""
+    if not raw:
+        return {}
+    if isinstance(raw, dict):
+        return normalize_yaml_bool_modes(raw)
+    if isinstance(raw, str):
+        cleaned = raw.strip()
+        if not cleaned:
+            return {}
+        try:
+            parsed = yaml.safe_load(cleaned)
+            if isinstance(parsed, dict):
+                return normalize_yaml_bool_modes(parsed)
+            if parsed is None:
+                return {}
+            msg = f"Fallback schedule payload must be a mapping (got {type(parsed).__name__})."
+            if raise_on_error:
+                raise ServiceValidationError(msg)
+            _LOGGER.warning("[%s] %s — ignored.", entity_id, msg)
+            return {}
+        except yaml.YAMLError as err:
+            if raise_on_error:
+                raise ServiceValidationError(f"Fallback schedule payload has invalid YAML: {err}") from err
+            _LOGGER.warning("[%s] Fallback schedule payload has invalid YAML: %s — ignored.", entity_id, err)
+            return {}
+    msg = f"Fallback schedule payload must be a dictionary or YAML string (got {type(raw).__name__})."
+    if raise_on_error:
+        raise ServiceValidationError(msg)
+    _LOGGER.warning("[%s] %s — ignored.", entity_id, msg)
+    return {}
+
+
 class ScheduleBaseHandler(ABC):
     """Shared logic for basis schedule and bypass layers.
 
-    Drives the group-level shared timer slot (group.schedule_timer) and the
-    slot processing pipeline (on_slot_change).  The timer slot carries either
-    a resync interval or an override-duration countdown — never both
-    simultaneously.
+    Drives the slot processing pipeline (on_slot_change) with pure climate
+    resolution and bypass delta tracking.
 
     Derived classes:
-    - ScheduleHandler: subscribes to the basis schedule/calendar entity and
-      drives the full timer lifecycle (resync + override duration).
-    - ScheduleBypassHandler: subscribes to the bypass entity and calls
-      on_slot_change() directly; no timer logic of its own.
+    - ScheduleHandler: subscribes to the basis schedule/calendar entity.
+    - ScheduleBypassHandler: subscribes to the bypass entity.
     """
 
     def __init__(self, group: ClimateGroupHelper) -> None:
         self._group = group
         self._hass = group.hass
-
-        self._resync_interval = group.config.get(CONF_RESYNC_INTERVAL, 0) if group.advanced_mode else 0
-        self._override_duration = group.config.get(CONF_OVERRIDE_DURATION, 0) if group.advanced_mode else 0
-        self._persist_changes = group.config.get(CONF_PERSIST_CHANGES, False) if group.advanced_mode else False
+        self._bypass_was_active: bool = False
 
     @property
     def state_manager(self) -> ScheduleStateManager:
@@ -130,15 +154,19 @@ class ScheduleBaseHandler(ABC):
     def bypass_entity_id(self) -> str | None:
         """Return the active bypass entity ID."""
 
-    @callback
-    def service_call_trigger(self, data: dict[str, Any] | None = None) -> None:  # noqa: ARG002
-        """Hook: a genuine user command was executed via climate_call_handler."""
-        self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.SERVICE_CALL))
-
-    @callback
-    def sync_call_trigger(self, data: dict[str, Any] | None = None) -> None:  # noqa: ARG002
-        """Hook: sync enforcement or MIRROR adoption was executed."""
-        self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.SYNC_CALL))
+    @property
+    def active_layer(self) -> str:
+        """Return the currently active schedule layer ('basis' | 'bypass' | 'fallback' | 'none')."""
+        bypass_eid = self.bypass_entity_id
+        if bypass_eid and (bypass_state := self._hass.states.get(bypass_eid)) and bypass_state.state == "on":
+            return "bypass"
+        schedule_eid = self.schedule_entity_id
+        if schedule_eid and (basis_state := self._hass.states.get(schedule_eid)):
+            if basis_state.state == "on":
+                return "basis"
+            if basis_state.state == "off" and self._group.schedule_handler.fallback_payload:
+                return "fallback"
+        return "none"
 
     def parse_entity_state(self, state: Any) -> dict[str, Any]:
         """Extract a slot data dict from a schedule or calendar entity.
@@ -172,21 +200,6 @@ class ScheduleBaseHandler(ABC):
             return data
         return dict(state.attributes)
 
-    def _snapshot_to_kwargs(self, snapshot: TargetState) -> dict[str, Any]:
-        """Return climate-relevant fields from a TargetState snapshot.
-
-        Metadata fields (last_source, last_entity, last_timestamp) are excluded
-        so the restore gets fresh source information from the StateManager.
-        hvac_mode is always included (even None) so a bypass that changed the mode
-        does not leave the group in the wrong mode after restore.
-        """
-        result = {}
-        for f in fields(ClimateState):
-            value = getattr(snapshot, f.name, None)
-            if f.name == "hvac_mode" or value is not None:
-                result[f.name] = value
-        return result
-
     def _validate_climate_payload(self, entity_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Filter a climate payload, dropping invalid values with a warning.
 
@@ -194,11 +207,9 @@ class ScheduleBaseHandler(ABC):
         Numeric attributes (temperature, humidity, …) must be float-convertible.
         """
         valid = {}
+        payload = normalize_yaml_bool_modes(payload)
         for attr, value in payload.items():
             if attr in _CLIMATE_MODE_ATTRS:
-                # YAML pitfall: unquoted 'on'/'off' becomes True/False.
-                if isinstance(value, bool):
-                    value = "on" if value else "off"
                 if not isinstance(value, str) or not value:
                     _LOGGER.warning(
                         "[%s] Schedule slot: '%s' expects a non-empty string, got %r — ignored.",
@@ -217,281 +228,104 @@ class ScheduleBaseHandler(ABC):
             valid[attr] = value
         return valid
 
-    def save_shadow(self, owner: str) -> None:
-        """Save current target_state as the shadow — only if none exists yet.
-
-        Records `owner` (SHADOW_OWNER_BOOST / SHADOW_OWNER_BYPASS) so restore and
-        clear can be scoped: a shadow is only ever consumed by the layer that
-        created it. A new layer only takes over when no shadow exists.
-        """
-        if self._group.run_state.target_state_snapshot is None:
-            self._group.run_state = replace(
-                self._group.run_state,
-                target_state_snapshot=self._group.shared_target_state,
-                shadow_owner=owner,
-            )
-
-    def clear_shadow(self, owner: str) -> bool:
-        """Clear the shadow and its owner — only if `owner` created it.
-
-        Returns True when the shadow was actually cleared; False when it belongs
-        to another layer (e.g. a boost abort must not clear a bypass shadow).
-        """
-        if self._group.run_state.shadow_owner != owner:
-            return False
-        self._group.run_state = self._group.run_state.clear_snapshot()
-        return True
-
-    async def restore_shadow(self, owner: str | None = None) -> bool:
-        """Restore target_state from the Shadow (target_state_snapshot) and clear override states.
-
-        With `owner` given, the shadow is only consumed when that layer created
-        it — a bypass shadow is never consumed by the boost and vice versa.
-        Returns True when a restore actually ran.
-        """
-        snapshot = self._group.run_state.target_state_snapshot
-        if not snapshot:
-            return False
-        if owner is not None and self._group.run_state.shadow_owner != owner:
-            _LOGGER.debug(
-                "[%s] Shadow restore skipped (owner=%s, caller=%s)",
-                self._group.entity_id, self._group.run_state.shadow_owner, owner,
-            )
-            return False
-
-        _LOGGER.debug("[%s] Restoring shadow state: %s", self._group.entity_id, snapshot)
-
-        # 1. Clear Shadow and Overrides from run_state.
-        # boost_temperature is NOT touched here — it is owned exclusively by
-        # BoostOverrideManager (_on_expired / _cancel_timer), which always clears
-        # it before restore_shadow can run.
-        self._group.run_state = self._group.run_state.clear_override().clear_snapshot()
-
-        # 2. Write snapshot values back into state_manager
-        restore_kwargs = self._snapshot_to_kwargs(snapshot)
-        self.state_manager.update(**restore_kwargs)
-
-        # 3. Sync members
-        await self.call_handler.call_immediate()
-
-        # 4. Restart resync timer if schedule entity is present
-        if self.schedule_entity_id:
-            self._start_timer("resync")
-        return True
-
-    def _cancel_timer(self) -> None:
-        """Cancel the active timer and clear any associated schedule_override RunState.
-
-        Only clears 'schedule_override' from RunState — never touches 'boost'.
-        BoostOverrideManager owns its own _cancel_timer() which clears 'boost'.
-        The two timer systems are intentionally independent.
-        """
-        if self._group.schedule_timer:
-            self._group.schedule_timer()
-            self._group.schedule_timer = None
-            self._group.schedule_timer_type = None
-            if self._group.run_state.active_override == "schedule_override":
-                self._group.run_state = self._group.run_state.clear_override()
-
-    def _start_timer(self, timer_type: str, duration: int | None = None) -> None:
-        """Start a resync or override timer. Both fire schedule_listener(RESYNC) on expiry."""
-        if duration is None:
-            # _resync_interval / _override_duration are configured in minutes
-            # (see strings.json); convert to seconds for async_call_later.
-            duration = 60 * (
-                self._resync_interval if timer_type == "resync" else self._override_duration
-            )
-        # A running OVERRIDE timer must survive a resync start: it counts down
-        # the manual-override revert, and its deadline is the documented
-        # invariant ("revert after override_duration from the FIRST manual
-        # change"). Replacing it here would e.g. let a boost expiry mid-override
-        # silently drop the revert deadline (resync_interval=0 → the manual
-        # change sticks forever).
-        if timer_type == "resync" and self._group.schedule_timer_type == "override":
-            _LOGGER.debug(
-                "[%s] Override timer running — resync timer start skipped",
-                self._group.entity_id,
-            )
-            return
-        # Cancel first: a non-positive duration means "no timer configured" —
-        # any previously running timer must not survive the call.
-        self._cancel_timer()
-        if duration <= 0:
-            return
-
-        if timer_type == "override":
-            self._group.run_state = self._group.run_state.set_override(
-                "schedule_override", duration
-            )
-
-        @callback
-        def handle_timer_timeout(_now: Any) -> None:
-            self._group.schedule_timer = None
-            self._group.schedule_timer_type = None
-            if self._group.run_state.active_override == "schedule_override":
-                self._group.run_state = self._group.run_state.clear_override()
-            self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.RESYNC))
-
-        self._group.schedule_timer = async_call_later(self._hass, duration, handle_timer_timeout)
-        self._group.schedule_timer_type = timer_type
-        _LOGGER.debug(
-            "[%s] %s timer started: %.0fs",
-            self._group.entity_id, timer_type.capitalize(), duration,
-        )
-
-    async def schedule_listener(self, caller: ScheduleCaller) -> None:
-        """Entry point for all basis-schedule events: apply slot, manage timers.
-
-        Caller semantics:
-        - SLOT / SWITCH / RESYNC: apply on_slot_change(), then (re)start the resync timer.
-        - SERVICE_CALL / SYNC_CALL (MIRROR): skip on_slot_change(), start override or
-          resync timer depending on override_duration config.
-        - SYNC_CALL (LOCK, last_source != "sync_mode"): early return — no timer touch,
-          no slot apply.  A LOCK revert is not a user-visible change.
-        - BYPASS path: ScheduleBypassHandler calls on_slot_change(SLOT) directly, never via this method.
-
-        Guards that suppress all action:
-        - No schedule entity configured.
-        - Sticky override active (SLOT caller + user is in control).
-        - External override active (e.g. boost): timer is not touched.
-        - Bypass is currently on: basis timer is suspended.
-        """
-        _LOGGER.debug("[%s] Schedule listener triggered by: %s", self._group.entity_id, caller)
-
-        if not self.schedule_entity_id:
-            return
-
-        # Sticky Override (Persist Changes): if the user is in control, ignore slot transitions.
-        if (
-            caller == ScheduleCaller.SLOT
-            and self._persist_changes
-            and self.target_state.last_source not in ("schedule", None)
-        ):
-            _LOGGER.debug("[%s] Sticky override active — ignoring slot transition", self._group.entity_id)
-            return
-
-        # SERVICE_CALL / SYNC_CALL only manage timers; slot state is applied for all other callers.
-        if caller not in (ScheduleCaller.SERVICE_CALL, ScheduleCaller.SYNC_CALL):
-            await self.on_slot_change(caller)
-
-        # Never touch the timer while any override (schedule_override or boost) is active.
-        # The override timer runs from the FIRST manual change — subsequent events
-        # (further user commands, slot transitions) must not extend or replace it.
-        if self._group.run_state.active_override:
-            return
-
-        # While bypass is active the basis timer is suspended — bypass has no timer of its own
-        # and holds priority until it deactivates.
-        if self.bypass_entity_id:
-            if state := self._hass.states.get(self.bypass_entity_id):
-                if state.state == "on":
-                    return
-
-        # LOCK enforcement (last_source != "sync_mode") reverts a member without changing
-        # target_state — no user-visible change, so the timer must not be touched.
-        if caller == ScheduleCaller.SYNC_CALL and self.target_state.last_source != "sync_mode":
-            return
-
-        # May duplicate a resync timer already (re)started by restore_shadow() inside
-        # on_slot_change() above — harmless (_start_timer cancels first) and intentional,
-        # since restore_shadow() must stay self-sufficient for its other caller
-        # (BoostOverrideManager._on_expired(), which bypasses schedule_listener()).
-        wants_override = (
-            caller in (ScheduleCaller.SERVICE_CALL, ScheduleCaller.SYNC_CALL)
-            and self._override_duration > 0
-        )
-        if wants_override:
-            self._start_timer("override")
-        else:
-            self._start_timer("resync")
-
-    async def on_slot_change(self, caller: ScheduleCaller) -> None:
+    async def on_slot_change(self) -> None:
         """Read both entity states, process meta-keys, update target_state, sync members.
 
-        Always reads the current state of both entities so the result is consistent
-        regardless of which side triggered the call.
+        Single parameterless entry point for all slot changes. Resolves basis,
+        bypass, and fallback payloads into a single write, managing the bypass
+        delta for pre-value restoration.
         """
         async with self.slot_transition_lock:
-            basis_state  = self._hass.states.get(self.schedule_entity_id) if self.schedule_entity_id else None
+            basis_state = self._hass.states.get(self.schedule_entity_id) if self.schedule_entity_id else None
             bypass_state = self._hass.states.get(self.bypass_entity_id) if self.bypass_entity_id else None
 
-            basis_data  = self.parse_entity_state(basis_state)  if (basis_state  and basis_state.state  == "on") else {}
+            if self.schedule_entity_id and basis_state:
+                if basis_state.state == "on":
+                    basis_data = self.parse_entity_state(basis_state)
+                elif basis_state.state == "off" and (fallback_payload := self._group.schedule_handler.fallback_payload):
+                    basis_data = dict(fallback_payload)
+                else:
+                    basis_data = {}
+            else:
+                basis_data = {}
+
             bypass_data = self.parse_entity_state(bypass_state) if (bypass_state and bypass_state.state == "on") else {}
             bypass_active = bypass_state is not None and bypass_state.state == "on"
-            boost_active = self._group.run_state.active_override == "boost"
 
             _LOGGER.debug(
-                "[%s] Slot change (caller=%s): basis=%s, bypass=%s (bypass_active=%s, boost_active=%s)",
-                self._group.entity_id, caller, list(basis_data.keys()) or "off",
-                list(bypass_data.keys()) or "off", bypass_active, boost_active
+                "[%s] Slot change: basis=%s, bypass=%s (bypass_active=%s)",
+                self._group.entity_id, list(basis_data.keys()) or "off",
+                list(bypass_data.keys()) or "off", bypass_active
             )
 
             result: MetaProcessResult = await self._group.slot_meta_processor.process(basis_data, bypass_data)
 
-            basis_payload  = self._validate_climate_payload(self._group.entity_id, result.climate_payload)
+            basis_payload = self._validate_climate_payload(self._group.entity_id, result.climate_payload)
             bypass_payload = self._validate_climate_payload(self._group.entity_id, result.climate_bypass_payload)
 
-            # 1. Basis payload -> target_state + shadow merge. The merge is deliberately
-            # NOT gated on an active override: on the override-end run the shadow must
-            # still absorb the payload of a simultaneously changing basis slot before
-            # the restore branch reads it.
-            if basis_payload:
-                self.state_manager.update(**basis_payload)
-                if self._group.run_state.target_state_snapshot is not None:
-                    new_snapshot = self._group.run_state.target_state_snapshot.update(**basis_payload)
-                    self._group.run_state = replace(self._group.run_state, target_state_snapshot=new_snapshot)
+            # Check if bypass delta is present from restore
+            was_active = self._bypass_was_active or bool(self._group.run_state.bypass_delta)
 
-            # 2. Build the effective override payload (stack: basis < bypass < boost).
-            if bypass_active or boost_active:
-                # First override starting via bypass: create the shadow here — at this
-                # point target_state holds only basis values. For boost this would be
-                # too late (activate() already wrote the boost temperature into
-                # target_state), so BoostOverrideManager.activate() creates it via
-                # _save_snapshot() before writing the temperature.
-                if bypass_active and self._group.run_state.target_state_snapshot is None:
-                    self.save_shadow(SHADOW_OWNER_BYPASS)
-                    _LOGGER.debug("[%s] Override stack activated — Shadow saved", self._group.entity_id)
+            # Handle bypass delta lifecycle
+            if bypass_active:
+                if not was_active:
+                    # Off -> On transition: capture pre_value from target_state for each bypass attribute
+                    delta_dict = {}
+                    for attr, val in bypass_payload.items():
+                        pre_val = getattr(self.target_state, attr, None)
+                        if pre_val is not None:
+                            delta_dict[attr] = (pre_val, val)
+                    self._group.run_state = self._group.run_state.set_bypass_delta(delta_dict)
+                    self._bypass_was_active = True
+                else:
+                    # Stays on: update bypass_value in delta if bypass payload changed, preserving pre_value
+                    current_delta = dict(self._group.run_state.bypass_delta)
+                    updated = False
+                    for attr, val in bypass_payload.items():
+                        if attr in current_delta:
+                            pre_val, old_byp = current_delta[attr]
+                            if not _attr_values_match(old_byp, val):
+                                current_delta[attr] = (pre_val, val)
+                                updated = True
+                        else:
+                            pre_val = getattr(self.target_state, attr, None)
+                            if pre_val is not None:
+                                current_delta[attr] = (pre_val, val)
+                                updated = True
+                    if updated:
+                        self._group.run_state = self._group.run_state.set_bypass_delta(current_delta)
+                    self._bypass_was_active = True
 
-                effective_payload = {}
-                if bypass_active and bypass_payload:
-                    effective_payload.update(bypass_payload)
-                elif boost_active and (snapshot := self._group.run_state.target_state_snapshot) is not None:
-                    # Bypass layer ended (or never ran) while the boost continues:
-                    # re-assert the shadow's attributes so bypass values written to
-                    # target_state don't outlive the bypass (bypass leak — e.g. a
-                    # bypass preset_mode would otherwise stick until the boost ends).
-                    # Idempotent for plain boosts: target_state already matches the
-                    # shadow except for the boost temperature, which is re-applied below.
-                    effective_payload.update(
-                        {k: v for k, v in self._snapshot_to_kwargs(snapshot).items() if v is not None}
-                    )
+                resolved = {**basis_payload, **bypass_payload}
+                if resolved:
+                    self.state_manager.update(**resolved)
+                if not self._group.run_state.temporary_state_active and resolved:
+                    await self.call_handler.call_immediate(resolved)
 
-                if boost_active:
-                    boost_temp = self._group.run_state.boost_temperature
-                    if boost_temp is not None:
-                        effective_payload["temperature"] = boost_temp
-
-                    # Boost implies active operation: never leave members OFF with only
-                    # a set_temperature pending — force the last active mode (fallback: heat).
-                    current_hvac = effective_payload.get("hvac_mode") or self._group.shared_target_state.hvac_mode
-                    if current_hvac == HVACMode.OFF:
-                        fallback_mode = self._group.run_state.last_active_hvac_mode or HVACMode.HEAT
-                        effective_payload["hvac_mode"] = fallback_mode
-
-                if effective_payload:
-                    self.state_manager.update(**effective_payload)
-                    await self.call_handler.call_immediate(effective_payload)
-
-            # 3. No override active but a shadow exists -> last layer just ended.
-            # The shadow's owner IS the layer that ended — restore scoped to it,
-            # so a foreign (e.g. boost) shadow is never consumed here.
-            elif self._group.run_state.target_state_snapshot is not None:
-                await self.restore_shadow(self._group.run_state.shadow_owner)
-
-            # 4. No override, no shadow -> plain basis operation (slot_only as before).
             else:
-                slot_only = caller in (ScheduleCaller.SLOT, ScheduleCaller.SWITCH)
-                await self.call_handler.call_immediate(basis_payload if slot_only else None)
+                # Bypass is off
+                if was_active:
+                    # On -> Off transition: restore pre-values from bypass_delta
+                    delta = self._group.run_state.bypass_delta
+                    delta_update = {
+                        attr: pre_val
+                        for attr, (pre_val, byp_val) in delta.items()
+                        if _attr_values_match(getattr(self.target_state, attr, None), byp_val)
+                    }
+                    final = {**delta_update, **basis_payload}
+                    self._group.run_state = self._group.run_state.clear_bypass_delta()
+                    self._bypass_was_active = False
+
+                    if final:
+                        self.state_manager.update(**final)
+                    if not self._group.run_state.temporary_state_active and final:
+                        await self.call_handler.call_immediate(final)
+                else:
+                    self._bypass_was_active = False
+                    if basis_payload:
+                        self.state_manager.update(**basis_payload)
+                    if not self._group.run_state.temporary_state_active and basis_payload:
+                        await self.call_handler.call_immediate(basis_payload)
 
 
 class ScheduleHandler(ScheduleBaseHandler):
@@ -499,13 +333,30 @@ class ScheduleHandler(ScheduleBaseHandler):
 
     def __init__(self, group: ClimateGroupHelper) -> None:
         self._schedule_entity = group.config.get(CONF_SCHEDULE_ENTITY) if group.advanced_mode else None
+        raw_fallback = group.config.get(CONF_SCHEDULE_FALLBACK_PAYLOAD, "") if group.advanced_mode else ""
+        self._config_fallback_payload: dict[str, Any] = _parse_fallback_payload(
+            raw_fallback, group.entity_id, raise_on_error=False
+        )
+        self._fallback_payload_override: dict[str, Any] | None = None
         super().__init__(group)
         self._unsub_listener: Callable[[], None] | None = None
         _LOGGER.debug(
-            "[%s] Schedule basis handler initialized: basis='%s' (resync=%sm, override=%sm, sticky=%s)",
+            "[%s] Schedule basis handler initialized: basis='%s' (fallback_payload=%s)",
             self._group.entity_id, self._schedule_entity,
-            self._resync_interval, self._override_duration, self._persist_changes
+            list(self.fallback_payload.keys()) or "(none)",
         )
+
+    @property
+    def fallback_payload(self) -> dict[str, Any]:
+        """Return the effective fallback slot payload for inactive schedule periods."""
+        if self._fallback_payload_override is not None:
+            return self._fallback_payload_override
+        return self._config_fallback_payload
+
+    @property
+    def config_fallback_payload(self) -> dict[str, Any]:
+        """Return the configured baseline fallback slot payload."""
+        return self._config_fallback_payload
 
     @property
     def schedule_entity_id(self) -> str | None:
@@ -518,19 +369,16 @@ class ScheduleHandler(ScheduleBaseHandler):
         return self._group.schedule_bypass_handler.bypass_entity_id
 
     async def async_setup(self) -> None:
-        """Subscribe to the schedule entity and register call triggers."""
+        """Subscribe to the schedule entity."""
         self._subscribe()
-        self._group.climate_call_handler.register_call_trigger(self.service_call_trigger)
-        self._group.sync_mode_call_handler.register_call_trigger(self.sync_call_trigger)
         _LOGGER.debug(
             "[%s] Schedule handler setup complete (subscribed to: %s)",
             self._group.entity_id, self._schedule_entity
         )
 
     def async_teardown(self) -> None:
-        """Unsubscribe from the schedule entity and cancel any active timer."""
+        """Unsubscribe from the schedule entity."""
         self._unsubscribe()
-        self._cancel_timer()
 
     def _subscribe(self) -> None:
         if not self._schedule_entity:
@@ -541,7 +389,7 @@ class ScheduleHandler(ScheduleBaseHandler):
             new_state = event.data.get("new_state")
             if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 return
-            self._hass.async_create_task(self.schedule_listener(caller=ScheduleCaller.SLOT))
+            self._hass.async_create_task(self.on_slot_change())
 
         self._unsub_listener = async_track_state_change_event(
             self._hass, [self._schedule_entity], handle_state_change
@@ -552,16 +400,23 @@ class ScheduleHandler(ScheduleBaseHandler):
             self._unsub_listener()
             self._unsub_listener = None
 
+    def restore_schedule_entity(self, entity_id: str) -> None:
+        """Restore active schedule entity from persisted state."""
+        self._schedule_entity = entity_id
+
+    def restore_fallback_payload(self, fallback_payload: dict[str, Any]) -> None:
+        """Restore fallback payload override from persisted state."""
+        self._fallback_payload_override = fallback_payload
+
     async def update_schedule_entity(self, new_entity_id: str | None) -> None:
         """Switch the active schedule entity at runtime (service: set_schedule_entity).
 
         Passing None reverts to the configured default and acts as a full reset:
-        the boost is aborted, the timer is cancelled, and group_offset is cleared.
+        the boost is aborted and group_offset is cleared.
         Switching to a different entity preserves the current offset.
         """
         is_reset = not new_entity_id
         self._unsubscribe()
-        self._cancel_timer()
         if is_reset:
             self._group.boost_override_manager.abort()
 
@@ -588,20 +443,41 @@ class ScheduleHandler(ScheduleBaseHandler):
 
         if self._schedule_entity:
             self._subscribe()
-            await self.schedule_listener(caller=ScheduleCaller.SWITCH)
+            await self.on_slot_change()
         else:
-            # Reset to "no schedule at all": unwind the meta-key state left by the
-            # last slot. schedule_listener() early-returns without an entity, so
-            # drive on_slot_change() directly — with empty basis data the meta
-            # processor clears its active keys (sync_mode, group_offset, presence)
-            # and the shadow branch unwinds a leftover bypass shadow. Without this
-            # the overrides would stick until reload (same bug class the bypass
-            # reset fixed).
+            # Reset to "no schedule at all": unwind the meta-key state left by the last slot.
             _LOGGER.debug(
                 "[%s] Schedule reset to none — running meta-key unwind",
                 self._group.entity_id,
             )
-            await self.on_slot_change(caller=ScheduleCaller.SWITCH)
+            await self.on_slot_change()
+
+    async def update_fallback_payload(self, new_payload: Any = None) -> None:
+        """Switch or reset the fallback slot payload at runtime (service: set_schedule_fallback_payload).
+
+        Passing None, an empty string, or an empty dict clears the runtime override
+        and reverts to the configured default fallback payload.
+        """
+        if not new_payload or (isinstance(new_payload, str) and not new_payload.strip()):
+            self._fallback_payload_override = None
+            _LOGGER.debug(
+                "[%s] Schedule fallback payload reset to configured default: %s",
+                self._group.entity_id,
+                list(self._config_fallback_payload.keys()) or "(none)",
+            )
+        else:
+            parsed = _parse_fallback_payload(new_payload, self._group.entity_id, raise_on_error=True)
+            self._fallback_payload_override = parsed if parsed else None
+            _LOGGER.debug(
+                "[%s] Schedule fallback payload override set: %s",
+                self._group.entity_id,
+                list(self._fallback_payload_override.keys()) if self._fallback_payload_override else "(none, reset to config)",
+            )
+
+        self._group.async_defer_or_update_ha_state()
+
+        if self._schedule_entity:
+            await self.on_slot_change()
 
 
 class ScheduleBypassHandler(ScheduleBaseHandler):
@@ -632,6 +508,14 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
         """Return the active bypass entity ID."""
         return self._bypass_entity
 
+    def restore_bypass_entity(self, entity_id: str) -> None:
+        """Restore active bypass entity from persisted state.
+
+        Called before async_setup() subscribes, so the restored entity is the
+        one that gets subscribed to.
+        """
+        self._bypass_entity = entity_id
+
     async def async_setup(self) -> None:
         """Subscribe to the bypass entity and apply current state if already active."""
         self._subscribe()
@@ -641,7 +525,7 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
             if state := self._hass.states.get(self._bypass_entity):
                 if state.state == "on":
                     _LOGGER.debug("[%s] Bypass entity already active at startup — applying slot", self._group.entity_id)
-                    await self.on_slot_change(caller=ScheduleCaller.SLOT)
+                    await self.on_slot_change()
 
         _LOGGER.debug("[%s] Bypass handler setup complete (subscribed to: %s)", self._group.entity_id, self._bypass_entity)
 
@@ -658,9 +542,7 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
             new_state = event.data.get("new_state")
             if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 return
-            # Go directly to on_slot_change — schedule_listener would start resync/override
-            # timers that have no meaning for the bypass layer.
-            self._hass.async_create_task(self.on_slot_change(caller=ScheduleCaller.SLOT))
+            self._hass.async_create_task(self.on_slot_change())
 
         self._unsub_listener = async_track_state_change_event(
             self._hass, [self._bypass_entity], handle_state_change
@@ -676,8 +558,8 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
 
         Passing None reverts to the configured default. If no default is configured,
         the bypass layer is cleared entirely — on_slot_change() still runs once so an
-        active bypass payload/shadow is unwound via the restore_shadow() branch instead
-        of leaving the group stuck on the last bypass state.
+        active bypass payload/delta is unwound instead of leaving the group stuck on
+        the last bypass state.
         """
         self._unsubscribe()
         self._bypass_entity = new_entity_id or self._group.config.get(CONF_SCHEDULE_BYPASS_ENTITY)
@@ -686,4 +568,4 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
 
         if self._bypass_entity:
             self._subscribe()
-        await self.on_slot_change(caller=ScheduleCaller.SWITCH)
+        await self.on_slot_change()

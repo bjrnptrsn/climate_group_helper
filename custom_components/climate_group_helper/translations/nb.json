@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "Du må velge minst én klimaenhet."
+      "no_entities": "Du må velge minst én klimaenhet.",
+      "empty_name": "Skriv inn et navn på gruppen."
     },
     "abort": {
       "already_configured": "Denne gruppen er allerede konfigurert.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Tilstedeværelsesutløser",
               "presence_zone": "Tilstedeværelsessone",
               "presence_action": "Fraværshandling",
-              "presence_away_offset": "Fraværs-temperaturforskyvning (°C)",
-              "presence_away_temperature": "Fraværs-temperatur (°C)",
+              "presence_away_offset": "Fraværs-temperaturforskyvning",
+              "presence_away_temperature": "Fraværs-temperatur",
               "presence_away_preset": "Fraværs-forhåndsinnstilling",
               "presence_away_delay": "Fraværsforsinkelse (sekunder)",
               "presence_return_delay": "Returforsinkelse (sekunder)"
@@ -169,21 +170,17 @@
             "name": "Tidsplan-automatisering",
             "description": "Koble til en tidsplan- eller kalenderenhet for å automatisere klimainnstillinger. Slot-data kan inkludere klimaattributter (temperature, hvac_mode) og meta-nøkler (turn_off, sync_mode, sync_attributes) for å justere gruppens atferd per slot.",
             "data": {
-              "schedule_entity": "Tidsplan- / kalenderenhet",
-              "schedule_bypass_entity": "Bypass-enhet",
-              "resync_interval": "Resync-intervall (minutter)",
-              "override_duration": "Varighet for overstyring (minutter)",
-              "persist_changes": "Vedvarende overstyring (Sticky)",
-              "persist_active_schedule": "Behold tidsplanoverstyring",
+              "schedule_entity": "Grunnleggende tidsplan-/kalenderenhet",
+              "schedule_fallback_payload": "Reservetilstand ved inaktiv basistidsplan/kalender (YAML)",
+              "schedule_bypass_entity": "Omgåelses tidsplan-/kalenderenhet",
+              "retain_service_changes_schedule": "Behold endringer gjort via tjeneste (Tidsplan)",
               "ignore_off_members_schedule": "Respekter medlemmers AV-tilstand (Tidsplan)"
             },
             "data_description": {
               "schedule_entity": "Velg en schedule.*- eller calendar.*-enhet. For tidsplanenheter leses slot-data fra slot-attributtene. For kalenderenheter leses slot-data som YAML fra begivenhetens beskrivelsesfelt. Støttede nøkler: klimaattributter og meta-nøkler.",
+              "schedule_fallback_payload": "Trer inn for basistidsplanen utenfor dens aktive tidsrom, så du slipper sammenhengende 24/7-tidsplaner. Bypass-laget fungerer som før og overstyrer den mens det er aktivt. Samme YAML-format som over (f.eks. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valgfritt prioritetslag (f.eks. en feriekalender). Når aktiv, overstyrer dens slot-data basisplanen. Slot-data leses på samme måte: attributter for schedule.*-, YAML-beskrivelse for calendar.*-enheter.",
-              "resync_interval": "Tvinge synkronisering av medlemmer til gruppens måltilstand hvert X minutt. Forhindrer avvik hvis enheter går glipp av en kommando eller justeres manuelt. Sett til 0 for å deaktivere.",
-              "override_duration": "Varigheten av manuelle overstyringer. Etter denne tiden går gruppen automatisk tilbake til gjeldende tidsplan. Sett til 0 for å hoppe over overstyringsperioden.",
-              "persist_changes": "Vil endringer i selve tidsplanen bli ignorert så lenge en manuell overstyring er aktiv. Bruker gjeldende tidsplan på nytt først etter at overstyringen er utløpt.",
-              "persist_active_schedule": "Beholder den aktive tidsplanen etter en omstart når den endres via tjenesten. Ellers går den tilbake til standarden.",
+              "retain_service_changes_schedule": "Beholder basistidsplan, bypass og reservetilstand endret via tjenesten etter en omstart. Ellers tilbakestilles de til de konfigurerte standardverdiene.",
               "ignore_off_members_schedule": "Tidsplanen vil IKKE slå på medlemmer som for tiden er AV."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Minst ett medlem må forbli utenfor isolasjonen.",
       "isolation_entity_overlap": "Hvert medlem kan bare forekomme i én isolasjonsregel.",
       "isolation_action_preset_required": "Velg en forhåndsdefinert modus for isoleringshandlingen.",
+      "window_temperature_required": "Angi en vindustemperatur, eller endre vindushandlingen.",
+      "presence_action_value_required": "Angi en verdi for den valgte fraværshandlingen, eller endre handlingen.",
+      "schedule_fallback_payload_invalid": "Ugyldig YAML-format i reserve-nyttelast for tidsplan. Må være en gyldig nøkkel-verdi-tilordning.",
       "sensor_loop_protection": "En Climate Group Helper-enhet kan ikke brukes som ekstern sensor eller kalibreringsmål — dette ville skape en tilbakekoblingsløkke."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Bypass-enhet",
           "description": "Den schedule.*- eller calendar.*-enheten som brukes som bypass (f.eks. calendar.vacation). Sett til null eller tom for å gjenopprette den konfigurerte standarden."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Angi reserve-nyttelast for tidsplan",
+      "description": "Angir eller fjerner en reserve-nyttelast som brukes når basistidsplanen er inaktiv. Overstyrer den konfigurerte reserve-nyttelasten.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Reserve-nyttelast",
+          "description": "Reserve-klimadata som YAML eller tilordning (f.eks. 'temperature: 17.0\\nhvac_mode: heat'). Sett til null eller tom for å gjenopprette konfigurert standard."
         }
       }
     },

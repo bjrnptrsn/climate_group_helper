@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "En az bir iklim cihazı seçmelisiniz."
+      "no_entities": "En az bir iklim cihazı seçmelisiniz.",
+      "empty_name": "Grup için bir ad girin."
     },
     "abort": {
       "already_configured": "Bu grup zaten yapılandırılmış.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Varlık Tetikleyicisi",
               "presence_zone": "Varlık Bölgesi",
               "presence_action": "Uzakta Eylemi",
-              "presence_away_offset": "Uzakta Sıcaklık Ofseti (°C)",
-              "presence_away_temperature": "Uzakta Sıcaklığı (°C)",
+              "presence_away_offset": "Uzakta Sıcaklık Ofseti",
+              "presence_away_temperature": "Uzakta Sıcaklığı",
               "presence_away_preset": "Uzakta Ön Ayarı",
               "presence_away_delay": "Uzakta Gecikmesi (saniye)",
               "presence_return_delay": "Dönüş Gecikmesi (saniye)"
@@ -169,21 +170,17 @@
             "name": "Program Otomasyonu",
             "description": "İklim ayarlarını otomatikleştirmek için bir program veya takvim varlığı bağlayın. Zaman aralığı verileri, grup davranışını zaman aralığı bazında ayarlamak için iklim özniteliklerini (temperature, hvac_mode) ve meta anahtarları (turn_off, sync_mode, sync_attributes) içerebilir.",
             "data": {
-              "schedule_entity": "Program/Takvim Varlığı",
-              "schedule_bypass_entity": "Bypass Varlığı",
-              "resync_interval": "Yeniden Senkronizasyon Aralığı (dakika)",
-              "override_duration": "Geçersiz Kılma Süresi (dakika)",
-              "persist_changes": "Kalıcı Geçersiz Kılma",
-              "persist_active_schedule": "Program Geçersiz Kılmasını Koru",
+              "schedule_entity": "Temel Program / Takvim Varlığı",
+              "schedule_fallback_payload": "Etkin Olmayan Temel Program / Takvim için Yedek Durum (YAML)",
+              "schedule_bypass_entity": "Bypass Program / Takvim Varlığı",
+              "retain_service_changes_schedule": "Hizmet Aracılığıyla Yapılan Değişiklikleri Koru (Program)",
               "ignore_off_members_schedule": "Üyenin Kapalı Durumuna Saygı Göster (Program)"
             },
             "data_description": {
               "schedule_entity": "Bir schedule.* veya calendar.* varlığı seçin. Program varlıkları için zaman aralığı verileri, aralığın özniteliklerinden okunur. Takvim varlıkları için zaman aralığı verileri, etkinliğin description alanından YAML olarak okunur. Desteklenen anahtarlar: iklim öznitelikleri ve meta anahtarlar.",
+              "schedule_fallback_payload": "Temel programın etkin blokları dışında onun yerine geçer, böylece kesintisiz 24/7 programlara gerek kalmaz. Baypas katmanı her zamanki gibi çalışmaya devam eder ve etkinken bunu geçersiz kılar. Yukarıdakiyle aynı YAML biçimi (ör. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "İsteğe bağlı daha yüksek öncelikli katman (örn. bir tatil takvimi). Etkin olduğunda, zaman aralığı verileri ana programı geçersiz kılar. Zaman aralığı verileri aynı şekilde okunur: schedule.* varlıkları için öznitelikler, calendar.* varlıkları için YAML açıklaması.",
-              "resync_interval": "Üyeleri her X dakikada bir hedef duruma zorla senkronize edin. Cihazların manuel olarak ayarlansa veya komutlar kaçırılsa bile programda kalmasını sağlar. Devre dışı bırakmak için 0 olarak ayarlayın.",
-              "override_duration": "Manuel geçersiz kılmaların süresi. Bu süreden sonra grup otomatik olarak mevcut programa geri döner. Geçersiz kılma süresini atlamak için 0 olarak ayarlayın.",
-              "persist_changes": "Manuel geçersiz kılma etkinken programın kendisindeki değişiklikler yoksayılır. Mevcut program yalnızca geçersiz kılma süresi dolduktan sonra yeniden uygulanır.",
-              "persist_active_schedule": "Hizmet aracılığıyla değiştirildiğinde etkin programı yeniden başlatma sonrasında koruyun. Aksi takdirde varsayılana sıfırlanır.",
+              "retain_service_changes_schedule": "Hizmet aracılığıyla değiştirilen temel programı, baypası ve yedek durumu yeniden başlatmadan sonra korur. Aksi takdirde yapılandırılmış varsayılanlara sıfırlanır.",
               "ignore_off_members_schedule": "Program, şu anda kapalı olan üyeleri AÇMAZ."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "En az bir üye izolasyon dışında kalmalıdır.",
       "isolation_entity_overlap": "Her üye yalnızca bir izolasyon kuralında görünebilir.",
       "isolation_action_preset_required": "İzolasyon eylemi için bir ön ayar modu seçin.",
+      "window_temperature_required": "Bir pencere sıcaklığı ayarlayın veya pencere eylemini değiştirin.",
+      "presence_action_value_required": "Seçilen uzakta eylemi için bir değer ayarlayın veya eylemi değiştirin.",
+      "schedule_fallback_payload_invalid": "Yedek zaman planı yükünde geçersiz YAML biçimi. Geçerli bir anahtar-değer eşlemesi olmalıdır.",
       "sensor_loop_protection": "Bir Climate Group Helper varlığı harici sensör veya kalibrasyon hedefi olarak kullanılamaz — bu bir geri besleme döngüsü oluşturur."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Bypass Varlığı",
           "description": "Bypass olarak kullanılacak schedule.* veya calendar.* varlığı (örn. calendar.vacation). Yapılandırılmış varsayılanı geri yüklemek için null veya boş bırakın."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Program Yedek Yükünü Ayarla",
+      "description": "Temel program kapalıyken uygulanan yedek yükü ayarlar veya temizler. Yapılandırılmış yedek yükü geçersiz kılar.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Yedek Yük",
+          "description": "YAML veya eşleme olarak yedek klima verileri (örn. 'temperature: 17.0\\nhvac_mode: heat'). Yapılandırılan varsayılana dönmek için null veya boş bırakın."
         }
       }
     },

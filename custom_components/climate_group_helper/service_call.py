@@ -77,8 +77,12 @@ class BaseServiceCallHandler(ABC):
         self._hass = group.hass
         self._debouncer: Debouncer[Any] | None = None
         self._active_tasks: set[asyncio.Task[Any]] = set()
-        self._call_triggers: list[Callable[[], Any]] = []
+        self._call_triggers: list[Callable[[dict[str, Any] | None], Any]] = []
         self._lock = asyncio.Lock()
+        # OOB marking collected by _process_oob_guard during call generation and
+        # applied by _execute_calls once the calls have gone out.
+        self._pending_oob_add: set[str] = set()
+        self._pending_oob_discard: set[str] = set()
 
     @property
     def target_state(self) -> TargetState:
@@ -191,9 +195,18 @@ class BaseServiceCallHandler(ABC):
         # a command.
         for attempt in range(attempts):
             try:
+                # Drop a previous attempt's pending marking — this generation
+                # re-evaluates every member against the current states.
+                self._pending_oob_add.clear()
+                self._pending_oob_discard.clear()
+
                 calls = self._generate_calls(data)
 
                 if not calls:
+                    # Nothing to send: a member found in range needs its marking
+                    # cleared even without a call (the OFF-restore call is only
+                    # built for members currently OFF).
+                    self._apply_pending_oob()
                     _LOGGER.debug("[%s] No pending calls, stopping retry loop", self._group.entity_id)
                     return
 
@@ -202,6 +215,8 @@ class BaseServiceCallHandler(ABC):
 
                 if stagger_delay:
                     calls = self._split_calls_by_entity(calls)
+
+                sent_entity_ids: set[str] = set()
 
                 for i, call in enumerate(calls):
                     service = call["service"]
@@ -212,7 +227,17 @@ class BaseServiceCallHandler(ABC):
                     # that await, so we check target_state here before each call.
                     if self._is_stale_call(call):
                         _LOGGER.debug("[%s] Aborting stale call: kwargs=%s no longer match target_state", self._group.entity_id, call["kwargs"])
+                        # Calls earlier in this batch already went out — their OOB
+                        # marking must not be lost just because a later call in the
+                        # same batch went stale. Restricted to sent_entity_ids: a
+                        # fully stale batch (nothing sent) must still leave no
+                        # marking behind, and entities from calls that never went
+                        # out must not be marked based on a decision that was
+                        # never executed.
+                        self._apply_pending_oob(sent_entity_ids)
                         return
+
+                    sent_entity_ids.update(call["entity_ids"])
 
                     # Stagger delay between calls (not before first, not after last)
                     if i > 0 and stagger_delay:
@@ -230,6 +255,9 @@ class BaseServiceCallHandler(ABC):
                                   self._group.entity_id, i + 1, len(calls), attempt + 1, 
                                   attempts, service, service_data, parent_id
                     )
+
+                # The calls went out — only now may the OOB marking be applied.
+                self._apply_pending_oob()
 
                 await self._after_call_trigger(data)
 
@@ -374,8 +402,25 @@ class BaseServiceCallHandler(ABC):
         """
         return value
 
-    def _get_target_value_with_offset(self, attr: str, value: Any = None) -> Any:
-        """Read from target_state, with group_offset applied for temperature attributes."""
+    def _get_target_value_with_offset(self, attr: str, value: Any = None) -> Any:  # noqa: ARG002
+        """Read from target_state, with group_offset applied for temperature attributes.
+
+        The rounding is unconditional — deliberately, and NOT a mismatch with the
+        call path's early return at offset 0.0. Devices round to one decimal
+        themselves, so an unrounded target like 19.75 sits ~0.05 away from the
+        19.8 the member reports back, which exceeds FLOAT_TOLERANCE by a float
+        epsilon and produces a redundant set_temperature on every single resync.
+        Rounding here compares against what the member can actually report.
+
+        Trade-off (accepted): for a target with more than one decimal that a
+        device *can* represent exactly, the diff compares against the rounded
+        value. Reverting to conditional rounding reintroduces the endless-resync
+        loop, which is the far worse failure — see the regression test
+        `test_bug1_rounding_causes_spurious_temperature_call`.
+
+        `value` is deliberately unused: handlers routing here always want the
+        group target, not the explicitly passed value.
+        """
         raw = getattr(self.target_state, attr, None)
         if raw is not None and attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
             return round(float(raw) + self._group.run_state.group_offset, 1)
@@ -868,6 +913,11 @@ class BaseServiceCallHandler(ABC):
             bundled: dict[tuple[str, frozenset[tuple[str, Any]]], list[str]] = {}
 
             for eid in template_members:
+                # Deliberately hass.states.get(), not read_member_state(): the
+                # translation needs the member's actual physical mode/temperature
+                # to decide the outgoing single-setpoint command, not the virtual
+                # heat_cool proxy read_member_state() would return for a covered
+                # member.
                 state = self._hass.states.get(eid)
                 if not state:
                     continue
@@ -893,6 +943,7 @@ class BaseServiceCallHandler(ABC):
                 if expected_mode != template.deadband_action:
                     template.last_physical_mode[eid] = expected_mode
 
+                trans_kwargs: dict[str, Any]
                 if expected_mode in (HVACMode.OFF, HVACMode.FAN_ONLY) or expected_temp is None:
                     trans_service = SERVICE_SET_HVAC_MODE
                     trans_kwargs = {ATTR_HVAC_MODE: expected_mode}
@@ -934,13 +985,19 @@ class BaseServiceCallHandler(ABC):
 
         Checks ALL calls with ATTR_TEMPERATURE kwargs against device min/max.
         Preserves upstream kwargs (e.g. hvac_mode from min_temp_off restore).
-        Mutates run_state.oob_members once at the end.
+
+        Side-effect free: the members this pass found out of bounds are collected
+        in `self._pending_oob` instead of being written to run_state here. Call
+        generation must not mark a member OOB before the corresponding OFF/CLAMP
+        call actually went out — `_execute_calls` may still discard the whole
+        batch as stale, which would leave the member excluded from later syncs
+        without ever having been acted on. `_execute_calls` applies the marking
+        once the calls have been sent.
         """
         if self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
             return calls  # No-op when not union strategy
 
         result = []
-        new_oob = set(self._group.run_state.oob_members)
         action = self._group.config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, UnionOutOfBoundsAction.OFF)
 
         temp_attrs = (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
@@ -974,7 +1031,8 @@ class BaseServiceCallHandler(ABC):
 
                 if is_oob:
                     # → OOB
-                    new_oob.add(entity_id)
+                    self._pending_oob_add.add(entity_id)
+                    self._pending_oob_discard.discard(entity_id)
                     if action == UnionOutOfBoundsAction.OFF:
                         if state.state != HVACMode.OFF:
                             result.append({
@@ -1001,19 +1059,26 @@ class BaseServiceCallHandler(ABC):
                             "injected": list(set(call.get("injected", [])) | call_temp_attrs.keys()),
                         })
                 else:
-                    # → In-range
+                    # → In-range for THIS call's attributes. That is not enough to
+                    # clear the marking: a member out of bounds only on
+                    # target_temp_low would be released by a temperature-only call
+                    # and re-marked by the next range call, flip-flopping every
+                    # sync cycle. `_is_oob_blocked` weighs every bound the target
+                    # state currently carries — reuse it as the single authority.
                     in_range_ids.append(entity_id)
-                    if entity_id in self._group.run_state.oob_members and state.state == HVACMode.OFF:
-                        target_mode = self.target_state.hvac_mode
-                        if target_mode and target_mode != HVACMode.OFF:
-                            capable = self._get_capable_entities(ATTR_HVAC_MODE, target_mode)
-                            if entity_id in capable:
-                                result.append({
-                                    "service": SERVICE_SET_HVAC_MODE,
-                                    "kwargs": {ATTR_HVAC_MODE: target_mode},
-                                    "entity_ids": [entity_id],
-                                })
-                    new_oob.discard(entity_id)
+                    if entity_id in self._group.run_state.oob_members and not self._is_oob_blocked(entity_id):
+                        if state.state == HVACMode.OFF:
+                            target_mode = self.target_state.hvac_mode
+                            if target_mode and target_mode != HVACMode.OFF:
+                                capable = self._get_capable_entities(ATTR_HVAC_MODE, target_mode)
+                                if entity_id in capable:
+                                    result.append({
+                                        "service": SERVICE_SET_HVAC_MODE,
+                                        "kwargs": {ATTR_HVAC_MODE: target_mode},
+                                        "entity_ids": [entity_id],
+                                    })
+                        self._pending_oob_discard.add(entity_id)
+                        self._pending_oob_add.discard(entity_id)
 
             if in_range_ids:
                 result.append({
@@ -1022,10 +1087,39 @@ class BaseServiceCallHandler(ABC):
                     "entity_ids": in_range_ids,
                 })
 
-        # Side effect: write oob_members once at end (retry-safe)
-        self._group.run_state = replace(self._group.run_state, oob_members=frozenset(new_oob))
-
         return result
+
+    def _apply_pending_oob(self, sent_entity_ids: set[str] | None = None) -> None:
+        """Write the OOB marking collected during call generation to run_state.
+
+        Called by `_execute_calls` after the generated calls have been sent, so a
+        batch discarded as stale never leaves a member marked OOB without the
+        corresponding OFF/CLAMP call having gone out. Read-modify-write is atomic
+        (no await), and the pending sets are cleared for the next generation.
+
+        `sent_entity_ids`, when given, restricts the marking to entities whose
+        call actually went out — used by the mid-batch stale abort, where later
+        calls in the same batch never reached their entities and must not be
+        marked based on a generation-time decision that was never executed.
+        """
+        if not self._pending_oob_add and not self._pending_oob_discard:
+            return
+        # Copy before clearing — pending_add/pending_discard would otherwise be
+        # the same set objects as self._pending_oob_add/_discard and go empty
+        # along with them below.
+        pending_add = set(self._pending_oob_add)
+        pending_discard = set(self._pending_oob_discard)
+        if sent_entity_ids is not None:
+            pending_add &= sent_entity_ids
+            pending_discard &= sent_entity_ids
+        self._pending_oob_add.clear()
+        self._pending_oob_discard.clear()
+        if not pending_add and not pending_discard:
+            return
+        run_state = self._group.run_state
+        new_oob = (run_state.oob_members | pending_add) - pending_discard
+        if new_oob != run_state.oob_members:
+            self._group.run_state = replace(run_state, oob_members=frozenset(new_oob))
 
     # Block hook to prevent all service calls
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
@@ -1139,6 +1233,7 @@ class ClimateCallHandler(BaseServiceCallHandler):
         """Initialize the climate call handler."""
         super().__init__(group)
         self._turning_off = False
+        self._dispatched_data: dict[str, Any] | None = None
 
     def _generate_calls(self, data: dict[str, Any] | None = None, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
         """Generate calls for user operations."""
@@ -1150,6 +1245,10 @@ class ClimateCallHandler(BaseServiceCallHandler):
             # in a combined payload (e.g. set_temperature with hvac_mode: off)
             # must not reach members while a blocking source is active.
             data = {ATTR_HVAC_MODE: HVACMode.OFF}
+        # Record what actually goes out: _after_call_trigger() is handed the
+        # original payload by the retry loop and must not act on attributes
+        # that were stripped here.
+        self._dispatched_data = data
         try:
             return super()._generate_calls(data=data, filter_state=filter_state)
         finally:
@@ -1221,9 +1320,20 @@ class ClimateCallHandler(BaseServiceCallHandler):
         return False
 
     async def _after_call_trigger(self, data: dict[str, Any] | None = None) -> None:
-        """Execute calls and reset group offset if a temperature was explicitly set."""
+        """Execute calls and reset group offset if a temperature was explicitly set.
+
+        The offset represents a manual nudge on top of the target; setting a
+        temperature by hand replaces that intent, so the nudge is cleared. It
+        must only be cleared for a temperature that actually went out: while a
+        blocking source is active, `_generate_calls()` strips a combined
+        `{temperature, hvac_mode: off}` down to a bare OFF. The retry loop still
+        hands us the *original* payload here, so read what was dispatched
+        instead — otherwise closing the window restores a target the user's
+        offset no longer applies to.
+        """
+        effective = self._dispatched_data if self._dispatched_data is not None else data
         temp_attrs = {ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH}
-        if data and temp_attrs & set(data) and self._group.offset_set_callback:
+        if effective and temp_attrs & set(effective) and self._group.offset_set_callback:
             await self._group.offset_set_callback(0.0)
 
 
@@ -1292,9 +1402,8 @@ class SyncCallHandler(BaseServiceCallHandler):
         return self._group.run_state.blocked
 
     def _apply_group_offset(self) -> bool:
-        # Suspended during active override (boost/schedule_override): those handlers
-        # send an exact temperature that must land on members unchanged.
-        return self._group.run_state.active_override is None
+        # Suspended during temporary state (blocking sources or boost).
+        return not self._group.run_state.temporary_state_active
 
 
 class WindowControlCallHandler(BaseServiceCallHandler):
@@ -1377,12 +1486,12 @@ class ScheduleCallHandler(BaseServiceCallHandler):
         return self._skip_off_member(state=state, target_value=target_value, conf_key=CONF_IGNORE_OFF_MEMBERS_SCHEDULE)
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:
-        """Block schedule calls if blocking mode is active."""
-        return self._group.run_state.blocked
+        """Block schedule calls if a temporary state is active."""
+        return self._group.run_state.temporary_state_active
 
     def _apply_group_offset(self) -> bool:
-        # Suspended during active override (boost/schedule_override): see SyncCallHandler.
-        return self._group.run_state.active_override is None
+        # Suspended during temporary state (blocking sources or boost).
+        return not self._group.run_state.temporary_state_active
 
 
 class SwitchCallHandler(BaseServiceCallHandler):
@@ -1451,13 +1560,14 @@ class OverrideCallHandler(BaseServiceCallHandler):
         return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
-        """Read from target_state instead of using the passed value."""
+        """Use explicit passed value if available, otherwise read from target_state."""
+        if value is not None:
+            return value
         return getattr(self.target_state, attr, None)
 
     def _apply_group_offset(self) -> bool:
-        # Apply offset only during restore (active_override cleared = boost just expired).
-        # During boost, active_override is set — exact temperature must land unchanged.
-        return self._group.run_state.active_override is None
+        # Suspended during temporary state (blocking sources or boost).
+        return not self._group.run_state.temporary_state_active
 
 
 class TemplateCallHandler(BaseServiceCallHandler):
@@ -1500,10 +1610,10 @@ class TemplateCallHandler(BaseServiceCallHandler):
         return not self._group.member_template_manager.is_covered_state(state)
 
     def _block_all_calls(self, data: dict[str, Any] | None = None) -> bool:  # noqa: ARG002
-        """Suppress changeover while a blocking source is active (window/switch/presence)."""
-        return self._group.run_state.blocked
+        """Suppress changeover while a temporary state is active."""
+        return self._group.run_state.temporary_state_active
 
     def _apply_group_offset(self) -> bool:
-        # Suspended during active override (boost/schedule_override): see SyncCallHandler.
-        return self._group.run_state.active_override is None
+        # Suspended during temporary state (blocking sources or boost).
+        return not self._group.run_state.temporary_state_active
 

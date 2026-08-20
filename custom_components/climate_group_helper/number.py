@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.number import NumberEntity, NumberMode, RestoreNumber
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -17,6 +16,31 @@ if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_push_group_offset(group: ClimateGroupHelper) -> None:
+    """Push the current group offset to the members.
+
+    Lives here because this module owns `run_state.group_offset` (AGENTS.md §2).
+    Shared by both writers — the slider below and the schedule meta-key
+    (meta_processor.py) — so a slot that only sets `group_offset` reaches the
+    devices just like a manual slider move. The offset value itself is applied
+    inside the call pipeline; this only triggers the send, picking the handler
+    that matches the current blocking state.
+    """
+    sources = group.run_state.blocking_sources
+    if "presence" in sources:
+        # Only presence AWAY_OFFSET uses group_offset — window/switch enforcement ignores it.
+        await group.presence_override_manager.enforce_override()
+    elif not group.run_state.temporary_state_active:
+        await group.sync_mode_call_handler.call_debounced()
+    else:
+        _LOGGER.debug(
+            "[%s] Group offset not pushed. Sources: '%s', Temporary state active: %s",
+            group.entity_id,
+            ", ".join(sources) if sources else "None",
+            group.run_state.temporary_state_active,
+        )
 
 
 async def async_setup_entry(
@@ -45,12 +69,15 @@ class OffsetNumber(RestoreNumber, NumberEntity):
     _attr_native_min_value = -5.0
     _attr_native_max_value = 5.0
     _attr_native_step = 0.5
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     _attr_should_poll = False
 
     def __init__(self, group: ClimateGroupHelper) -> None:
         """Initialize the offset number."""
         self._group = group
+        # Follow the system unit like the climate entity does — a hard-coded °C
+        # mislabels the slider in Fahrenheit setups and makes the magnitude wrong
+        # (a step of 0.5 would read as °C but be applied as °F).
+        self._attr_native_unit_of_measurement = group.hass.config.units.temperature_unit
         self._attr_icon = "mdi:thermometer-plus"
         self._attr_translation_key = "group_offset"
         self._attr_unique_id = f"{group.unique_id}_group_offset"
@@ -116,17 +143,5 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         self._group.run_state = new_run_state
         self._group.async_defer_or_update_ha_state()
 
-        sources = self._group.run_state.blocking_sources
-        if "presence" in sources:
-            # Only presence AWAY_OFFSET uses group_offset — window/switch enforcement ignores it.
-            await self._group.presence_override_manager.enforce_override()
-        elif not sources and not self._group.run_state.active_override:
-            await self._group.sync_mode_call_handler.call_debounced()
-        else:
-            _LOGGER.debug(
-                "[%s] No calls made. Sources: '%s', Active override: '%s'",
-                self._group.entity_id,
-                ", ".join(sources) if sources else "None",
-                self._group.run_state.active_override
-            )
+        await async_push_group_offset(self._group)
         self.async_write_ha_state()

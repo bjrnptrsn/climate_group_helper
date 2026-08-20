@@ -46,14 +46,13 @@ _TRUSTED_CONTEXT_IDS = frozenset(
 )
 
 # Subset of _TRUSTED_CONTEXT_IDS whose echoes are suppressed wholesale early in
-# resync() (blocking/restore side effects are never external changes). Keep in
-# sync when adding a new blocking-source handler.
+# resync() (blocking/restore/override side effects are never external changes).
 # INVARIANT BREAK (deliberate): "isolation_restore" is NOT in _TRUSTED_CONTEXT_IDS.
 # Its echo must reach the enforcement branch (own_echo=False → active blocking
 # sources re-apply their state when isolation ends during a block), but it must
 # never be MIRROR-adopted — hence the suppression here.
 _BLOCKING_ECHO_CONTEXT_IDS = frozenset(
-    {"window_control", "isolation", "presence", "isolation_restore"}
+    {"window_control", "isolation", "presence", "isolation_restore", "override"}
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -161,7 +160,7 @@ class SyncModeHandler:
         # startup_time is always armed in async_added_to_hass(); the is-not-None guard
         # keeps the suppression window the only gate — sync can never be blocked forever.
         startup_time = self._group.run_state.startup_time
-        if startup_time is not None and (time.time() - startup_time) < STARTUP_BLOCK_DELAY:
+        if startup_time is not None and (time.monotonic() - startup_time) < STARTUP_BLOCK_DELAY:
             _LOGGER.debug("[%s] Startup phase, sync blocked", self._group.entity_id)
             return
 
@@ -253,7 +252,10 @@ class SyncModeHandler:
         if self.sync_mode in (SyncMode.MIRROR, SyncMode.MIRROR_LOCK) and not is_reconnect and not is_covered:
             if filtered := {key: value for key, value in change_dict.items() if self.filter_state.to_dict().get(key)}:
                 filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
+                was_boost = self._group.run_state.boost_temperature is not None
                 self.state_manager.update(entity_id=change_entity_id, **filtered)
+                if was_boost:
+                    self._group.boost_override_manager.abort(push=True)
                 _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
 
         # 2. Lock mode: only accept "Last Man Standing" OFF (Partial Sync).
@@ -266,6 +268,8 @@ class SyncModeHandler:
                 and self.target_state.hvac_mode != HVACMode.OFF
             ):
                 if self.state_manager.update(entity_id=change_entity_id, hvac_mode=HVACMode.OFF):
+                    if self._group.run_state.boost_temperature is not None:
+                        self._group.boost_override_manager.abort(push=True)
                     _LOGGER.debug("[%s] Last Man Standing: accepted OFF from %s", self._group.entity_id, change_entity_id)
 
         # 3. Master/Lock mode: master adopts (MIRROR), non-master reverts (LOCK)
@@ -279,19 +283,22 @@ class SyncModeHandler:
             if master_id and change_entity_id == master_id and not is_covered and not is_reconnect:
                 if filtered := {key: value for key, value in change_dict.items() if self.filter_state.to_dict().get(key)}:
                     filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
+                    was_boost = self._group.run_state.boost_temperature is not None
                     self.state_manager.update(entity_id=change_entity_id, **filtered)
+                    if was_boost:
+                        self._group.boost_override_manager.abort(push=True)
                     _LOGGER.debug("[%s] Master entity change adopted: %s", self._group.entity_id, filtered)
             # Non-master changes are enforced (reverted) via call_debounced below
 
-        # Enforce target state on all members (skip during global blocking mode)
-        if not self._group.run_state.blocked:
+        # Enforce target state on all members (skip during temporary state: blocking mode or boost)
+        if not self._group.run_state.temporary_state_active:
             sync_task = self._hass.async_create_background_task(
                 self.call_handler.call_debounced(), name="climate_group_sync_enforcement"
             )
             self._active_sync_tasks.add(sync_task)
             sync_task.add_done_callback(self._active_sync_tasks.discard)
         else:
-            _LOGGER.debug("[%s] Enforcement skipped (blocking mode)", self._group.entity_id)
+            _LOGGER.debug("[%s] Enforcement skipped (temporary state active)", self._group.entity_id)
 
     # --- Offset Helpers ---
 

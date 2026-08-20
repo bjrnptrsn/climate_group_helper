@@ -15,7 +15,8 @@
       }
     },
     "error": {
-      "no_entities": "Musíte vybrať aspoň jedno klimatické zariadenie."
+      "no_entities": "Musíte vybrať aspoň jedno klimatické zariadenie.",
+      "empty_name": "Zadajte názov skupiny."
     },
     "abort": {
       "already_configured": "Táto skupina je už nakonfigurovaná.",
@@ -147,8 +148,8 @@
               "presence_sensor": "Spúšťač prítomnosti",
               "presence_zone": "Zóna prítomnosti",
               "presence_action": "Akcia pri neprítomnosti",
-              "presence_away_offset": "Teplotný posun pri neprítomnosti (°C)",
-              "presence_away_temperature": "Teplota pri neprítomnosti (°C)",
+              "presence_away_offset": "Teplotný posun pri neprítomnosti",
+              "presence_away_temperature": "Teplota pri neprítomnosti",
               "presence_away_preset": "Predvoľba pri neprítomnosti",
               "presence_away_delay": "Oneskorenie neprítomnosti (sekundy)",
               "presence_return_delay": "Oneskorenie návratu (sekundy)"
@@ -169,21 +170,17 @@
             "name": "Automatizácia plánu",
             "description": "Prepojte entitu rozvrhu alebo kalendára na automatizáciu nastavení klimatu. Dáta slotu môžu obsahovať klimatické atribúty (temperature, hvac_mode) a meta-kľúče (turn_off, sync_mode, sync_attributes) na úpravu správania skupiny na slot.",
             "data": {
-              "schedule_entity": "Entita rozvrhu / kalendára",
-              "schedule_bypass_entity": "Obchádzajúca entita",
-              "resync_interval": "Interval opätovnej synchronizácie (minúty)",
-              "override_duration": "Trvanie prepísania (minúty)",
-              "persist_changes": "Trvalé prepísanie (Sticky)",
-              "persist_active_schedule": "Zachovať prepísanie rozvrhu",
+              "schedule_entity": "Základná entita rozvrhu/kalendára",
+              "schedule_fallback_payload": "Náhradný stav pri neaktívnom základnom rozvrhu/kalendári (YAML)",
+              "schedule_bypass_entity": "Obchádzková entita rozvrhu/kalendára",
+              "retain_service_changes_schedule": "Zachovať zmeny vykonané cez službu (Plán)",
               "ignore_off_members_schedule": "Rešpektovať stav Vypnuté u členov (Plán)"
             },
             "data_description": {
               "schedule_entity": "Vyberte entitu schedule.* alebo calendar.*. Pre entity rozvrhu sa dáta slotu čítajú z atribútov slotu. Pre entity kalendára sa dáta slotu čítajú ako YAML z poľa popisu udalosti. Podporované kľúče: klimatické atribúty a meta-kľúče.",
+              "schedule_fallback_payload": "Zastupuje základný rozvrh mimo jeho aktívnych blokov, takže nepotrebujete súvislé rozvrhy 24/7. Vrstva bypass funguje bez zmeny a počas aktivity ho prepíše. Rovnaký formát YAML ako vyššie (napr. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Voliteľná prioritná vrstva (napr. kalendár dovolenky). Keď je aktívna, jej dáta slotu prepíšu základný plán. Dáta slotu sa čítajú rovnako: atribúty pre entity schedule.*, YAML popis pre entity calendar.*.",
-              "resync_interval": "Vynútiť synchronizáciu členov na cieľový stav každých X minút. Zabezpečí, že zariadenia zostanú podľa rozvrhu aj po manuálnej úprave alebo zmeškání príkazu. Nastavte na 0 pre vypnutie.",
-              "override_duration": "Trvanie manuálnych prepísaní. Po uplynutí tejto doby sa skupina automaticky vráti k aktuálnemu rozvrhu. Nastavte na 0 pre preskočenie obdobia prepísania.",
-              "persist_changes": "Zmeny samotného rozvrhu budú ignorované, kým je aktívne manuálne prepísanie. Aktuálny rozvrh sa znovu použije až po vypršaní prepísania.",
-              "persist_active_schedule": "Zachová aktívny rozvrh po reštarte, ak bol zmenený prostredníctvom služby. V opačnom prípade sa vráti na predvolené nastavenie.",
+              "retain_service_changes_schedule": "Po reštarte zachová základný rozvrh, bypass a náhradný stav zmenené prostredníctvom služby. Inak sa vrátia na nakonfigurované predvolené hodnoty.",
               "ignore_off_members_schedule": "Plán NEZAPNE členov, ktorí sú momentálne VYPNUTÍ."
             }
           },
@@ -360,6 +357,9 @@
       "isolation_all_selected": "Aspoň jeden člen musí zostať mimo izolácie.",
       "isolation_entity_overlap": "Každý člen sa môže nachádzať iba v jednom izolačnom pravidle.",
       "isolation_action_preset_required": "Vyberte prednastavený režim pre izolačnú akciu.",
+      "window_temperature_required": "Nastavte teplotu pri otvorenom okne alebo zmeňte akciu okna.",
+      "presence_action_value_required": "Nastavte hodnotu pre vybranú akciu neprítomnosti alebo zmeňte akciu.",
+      "schedule_fallback_payload_invalid": "Neplatný formát YAML v náhradnom užitočnom zaťažení plánu. Musí to byť platné mapovanie kľúč-hodnota.",
       "sensor_loop_protection": "Entitu Climate Group Helper nie je možné použiť ako externý senzor alebo cieľ kalibrácie — vznikla by spätná väzba."
     },
     "abort": {
@@ -624,6 +624,16 @@
         "schedule_bypass_entity": {
           "name": "Obchádzajúca entita",
           "description": "Entita schedule.* alebo calendar.* použitá ako bypass (napr. calendar.vacation). Nastavte na null alebo prázdne pre obnovenie nakonfigurovanej predvolenej hodnoty."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Nastaviť náhradný payload rozvrhu",
+      "description": "Nastaví alebo vymaže náhradný payload použitý, keď je základný rozvrh vypnutý. Prepíše nakonfigurovaný náhradný payload.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Náhradný payload",
+          "description": "Náhradné údaje klímy ako YAML alebo mapovanie (napr. 'temperature: 17.0\\nhvac_mode: heat'). Nastavte na null alebo prázdne pre obnovenie predvoleného nastavenia."
         }
       }
     },
