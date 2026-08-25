@@ -134,7 +134,7 @@ class BaseOverrideManager:
     def _any_member_not_off(self) -> bool:
         """Return True if any reachable, non-isolated member has an HVAC mode other than OFF."""
         return any(
-            (st := self._group.read_member_state(eid))
+            (st := self._group.aggregator.read_member_state(eid))
             and st.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
             and st.state != HVACMode.OFF
             for eid in self._group.climate_entity_ids

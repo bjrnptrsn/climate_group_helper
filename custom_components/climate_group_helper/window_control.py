@@ -66,7 +66,7 @@ class WindowControlHandler:
 
         _LOGGER.debug(
             "[%s] WindowControl initialized. (room: %s.open_delay: %ds), (zone: %s.open_delay: %ds), (room/zone: close_delay: %ds)",
-            group.entity_id, self._room_sensor, self._room_delay, self._zone_sensor, self._zone_delay, self._close_delay)
+            group.log_id, self._room_sensor, self._room_delay, self._zone_sensor, self._zone_delay, self._close_delay)
 
     @property
     def override_manager(self) -> WindowOverrideManager:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
@@ -17,11 +18,49 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Bounds of the group offset. Module-level so every writer shares one source of
+# truth — the slider entity below exposes them as its native min/max, and
+# `clean_offset()` enforces them for the paths that never touch the entity.
+GROUP_OFFSET_MIN = -5.0
+GROUP_OFFSET_MAX = 5.0
+
+
+def clean_offset(value: Any, entity_id: str) -> float | None:
+    """Validate and clamp a group offset, or return None if it is unusable.
+
+    Lives here because this module owns `run_state.group_offset`, and every
+    writer has to apply the same rule: the slider, both restore paths
+    (climate attributes and the entity's own persisted value) and the schedule
+    meta-key fallback that writes `run_state` directly when no offset entity
+    exists. An unclamped value is not cosmetic — it flows into every temperature
+    call through `_process_group_offset` (a target of 21.0 with an offset of
+    99.0 is sent as 120.0), and `status.py` persists it verbatim, so it survives
+    every restart once stored.
+
+    Out-of-range values are clamped rather than rejected, matching what the
+    slider does with the same input — one value, one rule.
+    """
+    try:
+        val = float(value)
+        if math.isnan(val) or math.isinf(val):
+            raise ValueError
+    except (ValueError, TypeError):
+        _LOGGER.warning("[%s] Invalid group_offset value: %s — ignored.", entity_id, value)
+        return None
+
+    clamped = max(GROUP_OFFSET_MIN, min(GROUP_OFFSET_MAX, val))
+    if clamped != val:
+        _LOGGER.warning(
+            "[%s] Clamped group_offset from %s to %s (allowed range: %s–%s)",
+            entity_id, val, clamped, GROUP_OFFSET_MIN, GROUP_OFFSET_MAX,
+        )
+    return clamped
+
 
 async def async_push_group_offset(group: ClimateGroupHelper) -> None:
     """Push the current group offset to the members.
 
-    Lives here because this module owns `run_state.group_offset` (AGENTS.md §2).
+    Lives here because this module owns `run_state.group_offset`.
     Shared by both writers — the slider below and the schedule meta-key
     (meta_processor.py) — so a slot that only sets `group_offset` reaches the
     devices just like a manual slider move. The offset value itself is applied
@@ -66,8 +105,8 @@ class OffsetNumber(RestoreNumber, NumberEntity):
 
     _attr_has_entity_name = True
     _attr_mode = NumberMode.SLIDER
-    _attr_native_min_value = -5.0
-    _attr_native_max_value = 5.0
+    _attr_native_min_value = GROUP_OFFSET_MIN
+    _attr_native_max_value = GROUP_OFFSET_MAX
     _attr_native_step = 0.5
     _attr_should_poll = False
 
@@ -98,11 +137,11 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         self._group.offset_set_callback = self._set_offset
         if (last := await self.async_get_last_number_data()) is not None:
             if last.native_value is not None:
-                try:
-                    self._group.run_state = replace(self._group.run_state, group_offset=float(last.native_value))
-                    _LOGGER.debug("[%s] Restored group offset: %s", self._group.entity_id, last.native_value)
-                except (ValueError, TypeError):
-                    _LOGGER.warning("[%s] Could not restore group offset from '%s' — using default 0.0", self._group.entity_id, last.native_value)
+                # Clamped like any other write: a persisted value can predate the
+                # bounds or have been stored while this entity was disabled.
+                if (restored := clean_offset(last.native_value, self._group.entity_id)) is not None:
+                    self._group.run_state = replace(self._group.run_state, group_offset=restored)
+                    _LOGGER.debug("[%s] Restored group offset: %s", self._group.entity_id, restored)
 
     async def async_will_remove_from_hass(self) -> None:
         """Deregister the offset callback and entity ID."""
@@ -110,10 +149,16 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         self._group.offset_set_callback = None
         self._group.offset_entity_id = None
 
+    def _clean_offset(self, value: float) -> float | None:
+        """Validate and clamp an offset value — see `clean_offset()`."""
+        return clean_offset(value, self._group.entity_id)
+
     async def _set_offset(self, value: float) -> None:
         """Set group offset and update both entities for UI consistency."""
-        _LOGGER.debug("[%s] External offset update: %s", self._group.entity_id, value)
-        self._group.run_state = replace(self._group.run_state, group_offset=value)
+        if (clean_val := self._clean_offset(value)) is None:
+            return
+        _LOGGER.debug("[%s] External offset update: %s", self._group.entity_id, clean_val)
+        self._group.run_state = replace(self._group.run_state, group_offset=clean_val)
         self.async_write_ha_state()
 
     @property
@@ -128,8 +173,10 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         change transfers ownership back to the user: the config_override marker is
         cleared so the next slot transition will NOT reset the offset to 0.0.
         """
-        _LOGGER.debug("[%s] Setting group offset to: %s", self._group.entity_id, value)
-        new_run_state = replace(self._group.run_state, group_offset=value)
+        if (clean_val := self._clean_offset(value)) is None:
+            return
+        _LOGGER.debug("[%s] Setting group offset to: %s", self._group.entity_id, clean_val)
+        new_run_state = replace(self._group.run_state, group_offset=clean_val)
 
         # Ownership transfer: if a schedule meta-key slot currently controls the offset,
         # release that claim so the slot-end cleanup does not silently reset the user's value.
@@ -145,3 +192,5 @@ class OffsetNumber(RestoreNumber, NumberEntity):
 
         await async_push_group_offset(self._group)
         self.async_write_ha_state()
+
+

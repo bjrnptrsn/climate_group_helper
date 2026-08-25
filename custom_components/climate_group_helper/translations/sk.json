@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "Plán NEZAPNE členov, ktorí sú momentálne VYPNUTÍ."
             }
           },
+          "presets_section": {
+            "name": "Predvoľby skupiny",
+            "description": "Definujte si vlastné pomenované predvoľby pre skupinu (napr. eco, guest, ventilate). Výberom predvoľby sa jej atribúty použijú naraz na všetkých členov. Skupinová predvoľba má prednosť pred rovnomennou predvoľbou člena.",
+            "data": {
+              "group_presets": "Predvoľby skupiny (YAML)",
+              "retain_service_changes_presets": "Zachovať zmeny vykonané službou (Predvoľby)"
+            },
+            "data_description": {
+              "group_presets": "Vaše predvoľby vo formáte YAML: ľubovoľne zvolený názov pre každú predvoľbu spolu s atribútmi, ktoré má použiť (temperature, hvac_mode, fan_mode, swing_mode). Predvoľba použije len atribúty, ktoré uvádza. Formát a hotové príklady nájdete v dokumentácii.",
+              "retain_service_changes_presets": "Zachová predvoľby vytvorené alebo upravené službou aj po reštarte. Inak sa obnovia na nakonfigurované predvoľby."
+            }
+          },
           "temp_offsets_section": {
             "name": "Odsadenia členov",
             "description": "Použite individuálne teplotné offsety, aby konkrétni členovia bežali úmerne teplejšie alebo chladnejšie než cieľová hodnota skupiny.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Aspoň jedno klimatické zariadenie musí zostať v skupine.",
-      "calibration_requires_sensors": "Kalibračné ciele vyžadujú aspoň jeden externý teplotný senzor.",
       "master_refresh_notice": "Pridaná Hlavná entita (Master). Dostupné nové možnosti.",
       "master_options_notice": "Nová možnosť Hlavnej entity",
       "isolation_all_selected": "Aspoň jeden člen musí zostať mimo izolácie.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Nastavte teplotu pri otvorenom okne alebo zmeňte akciu okna.",
       "presence_action_value_required": "Nastavte hodnotu pre vybranú akciu neprítomnosti alebo zmeňte akciu.",
       "schedule_fallback_payload_invalid": "Neplatný formát YAML v náhradnom užitočnom zaťažení plánu. Musí to byť platné mapovanie kľúč-hodnota.",
+      "group_presets_invalid": "Neplatný formát YAML v predvoľbách skupiny. Musí to byť platné mapovanie kľúč-hodnota.",
+      "preset_name_collision_notice": "Jedna alebo viac predvolieb skupiny má rovnaký názov ako natívne predvoľby členov. Definícia skupiny ich prepíše.",
       "sensor_loop_protection": "Entitu Climate Group Helper nie je možné použiť ako externý senzor alebo cieľ kalibrácie — vznikla by spätná väzba."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Nastaviť predvoľbu skupiny",
+      "description": "Vytvorí, aktualizuje alebo vymaže virtuálne predvoľby skupiny za behu. Nechajte prázdne na resetovanie.",
+      "fields": {
+        "payload": {
+          "name": "Dátová časť",
+          "description": "Predvoľby skupiny ako YAML alebo mapovanie. Nechajte prázdne na resetovanie. Formát a príklady nájdete v dokumentácii."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Dočasne nastaví skupinu na cieľovú teplotu. Po vypršaní časovača sa skupina automaticky vráti k aktívnemu plánu alebo predchádzajúcemu stavu.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Zahrnúť selektory entít",
           "description": "Ak je true, prepíše aj prepojené senzory (teplota, vlhkosť, prítomnosť, okno atď.) a offsety jednotlivých členov."
+        }
+      }
+    },
+    "reset": {
+      "name": "Obnoviť predvolené",
+      "description": "Obnoví dočasné prepísania a runtime stav (boost, posun, plán, obchádzanie, záloha, predvoľby) na nakonfigurované predvolené hodnoty. Vyberte aspoň jednu možnosť alebo použite „Všetko“.",
+      "fields": {
+        "everything": {
+          "name": "Všetko",
+          "description": "Obnoví všetko nižšie uvedené naraz. Jednotlivé prepínače sa potom ignorujú."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Zruší aktívny boost a obnoví cieľový stav."
+        },
+        "offset": {
+          "name": "Teplotný offset",
+          "description": "Obnoví teplotný offset skupiny na 0.0."
+        },
+        "schedule": {
+          "name": "Entita plánu",
+          "description": "Vráti aktívnu entitu plánu na nakonfigurovaný predvolený plán."
+        },
+        "bypass": {
+          "name": "Entita bypassu",
+          "description": "Vráti aktívnu entitu bypassu na predvolenú hodnotu a vráti úpravy bypassu."
+        },
+        "fallback": {
+          "name": "Záložný payload",
+          "description": "Vráti záložný payload plánu na nakonfigurovanú predvolenú hodnotu."
+        },
+        "presets": {
+          "name": "Predvoľby skupiny",
+          "description": "Vymaže predvoľby vytvorené za behu a obnoví nakonfigurované predvoľby."
         }
       }
     }

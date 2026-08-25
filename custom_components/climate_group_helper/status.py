@@ -13,6 +13,7 @@ from homeassistant.const import (
 
 from .const import (
     ATTR_ACTIVE_MEMBER_COUNT,
+    ATTR_ACTIVE_VIRTUAL_PRESET,
     ATTR_BOOST_TEMPERATURE,
     ATTR_BOOST_UNTIL,
     ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY,
@@ -37,6 +38,7 @@ from .const import (
     ATTR_MEMBER_ENTITIES,
     ATTR_OOB_MEMBERS,
     ATTR_PRESENCE_FALLBACK,
+    ATTR_RUNTIME_GROUP_PRESETS,
     ATTR_SCHEDULE_FALLBACK_PAYLOAD,
     ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE,
     ATTR_TARGET_STATE,
@@ -64,6 +66,10 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # --- Always present ---
     attrs[ATTR_ASSUMED_STATE] = group._attr_assumed_state
     attrs[ATTR_LAST_ACTIVE_HVAC_MODE] = run_state.last_active_hvac_mode
+    if run_state.active_virtual_preset:
+        attrs[ATTR_ACTIVE_VIRTUAL_PRESET] = run_state.active_virtual_preset
+    if group.preset_manager.runtime_presets:
+        attrs[ATTR_RUNTIME_GROUP_PRESETS] = {k: dict(v) for k, v in group.preset_manager.runtime_presets.items()}
     attrs[ATTR_CURRENT_HVAC_MODES] = group._current_hvac_modes
     attrs[ATTR_GROUP_OFFSET] = run_state.group_offset
     attrs[ATTR_TARGET_STATE] = target.to_dict(
@@ -86,7 +92,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # member list, not from live states, and an all-members-unavailable group is
     # exactly the situation where a dashboard needs to show "0 of N active".
     attrs[ATTR_ACTIVE_MEMBER_COUNT] = sum(
-        1 for s in (group.states or ())
+        1 for s in (group.aggregator.states or ())
         if s.state not in (HVACMode.OFF, STATE_UNAVAILABLE, STATE_UNKNOWN)
     )
     attrs[ATTR_TOTAL_MEMBER_COUNT] = len(group.climate_entity_ids)

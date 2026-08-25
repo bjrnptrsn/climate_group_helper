@@ -91,7 +91,7 @@ class MemberIsolationHandler:
 
         _LOGGER.debug(
             "[%s] MemberIsolation initialized. trigger=%s, sensor=%s, hvac_modes=%s, entities=%s, activate_delay=%ss, restore_delay=%ss",
-            group.entity_id, self._trigger, self._sensor_id, self._trigger_hvac_modes,
+            group.log_id, self._trigger, self._sensor_id, self._trigger_hvac_modes,
             self._isolation_entity_ids, self._activate_delay, self._restore_delay,
         )
 
@@ -165,7 +165,12 @@ class MemberIsolationHandler:
                 await self._activate_isolation()
 
     def async_teardown(self) -> None:
-        """Unsubscribe from sensor and cancel pending timers."""
+        """Unsubscribe from sensor and cancel pending timers.
+
+        The per-entity call handlers need no shutdown: both the debouncer and
+        the retry task are created by call_debounced(), and isolation only ever
+        uses call_immediate(), so there is nothing left running to cancel.
+        """
         self._cancel_timer()
         if self._unsub_listener:
             self._unsub_listener()
@@ -274,7 +279,7 @@ class MemberIsolationHandler:
 
         Returns None if the device is unavailable or already in the target state.
         """
-        state = self._group.read_member_state(entity_id)
+        state = self._group.aggregator.read_member_state(entity_id)
         if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return None
 
@@ -304,7 +309,7 @@ class MemberIsolationHandler:
 
     def _read_current_preset(self, entity_id: str) -> str | None:
         """Read the device's current preset_mode (None if unavailable or unset)."""
-        state = self._group.read_member_state(entity_id)
+        state = self._group.aggregator.read_member_state(entity_id)
         if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return None
         return state.attributes.get("preset_mode")
@@ -315,6 +320,9 @@ class MemberIsolationHandler:
         Returns None if no pre-preset was captured, the device is unavailable,
         the preset is not supported by the device, or the device already carries
         the preset (skip logic, consistent with _build_isolation_payload).
+
+        The unavailable case is the odd one out: there the restore is merely
+        postponed, so the caller keeps the snapshot instead of consuming it.
 
         The call is also skipped when the target_state restore will cover the
         preset itself (group preset is set AND supported by the device AND no
@@ -327,7 +335,7 @@ class MemberIsolationHandler:
         pre_preset = self._pre_action_presets.get(entity_id)
         if not pre_preset:
             return None
-        state = self._group.read_member_state(entity_id)
+        state = self._group.aggregator.read_member_state(entity_id)
         if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return None
         supported = state.attributes.get("preset_modes", [])
@@ -388,11 +396,21 @@ class MemberIsolationHandler:
             if handler := self._call_handlers.get(entity_id):
                 # Capture the pre-action preset BEFORE sending the pre-action —
                 # only preset_mode changes need a device-side restore point.
+                #
+                # setdefault, not assignment: an entry may survive a release when
+                # the device was offline and its restore was merely postponed. That
+                # device is out of isolated_members by now, so it passes the check
+                # above — and a plain write would replace the user's original with
+                # the isolation preset the device is still wearing, which is the one
+                # value the entry exists to undo. An entry that is still present is
+                # always the older, more original one.
                 if (
                     self._action_type == IsolationActionType.PRESET_MODE
                     and entity_id not in already_isolated
                 ):
-                    self._pre_action_presets[entity_id] = self._read_current_preset(entity_id)
+                    self._pre_action_presets.setdefault(
+                        entity_id, self._read_current_preset(entity_id)
+                    )
                 payload = self._build_isolation_payload(entity_id)
                 if payload:
                     await handler.call_immediate(payload)
@@ -448,6 +466,16 @@ class MemberIsolationHandler:
             if payload:
                 if restore_handler := self._restore_call_handlers.get(entity_id):
                     await restore_handler.call_immediate(payload)
+            else:
+                state = self._group.aggregator.read_member_state(entity_id)
+                if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                    # Offline device: the restore did not happen, it was
+                    # postponed. Keeping the snapshot is the only chance to
+                    # still get the device off the isolation preset once it
+                    # reconnects — every other reason for an empty payload
+                    # means the preset is already taken care of and the entry
+                    # is genuinely spent.
+                    continue
             # Final release for this device — the entry is consumed.
             self._pre_action_presets.pop(entity_id, None)
 
@@ -477,6 +505,13 @@ class MemberIsolationHandler:
         new_state = event_data.get("new_state")
 
         if entity_id is None or old_state is None or new_state is None:
+            return
+
+        # A covered member's physical mode is band mechanics, not user intent:
+        # with deadband_action=none it reports "off" while resting inside the
+        # band. Isolating it there is permanent — the changeover that would
+        # release it is an own-echo this method never sees.
+        if self._group.member_template_manager.is_covered_state(new_state):
             return
 
         if not (old_hvac_mode := old_state.state):

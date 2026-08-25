@@ -49,6 +49,21 @@ set_schedule_fallback_payload:
         object:
       required: false
 
+set_group_preset:
+  name: Set Group Preset
+  description: Sets, updates, or clears virtual group presets at runtime. Set to null or empty to reset.
+  target:
+    entity:
+      integration: climate_group_helper
+      domain: climate
+  fields:
+    payload:
+      name: Payload
+      description: "The group presets as YAML or mapping. Set to null or empty to reset. See the documentation for the format and examples."
+      selector:
+        object:
+      required: false
+
 boost:
   name: Boost
   description: Temporarily sets the group to a target temperature for a specified duration, then restores the previous state. Specify either an absolute temperature or a relative offset.
@@ -116,3 +131,61 @@ apply_config:
       default: false
       selector:
         boolean:
+
+reset:
+  name: Reset
+  description: Resets temporary overrides and runtime state (boost, offset, schedule, bypass, fallback, presets) back to configured defaults. Select at least one option, or use "Everything".
+  target:
+    entity:
+      integration: climate_group_helper
+      domain: climate
+  fields:
+    everything:
+      name: Everything
+      description: Resets everything below at once. The individual switches are then ignored.
+      selector:
+        boolean:
+      default: false
+      required: false
+    boost:
+      name: Boost
+      description: Aborts an active boost override and restores target state.
+      selector:
+        boolean:
+      default: false
+      required: false
+    offset:
+      name: Temperature Offset
+      description: Resets the group temperature offset to 0.0.
+      selector:
+        boolean:
+      default: false
+      required: false
+    schedule:
+      name: Schedule Entity
+      description: Reverts the active schedule entity to the configured default schedule.
+      selector:
+        boolean:
+      default: false
+      required: false
+    bypass:
+      name: Bypass Entity
+      description: Reverts the active bypass entity to the configured default and unwinds bypass adjustments.
+      selector:
+        boolean:
+      default: false
+      required: false
+    fallback:
+      name: Fallback Payload
+      description: Reverts the schedule fallback payload to the configured default.
+      selector:
+        boolean:
+      default: false
+      required: false
+    presets:
+      name: Group Presets
+      description: Clears runtime group presets and restores configured presets.
+      selector:
+        boolean:
+      default: false
+      required: false

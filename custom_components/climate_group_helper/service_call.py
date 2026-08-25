@@ -13,6 +13,7 @@ from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_HVAC_MODES,
     ATTR_HUMIDITY,
+    ATTR_PRESET_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     ATTR_TEMPERATURE,
@@ -41,6 +42,7 @@ from .const import (
     UnionOutOfBoundsAction,
     UnsupportedHvacAction,
 )
+from .aggregation import within_tolerance
 from .state import FilterState
 
 if TYPE_CHECKING:
@@ -119,6 +121,7 @@ class BaseServiceCallHandler(ABC):
 
     async def call_immediate(self, data: dict[str, Any] | None = None) -> None:
         """Execute a service call immediately without debouncing."""
+        data = self._group.preset_manager.resolve_preset(data)
         async with self._lock:
             await self._execute_calls(data)
 
@@ -139,6 +142,7 @@ class BaseServiceCallHandler(ABC):
         Stale calls that slip through a blocking `async_call` are caught by
         `_is_stale_call` inside `_execute_calls`.
         """
+        data = self._group.preset_manager.resolve_preset(data)
         # Cancel any running retry task — its stale data must not be sent.
         for task in list(self._active_tasks):
             task.cancel()
@@ -194,6 +198,11 @@ class BaseServiceCallHandler(ABC):
         # state"), since HA service calls don't raise when a device silently ignores
         # a command.
         for attempt in range(attempts):
+            # Entities whose service call completed successfully this attempt.
+            # Tracked per attempt so the exception handler below can mark exactly
+            # the members that actually received a command — never one whose call
+            # raised before it reached the device.
+            sent_entity_ids: set[str] = set()
             try:
                 # Drop a previous attempt's pending marking — this generation
                 # re-evaluates every member against the current states.
@@ -216,8 +225,6 @@ class BaseServiceCallHandler(ABC):
                 if stagger_delay:
                     calls = self._split_calls_by_entity(calls)
 
-                sent_entity_ids: set[str] = set()
-
                 for i, call in enumerate(calls):
                     service = call["service"]
                     service_data = {ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
@@ -237,8 +244,6 @@ class BaseServiceCallHandler(ABC):
                         self._apply_pending_oob(sent_entity_ids)
                         return
 
-                    sent_entity_ids.update(call["entity_ids"])
-
                     # Stagger delay between calls (not before first, not after last)
                     if i > 0 and stagger_delay:
                         await asyncio.sleep(stagger_delay)
@@ -250,6 +255,11 @@ class BaseServiceCallHandler(ABC):
                         blocking=True,
                         context=Context(id=context_id, parent_id=parent_id),
                     )
+
+                    # Only a successfully completed send counts as "sent" for OOB
+                    # marking — a call that raises below must not mark an entity
+                    # that never received the command.
+                    sent_entity_ids.update(call["entity_ids"])
 
                     _LOGGER.debug("[%s] Call %d/%d (%d/%d) '%s' with data: %s, Parent ID: %s",
                                   self._group.entity_id, i + 1, len(calls), attempt + 1, 
@@ -267,6 +277,11 @@ class BaseServiceCallHandler(ABC):
                     _LOGGER.debug("[%s] Call attempt (%d/%d) skipped (not supported): %s", self._group.entity_id, attempt + 1, attempts, error_msg)
                 else:
                     _LOGGER.warning("[%s] Call attempt (%d/%d) failed: %s", self._group.entity_id, attempt + 1, attempts, error)
+                # Calls that already went out before the exception still acted on
+                # their members — keep their OOB marking (restricted to the sent
+                # entities) so the next sync does not re-drive them as if they
+                # were in range.
+                self._apply_pending_oob(sent_entity_ids)
 
             if attempts > 1 and attempt < (attempts - 1):
                 await asyncio.sleep(delay)
@@ -278,104 +293,173 @@ class BaseServiceCallHandler(ABC):
     def _generate_calls_from_dict(self, data: dict[str, Any] | None = None, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
         """Generate service calls from a dict of target attributes.
 
-        This is the central template method for call generation:
-        - Filters attributes based on filter_state
-        - Applies wake-up bug prevention (skip setpoints when target is OFF)
-        - Handles temperature range specially (must be sent in one call)
-        - Uses _get_call_entity_ids() for entity selection
-        - Routes calls through the processing pipeline:
-          _build_initial_call → _process_unsupported_hvac → _process_min_temp_off → _process_member_offset → _process_group_offset → _process_range_template → _process_oob_guard
+        Central template method for call generation. Each attribute is selected
+        (`_is_callable_attr` → `_build_*_initial_calls`) and the resulting raw
+        calls are routed through `_run_pipeline`. The two bounds of a temperature
+        range resolve into a single bundled call, so the first of them builds it
+        and the second is skipped.
 
         Args:
-            data: Dict of attribute values to sync
+            data: Dict of attribute values to sync. Defaults to target_state.
             filter_state: Optional FilterState for attribute filtering.
                           Attributes with False are skipped.
         """
-        calls = []
-        temp_range_processed = False
         data = self.target_state.to_dict() if data is None else data
         filter_attrs = (filter_state or FilterState()).to_dict()
 
+        calls: list[dict[str, Any]] = []
+        range_bundled = False
+
         for attr, value in data.items():
-            # Skip None values
-            if value is None:
+            if not self._is_callable_attr(data, attr, value, filter_attrs):
                 continue
 
-            # Skip if attribute is filtered out
-            if not filter_attrs.get(attr, True):
-                continue
-
-            # Skip if blocked
-            if self._block_call_attr(data, attr):
-                continue
-
-            # Handle temperature range specially - must be sent in one call
             if attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
-                if not temp_range_processed:
-                    low = data.get(ATTR_TARGET_TEMP_LOW)
-                    high = data.get(ATTR_TARGET_TEMP_HIGH)
-                    # A single set bound must still be enforceable — the range branch
-                    # used to require BOTH bounds, silently dropping real deviations
-                    # in a lone bound (e.g. a schedule slot defining only one).
-                    if low is not None or high is not None:
-                        # Diff low and high independently — a member in sync on one but
-                        # deviating on the other must still receive the combined call.
-                        low_entities = self._get_call_entity_ids(ATTR_TARGET_TEMP_LOW, low) if low is not None else []
-                        high_entities = self._get_call_entity_ids(ATTR_TARGET_TEMP_HIGH, high) if high is not None else []
-                        entity_ids = list(dict.fromkeys(low_entities + high_entities))
-                        # HA Core's set_temperature schema requires both bounds together
-                        # (vol.Inclusive) — a lone diffing bound must be completed before
-                        # the call is built, or HA Core rejects the call outright. Prefer
-                        # target_state (group-wide intended value); if target_state itself
-                        # never carries the other bound, fall back per-entity to the
-                        # member's own current value so the call stays valid.
-                        group_low = low if low is not None else self.target_state.target_temp_low
-                        group_high = high if high is not None else self.target_state.target_temp_high
-                        raw = []
-                        if entity_ids and group_low is not None and group_high is not None:
-                            raw = [{"service": SERVICE_SET_TEMPERATURE,
-                                    "kwargs": {ATTR_TARGET_TEMP_LOW: group_low, ATTR_TARGET_TEMP_HIGH: group_high},
-                                    "entity_ids": entity_ids}]
-                        elif entity_ids:
-                            for entity_id in entity_ids:
-                                member_state = self._group.read_member_state(entity_id)
-                                member_attrs = member_state.attributes if member_state else {}
-                                entity_low = group_low if group_low is not None else member_attrs.get(ATTR_TARGET_TEMP_LOW)
-                                entity_high = group_high if group_high is not None else member_attrs.get(ATTR_TARGET_TEMP_HIGH)
-                                if entity_low is not None and entity_high is not None:
-                                    raw.append({"service": SERVICE_SET_TEMPERATURE,
-                                                "kwargs": {ATTR_TARGET_TEMP_LOW: entity_low, ATTR_TARGET_TEMP_HIGH: entity_high},
-                                                "entity_ids": [entity_id]})
-                        if raw:
-                            processed = self._process_unsupported_hvac(raw)
-                            processed = self._process_min_temp_off(processed)
-                            processed = self._process_member_offset(processed)
-                            processed = self._process_group_offset(processed)
-                            processed = self._process_range_template(processed)
-                            processed = self._process_oob_guard(processed)
-                            calls.extend(processed)
-                            temp_range_processed = True
+                # Both bounds ship in ONE set_temperature call — build it once.
+                if range_bundled:
+                    continue
+                range_bundled = True
+                raw = self._build_temperature_range_initial_calls(data, filter_attrs)
+            else:
+                raw = self._build_attr_initial_calls(attr, value)
+
+            if raw:
+                calls.extend(self._run_pipeline(raw))
+
+        # Pipeline stages may empty an entity list (e.g. unsupported-hvac filtering).
+        return [call for call in calls if call.get("entity_ids")]
+
+    def _is_callable_attr(self, data: dict[str, Any], attr: str, value: Any, filter_attrs: dict[str, Any]) -> bool:
+        """Whether `attr` should produce a service call at all (pre-entity-selection)."""
+        if value is None:
+            return False
+        if not filter_attrs.get(attr, True):
+            return False
+        # Wake-up bug prevention: irrelevant attributes for the target mode.
+        return not self._block_call_attr(data, attr)
+
+    def _build_attr_initial_calls(self, attr: str, value: Any) -> list[dict[str, Any]]:
+        """Select entities for a single attribute and build its raw call."""
+        entity_ids = self._get_call_entity_ids(attr, value)
+        # hvac_mode proceeds even with no capable entities: _process_unsupported_hvac
+        # may generate OFF calls for members that advertise modes but not this one.
+        if not entity_ids and attr != ATTR_HVAC_MODE:
+            return []
+        return self._build_initial_call(attr, value, entity_ids)
+
+    def _run_pipeline(self, raw_calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Run raw initial calls through the full call processing pipeline.
+
+        Every stage has the signature `list[dict] -> list[dict]` and passes
+        non-applicable calls through unchanged. Order matters: offsets stack
+        additively, the range template needs the offset-applied values, and the
+        OOB guard must see the final numbers — it is always last.
+        """
+        processed = self._process_unsupported_hvac(raw_calls)
+        processed = self._process_min_temp_off(processed)
+        processed = self._process_member_offset(processed)
+        processed = self._process_group_offset(processed)
+        processed = self._process_range_template(processed)
+        return self._process_oob_guard(processed)
+
+    def _build_temperature_range_initial_calls(
+        self, data: dict[str, Any], filter_attrs: dict[str, bool] | None = None
+    ) -> list[dict[str, Any]]:
+        """Build the raw bundled `set_temperature` call(s) for target_temp_low/high.
+
+        HA Core's `set_temperature` schema requires both bounds together
+        (`vol.Inclusive`) and rejects a call carrying only one, so a lone bound
+        must be completed before the call is built. Completion happens in two
+        tiers: the group-wide `target_state` value first, and — only when
+        `target_state` itself never carries the other bound — a per-entity
+        fallback (`_complete_bounds_per_entity`).
+
+        `raw_kwargs` always carries the *group* band, never a per-entity
+        completion: it feeds the range-template band cache, which must hold the
+        last commanded group band rather than one member's local value.
+
+        **`filter_attrs` has to be applied here, not only per attribute.** The
+        caller filters each attribute before dispatching to a builder, but this
+        builder reads *both* bounds straight out of `data` — so a bound that
+        `sync_attributes` excludes would still ride along in the bundle's kwargs
+        and, worse, pull in members that deviate on nothing else. An excluded
+        bound therefore selects no entities, and its schema-mandated value is
+        completed *per member from that member's own state* — filling it from
+        `target_state` would correct the very bound the user excluded from sync.
+        """
+        filtered = filter_attrs or {}
+        low_synced = filtered.get(ATTR_TARGET_TEMP_LOW, True)
+        high_synced = filtered.get(ATTR_TARGET_TEMP_HIGH, True)
+
+        low = data.get(ATTR_TARGET_TEMP_LOW) if low_synced else None
+        high = data.get(ATTR_TARGET_TEMP_HIGH) if high_synced else None
+        if low is None and high is None:
+            return []
+
+        # Diff low and high independently — a member in sync on one but
+        # deviating on the other must still receive the combined call.
+        low_entities = self._get_call_entity_ids(ATTR_TARGET_TEMP_LOW, low) if low is not None else []
+        high_entities = self._get_call_entity_ids(ATTR_TARGET_TEMP_HIGH, high) if high is not None else []
+        entity_ids = list(dict.fromkeys(low_entities + high_entities))
+        if not entity_ids:
+            return []
+
+        # An excluded bound stays None on purpose: leaving it out of the group
+        # band routes the call through the per-entity completion below, which
+        # fills it from the member's own state instead of correcting it.
+        group_low = low if (low is not None or not low_synced) else self.target_state.target_temp_low
+        group_high = high if (high is not None or not high_synced) else self.target_state.target_temp_high
+        group_band = {ATTR_TARGET_TEMP_LOW: group_low, ATTR_TARGET_TEMP_HIGH: group_high}
+
+        # Common case: the group band is complete — one bundled call for everyone.
+        if group_low is not None and group_high is not None:
+            return [{
+                "service": SERVICE_SET_TEMPERATURE,
+                "kwargs": dict(group_band),
+                "raw_kwargs": dict(group_band),
+                "entity_ids": entity_ids,
+            }]
+
+        return self._complete_bounds_per_entity(entity_ids, group_band)
+
+    def _complete_bounds_per_entity(
+        self, entity_ids: list[str], group_band: dict[str, float | None]
+    ) -> list[dict[str, Any]]:
+        """Complete a half-open group band per entity ("leave the rest as it is").
+
+        Only reached when `target_state` carries just one bound. The missing
+        bound is taken from the member's own current state, or — for a
+        template-covered member, whose physical state has no range attributes at
+        all — from the template's cached band. A member for which the bound
+        stays unresolvable yields no call rather than an invalid one.
+        """
+        template = self._group.member_template_manager.range_template
+        group_low = group_band[ATTR_TARGET_TEMP_LOW]
+        group_high = group_band[ATTR_TARGET_TEMP_HIGH]
+
+        calls = []
+        for entity_id in entity_ids:
+            member_state = self._group.aggregator.read_member_state(entity_id)
+            member_attrs = member_state.attributes if member_state else {}
+            entity_low = group_low if group_low is not None else member_attrs.get(ATTR_TARGET_TEMP_LOW)
+            entity_high = group_high if group_high is not None else member_attrs.get(ATTR_TARGET_TEMP_HIGH)
+
+            is_covered = bool(template and template.covers(entity_id))
+            if is_covered:
+                # A covered member is emitted even with an unresolved bound: the
+                # range-template stage replaces these kwargs with a physical
+                # single-setpoint command anyway, so no invalid call goes out.
+                entity_low = entity_low if entity_low is not None else template.low
+                entity_high = entity_high if entity_high is not None else template.high
+            elif entity_low is None or entity_high is None:
                 continue
 
-            entity_ids = self._get_call_entity_ids(attr, value)
-            # hvac_mode proceeds even with no capable entities: _process_unsupported_hvac
-            # may generate OFF calls for members that advertise modes but not this one.
-            if not entity_ids and attr != ATTR_HVAC_MODE:
-                continue
-
-            # Pipeline: build → unsupported_hvac → min_temp_off → member_offset → group_offset → range_template → oob_guard
-            raw = self._build_initial_call(attr, value, entity_ids)
-            processed = self._process_unsupported_hvac(raw)
-            processed = self._process_min_temp_off(processed)
-            processed = self._process_member_offset(processed)
-            processed = self._process_group_offset(processed)
-            processed = self._process_range_template(processed)
-            processed = self._process_oob_guard(processed)
-            calls.extend(processed)
-
-        # Final filter: prune calls with empty entity_ids (may result from various processing stages)
-        calls = [c for c in calls if c.get("entity_ids")]
-
+            calls.append({
+                "service": SERVICE_SET_TEMPERATURE,
+                "kwargs": {ATTR_TARGET_TEMP_LOW: entity_low, ATTR_TARGET_TEMP_HIGH: entity_high},
+                "raw_kwargs": dict(group_band),
+                "entity_ids": [entity_id],
+            })
         return calls
 
     def _get_call_entity_ids(self, attr: str, value: Any = None) -> list[str]:
@@ -460,7 +544,7 @@ class BaseServiceCallHandler(ABC):
             if not active_temps:
                 return False  # Targets cleared -> no longer OOB
 
-            state = self._group.read_member_state(entity_id)
+            state = self._group.aggregator.read_member_state(entity_id)
             if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 return True  # Device unavailable -> keep blocked
 
@@ -494,12 +578,15 @@ class BaseServiceCallHandler(ABC):
             attr: The attribute to check capability for.
             value: Target value. Used for mode attributes only — ignored for float attributes.
         """
+        if attr == ATTR_PRESET_MODE and self._group.preset_manager.is_virtual(value):
+            return []
+
         entity_ids = []
         for entity_id in self._group.climate_entity_ids:
             if self._is_member_blocked(entity_id):
                 continue
 
-            state = self._group.read_member_state(entity_id)
+            state = self._group.aggregator.read_member_state(entity_id)
             if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
             if attr in MODE_MODES_MAP:
@@ -539,7 +626,7 @@ class BaseServiceCallHandler(ABC):
             return []
 
         for entity_id in self._get_capable_entities(attr, target_value):
-            state = self._group.read_member_state(entity_id)
+            state = self._group.aggregator.read_member_state(entity_id)
             if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
 
@@ -562,7 +649,7 @@ class BaseServiceCallHandler(ABC):
 
             # Float tolerance check
             if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH, ATTR_HUMIDITY):
-                if self._group.within_tolerance(current_value, effective_target):
+                if within_tolerance(current_value, effective_target):
                     continue
 
             if current_value != effective_target:
@@ -615,7 +702,7 @@ class BaseServiceCallHandler(ABC):
         # Identify members that technically do not support the target mode
         unsupported = {
             eid for eid in self._group.climate_entity_ids
-            if (state := self._group.read_member_state(eid))
+            if (state := self._group.aggregator.read_member_state(eid))
             and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
             and (modes := state.attributes.get(ATTR_HVAC_MODES, []))
             and target_mode not in modes
@@ -633,7 +720,7 @@ class BaseServiceCallHandler(ABC):
         # For explicit HVAC_MODE changes, turn unsupported members OFF if configured
         if hvac_call and action == UnsupportedHvacAction.OFF:
             for entity_id in unsupported:
-                state = self._group.read_member_state(entity_id)
+                state = self._group.aggregator.read_member_state(entity_id)
                 if state and state.state != HVACMode.OFF and not self._is_member_blocked(entity_id):
                     filtered.append({
                         "service": SERVICE_SET_HVAC_MODE,
@@ -670,14 +757,14 @@ class BaseServiceCallHandler(ABC):
             # Entity split: temp-capable vs. non-temp devices
             temp_ids = [
                 eid for eid in entity_ids
-                if (state := self._group.read_member_state(eid)) and (ATTR_TEMPERATURE in state.attributes or ATTR_TARGET_TEMP_LOW in state.attributes)
+                if (state := self._group.aggregator.read_member_state(eid)) and (ATTR_TEMPERATURE in state.attributes or ATTR_TARGET_TEMP_LOW in state.attributes)
             ]
             non_temp_ids = [eid for eid in entity_ids if eid not in temp_ids]
 
             if hvac_mode == HVACMode.OFF:
                 # OFF: each temp-capable device gets its own min_temp
                 for eid in temp_ids:
-                    state = self._group.read_member_state(eid)
+                    state = self._group.aggregator.read_member_state(eid)
                     device_min = state.attributes.get("min_temp", DEFAULT_MIN_TEMP) if state else DEFAULT_MIN_TEMP
                     result.append({
                         **call,
@@ -896,7 +983,7 @@ class BaseServiceCallHandler(ABC):
                 target_temp = float(self._group._attr_target_temperature)
                 low_val = target_temp - 5
                 high_val = target_temp + 5
-                # Deliberate exception to the StateManager pattern (AGENTS.md §1): this is
+                # Deliberate exception to the StateManager pattern: this is
                 # pipeline-internal band seeding, not a source-attributable event — there is
                 # no meaningful "last_source" for it, so it bypasses StateManager.update()
                 # and writes target_temp_low/high directly without touching last_source/
@@ -1015,7 +1102,7 @@ class BaseServiceCallHandler(ABC):
 
             in_range_ids = []
             for entity_id in call["entity_ids"]:
-                state = self._group.read_member_state(entity_id)
+                state = self._group.aggregator.read_member_state(entity_id)
                 if not state:
                     continue
 
@@ -1135,24 +1222,24 @@ class BaseServiceCallHandler(ABC):
         return self._block_wakeup_calls(data, attr)
 
     def _block_wakeup_calls(self, data: dict[str, Any], attr: str) -> bool:
-        """Block calls for specific attributes based on target HVAC mode.
+        """Block calls for specific attributes based on requested HVAC mode.
 
-        1. Prevent all setpoint changes if target HVAC mode is OFF (Wake-up prevention).
-        2. Prevent single setpoint changes if target HVAC mode is AUTO or HEAT_COOL
+        1. Prevent all setpoint changes if requested HVAC mode is OFF (Wake-up prevention).
+        2. Prevent single setpoint changes if requested HVAC mode is AUTO or HEAT_COOL
            (Dynamic modes where single setpoints are often irrelevant or stale).
-        3. Prevent range setpoint changes if target HVAC mode is AUTO.
+        3. Prevent range setpoint changes if requested HVAC mode is AUTO.
         """
         if attr == ATTR_HVAC_MODE:
             return False
 
-        target_hvac_mode = data.get(ATTR_HVAC_MODE)
-        if target_hvac_mode == HVACMode.OFF:
+        requested_hvac_mode = data.get(ATTR_HVAC_MODE)
+        if requested_hvac_mode == HVACMode.OFF:
             return True
 
-        if target_hvac_mode == HVACMode.AUTO:
+        if requested_hvac_mode == HVACMode.AUTO:
             return attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
 
-        if target_hvac_mode == HVACMode.HEAT_COOL:
+        if requested_hvac_mode == HVACMode.HEAT_COOL:
             return attr == ATTR_TEMPERATURE
 
         return False
@@ -1198,7 +1285,7 @@ class BaseServiceCallHandler(ABC):
             member_state.state != HVACMode.OFF
             for member_id in self._group.climate_entity_ids
             if member_id not in self._group.run_state.isolated_members
-            and (member_state := self._group.read_member_state(member_id))
+            and (member_state := self._group.aggregator.read_member_state(member_id))
             and member_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         )
 

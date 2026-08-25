@@ -13,19 +13,22 @@ Praxisnahe Szenarien, nach Komplexität geordnet. Jedes Beispiel beschreibt die 
   - [5. Fenstersteuerung mit einem Rollladen (Cover)](#5-fenstersteuerung-mit-einem-rollladen-cover)
   - [6. Heizung ausschalten, wenn niemand zu Hause ist](#6-heizung-ausschalten-wenn-niemand-zu-hause-ist)
   - [7. Zuverlässiges externes Thermostat als Master](#7-zuverlässiges-externes-thermostat-als-master)
-  - [8. Virtuelle Presets für einfache TRVs](#8-virtuelle-presets-für-einfache-trvs)
-  - [9. Kalibrierung durch externen Sensor für TRVs](#9-kalibrierung-durch-externen-sensor-für-trvs)
-  - [10. Better Thermostat / Versatile Thermostat + CGH](#10-better-thermostat--versatile-thermostat--cgh)
-  - [11. Zeitplan mit temporären lokalen Überschreibungen](#11-zeitplan-mit-temporären-lokalen-überschreibungen)
-  - [12. Saisonale Abschaltung per Zeitplan](#12-saisonale-abschaltung-per-zeitplan)
-  - [13. Kalender-Bypass über einem Basis-Zeitplan](#13-kalender-bypass-über-einem-basis-zeitplan)
-  - [14. Nachtabsenkung bei inaktivem Zeitplan](#14-nachtabsenkung-bei-inaktivem-zeitplan)
+  - [8. Presets für einfache TRVs](#8-presets-für-einfache-trvs)
+  - [9. Presets über ein Master-Thermostat](#9-presets-über-ein-master-thermostat)
+  - [10. Sollwerte über einen Dashboard-Schieberegler](#10-sollwerte-über-einen-dashboard-schieberegler)
+  - [11. Zeitplan als Ein/Aus, Schieberegler für die Temperaturen](#11-zeitplan-als-einaus-schieberegler-für-die-temperaturen)
+  - [12. Kalibrierung durch externen Sensor für TRVs](#12-kalibrierung-durch-externen-sensor-für-trvs)
+  - [13. Better Thermostat / Versatile Thermostat + CGH](#13-better-thermostat--versatile-thermostat--cgh)
+  - [14. Zeitplan mit temporären lokalen Überschreibungen](#14-zeitplan-mit-temporären-lokalen-überschreibungen)
+  - [15. Saisonale Abschaltung per Zeitplan](#15-saisonale-abschaltung-per-zeitplan)
+  - [16. Kalender-Bypass über einem Basis-Zeitplan](#16-kalender-bypass-über-einem-basis-zeitplan)
+  - [17. Nachtabsenkung bei inaktivem Zeitplan](#17-nachtabsenkung-bei-inaktivem-zeitplan)
 - [Edge Cases](#edge-cases) — gemischte Hardware, mehrere Einschränkungen, Grenzfälle aus echten Support-Anfragen
-  - [15. Gemischt Heizkörper + Klimaanlage, ein Gerät pro Modus](#15-gemischt-heizkörper--klimaanlage-ein-gerät-pro-modus)
-  - [16. Fußbodenheizung, die sich nicht ausschalten lässt](#16-fußbodenheizung-die-sich-nicht-ausschalten-lässt)
-  - [17. Union-Gruppe mit Geräten außerhalb des Bereichs](#17-union-gruppe-mit-geräten-außerhalb-des-bereichs)
-  - [18. Multi-Kopf-Klimasplit, nur gemeinsamer Modus](#18-multi-kopf-klimasplit-nur-gemeinsamer-modus)
-  - [19. Verriegeltes Heizen/Kühlen über zwei Systeme](#19-verriegeltes-heizenkühlen-über-zwei-systeme)
+  - [18. Gemischt Heizkörper + Klimaanlage, ein Gerät pro Modus](#18-gemischt-heizkörper--klimaanlage-ein-gerät-pro-modus)
+  - [19. Fußbodenheizung, die sich nicht ausschalten lässt](#19-fußbodenheizung-die-sich-nicht-ausschalten-lässt)
+  - [20. Union-Gruppe mit Geräten außerhalb des Bereichs](#20-union-gruppe-mit-geräten-außerhalb-des-bereichs)
+  - [21. Multi-Kopf-Klimasplit, nur gemeinsamer Modus](#21-multi-kopf-klimasplit-nur-gemeinsamer-modus)
+  - [22. Verriegeltes Heizen/Kühlen über zwei Systeme](#22-verriegeltes-heizenkühlen-über-zwei-systeme)
 
 ---
 
@@ -176,9 +179,41 @@ Günstige TRVs messen die Raumtemperatur schlecht. Lass ein präzises Gerät die
 
 ---
 
-### 8. Virtuelle Presets für einfache TRVs
+### 8. Presets für einfache TRVs
 
-Einfache TRVs unterstützen `preset_mode` überhaupt nicht — kein "Eco"/"Comfort"-Konzept, nur ein Sollwert. Gib ihnen virtuelle Presets, indem du die Preset-Auswahl über einen `generic_thermostat`-Master leitest.
+Einfache TRVs unterstützen Presets überhaupt nicht — kein "Eco"/"Comfort"-Konzept, nur ein Sollwert. Definiere die Presets stattdessen an der Gruppe. Keine Hilfs-Entität, kein bestimmter Sync-Modus nötig.
+
+**Entitäten:** `climate.trv1`, `climate.trv2`
+
+| Einstellung | Wert |
+|---|---|
+| Mitglieder | `climate.trv1`, `climate.trv2` |
+| Gruppen-Presets | siehe unten |
+
+```yaml
+eco:
+  temperature: 17.0
+  hvac_mode: heat
+comfort:
+  temperature: 21.0
+  hvac_mode: heat
+ventilate:
+  hvac_mode: off
+```
+
+**Ergebnis:** Der Preset-Wähler der Gruppe zeigt `comfort`, `eco` und `ventilate`. Die Auswahl eines Presets wendet dessen Einstellungen auf beide TRVs gleichzeitig an. Ein Preset setzt nur die Werte, die es auch aufführt — `ventilate` oben ändert den Modus und lässt den Sollwert unangetastet.
+
+Änderst du etwas, das das aktive Preset festlegt (hier: die Temperatur), kehrt die Gruppe in ihren normalen, presetlosen Zustand zurück — angezeigtes Preset und tatsächliche Werte laufen so nie auseinander. Änderst du etwas, das es nicht festlegt, bleibt das Preset ausgewählt.
+
+Benennst du ein Gruppen-Preset genauso wie eines, das ein Mitgliedsgerät bereits anbietet (z. B. beide heißen `eco`), gewinnt die eigene Definition der Gruppe — die Version des Geräts wird nie gesendet. Die Einstellungsseite warnt dich beim Speichern, damit du eines von beiden umbenennen kannst, falls das nicht beabsichtigt war.
+
+> **Tipp:** Presets lassen sich auch zur Laufzeit aus einer Automation heraus erstellen, aktualisieren oder löschen — siehe Beispiel 10.
+
+---
+
+### 9. Presets über ein Master-Thermostat
+
+Gleiches Ziel wie Beispiel 8, aber die Preset-Temperaturen liegen in einem separaten `generic_thermostat` statt in den Gruppeneinstellungen. Lohnt sich, wenn Automationen sie dort bereits auslesen oder wenn der Master zugleich als zuverlässiger externer Sensor dient (Beispiel 7).
 
 **Entitäten:** `climate.generic_thermostat` (Master, feste Preset-Temperaturen), `climate.trv1`, `climate.trv2`
 
@@ -190,11 +225,96 @@ Einfache TRVs unterstützen `preset_mode` überhaupt nicht — kein "Eco"/"Comfo
 
 Konfiguriere die Away-/Home-Presets des `generic_thermostat` mit den gewünschten Temperaturen (z. B. Eco = 17 °C, Comfort = 21 °C).
 
-**Ergebnis:** Die Auswahl eines Presets an der Gruppe ändert die Zieltemperatur des Masters entsprechend, die dann mit `climate.trv1` und `climate.trv2` synchronisiert wird — Geräte ohne native Preset-Unterstützung erhalten so einen funktionierenden Preset-Wähler.
+**Ergebnis:** Die Auswahl eines Presets an der Gruppe ändert die Zieltemperatur des Masters entsprechend, die dann mit `climate.trv1` und `climate.trv2` synchronisiert wird.
 
 ---
 
-### 9. Kalibrierung durch externen Sensor für TRVs
+### 10. Sollwerte über einen Dashboard-Schieberegler
+
+Halte die Temperaturen in einem Preset und lass sie von einer Automation schreiben — so können die Werte aus beliebigen Quellen in Home Assistant kommen: ein `input_number` auf dem Dashboard, ein berechneter Sensor, eine Preisprognose. Die Gruppeneinstellungen bleiben unangetastet.
+
+**Entitäten:** die Gruppe sowie `input_number.comfort_temperature` als Schieberegler
+
+```yaml
+alias: "Komfort-Temperatur mit Klimagruppe synchronisieren"
+trigger:
+  - platform: state
+    entity_id: input_number.comfort_temperature
+  - platform: homeassistant
+    event: start
+action:
+  - service: climate_group_helper.set_group_preset
+    target:
+      entity_id: climate.living_room_group
+    data:
+      payload:
+        comfort:
+          temperature: "{{ states('input_number.comfort_temperature') | float }}"
+          hvac_mode: heat
+```
+
+**Ergebnis:** Das Verschieben des Reglers aktualisiert das Preset `comfort`. Ist genau dieses Preset gerade auf der Gruppe ausgewählt, wird die neue Temperatur sofort angewendet; andernfalls greift sie, sobald das Preset das nächste Mal gewählt wird. Der `homeassistant.start`-Trigger gleicht nach einem Neustart ab, falls der Regler bewegt wurde, während Home Assistant aus war.
+
+Aktiviere **Per Dienst geänderte Werte beibehalten (Presets)**, damit die Werte einen Neustart auch von sich aus überstehen.
+
+> **Tipp:** Zeitplan-Slots können ein Preset über seinen Namen anfordern, statt selbst Temperaturen zu tragen — siehe Beispiel 11 für diese Kombination.
+
+---
+
+### 11. Zeitplan als Ein/Aus, Schieberegler für die Temperaturen
+
+Der Zeitplan bestimmt das *Wann*, zwei Schieberegler das *Wie warm*. Der Zeitplan selbst enthält überhaupt keine Temperaturen — sein Zeitblock fordert ein Preset über den Namen an, ebenso der Fallback für die Stunden außerhalb. Zum Ändern der Sollwerte genügt es, einen Regler zu verschieben; der Zeitplan wird nie wieder angefasst.
+
+**Entitäten:** `climate.living_room_trv`, `schedule.house_weekly`, `input_number.eco_temp`, `input_number.comfort_temp`
+
+| Einstellung | Wert |
+|---|---|
+| Mitglieder | `climate.living_room_trv` |
+| Zeitplan-Entität | `schedule.house_weekly` |
+| Fallback bei inaktivem Zeitplan | siehe unten |
+| Per Dienst geänderte Werte beibehalten (Presets) | an |
+
+**Heiz-Zeitblock (z. B. 06:00–22:00):**
+```yaml
+preset_mode: comfort
+```
+
+**Fallback bei inaktivem Zeitplan** (Options-Flow → Zeitplan-Bereich, YAML):
+```yaml
+preset_mode: eco
+```
+
+**Automation — beide Presets mit den Reglern synchron halten:**
+```yaml
+alias: "Heiztemperaturen mit Klimagruppe synchronisieren"
+trigger:
+  - platform: state
+    entity_id:
+      - input_number.eco_temp
+      - input_number.comfort_temp
+  - platform: homeassistant
+    event: start
+action:
+  - service: climate_group_helper.set_group_preset
+    target:
+      entity_id: climate.living_room_group
+    data:
+      payload:
+        eco:
+          temperature: "{{ states('input_number.eco_temp') | float }}"
+          hvac_mode: heat
+        comfort:
+          temperature: "{{ states('input_number.comfort_temp') | float }}"
+          hvac_mode: heat
+```
+
+**Ergebnis:** Während des Zeitblocks läuft die Gruppe im Preset `comfort`, außerhalb im Preset `eco`. Das Verschieben eines Reglers aktualisiert dessen Preset — ist genau dieses gerade aktiv, zieht die Gruppe sofort nach.
+
+> **Tipp:** Das ersetzt den verbreiteten Aufbau mit lückenlosem 24/7-Zeitplan, bei dem jede Stunde ihren eigenen Block mit eigener Temperatur braucht. Hier markiert der Zeitplan nur die Heizstunden, und es gibt genau zwei Temperaturen zu pflegen — beide auf dem Dashboard.
+
+---
+
+### 12. Kalibrierung durch externen Sensor für TRVs
 
 Der eingebaute Sensor eines TRVs sitzt direkt neben einem heißen Rohr und misst zu hoch. Korrigiere das mit einem echten Raumsensor.
 
@@ -210,11 +330,11 @@ Der eingebaute Sensor eines TRVs sitzt direkt neben einem heißen Rohr und misst
 
 **Ergebnis:** CGH berechnet den Offset zwischen der internen Messung des TRVs und dem externen Sensor, schreibt ihn in die Kalibrierungs-`number`-Entität und sendet ihn periodisch erneut, um Timeouts bei batteriebetriebenen Geräten zu vermeiden.
 
-> Überspringe dies, wenn deine Geräte bereits von Better Thermostat oder Versatile Thermostat gehandhabt werden — siehe Beispiel 10.
+> Überspringe dies, wenn deine Geräte bereits von Better Thermostat oder Versatile Thermostat gehandhabt werden — siehe Beispiel 13.
 
 ---
 
-### 10. Better Thermostat / Versatile Thermostat + CGH
+### 13. Better Thermostat / Versatile Thermostat + CGH
 
 Du nutzt bereits eine dedizierte Regelungs-Integration (Better Thermostat oder Versatile Thermostat) für gerätespezifische Algorithmen (MPC/PID/TPI) — jedes Gerät regelt sein eigenes Ventil/seinen eigenen Ausgang unabhängig. CGH muss (und sollte im Allgemeinen nicht) darüber einen gemeinsamen Sollwert erzwingen; seine Aufgabe ist die Orchestrierung, die jede Regelungs-Integration nicht selbst übernimmt: Zeitplan, Fenstersteuerung, Anwesenheit, eine kombinierte Übersichts-Entität.
 
@@ -251,7 +371,7 @@ Ein Raum hat ein gut kalibriertes BT/VT-Gerät (guter externer Sensor, saubere R
 
 ---
 
-### 11. Zeitplan mit temporären lokalen Überschreibungen
+### 14. Zeitplan mit temporären lokalen Überschreibungen
 
 Während bestimmter Zeitblöcke (z. B. ein "Comfort"-Zeitblock am Abend) sollen Bewohner die Temperatur anpassen können, ohne dass die Gruppe das sofort zurücksetzt — andere Zeitblöcke sollen aber strikt gesperrt bleiben.
 
@@ -279,7 +399,7 @@ sync_mode: disabled
 
 ---
 
-### 12. Saisonale Abschaltung per Zeitplan
+### 15. Saisonale Abschaltung per Zeitplan
 
 Schaltet eine Gruppe für einen längeren Zeitraum (z. B. Sommer) aus und über ein Kalender-Ereignis automatisch wieder ein, statt den Hauptschalter von Hand umzulegen.
 
@@ -305,7 +425,7 @@ temperature: 20.0
 
 ---
 
-### 13. Kalender-Bypass über einem Basis-Zeitplan
+### 16. Kalender-Bypass über einem Basis-Zeitplan
 
 Eine wöchentliche `schedule.*`-Entität steuert bereits das alltägliche Heizen. Zusätzlich soll ein gemeinsamer Haushalts-`calendar.*` (z. B. ein Google-Kalender, dem jeder Ereignisse hinzufügen kann) das vorübergehend überschreiben können — ein Gast über Nacht, ein Homeoffice-Tag, eine Feier — ohne den Basis-Zeitplan überhaupt anzufassen.
 
@@ -335,7 +455,7 @@ temperature: 22.0
 
 ---
 
-### 14. Nachtabsenkung bei inaktivem Zeitplan
+### 17. Nachtabsenkung bei inaktivem Zeitplan
 
 `schedule.*`-Entitäten melden außerhalb der konfigurierten Zeitblöcke `off` ohne jegliche Zeitblock-Attribute. Statt einen lückenlosen 24/7-Zeitplan zu bauen (einen expliziten Niedrigtemperatur-Block für jede inaktive Stunde), definiere einen Fallback-Zustand, den die Gruppe anwendet, sobald kein Zeitblock aktiv ist.
 
@@ -379,9 +499,9 @@ Die Änderung wirkt sofort (falls der Zeitblock gerade inaktiv ist). Aktiviere d
 
 ## Edge Cases
 
-### 15. Gemischt Heizkörper + Klimaanlage, ein Gerät pro Modus
+### 18. Gemischt Heizkörper + Klimaanlage, ein Gerät pro Modus
 
-Ein Raum hat einen reinen Heizkörper (Wiser) und eine Heiz-/Kühl-Klimaanlage (Daikin/Faikin). Die Klimaanlage darf **niemals** heizen, obwohl sie `heat` meldet — und jedes Gerät braucht je nach aktivem Modus eine andere Behandlung. (Basierend auf einem echten Bericht zu gemischter Hardware, GitHub #99.)
+Ein Raum hat einen reinen Heizkörper (Wiser) und eine Heiz-/Kühl-Klimaanlage (Daikin/Faikin). Die Klimaanlage darf **niemals** heizen, obwohl sie `heat` meldet — und jedes Gerät braucht je nach aktivem Modus eine andere Behandlung. (Basierend auf einem echten Szenario mit gemischter Hardware.)
 
 **Entitäten:** `climate.wiser_radiator` (nur heat/off), `climate.daikin_ac` (heat_cool/cool/heat/dry/fan_only/off)
 
@@ -399,9 +519,9 @@ Ein Raum hat einen reinen Heizkörper (Wiser) und eine Heiz-/Kühl-Klimaanlage (
 
 ---
 
-### 16. Fußbodenheizung, die sich nicht ausschalten lässt
+### 19. Fußbodenheizung, die sich nicht ausschalten lässt
 
-Eine wasserbasierte Fußbodenheizung hat keinen `off`-Modus — sie unterstützt nur `heat`. Muss die Gruppe das Heizen stoppen (z. B. beim Umschalten auf Kühlen andernorts im Sommer), braucht der Fußbodenkreis statt eines echten `off`-Befehls einen sicheren Fallback. (Basierend auf GitHub #100.)
+Eine wasserbasierte Fußbodenheizung hat keinen `off`-Modus — sie unterstützt nur `heat`. Muss die Gruppe das Heizen stoppen (z. B. beim Umschalten auf Kühlen andernorts im Sommer), braucht der Fußbodenkreis statt eines echten `off`-Befehls einen sicheren Fallback. (Basierend auf einem realen Fußbodenheizungs-Setup.)
 
 **Entitäten:** `climate.floor_heating` (nur heat, kein off), `climate.bedroom_ac` (heat/cool)
 
@@ -416,7 +536,7 @@ Eine wasserbasierte Fußbodenheizung hat keinen `off`-Modus — sie unterstützt
 
 ---
 
-### 17. Union-Gruppe mit Geräten außerhalb des Bereichs
+### 20. Union-Gruppe mit Geräten außerhalb des Bereichs
 
 Mischung von Geräten mit unterschiedlichen Temperaturbereichen — ein TRV mit niedrigem Bereich und eine Klimaanlage mit höherem Minimum. Fällt das Ziel außerhalb des Bereichs eines Geräts, soll dieses Gerät ausgeschlossen statt auf einen unsinnigen Wert geklemmt werden.
 
@@ -432,9 +552,9 @@ Mischung von Geräten mit unterschiedlichen Temperaturbereichen — ein TRV mit 
 
 ---
 
-### 18. Multi-Kopf-Klimasplit, nur gemeinsamer Modus
+### 21. Multi-Kopf-Klimasplit, nur gemeinsamer Modus
 
-Ein 4-Kopf-Klimasplit-System (z. B. Daikin über Faikin) benötigt, dass alle Köpfe denselben HVAC-Modus teilen, um korrekt zu funktionieren, aber jeder Raum braucht trotzdem seinen eigenen Sollwert und seine eigene Lüfterstufe. Vollständiges Mirror/Lock würde fälschlicherweise auch Temperatur und Lüfterstufe angleichen. (Basierend auf GitHub #36.)
+Ein 4-Kopf-Klimasplit-System (z. B. Daikin über Faikin) benötigt, dass alle Köpfe denselben HVAC-Modus teilen, um korrekt zu funktionieren, aber jeder Raum braucht trotzdem seinen eigenen Sollwert und seine eigene Lüfterstufe. Vollständiges Mirror/Lock würde fälschlicherweise auch Temperatur und Lüfterstufe angleichen. (Basierend auf einem realen Multi-Kopf-Setup.)
 
 **Entitäten:** `climate.head_living_room`, `climate.head_bedroom`, `climate.head_office`, `climate.head_kitchen`
 
@@ -448,9 +568,9 @@ Ein 4-Kopf-Klimasplit-System (z. B. Daikin über Faikin) benötigt, dass alle K�
 
 ---
 
-### 19. Verriegeltes Heizen/Kühlen über zwei Systeme
+### 22. Verriegeltes Heizen/Kühlen über zwei Systeme
 
-Ein HRV (Wärmerückgewinnungslüftung) mit heat/cool/auto fungiert als "Dirigent". Mehrere unabhängige Fußbodenheizungszonen müssen vollständig ausschalten, sobald der HRV kühlt, und wieder einschalten, wenn er heizt — reine Verriegelung, kein gemeinsamer Sollwert. (Basierend auf GitHub #66.)
+Ein HRV (Wärmerückgewinnungslüftung) mit heat/cool/auto fungiert als "Dirigent". Mehrere unabhängige Fußbodenheizungszonen müssen vollständig ausschalten, sobald der HRV kühlt, und wieder einschalten, wenn er heizt — reine Verriegelung, kein gemeinsamer Sollwert. (Basierend auf einem realen Mehrsystem-Setup.)
 
 **Entitäten:** `climate.hrv` (Master), `climate.floor_zone_1` … `climate.floor_zone_5`
 
@@ -470,8 +590,8 @@ Ein HRV (Wärmerückgewinnungslüftung) mit heat/cool/auto fungiert als "Dirigen
 
 - **Einfach anfangen:** Zuerst die grundlegende Gruppierung zum Laufen bringen (nur Mitglieder, keine weiteren Einstellungen), dann Funktionen nach und nach hinzufügen.
 - **Erweiterte Funktionen:** In der Gruppenkonfiguration aktivieren, um alles jenseits der Basic-Stufe freizuschalten (Beispiele 3–18).
-- **Sync-Modus:** Nutze `Lock`, wenn die Gruppe die alleinige Quelle der Wahrheit sein soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen werden sollen; nutze `Mirror/Lock`, wenn nur einige Attribute synchronisiert werden sollen (Beispiel 17).
+- **Sync-Modus:** Nutze `Lock`, wenn die Gruppe die alleinige Quelle der Wahrheit sein soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen werden sollen; nutze `Mirror/Lock`, wenn nur einige Attribute synchronisiert werden sollen (Beispiel 20).
 - **Sperr-Priorität:** Hauptschalter > Fenstersteuerung > Anwesenheitssteuerung — sind mehrere gleichzeitig aktiv, wird nur die Aktion der höchstrangigen an Mitglieder gesendet.
 - **Zeitplan + Boost:** Boost rangiert über dem Zeitplan. Zeitplan-Zeitblock-Änderungen laufen während eines Boosts weiterhin im Hintergrund.
-- **Kalibrierung:** Nutze CGHs eigene Kalibrierung nur, wenn du nicht bereits Better Thermostat oder Versatile Thermostat verwendest — die haben ihre eigene (Beispiel 10).
+- **Kalibrierung:** Nutze CGHs eigene Kalibrierung nur, wenn du nicht bereits Better Thermostat oder Versatile Thermostat verwendest — die haben ihre eigene (Beispiel 13).
 - **Mehrere Isolationsregeln:** Wenn verschiedene Mitgliedsgeräte unterschiedlich auf denselben Trigger (oder ganz unterschiedliche Trigger) reagieren müssen, füge eine Isolationsregel pro Gerät hinzu — siehe Beispiele 14 und 15.

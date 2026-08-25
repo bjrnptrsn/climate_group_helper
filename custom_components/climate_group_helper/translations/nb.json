@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "Tidsplanen vil IKKE slå på medlemmer som for tiden er AV."
             }
           },
+          "presets_section": {
+            "name": "Gruppeforhåndsinnstillinger",
+            "description": "Definer dine egne navngitte forhåndsinnstillinger for gruppen (f.eks. eco, guest, ventilate). Når du velger en, brukes attributtene på alle medlemmer samtidig. En gruppeforhåndsinnstilling overstyrer et medlems egen forhåndsinnstilling med samme navn.",
+            "data": {
+              "group_presets": "Gruppeforhåndsinnstillinger (YAML)",
+              "retain_service_changes_presets": "Behold endringer gjort via tjeneste (Forhåndsinnstillinger)"
+            },
+            "data_description": {
+              "group_presets": "Forhåndsinnstillingene dine i YAML: et fritt valgt navn per forhåndsinnstilling, hver med attributtene den skal bruke (temperature, hvac_mode, fan_mode, swing_mode). En forhåndsinnstilling bruker bare attributtene den lister opp. Se dokumentasjonen for formatet og ferdige eksempler.",
+              "retain_service_changes_presets": "Beholder forhåndsinnstillinger opprettet eller oppdatert via tjeneste etter en omstart. Ellers tilbakestilles de til de konfigurerte forhåndsinnstillingene."
+            }
+          },
           "temp_offsets_section": {
             "name": "Medlem Offsets",
             "description": "Bruk individuelle temperaturforskyvninger slik at spesifikke medlemmer kjører forholdsmessig varmere eller kjøligere enn gruppens mål.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Minst én klimaenhet må være igjen i gruppen.",
-      "calibration_requires_sensors": "Kalibreringsmål krever minst én ekstern temperatursensor.",
       "master_refresh_notice": "Master-enhet lagt til. Nye alternativer tilgjengelig.",
       "master_options_notice": "Nytt valg for master-enhet",
       "isolation_all_selected": "Minst ett medlem må forbli utenfor isolasjonen.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Angi en vindustemperatur, eller endre vindushandlingen.",
       "presence_action_value_required": "Angi en verdi for den valgte fraværshandlingen, eller endre handlingen.",
       "schedule_fallback_payload_invalid": "Ugyldig YAML-format i reserve-nyttelast for tidsplan. Må være en gyldig nøkkel-verdi-tilordning.",
+      "group_presets_invalid": "Ugyldig YAML-format i gruppeforhåndsinnstillinger. Må være en gyldig nøkkel-verdi-tilordning.",
+      "preset_name_collision_notice": "En eller flere gruppeforhåndsinnstillinger har samme navn som medlemmers innebygde forhåndsinnstillinger. Gruppedefinisjonen overstyrer dem.",
       "sensor_loop_protection": "En Climate Group Helper-enhet kan ikke brukes som ekstern sensor eller kalibreringsmål — dette ville skape en tilbakekoblingsløkke."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Angi gruppeforhåndsinnstilling",
+      "description": "Oppretter, oppdaterer eller fjerner virtuelle gruppeforhåndsinnstillinger under kjøring. La stå tomt for å tilbakestille.",
+      "fields": {
+        "payload": {
+          "name": "Nyttelast",
+          "description": "Gruppeforhåndsinnstillingene som YAML eller tilordning. La stå tomt for å tilbakestille. Se dokumentasjonen for format og eksempler."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Setter gruppen midlertidig til en måltemperatur. Når timeren utløper, går gruppen automatisk tilbake til den aktive tidsplanen eller forrige tilstand.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Inkluder enhetsvelgere",
           "description": "Hvis sant, overskrives også tilknyttede sensorer (temp, fuktighet, tilstedeværelse, vindu osv.) og per-medlem-forskyvninger."
+        }
+      }
+    },
+    "reset": {
+      "name": "Tilbakestill",
+      "description": "Tilbakestiller midlertidige overstyringer og kjøretidstilstand (boost, forskyvning, tidsplan, forbikobling, reserve, forhåndsinnstillinger) til de konfigurerte standardverdiene. Velg minst ett alternativ, eller bruk «Alt».",
+      "fields": {
+        "everything": {
+          "name": "Alt",
+          "description": "Tilbakestiller alt nedenfor på én gang. De enkelte bryterne ignoreres da."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Avbryter en aktiv boost og gjenoppretter måltilstanden."
+        },
+        "offset": {
+          "name": "Temperaturforskyvning",
+          "description": "Tilbakestiller gruppens temperaturforskyvning til 0.0."
+        },
+        "schedule": {
+          "name": "Tidsplanentitet",
+          "description": "Tilbakestiller den aktive tidsplanentiteten til den konfigurerte standardplanen."
+        },
+        "bypass": {
+          "name": "Bypass-entitet",
+          "description": "Tilbakestiller den aktive bypass-entiteten til standard og ruller tilbake bypass-justeringer."
+        },
+        "fallback": {
+          "name": "Reservetilstandsnyttelast",
+          "description": "Tilbakestiller tidsplanens reservetilstandsnyttelast til den konfigurerte standarden."
+        },
+        "presets": {
+          "name": "Gruppeforhåndsinnstillinger",
+          "description": "Sletter kjøretidsforhåndsinnstillinger og gjenoppretter konfigurerte forhåndsinnstillinger."
         }
       }
     }

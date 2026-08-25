@@ -49,7 +49,7 @@ class PresenceHandler:
 
         _LOGGER.debug(
             "[%s] PresenceHandler initialized. sensors=%s, zones=%s, away_delay=%ds, return_delay=%ds",
-            group.entity_id, self._sensors, self._zones, self._away_delay, self._return_delay,
+            group.log_id, self._sensors, self._zones, self._away_delay, self._return_delay,
         )
 
     @property
@@ -83,8 +83,14 @@ class PresenceHandler:
         # Check initial collective presence
         if not self._get_collective_presence():
             _LOGGER.debug("[%s] Initial collective presence absent — activating away mode immediately", self._group.entity_id)
-            await self.override_manager.activate()
+            # Set before the await, like _go_away() — the listener is already
+            # subscribed above, so a sensor reporting presence while activate()
+            # is in flight must see _away_active already True, or its return
+            # branch clears the block and sets _away_active back to False just
+            # before this line would overwrite it to True again, leaving the
+            # flag desynced from reality until an unrelated return resets it.
             self._away_active = True
+            await self.override_manager.activate()
 
     def async_teardown(self) -> None:
         self._cancel_timer()

@@ -74,6 +74,7 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
   - [Member Template](#member-template)
+  - [Group Presets](#group-presets)
 - [Examples](EXAMPLES.md)
 - [Management Entities (Switch & Slider)](#management-entities-switch--slider)
   - [Main Switch](#main-switch)
@@ -304,6 +305,13 @@ Translates outgoing `heat_cool` range commands into single-setpoint commands for
 *   **Deadband Action:** What to do when the room is already within the target band: **None** (default), **Turn Off**, or **Fan Only**.
 *   **Automatic member detection:** All members that do **not** natively advertise `heat_cool` are automatically covered — no manual selection needed. Members with native `heat_cool` support are left unchanged. This also enables `heat_cool` mode for groups consisting entirely of heat-only and cool-only devices, with no native `heat_cool` device required.
 
+### Group Presets
+
+Define your own named presets for the group — e.g. `eco`, `guest`, or `ventilate` — each mapping to a set of climate attributes (target temperature, HVAC mode, fan mode, swing mode) in YAML. Selecting one of these presets applies its attributes to the group and all members at once, the same way changing the temperature or HVAC mode directly would. This is a lightweight alternative to the Master Preset Pattern for groups that don't need a dedicated master entity.
+
+*   **Takes priority over device presets:** If a group preset shares a name with a preset a member device offers natively (e.g. both are called `eco`, as above), the group's own definition is used and the device's version is never sent. The settings page warns you if this happens so you can rename one of them.
+*   **Leaves the group as soon as you deviate:** Changing an attribute the active preset defines — on the group, via schedule, or by adjusting a member directly under Mirror sync — returns the group to its normal, un-presetted state. Adjusting an attribute the preset doesn't touch leaves it active.
+
 ## Management Entities (Switch & Slider)
 
 Alongside the main climate entity, the integration creates additional helper entities to provide direct control points for your dashboards and automations.
@@ -451,6 +459,13 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | **Enable Range Template** | Enables automatic `heat_cool` range control for all members that do not natively advertise `heat_cool`. No manual selection needed — the group detects eligible members automatically. |
 | **Deadband Action** | What to do when the room temperature is already within the target band (between `target_temp_low` and `target_temp_high`). **None** (default — no command, device regulates itself to the setpoint it already received), **Turn Off**, or **Fan Only**. |
 
+### Group Presets
+
+| Option | Description |
+|--------|-------------|
+| **Group Presets (YAML)** | Define named presets for the group as a YAML mapping, each with its own set of climate attributes (e.g. `eco:` with `temperature: 18.0` and `hvac_mode: heat`). Selecting one applies its attributes to the group and all members. If a name matches a preset a member device already offers natively, the settings page warns you and the group's own definition is used. |
+| **Retain Changes Made via Service (Presets)** | Keep presets created or updated via service after a restart. Otherwise they reset to the configured presets. |
+
 ### Advanced Settings
 
 | Option | Description |
@@ -459,13 +474,18 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | **Force Retry** | Always send commands to all members, even if they already report the target state. Useful for IR-based AC units or other devices that may not reliably update their state after receiving a command. |
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
-| **Staggered Call Delay** | Time to wait between individual commands to group members (0–2s, default: 0). Staggering calls prevents radio flooding in large Zigbee/Matter networks. Also applies to calibration writes. |
-| **UI Grace Period** | Duration (seconds) for which the group displays the commanded value immediately after a UI action, before slow member devices echo their state back. Prevents visual flicker on the dashboard. Applies to all attributes: HVAC mode, temperature, humidity, fan/preset/swing modes. |
-| **Expose Smart Sensors** | Create additional temperature and humidity sensor entities that reflect the group's current aggregated state (useful for historical graphs and dashboards). |
-| **Expose Member List** | Add the `member_entities` attribute containing the list of all member entity IDs to the climate group helper entity (enables use of `expand()` templates). |
-| **Expose Configuration Sensor** | Create a diagnostic configuration sensor entity (`sensor.*_configuration`) containing a portable JSON snapshot of all group settings under the `settings_json` attribute. |
+| **Staggered Call Delay** | Delay between service calls to individual group members (default: 0.0s = disabled). Helps reduce Zigbee/Z-Wave network congestion with large groups. |
+| **UI Grace Period** | Delay before members deviating from target state are flagged as out of sync (default: 3.0s). Gives slow-responding devices time to process commands. |
+| **Expose Smart Sensors** | When enabled, creates separate temperature and humidity sensor entities for the group. |
+| **Expose Member List** | When enabled, exposes an `entity_ids` attribute on the group listing all member entity IDs. |
+| **Expose Configuration** | When enabled, creates a diagnostic sensor exposing the group's configuration as portable JSON. |
+| **Expand all sections by default** | Keeps all configuration sections expanded by default in the options dialog. |
+
+---
 
 ## Services
+
+In addition to standard Home Assistant climate services, the integration provides:
 
 ### `climate_group_helper.boost`
 
@@ -513,7 +533,7 @@ Dynamically change the active schedule entity for a group. With **Retain Changes
 |-------|----------|-------------|
 | `schedule_entity` | No | The entity ID of the new schedule or calendar (e.g. `schedule.*` or `calendar.*`). If omitted, the group reverts to its configured default schedule entity. |
 
-Calling this service without an entity aborts any active boost and immediately re-applies the current schedule slot.
+Calling this service **without** an entity returns the group to its configured schedule (discarding one set via this service earlier) and re-applies the current slot. To reset other temporary overrides like boost or offset, use the `climate_group_helper.reset` service.
 
 **Example:**
 ```yaml
@@ -524,6 +544,43 @@ data:
   schedule_entity: schedule.guest_mode
 ```
 
+### `climate_group_helper.reset`
+
+Resets temporary overrides and runtime state back to their configured defaults. Useful for ending temporary automation states or returning a group to its baseline.
+
+**Service Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `everything` | No | Resets all options below at once. The individual fields are then ignored. |
+| `boost` | No | Aborts an active boost override and restores the group target state. |
+| `offset` | No | Resets the global group temperature offset to 0.0. |
+| `schedule` | No | Reverts the active schedule entity to the configured default schedule. |
+| `bypass` | No | Reverts the active bypass entity to the configured default and unwinds bypass adjustments. |
+| `fallback` | No | Reverts the schedule fallback payload to the configured default. |
+| `presets` | No | Clears runtime group presets and restores configured presets. |
+
+Set at least one option to `true`, or use `everything: true` to reset all of them. A call that selects nothing is rejected.
+
+**Example — Reset everything:**
+```yaml
+service: climate_group_helper.reset
+target:
+  entity_id: climate.my_group
+data:
+  everything: true
+```
+
+**Example — Reset only boost and offset:**
+```yaml
+service: climate_group_helper.reset
+target:
+  entity_id: climate.my_group
+data:
+  boost: true
+  offset: true
+```
+
 ### `climate_group_helper.set_schedule_bypass_entity`
 
 Dynamically change the active bypass schedule entity for a group at runtime. The bypass schedule acts as a priority layer that overrides the base schedule. While a bypass is active, the group keeps tracking the base schedule in the background; when the bypass ends, the currently valid base state is restored (attributes only the bypass changed fall back to their pre-bypass values). With **Retain Changes Made via Service (Schedule)** enabled, the entity you set here survives a restart.
@@ -532,7 +589,7 @@ Dynamically change the active bypass schedule entity for a group at runtime. The
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `schedule_entity` | No | The entity ID of the new bypass schedule or calendar (e.g. `schedule.*` or `calendar.*`). If omitted, the group reverts to its configured default bypass schedule entity.  |
+| `schedule_bypass_entity` | No | The entity ID of the new bypass schedule or calendar (e.g. `schedule.*` or `calendar.*`). If omitted, the group reverts to its configured default bypass schedule entity.  |
 
 **Example:**
 ```yaml
@@ -540,7 +597,7 @@ service: climate_group_helper.set_schedule_bypass_entity
 target:
   entity_id: climate.my_group
 data:
-  schedule_entity: calendar.holiday_schedule
+  schedule_bypass_entity: calendar.holiday_schedule
 ```
 
 Calling this service without an entity clears the bypass schedule and immediately re-applies the current schedule slot.
@@ -566,6 +623,42 @@ data:
     hvac_mode: heat
 ```
 
+### `climate_group_helper.set_group_preset`
+
+Create, update, or remove virtual group presets at runtime without opening the group settings. Useful for dynamic automations, temporary guest modes, or party setpoints. With "Retain Changes Made via Service (Presets)" enabled, presets created or modified via this service are remembered across Home Assistant restarts.
+
+If you update the preset that is currently selected on the group, its new values are applied immediately. Updating any other preset only changes its stored definition.
+
+**Service Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `payload` | No | The group presets in the same YAML or mapping format as the group settings (e.g. `party:` with `temperature: 23.0`). Setting an individual preset to empty or `null` removes only that preset. Omitting or passing empty `payload` removes all runtime presets (reverting back to the configured presets). |
+
+**Example — Add or update presets:**
+```yaml
+service: climate_group_helper.set_group_preset
+target:
+  entity_id: climate.my_group
+data:
+  payload: |
+    party:
+      temperature: 23.5
+      hvac_mode: heat
+    guest:
+      temperature: 21.0
+```
+
+**Example — Remove a specific preset:**
+```yaml
+service: climate_group_helper.set_group_preset
+target:
+  entity_id: climate.my_group
+data:
+  payload:
+    party: null
+```
+
 ### `climate_group_helper.apply_config`
 
 Apply a portable JSON configuration to a group. This is useful for copying logic settings between groups or restoring a backup from a configuration sensor.
@@ -575,10 +668,10 @@ Apply a portable JSON configuration to a group. This is useful for copying logic
 | Field | Required | Description |
 |-------|----------|-------------|
 | `settings` | **Yes** | A JSON object containing the configuration. Source: `settings_json` attribute from a Configuration Sensor. |
-| `include_member_list` | **Yes** | If `true`, overwrites the member list, the master entity, and the per-device heat/cool role assignment. |
-| `include_entity_selectors` | **Yes** | If `true`, overwrites linked sensors and per-member offsets. |
+| `include_member_list` | **Yes** | If `true`, overwrites the member list, the master entity, the per-device heat/cool role assignment, and the member lists of the isolation rules. |
+| `include_entity_selectors` | **Yes** | If `true`, overwrites linked sensors, per-member offsets, and isolation sensors. |
 
-By default, only logic settings (Sync Modes, Window Control, Schedules, etc.) are transferred. Set the two inclusion flags to `true` if you also want to copy the list of members and their linked sensors. The group name is always preserved.
+By default, only logic settings (Sync Modes, Window Control, Schedules, etc.) are transferred. Set the two inclusion flags to `true` if you also want to copy the member list, the linked sensors, and the isolation rules with their member lists and sensors. The group name is always preserved.
 
 > [!IMPORTANT]
 > **Reload Behavior:** Calling this service triggers a full reload of the group entity. All active, non-persisted timers (e.g., Boost, Window delays) will be reset immediately. This is the same behavior as when making changes through the UI.

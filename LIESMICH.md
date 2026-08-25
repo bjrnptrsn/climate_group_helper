@@ -74,6 +74,7 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
   - [Mitglieder-Offsets](#mitglieder-offsets)
   - [Mitglieder-Isolation](#mitglieder-isolation)
   - [Mitglieder-Vorlage](#mitglieder-vorlage)
+  - [Gruppen-Presets](#gruppen-presets)
 - [Beispiele](BEISPIELE.md)
 - [Verwaltungs-Entitäten (Schalter & Regler)](#verwaltungs-entitäten-schalter--regler)
   - [Hauptschalter](#hauptschalter)
@@ -304,6 +305,13 @@ Eine **Mitglieder-Vorlage** umhüllt einzelne Gruppenmitglieder mit einem virtue
 *   **Totzonen-Aktion:** Was zu tun ist, wenn sich der Raum bereits innerhalb des Zielbandes befindet: **Keine** (Standard), **Ausschalten** oder **Nur Lüfter**.
 *   **Automatische Mitgliedserkennung:** Alle Mitglieder, die `heat_cool` **nicht** nativ melden, werden automatisch erfasst — keine manuelle Auswahl nötig. Mitglieder mit nativer `heat_cool`-Unterstützung bleiben unverändert. Dies ermöglicht auch den `heat_cool`-Modus für Gruppen, die ausschließlich aus reinen Heiz- und Kühlgeräten bestehen, ganz ohne natives `heat_cool`-Gerät.
 
+### Gruppen-Presets
+
+Definiere eigene benannte Presets für die Gruppe — z. B. `eco`, `guest` oder `ventilate` — jedes davon einer Reihe von Climate-Attributen (Solltemperatur, HVAC-Modus, Lüfterstufe, Schwenkmodus) in YAML zugeordnet. Wählst du eines dieser Presets aus, werden seine Attribute sofort auf die Gruppe und alle Mitglieder angewendet — genauso, als würdest du die Temperatur oder den HVAC-Modus direkt ändern. Das ist eine schlanke Alternative zum Master-Preset-Muster für Gruppen, die keine eigene Master-Entität benötigen.
+
+*   **Hat Vorrang vor Geräte-Presets:** Teilt sich ein Gruppen-Preset einen Namen mit einem Preset, das ein Mitgliedsgerät nativ anbietet (z. B. beide heißen `eco`, wie oben), wird die eigene Definition der Gruppe verwendet — die Version des Geräts wird nie gesendet. Die Einstellungsseite warnt dich in diesem Fall, damit du eines der beiden umbenennen kannst.
+*   **Verlässt die Gruppe, sobald du abweichst:** Änderst du ein Attribut, das das aktive Preset festlegt — an der Gruppe, per Zeitplan oder direkt an einem Mitglied unter Mirror-Sync — kehrt die Gruppe in ihren normalen, presetlosen Zustand zurück. Änderst du ein Attribut, das das Preset nicht berührt, bleibt es aktiv.
+
 ## Verwaltungs-Entitäten (Schalter & Regler)
 
 Neben der Haupt-Klima-Entität erstellt die Integration zusätzliche Helfer-Entitäten, die direkte Steuerungspunkte für deine Dashboards und Automationen bieten.
@@ -451,6 +459,13 @@ Eine dedizierte `number`-Entität erlaubt dir, eine globale Temperaturverschiebu
 | **Bereichs-Vorlage aktivieren** | Aktiviert automatische `heat_cool`-Bereichssteuerung für alle Mitglieder, die `heat_cool` nicht nativ melden. Keine manuelle Auswahl nötig — die Gruppe erkennt geeignete Mitglieder automatisch. |
 | **Totzonen-Aktion** | Was zu tun ist, wenn die Raumtemperatur bereits innerhalb des Zielbandes liegt (zwischen `target_temp_low` und `target_temp_high`). **Keine** (Standard — kein Befehl, das Gerät regelt sich selbst auf den bereits erhaltenen Sollwert), **Ausschalten** oder **Nur Lüfter**. |
 
+### Gruppen-Presets
+
+| Option | Beschreibung |
+|--------|-------------|
+| **Gruppen-Presets (YAML)** | Definiert benannte Presets für die Gruppe als YAML-Mapping, jedes mit einer eigenen Reihe von Climate-Attributen (z. B. `eco:` mit `temperature: 18.0` und `hvac_mode: heat`). Die Auswahl eines Presets wendet seine Attribute auf die Gruppe und alle Mitglieder an. Stimmt ein Name mit einem Preset überein, das ein Mitgliedsgerät bereits nativ anbietet, warnt die Einstellungsseite und die eigene Definition der Gruppe wird verwendet. |
+| **Per Dienst geänderte Werte beibehalten (Presets)** | Behält per Dienst angelegte oder geänderte Presets nach einem Neustart bei. Andernfalls werden sie auf die konfigurierten Presets zurückgesetzt. |
+
 ### Erweiterte Einstellungen
 
 | Option | Beschreibung |
@@ -464,6 +479,7 @@ Eine dedizierte `number`-Entität erlaubt dir, eine globale Temperaturverschiebu
 | **Smart-Sensoren anzeigen** | Erstellt zusätzliche Temperatur- und Feuchtigkeits-Sensor-Entitäten, die den aktuellen aggregierten Zustand der Gruppe widerspiegeln (nützlich für Verlaufsgraphen und Dashboards). |
 | **Mitgliederliste anzeigen** | Fügt das `member_entities`-Attribut mit der Liste aller Mitglieds-Entitäts-IDs zur Climate-Group-Helper-Entität hinzu (ermöglicht die Nutzung von `expand()`-Templates). |
 | **Konfigurations-Sensor anzeigen** | Erstellt eine diagnostische Konfigurations-Sensor-Entität (`sensor.*_configuration`), die einen portablen JSON-Schnappschuss aller Gruppeneinstellungen unter dem Attribut `settings_json` enthält. |
+| **Alle Sektionen standardmäßig aufklappen** | Hält standardmäßig alle Konfigurationsabschnitte im Optionsdialog aufgeklappt. |
 
 ## Dienste
 
@@ -513,7 +529,7 @@ data:
 |-------|----------|-------------|
 | `schedule_entity` | Nein | Die Entitäts-ID des neuen Zeitplans oder Kalenders (z. B. `schedule.*` oder `calendar.*`). Wenn weggelassen, kehrt die Gruppe zu ihrer konfigurierten Standard-Zeitplan-Entität zurück. |
 
-Wird dieser Dienst ohne Entität aufgerufen, wird ein aktiver Boost abgebrochen und der aktuelle Zeitplan-Zeitblock sofort erneut angewendet.
+Wird dieser Dienst **ohne** Entität aufgerufen, kehrt die Gruppe zu ihrem konfigurierten Zeitplan zurück (eine zuvor über diesen Dienst gesetzte Entität wird dabei verworfen) und der aktuelle Zeitblock wird erneut angewendet. Um andere temporäre Überschreibungen wie Boost oder Offset zurückzusetzen, wird der Dienst `climate_group_helper.reset` verwendet.
 
 **Beispiel:**
 ```yaml
@@ -524,6 +540,43 @@ data:
   schedule_entity: schedule.guest_mode
 ```
 
+### `climate_group_helper.reset`
+
+Setzt temporäre Überschreibungen und den Runtime-Zustand auf die konfigurierten Standardwerte zurück. Nützlich, um temporäre Automatisierungszustände zu beenden oder eine Gruppe auf ihren Standard zurückzubringen.
+
+**Dienst-Felder:**
+
+| Feld | Erforderlich | Beschreibung |
+|-------|----------|-------------|
+| `everything` | Nein | Setzt alle folgenden Bereiche auf einmal zurück. Die einzelnen Felder werden dann ignoriert. |
+| `boost` | Nein | Bricht einen aktiven Boost ab und stellt den Zielzustand wieder her. |
+| `offset` | Nein | Setzt den globalen Temperatur-Offset der Gruppe auf 0.0 zurück. |
+| `schedule` | Nein | Setzt die aktive Zeitplan-Entität auf den konfigurierten Standardzeitplan zurück. |
+| `bypass` | Nein | Setzt die aktive Bypass-Entität auf den konfigurierten Standard zurück und nimmt Bypass-Anpassungen zurück. |
+| `fallback` | Nein | Setzt den Fallback-Payload des Zeitplans auf den konfigurierten Standard zurück. |
+| `presets` | Nein | Löscht zur Laufzeit erstellte Voreinstellungen und stellt konfigurierte Voreinstellungen wieder her. |
+
+Setze mindestens einen Bereich auf `true` oder nutze `everything: true`, um alles zurückzusetzen. Ein Aufruf ohne jede Auswahl wird abgelehnt.
+
+**Beispiel — Alles zurücksetzen:**
+```yaml
+service: climate_group_helper.reset
+target:
+  entity_id: climate.my_group
+data:
+  everything: true
+```
+
+**Beispiel — Nur Boost und Offset zurücksetzen:**
+```yaml
+service: climate_group_helper.reset
+target:
+  entity_id: climate.my_group
+data:
+  boost: true
+  offset: true
+```
+
 ### `climate_group_helper.set_schedule_bypass_entity`
 
 Ändert die aktive Bypass-Zeitplan-Entität einer Gruppe zur Laufzeit dynamisch. Der Bypass-Zeitplan fungiert als Prioritätsebene, die den Basis-Zeitplan überschreibt. Während ein Bypass aktiv ist, verfolgt die Gruppe den Basis-Zeitplan weiterhin im Hintergrund; endet der Bypass, wird der aktuell gültige Basis-Zustand wiederhergestellt (Attribute, die nur der Bypass geändert hat, fallen auf ihre Werte vor dem Bypass zurück). Mit aktivierter Option **Per Dienst geänderte Werte beibehalten (Zeitplan)** übersteht die hier gesetzte Entität einen Neustart.
@@ -532,7 +585,7 @@ data:
 
 | Feld | Erforderlich | Beschreibung |
 |-------|----------|-------------|
-| `schedule_entity` | Nein | Die Entitäts-ID des neuen Bypass-Zeitplans oder -Kalenders (z. B. `schedule.*` oder `calendar.*`). Wenn weggelassen, kehrt die Gruppe zu ihrer konfigurierten Standard-Bypass-Zeitplan-Entität zurück. |
+| `schedule_bypass_entity` | Nein | Die Entitäts-ID des neuen Bypass-Zeitplans oder -Kalenders (z. B. `schedule.*` oder `calendar.*`). Wenn weggelassen, kehrt die Gruppe zu ihrer konfigurierten Standard-Bypass-Zeitplan-Entität zurück. |
 
 **Beispiel:**
 ```yaml
@@ -540,7 +593,7 @@ service: climate_group_helper.set_schedule_bypass_entity
 target:
   entity_id: climate.my_group
 data:
-  schedule_entity: calendar.holiday_schedule
+  schedule_bypass_entity: calendar.holiday_schedule
 ```
 
 Wird dieser Dienst ohne Entität aufgerufen, wird der Bypass-Zeitplan gelöscht und der aktuelle Zeitplan-Zeitblock sofort erneut angewendet.
@@ -566,6 +619,42 @@ data:
     hvac_mode: heat
 ```
 
+### `climate_group_helper.set_group_preset`
+
+Erstellt, aktualisiert oder entfernt virtuelle Gruppen-Presets zur Laufzeit, ohne die Gruppeneinstellungen öffnen zu müssen. Nützlich für dynamische Automatisierungen, temporäre Gäste-Modi oder Party-Sollwerte. Wenn „Per Dienst geänderte Werte beibehalten (Presets)“ aktiviert ist, bleiben über diesen Dienst angelegte oder geänderte Presets auch nach einem Home Assistant Neustart erhalten.
+
+Aktualisierst du genau das Preset, das gerade auf der Gruppe ausgewählt ist, werden dessen neue Werte sofort angewendet. Bei jedem anderen Preset ändert sich nur die hinterlegte Definition.
+
+**Dienst-Felder:**
+
+| Feld | Erforderlich | Beschreibung |
+|-------|----------|-------------|
+| `payload` | Nein | Die Gruppen-Presets im selben YAML- oder Mapping-Format wie in den Gruppeneinstellungen (z. B. `party:` mit `temperature: 23.0`). Wird ein einzelnes Preset auf leer oder `null` gesetzt, wird nur dieses Preset entfernt. Wird `payload` weggelassen oder leer übergeben, werden alle Runtime-Presets entfernt (und auf die konfigurierten Presets zurückgesetzt). |
+
+**Beispiel — Presets hinzufügen oder aktualisieren:**
+```yaml
+service: climate_group_helper.set_group_preset
+target:
+  entity_id: climate.my_group
+data:
+  payload: |
+    party:
+      temperature: 23.5
+      hvac_mode: heat
+    guest:
+      temperature: 21.0
+```
+
+**Beispiel — Einzelnes Preset entfernen:**
+```yaml
+service: climate_group_helper.set_group_preset
+target:
+  entity_id: climate.my_group
+data:
+  payload:
+    party: null
+```
+
 ### `climate_group_helper.apply_config`
 
 Wendet eine portable JSON-Konfiguration auf eine Gruppe an. Nützlich, um Logikeinstellungen zwischen Gruppen zu kopieren oder eine Sicherung von einem Konfigurationssensor wiederherzustellen.
@@ -575,10 +664,10 @@ Wendet eine portable JSON-Konfiguration auf eine Gruppe an. Nützlich, um Logike
 | Feld | Erforderlich | Beschreibung |
 |-------|----------|-------------|
 | `settings` | **Ja** | Ein JSON-Objekt mit der Konfiguration. Quelle: Attribut `settings_json` eines Konfigurationssensors. |
-| `include_member_list` | **Ja** | Wenn `true`, überschreibt die Mitgliederliste, die Master-Entität und die Heiz-/Kühl-Rollenzuweisung pro Gerät. |
-| `include_entity_selectors` | **Ja** | Wenn `true`, überschreibt verknüpfte Sensoren und Offsets pro Mitglied. |
+| `include_member_list` | **Ja** | Wenn `true`, überschreibt die Mitgliederliste, die Master-Entität, die Heiz-/Kühl-Rollenzuweisung pro Gerät und die Mitgliederlisten der Isolationsregeln. |
+| `include_entity_selectors` | **Ja** | Wenn `true`, überschreibt verknüpfte Sensoren, Offsets pro Mitglied und die Isolationssensoren. |
 
-Standardmäßig werden nur Logikeinstellungen übertragen (Sync-Modi, Fenstersteuerung, Zeitpläne usw.). Setze die beiden Einschluss-Flags auf `true`, wenn du auch die Mitgliederliste und deren verknüpfte Sensoren kopieren möchtest. Der Gruppenname bleibt immer erhalten.
+Standardmäßig werden nur Logikeinstellungen übertragen (Sync-Modi, Fenstersteuerung, Zeitpläne usw.). Setze die beiden Einschluss-Flags auf `true`, wenn du auch die Mitgliederliste, deren verknüpfte Sensoren und die Isolationsregeln (einschließlich ihrer Mitgliederlisten und Sensoren) kopieren möchtest. Der Gruppenname bleibt immer erhalten.
 
 > [!IMPORTANT]
 > **Neuladeverhalten:** Der Aufruf dieses Dienstes löst ein vollständiges Neuladen der Gruppen-Entität aus. Alle aktiven, nicht persistierten Timer (z. B. Boost, Fenster-Verzögerungen) werden sofort zurückgesetzt. Dies ist dasselbe Verhalten wie bei Änderungen über die UI.

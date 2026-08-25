@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "La Pianificazione NON accenderà i membri attualmente SPENTI."
             }
           },
+          "presets_section": {
+            "name": "Preimpostazioni di gruppo",
+            "description": "Definisci i tuoi preset denominati per il gruppo (ad es. eco, guest, ventilate). Selezionandone uno, i suoi attributi vengono applicati a tutti i membri contemporaneamente. Un preset di gruppo ha la precedenza sul preset di un membro con lo stesso nome.",
+            "data": {
+              "group_presets": "Preimpostazioni di gruppo (YAML)",
+              "retain_service_changes_presets": "Mantieni le modifiche apportate tramite servizio (Preimpostazioni)"
+            },
+            "data_description": {
+              "group_presets": "I tuoi preset in YAML: un nome a scelta per ogni preset, ciascuno con gli attributi da applicare (temperature, hvac_mode, fan_mode, swing_mode). Un preset applica solo gli attributi che elenca. Consulta la documentazione per il formato ed esempi pronti da copiare.",
+              "retain_service_changes_presets": "Mantiene le preimpostazioni create o aggiornate tramite servizio dopo un riavvio. Altrimenti tornano alle preimpostazioni configurate."
+            }
+          },
           "temp_offsets_section": {
             "name": "Offset dei membri",
             "description": "Applica offset di temperatura individuali in modo che membri specifici funzionino in modo proporzionalmente più caldo o freddo rispetto al target di gruppo.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Almeno un dispositivo climatico deve rimanere nel gruppo.",
-      "calibration_requires_sensors": "Gli obiettivi di calibrazione richiedono almeno un sensore di temperatura esterno.",
       "master_refresh_notice": "Entità Master aggiunta. Nuove opzioni disponibili.",
       "master_options_notice": "Nuova opzione entità Master",
       "isolation_all_selected": "Almeno un membro deve rimanere fuori dall'isolamento.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Imposta una temperatura finestra o cambia l'azione finestra.",
       "presence_action_value_required": "Imposta un valore per l'azione di assenza selezionata o cambia l'azione.",
       "schedule_fallback_payload_invalid": "Formato YAML non valido nel payload di riserva della programmazione. Deve essere una mappatura chiave-valore valida.",
+      "group_presets_invalid": "Formato YAML non valido nelle preimpostazioni di gruppo. Deve essere una mappatura chiave-valore valida.",
+      "preset_name_collision_notice": "Una o più preimpostazioni di gruppo condividono il nome con le preimpostazioni native dei membri. La definizione del gruppo le sovrascriverà.",
       "sensor_loop_protection": "Non è possibile utilizzare un'entità Climate Group Helper come sensore esterno o destinazione di calibrazione — si creerebbe un ciclo di retroazione."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Imposta preimpostazione gruppo",
+      "description": "Crea, aggiorna o cancella preimpostazioni di gruppo virtuali durante l'esecuzione. Lascia vuoto per ripristinare.",
+      "fields": {
+        "payload": {
+          "name": "Payload",
+          "description": "Le preimpostazioni di gruppo come YAML o mappatura. Lascia vuoto per ripristinare. Consulta la documentazione per il formato e gli esempi."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Imposta temporaneamente il gruppo a una temperatura target. Alla scadenza del timer, il gruppo torna automaticamente alla programmazione attiva o allo stato precedente.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Includi selettori entità",
           "description": "Se vero, sovrascrive anche i sensori collegati (temp, umidità, presenza, finestra, ecc.) e gli offset per membro."
+        }
+      }
+    },
+    "reset": {
+      "name": "Ripristina",
+      "description": "Ripristina le sostituzioni temporanee e lo stato di esecuzione (boost, offset, programmazione, bypass, fallback, preset) ai valori predefiniti configurati. Seleziona almeno un'opzione oppure usa «Tutto».",
+      "fields": {
+        "everything": {
+          "name": "Tutto",
+          "description": "Ripristina tutto quanto segue in una sola volta. I singoli interruttori vengono quindi ignorati."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Interrompe un boost attivo e ripristina lo stato target."
+        },
+        "offset": {
+          "name": "Offset temperatura",
+          "description": "Ripristina l'offset di temperatura del gruppo a 0.0."
+        },
+        "schedule": {
+          "name": "Entità pianificazione",
+          "description": "Ripristina l'entità di pianificazione attiva alla pianificazione predefinita configurata."
+        },
+        "bypass": {
+          "name": "Entità bypass",
+          "description": "Ripristina l'entità bypass attiva al valore predefinito configurato e annulla le regolazioni del bypass."
+        },
+        "fallback": {
+          "name": "Payload di riserva",
+          "description": "Ripristina il payload di riserva della pianificazione al valore predefinito configurato."
+        },
+        "presets": {
+          "name": "Preimpostazioni di gruppo",
+          "description": "Cancella le preimpostazioni di gruppo di runtime e ripristina le preimpostazioni configurate."
         }
       }
     }

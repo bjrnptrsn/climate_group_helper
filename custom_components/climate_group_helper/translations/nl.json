@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "De Planning zal GEEN leden inschakelen die momenteel UIT staan."
             }
           },
+          "presets_section": {
+            "name": "Groepsvoorinstellingen",
+            "description": "Definieer je eigen benoemde presets voor de groep (bijv. eco, guest, ventilate). Als je er een selecteert, worden de attributen in één keer op alle leden toegepast. Een groepspreset gaat vóór een gelijknamige preset van een lid.",
+            "data": {
+              "group_presets": "Groepsvoorinstellingen (YAML)",
+              "retain_service_changes_presets": "Wijzigingen via service behouden (Voorinstellingen)"
+            },
+            "data_description": {
+              "group_presets": "Je presets in YAML: een vrij gekozen naam per preset, elk met de attributen die het moet toepassen (temperature, hvac_mode, fan_mode, swing_mode). Een preset past alleen de attributen toe die het vermeldt. Zie de documentatie voor het formaat en kant-en-klare voorbeelden.",
+              "retain_service_changes_presets": "Behoudt voorinstellingen die via service zijn gemaakt of bijgewerkt na een herstart. Anders worden ze teruggezet naar de geconfigureerde voorinstellingen."
+            }
+          },
           "temp_offsets_section": {
             "name": "Leden Offsets",
             "description": "Pas individuele temperatuur-offsets toe zodat specifieke leden proportioneel warmer of koeler draaien dan het groepsdoel.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Ten minste één klimaatapparaat moet in de groep blijven.",
-      "calibration_requires_sensors": "Kalibratiedoelen vereisen minimaal één externe temperatuursensor.",
       "master_refresh_notice": "Master-entiteit toegevoegd. Nieuwe opties beschikbaar.",
       "master_options_notice": "Nieuwe Master-entiteit optie",
       "isolation_all_selected": "Ten minste één lid moet buiten de isolatie blijven.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Stel een raamtemperatuur in of wijzig de raamactie.",
       "presence_action_value_required": "Stel een waarde in voor de gekozen afwezigheidsactie of wijzig de actie.",
       "schedule_fallback_payload_invalid": "Ongeldig YAML-formaat in terugval-schema-payload. Moet een geldige sleutel-waarde-toewijzing zijn.",
+      "group_presets_invalid": "Ongeldige YAML-indeling in groepsvoorinstellingen. Moet een geldige sleutel-waarde-koppeling zijn.",
+      "preset_name_collision_notice": "Een of meer groepsvoorinstellingen delen namen met native voorinstellingen van leden. De groepsdefinitie overschrijft deze.",
       "sensor_loop_protection": "Een Climate Group Helper-entiteit kan niet worden gebruikt als externe sensor of kalibratiedoel — dit zou een feedbacklus veroorzaken."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Groepsvoorinstelling instellen",
+      "description": "Maakt, werkt bij of verwijdert virtuele groepsvoorinstellingen tijdens runtime. Leeg laten om te resetten.",
+      "fields": {
+        "payload": {
+          "name": "Payload",
+          "description": "De groepsvoorinstellingen als YAML of mapping. Leeg laten om te resetten. Zie de documentatie voor het formaat en voorbeelden."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Stelt de groep tijdelijk in op een doeltemperatuur. Na afloop keert de groep automatisch terug naar het actieve schema of de vorige staat.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Entiteitsselectors opnemen",
           "description": "Als waar, worden ook gekoppelde sensoren (temp, vochtigheid, aanwezigheid, raam, enz.) en per-lid-offsets overschreven."
+        }
+      }
+    },
+    "reset": {
+      "name": "Resetten",
+      "description": "Zet tijdelijke overschrijvingen en runtimestatus (boost, offset, schema, bypass, terugval, presets) terug naar de geconfigureerde standaardwaarden. Selecteer ten minste één optie of gebruik 'Alles'.",
+      "fields": {
+        "everything": {
+          "name": "Alles",
+          "description": "Zet alles hieronder in één keer terug. De afzonderlijke schakelaars worden dan genegeerd."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Onderbreekt een actieve boost en herstelt de doelstatus."
+        },
+        "offset": {
+          "name": "Temperatuuroffset",
+          "description": "Reset de temperatuuroffset van de groep naar 0.0."
+        },
+        "schedule": {
+          "name": "Schema-entiteit",
+          "description": "Zet de actieve schema-entiteit terug naar het geconfigureerde standaardschema."
+        },
+        "bypass": {
+          "name": "Bypass-entiteit",
+          "description": "Zet de actieve bypass-entiteit terug naar de standaard en draait bypass-aanpassingen terug."
+        },
+        "fallback": {
+          "name": "Fallback-payload",
+          "description": "Zet de fallback-payload van het schema terug naar de geconfigureerde standaard."
+        },
+        "presets": {
+          "name": "Groepsvoorinstellingen",
+          "description": "Wist runtime-groepsvoorinstellingen en herstelt de geconfigureerde voorinstellingen."
         }
       }
     }

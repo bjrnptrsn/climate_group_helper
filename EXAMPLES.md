@@ -13,19 +13,22 @@ Real-world scenarios, ordered by complexity. Each example describes the situatio
   - [5. Window Control with a Cover (Roller Shutter)](#5-window-control-with-a-cover-roller-shutter)
   - [6. Turn Off Heating When Nobody's Home](#6-turn-off-heating-when-nobodys-home)
   - [7. Reliable External Thermostat as Master](#7-reliable-external-thermostat-as-master)
-  - [8. Virtual Presets for Simple TRVs](#8-virtual-presets-for-simple-trvs)
-  - [9. External Sensor Calibration for TRVs](#9-external-sensor-calibration-for-trvs)
-  - [10. Better Thermostat / Versatile Thermostat + CGH](#10-better-thermostat--versatile-thermostat--cgh)
-  - [11. Schedule with Temporary Local Overrides](#11-schedule-with-temporary-local-overrides)
-  - [12. Seasonal Shutdown via Schedule](#12-seasonal-shutdown-via-schedule)
-  - [13. Calendar Bypass on Top of a Base Schedule](#13-calendar-bypass-on-top-of-a-base-schedule)
-  - [14. Night Setback when the Schedule is Inactive](#14-night-setback-when-the-schedule-is-inactive)
+  - [8. Presets for Simple TRVs](#8-presets-for-simple-trvs)
+  - [9. Presets via a Master Thermostat](#9-presets-via-a-master-thermostat)
+  - [10. Setpoints from a Dashboard Slider](#10-setpoints-from-a-dashboard-slider)
+  - [11. Schedule as On/Off, Sliders for the Temperatures](#11-schedule-as-onoff-sliders-for-the-temperatures)
+  - [12. External Sensor Calibration for TRVs](#12-external-sensor-calibration-for-trvs)
+  - [13. Better Thermostat / Versatile Thermostat + CGH](#13-better-thermostat--versatile-thermostat--cgh)
+  - [14. Schedule with Temporary Local Overrides](#14-schedule-with-temporary-local-overrides)
+  - [15. Seasonal Shutdown via Schedule](#15-seasonal-shutdown-via-schedule)
+  - [16. Calendar Bypass on Top of a Base Schedule](#16-calendar-bypass-on-top-of-a-base-schedule)
+  - [17. Night Setback when the Schedule is Inactive](#17-night-setback-when-the-schedule-is-inactive)
 - [Edge Cases](#edge-cases) — mixed hardware, multiple constraints, edge cases from real support issues
-  - [15. Mixed Radiator + AC, One Device per Mode](#15-mixed-radiator--ac-one-device-per-mode)
-  - [16. Underfloor Heating That Can't Turn Off](#16-underfloor-heating-that-cant-turn-off)
-  - [17. Union Group with Out-of-Bounds Devices](#17-union-group-with-out-of-bounds-devices)
-  - [18. Multi-Head Mini-Split, Shared Mode Only](#18-multi-head-mini-split-shared-mode-only)
-  - [19. Interlocking Heat/Cool Across Two Systems](#19-interlocking-heatcool-across-two-systems)
+  - [18. Mixed Radiator + AC, One Device per Mode](#18-mixed-radiator--ac-one-device-per-mode)
+  - [19. Underfloor Heating That Can't Turn Off](#19-underfloor-heating-that-cant-turn-off)
+  - [20. Union Group with Out-of-Bounds Devices](#20-union-group-with-out-of-bounds-devices)
+  - [21. Multi-Head Mini-Split, Shared Mode Only](#21-multi-head-mini-split-shared-mode-only)
+  - [22. Interlocking Heat/Cool Across Two Systems](#22-interlocking-heatcool-across-two-systems)
 
 ---
 
@@ -176,9 +179,41 @@ Cheap TRVs measure the room temperature poorly. Let one accurate device be the s
 
 ---
 
-### 8. Virtual Presets for Simple TRVs
+### 8. Presets for Simple TRVs
 
-Simple TRVs don't support `preset_mode` at all — no "Eco"/"Comfort" concept, just a setpoint. Give them virtual presets by routing preset selection through a `generic_thermostat` master.
+Simple TRVs don't support presets at all — no "Eco"/"Comfort" concept, just a setpoint. Define the presets on the group instead. No helper entity, no particular sync mode required.
+
+**Entities:** `climate.trv1`, `climate.trv2`
+
+| Setting | Value |
+|---|---|
+| Members | `climate.trv1`, `climate.trv2` |
+| Group Presets | see below |
+
+```yaml
+eco:
+  temperature: 17.0
+  hvac_mode: heat
+comfort:
+  temperature: 21.0
+  hvac_mode: heat
+ventilate:
+  hvac_mode: off
+```
+
+**Result:** The group's preset selector lists `comfort`, `eco` and `ventilate`. Picking one applies its settings to both TRVs at once. A preset only sets the values it lists — `ventilate` above changes the mode and leaves the setpoint alone.
+
+Adjusting something the active preset defines (here: the temperature) returns the group to its normal, preset-free state, so the shown preset and the actual values never drift apart. Adjusting something it doesn't define leaves the preset selected.
+
+If you name a group preset the same as one a member device already offers (e.g. both call it `eco`), the group's own definition wins and the device's version is never sent. The settings page warns you when you save, so you can rename one of them if that wasn't intended.
+
+> **Tip:** Presets can also be created, updated or removed at runtime from an automation — see Example 10.
+
+---
+
+### 9. Presets via a Master Thermostat
+
+Same goal as Example 8, but the preset temperatures live in a separate `generic_thermostat` instead of the group's settings. Worth it when automations already read them there, or when the master doubles as a reliable external sensor (Example 7).
 
 **Entities:** `climate.generic_thermostat` (master, fixed preset temperatures), `climate.trv1`, `climate.trv2`
 
@@ -190,11 +225,96 @@ Simple TRVs don't support `preset_mode` at all — no "Eco"/"Comfort" concept, j
 
 Configure the `generic_thermostat`'s away/home presets with the temperatures you want (e.g. Eco = 17 °C, Comfort = 21 °C).
 
-**Result:** Selecting a preset on the group changes the master's target temperature accordingly, which then syncs to `climate.trv1` and `climate.trv2` — giving devices that have no native preset support a working preset selector.
+**Result:** Selecting a preset on the group changes the master's target temperature accordingly, which then syncs to `climate.trv1` and `climate.trv2`.
 
 ---
 
-### 9. External Sensor Calibration for TRVs
+### 10. Setpoints from a Dashboard Slider
+
+Keep the temperatures in a preset and let an automation write them, so the values can come from anywhere in Home Assistant — an `input_number` on your dashboard, a calculated sensor, a price forecast. The group's settings stay untouched.
+
+**Entities:** the group, plus `input_number.comfort_temperature` as the slider
+
+```yaml
+alias: "Sync Comfort Temperature to Climate Group"
+trigger:
+  - platform: state
+    entity_id: input_number.comfort_temperature
+  - platform: homeassistant
+    event: start
+action:
+  - service: climate_group_helper.set_group_preset
+    target:
+      entity_id: climate.living_room_group
+    data:
+      payload:
+        comfort:
+          temperature: "{{ states('input_number.comfort_temperature') | float }}"
+          hvac_mode: heat
+```
+
+**Result:** Moving the slider updates the `comfort` preset. If that preset is the one currently selected on the group, the new temperature is applied right away; otherwise it takes effect the next time the preset is picked. The `homeassistant.start` trigger re-syncs after a restart, in case the slider moved while Home Assistant was down.
+
+Enable **Retain Changes Made via Service (Presets)** so the values also survive a restart on their own.
+
+> **Tip:** Schedule slots can request a preset by name instead of carrying temperatures themselves — see Example 11 for that combination.
+
+---
+
+### 11. Schedule as On/Off, Sliders for the Temperatures
+
+The schedule decides *when* to heat, two sliders decide *how warm*. The schedule itself holds no temperatures at all — its slot asks for a preset by name, and so does the fallback that covers the hours outside it. Adjusting a slider is all that's needed to change the setpoints; the schedule is never touched again.
+
+**Entities:** `climate.living_room_trv`, `schedule.house_weekly`, `input_number.eco_temp`, `input_number.comfort_temp`
+
+| Setting | Value |
+|---|---|
+| Members | `climate.living_room_trv` |
+| Schedule Entity | `schedule.house_weekly` |
+| Inactive Schedule Fallback | see below |
+| Retain Changes Made via Service (Presets) | on |
+
+**Heating slot (e.g. 06:00–22:00):**
+```yaml
+preset_mode: comfort
+```
+
+**Inactive Schedule Fallback** (options flow → Schedule section, YAML):
+```yaml
+preset_mode: eco
+```
+
+**Automation — keep both presets in sync with the sliders:**
+```yaml
+alias: "Sync Heating Temperatures to Climate Group"
+trigger:
+  - platform: state
+    entity_id:
+      - input_number.eco_temp
+      - input_number.comfort_temp
+  - platform: homeassistant
+    event: start
+action:
+  - service: climate_group_helper.set_group_preset
+    target:
+      entity_id: climate.living_room_group
+    data:
+      payload:
+        eco:
+          temperature: "{{ states('input_number.eco_temp') | float }}"
+          hvac_mode: heat
+        comfort:
+          temperature: "{{ states('input_number.comfort_temp') | float }}"
+          hvac_mode: heat
+```
+
+**Result:** During the slot the group runs the `comfort` preset, outside it the `eco` preset. Moving a slider updates its preset — and if that preset is the one currently active, the group follows immediately.
+
+> **Tip:** This replaces the common "gapless 24/7 schedule" setup, where every hour needs its own block with its own temperature. Here the schedule only marks the heating hours, and there are exactly two temperatures to maintain — both on your dashboard.
+
+---
+
+### 12. External Sensor Calibration for TRVs
 
 A TRV's built-in sensor sits right next to a hot pipe and reads too high. Correct it using a real room sensor.
 
@@ -210,11 +330,11 @@ A TRV's built-in sensor sits right next to a hot pipe and reads too high. Correc
 
 **Result:** CGH computes the offset between the TRV's internal reading and the external sensor, writes it to the calibration `number` entity, and re-sends it periodically to prevent battery-device timeouts.
 
-> Skip this if your devices are already handled by Better Thermostat or Versatile Thermostat — see Example 10.
+> Skip this if your devices are already handled by Better Thermostat or Versatile Thermostat — see Example 13.
 
 ---
 
-### 10. Better Thermostat / Versatile Thermostat + CGH
+### 13. Better Thermostat / Versatile Thermostat + CGH
 
 You already use a dedicated regulation integration (Better Thermostat or Versatile Thermostat) for per-device algorithms (MPC/PID/TPI) — each device regulates its own valve/output independently. CGH doesn't need to (and generally shouldn't) force a shared setpoint on top of that; its job is the orchestration each regulation integration doesn't do by itself: Schedule, Window Control, Presence, a combined overview entity.
 
@@ -251,7 +371,7 @@ A room has one well-calibrated BT/VT device (good external sensor, proper regula
 
 ---
 
-### 11. Schedule with Temporary Local Overrides
+### 14. Schedule with Temporary Local Overrides
 
 During certain slots (e.g. a "comfort" evening slot), occupants should be able to nudge the temperature without the group instantly reverting it — but other slots should stay strictly locked.
 
@@ -279,7 +399,7 @@ sync_mode: disabled
 
 ---
 
-### 12. Seasonal Shutdown via Schedule
+### 15. Seasonal Shutdown via Schedule
 
 Turn a group off for an extended period (e.g. summer) and back on again automatically via a calendar event, instead of flipping the Main Switch by hand.
 
@@ -305,7 +425,7 @@ temperature: 20.0
 
 ---
 
-### 13. Calendar Bypass on Top of a Base Schedule
+### 16. Calendar Bypass on Top of a Base Schedule
 
 A weekly `schedule.*` entity already drives day-to-day heating. On top of that, a shared household `calendar.*` (e.g. a Google Calendar everyone can add events to) should be able to temporarily override it — a guest staying over, a day working from home, a party — without touching the base schedule at all.
 
@@ -335,7 +455,7 @@ temperature: 22.0
 
 ---
 
-### 14. Night Setback when the Schedule is Inactive
+### 17. Night Setback when the Schedule is Inactive
 
 `schedule.*` entities report `off` without any slot attributes outside the configured time blocks. Instead of building a gapless 24/7 schedule (an explicit low-temperature block for every inactive hour), define one fallback state that the group applies whenever no slot is active.
 
@@ -379,9 +499,9 @@ The override takes effect immediately (if the slot is currently inactive). Enabl
 
 ## Edge Cases
 
-### 15. Mixed Radiator + AC, One Device per Mode
+### 18. Mixed Radiator + AC, One Device per Mode
 
-A room has a heat-only radiator (Wiser) and a heat/cool AC (Daikin/Faikin). The AC must **never** heat, even though it advertises `heat` — and each device needs different handling depending on which mode is active. (Based on a real mixed-hardware report, GitHub #99.)
+A room has a heat-only radiator (Wiser) and a heat/cool AC (Daikin/Faikin). The AC must **never** heat, even though it advertises `heat` — and each device needs different handling depending on which mode is active. (Based on a real mixed-hardware setup.)
 
 **Entities:** `climate.wiser_radiator` (heat/off only), `climate.daikin_ac` (heat_cool/cool/heat/dry/fan_only/off)
 
@@ -399,9 +519,9 @@ A room has a heat-only radiator (Wiser) and a heat/cool AC (Daikin/Faikin). The 
 
 ---
 
-### 16. Underfloor Heating That Can't Turn Off
+### 19. Underfloor Heating That Can't Turn Off
 
-Water-based underfloor heating has no `off` mode — it only supports `heat`. When the group needs to stop heating (e.g. switching to cooling elsewhere in summer), the floor loop needs a safe fallback instead of a real `off` call. (Based on GitHub #100.)
+Water-based underfloor heating has no `off` mode — it only supports `heat`. When the group needs to stop heating (e.g. switching to cooling elsewhere in summer), the floor loop needs a safe fallback instead of a real `off` call. (Based on a real underfloor heating setup.)
 
 **Entities:** `climate.floor_heating` (heat only, no off), `climate.bedroom_ac` (heat/cool)
 
@@ -416,7 +536,7 @@ Water-based underfloor heating has no `off` mode — it only supports `heat`. Wh
 
 ---
 
-### 17. Union Group with Out-of-Bounds Devices
+### 20. Union Group with Out-of-Bounds Devices
 
 Mixing devices with different temperature ranges — a low-range TRV and an AC with a higher minimum. When the target falls outside a device's range, that device should be excluded rather than clamped to a nonsensical value.
 
@@ -432,9 +552,9 @@ Mixing devices with different temperature ranges — a low-range TRV and an AC w
 
 ---
 
-### 18. Multi-Head Mini-Split, Shared Mode Only
+### 21. Multi-Head Mini-Split, Shared Mode Only
 
-A 4-head mini-split system (e.g. Daikin via Faikin) requires all heads to share the same HVAC mode to function correctly, but each room still needs its own setpoint and fan speed. Full Mirror/Lock would wrongly force temperature and fan speed to match too. (Based on GitHub #36.)
+A 4-head mini-split system (e.g. Daikin via Faikin) requires all heads to share the same HVAC mode to function correctly, but each room still needs its own setpoint and fan speed. Full Mirror/Lock would wrongly force temperature and fan speed to match too. (Based on a real multi-head setup.)
 
 **Entities:** `climate.head_living_room`, `climate.head_bedroom`, `climate.head_office`, `climate.head_kitchen`
 
@@ -448,9 +568,9 @@ A 4-head mini-split system (e.g. Daikin via Faikin) requires all heads to share 
 
 ---
 
-### 19. Interlocking Heat/Cool Across Two Systems
+### 22. Interlocking Heat/Cool Across Two Systems
 
-An HRV (heat recovery ventilator) with heat/cool/auto acts as the "conductor". Several independent underfloor heating zones must turn fully off whenever the HRV is cooling, and back on when it's heating — pure interlocking, no shared setpoint. (Based on GitHub #66.)
+An HRV (heat recovery ventilator) with heat/cool/auto acts as the "conductor". Several independent underfloor heating zones must turn fully off whenever the HRV is cooling, and back on when it's heating — pure interlocking, no shared setpoint. (Based on a real multi-system setup.)
 
 **Entities:** `climate.hrv` (master), `climate.floor_zone_1` … `climate.floor_zone_5`
 
@@ -470,8 +590,8 @@ An HRV (heat recovery ventilator) with heat/cool/auto acts as the "conductor". S
 
 - **Start simple:** get basic grouping working first (just Members, no other settings), then layer on features one at a time.
 - **Advanced Mode:** toggle it on in the group's configuration to unlock everything beyond Basic-tier settings (Examples 3–18).
-- **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted; use `Mirror/Lock` when only some attributes should sync (Example 17).
+- **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted; use `Mirror/Lock` when only some attributes should sync (Example 20).
 - **Blocking priority:** Main Switch > Window Control > Presence Control — if several are active at once, only the highest-ranked one's action is sent to members.
 - **Schedule + Boost:** Boost outranks the schedule. Schedule slot changes still run in the background during a boost.
-- **Calibration:** only use CGH's own calibration if you're not already using Better Thermostat or Versatile Thermostat — they handle their own (Example 10).
+- **Calibration:** only use CGH's own calibration if you're not already using Better Thermostat or Versatile Thermostat — they handle their own (Example 13).
 - **Multiple Isolation Rules:** when different member devices need different reactions to the same trigger (or different triggers entirely), add one isolation rule per device — see Examples 14 and 15.

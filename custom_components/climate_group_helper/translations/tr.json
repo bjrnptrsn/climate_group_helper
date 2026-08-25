@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "Program, şu anda kapalı olan üyeleri AÇMAZ."
             }
           },
+          "presets_section": {
+            "name": "Grup Ön Ayarları",
+            "description": "Grup için kendi adlandırılmış ön ayarlarınızı tanımlayın (ör. eco, guest, ventilate). Birini seçtiğinizde öznitelikleri tüm üyelere aynı anda uygulanır. Bir grup ön ayarı, aynı ada sahip bir üye ön ayarını geçersiz kılar.",
+            "data": {
+              "group_presets": "Grup Ön Ayarları (YAML)",
+              "retain_service_changes_presets": "Servis Aracılığıyla Yapılan Değişiklikleri Koru (Ön Ayarlar)"
+            },
+            "data_description": {
+              "group_presets": "YAML biçiminde ön ayarlarınız: her ön ayar için serbestçe seçilen bir ad ve uygulanacak öznitelikler (temperature, hvac_mode, fan_mode, swing_mode). Bir ön ayar yalnızca listelediği öznitelikleri uygular. Biçim ve kopyalamaya hazır örnekler için belgelere bakın.",
+              "retain_service_changes_presets": "Yeniden başlatmanın ardından servis aracılığıyla oluşturulan veya güncellenen ön ayarları korur. Aksi takdirde yapılandırılmış ön ayarlara sıfırlanırlar."
+            }
+          },
           "temp_offsets_section": {
             "name": "Üye Ofsetleri",
             "description": "Belirli üyelerin grup hedefine göre orantılı olarak daha sıcak veya daha soğuk çalışması için bireysel sıcaklık ofsetleri uygulayın.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Grupta en az bir iklim cihazı kalmalıdır.",
-      "calibration_requires_sensors": "Kalibrasyon hedefleri en az bir harici sıcaklık sensörü gerektirir.",
       "master_refresh_notice": "Ana Varlık eklendi. Yeni seçenekler kullanılabilir.",
       "master_options_notice": "Yeni Ana Varlık seçeneği",
       "isolation_all_selected": "En az bir üye izolasyon dışında kalmalıdır.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Bir pencere sıcaklığı ayarlayın veya pencere eylemini değiştirin.",
       "presence_action_value_required": "Seçilen uzakta eylemi için bir değer ayarlayın veya eylemi değiştirin.",
       "schedule_fallback_payload_invalid": "Yedek zaman planı yükünde geçersiz YAML biçimi. Geçerli bir anahtar-değer eşlemesi olmalıdır.",
+      "group_presets_invalid": "Grup Ön Ayarlarında geçersiz YAML biçimi. Geçerli bir anahtar-değer eşlemesi olmalıdır.",
+      "preset_name_collision_notice": "Bir veya daha fazla grup ön ayarı, üyelerin yerel ön ayarlarıyla aynı adı paylaşıyor. Grup tanımı bunları geçersiz kılacaktır.",
       "sensor_loop_protection": "Bir Climate Group Helper varlığı harici sensör veya kalibrasyon hedefi olarak kullanılamaz — bu bir geri besleme döngüsü oluşturur."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Grup Ön Ayarını Ayarla",
+      "description": "Çalışma zamanında sanal grup ön ayarlarını oluşturur, günceller veya temizler. Sıfırlamak için boş bırakın.",
+      "fields": {
+        "payload": {
+          "name": "Veri Yükü",
+          "description": "YAML veya harita olarak grup ön ayarları. Sıfırlamak için boş bırakın. Biçim ve örnekler için belgelere bakın."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Grubu geçici olarak bir hedef sıcaklığa ayarlar. Zamanlayıcı sona erdiğinde grup otomatik olarak aktif programa veya önceki duruma geri döner.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Varlık Seçicilerini Dahil Et",
           "description": "Doğruysa, bağlantılı sensörleri (sıcaklık, nem, varlık, pencere vb.) ve üye başına ofsetleri de üzerine yazar."
+        }
+      }
+    },
+    "reset": {
+      "name": "Sıfırla",
+      "description": "Geçici geçersiz kılmaları ve çalışma zamanı durumunu (boost, ofset, program, atlama, yedek, ön ayarlar) yapılandırılmış varsayılanlara sıfırlar. En az bir seçenek belirleyin veya \"Tümü\" seçeneğini kullanın.",
+      "fields": {
+        "everything": {
+          "name": "Tümü",
+          "description": "Aşağıdakilerin tümünü tek seferde sıfırlar. Tek tek anahtarlar bu durumda yok sayılır."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Etkin boost işlemini iptal eder ve hedef durumu geri yükler."
+        },
+        "offset": {
+          "name": "Sıcaklık Ofseti",
+          "description": "Grup sıcaklık ofsetini 0.0'a sıfırlar."
+        },
+        "schedule": {
+          "name": "Program Varlığı",
+          "description": "Etkin program varlığını yapılandırılan varsayılan programa döndürür."
+        },
+        "bypass": {
+          "name": "Bypass Varlığı",
+          "description": "Etkin bypass varlığını yapılandırılan varsayılana döndürür ve bypass ayarlamalarını geri alır."
+        },
+        "fallback": {
+          "name": "Geri Dönüş Yükü",
+          "description": "Program geri dönüş yükünü yapılandırılan varsayılana döndürür."
+        },
+        "presets": {
+          "name": "Grup Ön Ayarları",
+          "description": "Çalışma zamanı grup ön ayarlarını temizler ve yapılandırılan ön ayarları geri yükler."
         }
       }
     }

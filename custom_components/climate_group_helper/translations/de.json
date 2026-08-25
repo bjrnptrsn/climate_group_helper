@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "Der Zeitplan schaltet keine Mitglieder ein, die aktuell ausgeschaltet sind."
             }
           },
+          "presets_section": {
+            "name": "Gruppen-Presets",
+            "description": "Definiere eigene benannte Presets für die Gruppe (z. B. eco, guest, ventilate). Die Auswahl eines Presets wendet seine Attribute auf alle Mitglieder gleichzeitig an. Ein Gruppen-Preset überschreibt ein gleichnamiges Preset eines Mitglieds.",
+            "data": {
+              "group_presets": "Gruppen-Presets (YAML)",
+              "retain_service_changes_presets": "Per Dienst geänderte Werte beibehalten (Presets)"
+            },
+            "data_description": {
+              "group_presets": "Deine Presets in YAML: ein frei gewählter Name je Preset, jeweils mit den Attributen, die es anwenden soll (temperature, hvac_mode, fan_mode, swing_mode). Ein Preset wendet nur die Attribute an, die es aufführt. Format und fertige Beispiele findest du in der Anleitung.",
+              "retain_service_changes_presets": "Behält per Dienst angelegte oder geänderte Presets nach einem Neustart bei. Andernfalls werden sie auf die konfigurierten Presets zurückgesetzt."
+            }
+          },
           "temp_offsets_section": {
             "name": "Geräte-Offsets",
             "description": "Individuelle Temperatur-Offsets anwenden, damit bestimmte Mitglieder proportional wärmer oder kühler als der Gruppenzielwert laufen.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Mindestens ein Klimagerät muss in der Gruppe verbleiben.",
-      "calibration_requires_sensors": "Kalibrierungsziele erfordern mindestens einen externen Temperatursensor.",
       "master_refresh_notice": "Master-Entität hinzugefügt. Neue Optionen verfügbar.",
       "master_options_notice": "Neue Master-Entitäts-Option",
       "isolation_all_selected": "Mindestens ein Mitglied muss außerhalb der Isolierung bleiben.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Lege eine Fenstertemperatur fest oder ändere die Fensteraktion.",
       "presence_action_value_required": "Lege einen Wert für die gewählte Abwesenheitsaktion fest oder ändere die Aktion.",
       "schedule_fallback_payload_invalid": "Ungültiges YAML-Format im Fallback-Zeitplan-Payload. Es muss ein gültiges Schlüssel-Wert-Mapping sein.",
+      "group_presets_invalid": "Ungültiges YAML-Format in den Gruppen-Presets. Muss ein gültiges Schlüssel-Wert-Mapping sein.",
+      "preset_name_collision_notice": "Ein oder mehrere Gruppen-Presets tragen den gleichen Namen wie native Preset-Modi der Mitglieder. Die Definition des Gruppen-Presets überschreibt diese.",
       "sensor_loop_protection": "Eine Climate Group Helper-Entität kann nicht als externer Sensor oder Kalibrierungsziel verwendet werden — dies würde eine Rückkopplungsschleife erzeugen."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Gruppen-Preset setzen",
+      "description": "Erstellt, aktualisiert oder löscht virtuelle Gruppen-Presets zur Laufzeit. Leer lassen zum Zurücksetzen.",
+      "fields": {
+        "payload": {
+          "name": "Payload",
+          "description": "Die Gruppen-Presets als YAML oder Mapping. Leer lassen zum Zurücksetzen. Format und Beispiele siehe Dokumentation."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Setzt die Gruppe vorübergehend auf eine Zieltemperatur. Nach Ablauf des Timers kehrt die Gruppe automatisch zum aktiven Zeitplan oder vorherigen Zustand zurück.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Entitätsselektoren einschließen",
           "description": "Wenn aktiviert, werden auch verknüpfte Sensoren (Temperatur, Luftfeuchtigkeit, Anwesenheit, Fenster usw.) und Offsets je Mitglied überschrieben."
+        }
+      }
+    },
+    "reset": {
+      "name": "Zurücksetzen",
+      "description": "Setzt temporäre Überschreibungen und Laufzeitzustände (Boost, Offset, Zeitplan, Bypass, Fallback, Presets) auf die konfigurierten Standardwerte zurück. Wähle mindestens eine Option aus oder nutze „Alles“.",
+      "fields": {
+        "everything": {
+          "name": "Alles",
+          "description": "Setzt alles Untenstehende auf einmal zurück. Die einzelnen Schalter werden dann ignoriert."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Bricht einen aktiven Boost ab und stellt den Zielzustand wieder her."
+        },
+        "offset": {
+          "name": "Temperatur-Offset",
+          "description": "Setzt den Temperatur-Offset der Gruppe auf 0.0 zurück."
+        },
+        "schedule": {
+          "name": "Zeitplan-Entität",
+          "description": "Setzt die aktive Zeitplan-Entität auf den konfigurierten Standardzeitplan zurück."
+        },
+        "bypass": {
+          "name": "Bypass-Entität",
+          "description": "Setzt die aktive Bypass-Entität auf den konfigurierten Standard zurück und nimmt Bypass-Anpassungen zurück."
+        },
+        "fallback": {
+          "name": "Fallback-Payload",
+          "description": "Setzt den Fallback-Payload des Zeitplans auf den konfigurierten Standard zurück."
+        },
+        "presets": {
+          "name": "Gruppen-Voreinstellungen",
+          "description": "Löscht zur Laufzeit erstellte Voreinstellungen und stellt konfigurierte Voreinstellungen wieder her."
         }
       }
     }

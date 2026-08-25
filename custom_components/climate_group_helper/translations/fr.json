@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "La Planification n'allumera PAS les membres actuellement ÉTEINTS."
             }
           },
+          "presets_section": {
+            "name": "Préréglages de groupe",
+            "description": "Définissez vos propres préréglages nommés pour le groupe (par ex. eco, guest, ventilate). En sélectionner un applique ses attributs à tous les membres en une fois. Un préréglage de groupe prévaut sur le préréglage d'un membre portant le même nom.",
+            "data": {
+              "group_presets": "Préréglages de groupe (YAML)",
+              "retain_service_changes_presets": "Conserver les modifications apportées par service (Préréglages)"
+            },
+            "data_description": {
+              "group_presets": "Vos préréglages en YAML : un nom libre par préréglage, chacun avec les attributs qu'il doit appliquer (temperature, hvac_mode, fan_mode, swing_mode). Un préréglage n'applique que les attributs qu'il énumère. Consultez la documentation pour le format et des exemples prêts à copier.",
+              "retain_service_changes_presets": "Conserve les préréglages créés ou mis à jour par service après un redémarrage. Sinon, ils reviennent aux préréglages configurés."
+            }
+          },
           "temp_offsets_section": {
             "name": "Décalages des membres",
             "description": "Appliquez des décalages de température individuels pour que certains membres fonctionnent proportionnellement plus chaud ou plus froid que la cible du groupe.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Au moins un appareil climatique doit rester dans le groupe.",
-      "calibration_requires_sensors": "Les cibles de calibration nécessitent au moins un capteur de température externe.",
       "master_refresh_notice": "Entité Maître ajoutée. Nouvelles options disponibles.",
       "master_options_notice": "Nouvelle option d'entité Maître",
       "isolation_all_selected": "Au moins un membre doit rester en dehors de l'isolation.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Définissez une température de fenêtre ou modifiez l'action de fenêtre.",
       "presence_action_value_required": "Définissez une valeur pour l'action d'absence sélectionnée ou modifiez l'action.",
       "schedule_fallback_payload_invalid": "Format YAML invalide dans les données de secours du planning. Doit être un mappage clé-valeur valide.",
+      "group_presets_invalid": "Format YAML non valide dans les préréglages de groupe. Doit être un mappage clé-valeur valide.",
+      "preset_name_collision_notice": "Un ou plusieurs préréglages de groupe partagent le même nom que les préréglages natifs des membres. La définition du groupe les remplacera.",
       "sensor_loop_protection": "Impossible d'utiliser une entité Climate Group Helper comme capteur externe ou cible de calibration — cela créerait une boucle de rétroaction."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Définir le préréglage de groupe",
+      "description": "Crée, met à jour ou efface des préréglages de groupe virtuels au moment de l'exécution. Laisser vide pour réinitialiser.",
+      "fields": {
+        "payload": {
+          "name": "Charge utile",
+          "description": "Les préréglages de groupe sous forme de YAML ou de mappage. Laisser vide pour réinitialiser. Voir la documentation pour le format et les exemples."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Règle temporairement le groupe à une température cible. À l'expiration de la minuterie, le groupe revient automatiquement au planning actif ou à son état précédent.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Inclure les sélecteurs d'entité",
           "description": "Si vrai, écrase également les capteurs liés (temp, humidité, présence, fenêtre, etc.) et les décalages par membre."
+        }
+      }
+    },
+    "reset": {
+      "name": "Réinitialiser",
+      "description": "Réinitialise les remplacements temporaires et l'état d'exécution (boost, décalage, programmation, dérogation, repli, préréglages) aux valeurs par défaut configurées. Sélectionnez au moins une option ou utilisez « Tout ».",
+      "fields": {
+        "everything": {
+          "name": "Tout",
+          "description": "Réinitialise tout ce qui suit en une seule fois. Les interrupteurs individuels sont alors ignorés."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Interrompt un boost actif et rétablit l'état cible."
+        },
+        "offset": {
+          "name": "Décalage de température",
+          "description": "Réinitialise le décalage de température du groupe à 0.0."
+        },
+        "schedule": {
+          "name": "Entité de planification",
+          "description": "Rétablit l'entité de planification active à la planification par défaut configurée."
+        },
+        "bypass": {
+          "name": "Entité de dérogation",
+          "description": "Rétablit l'entité de dérogation active par défaut et annule les ajustements de dérogation."
+        },
+        "fallback": {
+          "name": "Charge utile de secours",
+          "description": "Rétablit la charge utile de secours de la planification par défaut configurée."
+        },
+        "presets": {
+          "name": "Préréglages de groupe",
+          "description": "Efface les préréglages de groupe d'exécution et restaure les préréglages configurés."
         }
       }
     }

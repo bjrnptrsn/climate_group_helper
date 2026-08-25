@@ -41,6 +41,7 @@ class RunState:
     """
 
     active_slot_title: str | None = None
+    active_virtual_preset: str | None = None
     blocking_sources: frozenset[str] = field(default_factory=frozenset)
     boost_temperature: float | None = None
     boost_until: datetime | None = None
@@ -257,13 +258,52 @@ class BaseStateManager:
         """Return the current target state from central source."""
         return self._group.shared_target_state
 
+    def _resolve_group_preset(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        """Merge a virtual group preset's payload and track activation/exit on run_state.
+
+        This is the sole owner of `run_state.active_virtual_preset`. It sits
+        behind `_filter_update()` on purpose: a preset that never reaches
+        `target_state` (blocked window/switch, partial sync) must not be
+        reported as active either — the name and the setpoints have to stay in
+        step.
+
+        A known virtual preset_mode overlays its payload onto kwargs and marks
+        the flag. The preset is exited (flag and preset_mode reset to None)
+        when a native preset_mode replaces it, or when kwargs touches one of
+        the attributes the active preset defines.
+        """
+        # `kwargs` is always a dict here (update() passes **kwargs), so the
+        # empty-payload pass-through in resolve_preset() cannot return None.
+        kwargs = self._group.preset_manager.resolve_preset(kwargs) or kwargs
+        preset_mode = kwargs.get("preset_mode")
+        is_virtual = self._group.preset_manager.is_virtual(preset_mode)
+
+        if self._group.run_state.active_virtual_preset:
+            if is_virtual:
+                # Switching between virtual presets.
+                if self._group.run_state.active_virtual_preset != preset_mode:
+                    self._group.run_state = replace(self._group.run_state, active_virtual_preset=preset_mode)
+            elif preset_mode is not None:
+                # A native preset replaces the virtual one — it owns preset_mode now.
+                self._group.run_state = replace(self._group.run_state, active_virtual_preset=None)
+            else:
+                active_payload = self._group.preset_manager.get_payload(self._group.run_state.active_virtual_preset)
+                if active_payload and set(kwargs.keys()) & set(active_payload.keys()):
+                    self._group.run_state = replace(self._group.run_state, active_virtual_preset=None)
+                    kwargs["preset_mode"] = None
+        elif is_virtual:
+            self._group.run_state = replace(self._group.run_state, active_virtual_preset=preset_mode)
+
+        return kwargs
+
     def update(self, entity_id: str | None = None, *, source: str | None = None, **kwargs: Any) -> bool:
         """Update target_state with source tracking.
-        
+
         Template Method workflow:
         1. Filter via `_filter_update()` (hook)
-        2. Add metadata (source, entity_id, timestamp)
-        3. Update the central shared_target_state
+        2. Resolve virtual group presets (`_resolve_group_preset()`)
+        3. Add metadata (source, entity_id, timestamp)
+        4. Update the central shared_target_state
         
         Args:
             entity_id: The specific entity that caused the update (optional)
@@ -283,6 +323,8 @@ class BaseStateManager:
 
         if not self._filter_update(entity_id, kwargs):
             return False
+
+        kwargs = self._resolve_group_preset(kwargs)
 
         # Inject source metadata (source, entity, timestamp)
         context = self._group._context
@@ -367,7 +409,7 @@ class BaseStateManager:
             entity for entity in self._group.climate_entity_ids
             if entity != entity_id
             and entity not in self._group.run_state.isolated_members
-            and (state := self._group.read_member_state(entity))
+            and (state := self._group.aggregator.read_member_state(entity))
             and state.state != HVACMode.OFF
             and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
         ]

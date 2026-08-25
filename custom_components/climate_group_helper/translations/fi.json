@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "Aikataulu EI kytke päälle jäseniä, jotka ovat tällä hetkellä pois päältä."
             }
           },
+          "presets_section": {
+            "name": "Ryhmän esiasetukset",
+            "description": "Määritä ryhmälle omat nimetyt esiasetukset (esim. eco, guest, ventilate). Esiasetuksen valinta soveltaa sen attribuutit kaikkiin jäseniin kerralla. Ryhmän esiasetus ohittaa jäsenen samannimisen esiasetuksen.",
+            "data": {
+              "group_presets": "Ryhmän esiasetukset (YAML)",
+              "retain_service_changes_presets": "Säilytä palvelun kautta tehdyt muutokset (Esiasetukset)"
+            },
+            "data_description": {
+              "group_presets": "Esiasetuksesi YAML-muodossa: vapaasti valittu nimi kullekin esiasetukselle ja attribuutit, jotka sen tulee ottaa käyttöön (temperature, hvac_mode, fan_mode, swing_mode). Esiasetus soveltaa vain luettelemansa attribuutit. Katso muoto ja valmiit esimerkit dokumentaatiosta.",
+              "retain_service_changes_presets": "Säilyttää palvelun kautta luodut tai päivitetyt esiasetukset uudelleenkäynnistyksen jälkeen. Muuten ne palautuvat määritettyihin esiasetuksiin."
+            }
+          },
           "temp_offsets_section": {
             "name": "Jäsenten lämpötilasiirtymät",
             "description": "Käytä jäsenkohtaisia lämpötilaoffsetteja, jotta tietyt jäsenet toimivat suhteessa lämpimämmin tai viileämmin kuin ryhmän tavoite.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Vähintään yhden ilmastointilaitteen on pysyttävä ryhmässä.",
-      "calibration_requires_sensors": "Kalibrointikohteet vaativat vähintään yhden ulkoisen lämpötila-anturin.",
       "master_refresh_notice": "Pääyksikkö lisätty. Uusia asetuksia saatavilla.",
       "master_options_notice": "Uusi pääyksikön asetus",
       "isolation_all_selected": "Vähintään yhden jäsenen on pysyttävä eristyksen ulkopuolella.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Aseta ikkunan lämpötila tai vaihda ikkunatoimintoa.",
       "presence_action_value_required": "Aseta arvo valitulle poissaolotoiminnolle tai vaihda toimintoa.",
       "schedule_fallback_payload_invalid": "Virheellinen YAML-muoto aikataulun varakuormassa. Sen on oltava kelvollinen avain-arvo-kartoitus.",
+      "group_presets_invalid": "Virheellinen YAML-muoto ryhmän esiasetuksissa. Sen on oltava kelvollinen avain-arvo-kartoitus.",
+      "preset_name_collision_notice": "Yhdellä tai useammalla ryhmän esiasetuksella on sama nimi kuin jäsenten omilla esiasetuksilla. Ryhmän esiasetus korvaa ne.",
       "sensor_loop_protection": "Climate Group Helper -entiteettiä ei voi käyttää ulkoisena anturina tai kalibrointikohteena — tämä loisi takaisinkytkentäsilmukan."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Aseta ryhmän esiasetus",
+      "description": "Luo, päivittää tai poistaa virtuaalisia ryhmäesiasetuksia ajon aikana. Jätä tyhjäksi nollataksesi.",
+      "fields": {
+        "payload": {
+          "name": "Hyötykuorma",
+          "description": "Ryhmän esiasetukset YAML-muodossa tai kartoituksena. Jätä tyhjäksi nollataksesi. Katso muoto ja esimerkit dokumentaatiosta."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Asettaa ryhmän väliaikaisesti tavoitelämpötilaan. Ajastimen umpeuduttua ryhmä palaa automaattisesti aktiiviseen aikatauluun tai edelliseen tilaan.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Sisällytä entiteettivalitsimet",
           "description": "Jos true, ylikirjoittaa myös linkitetyt anturit (lämpötila, kosteus, läsnäolo, ikkuna jne.) ja jäsenkohtaiset siirtymät."
+        }
+      }
+    },
+    "reset": {
+      "name": "Palauta oletukset",
+      "description": "Palauttaa tilapäiset ohitukset ja ajonaikaisen tilan (tehostus, siirtymä, aikataulu, ohitus, varatila, esiasetukset) määritettyihin oletusarvoihin. Valitse vähintään yksi vaihtoehto tai käytä Kaikki-valintaa.",
+      "fields": {
+        "everything": {
+          "name": "Kaikki",
+          "description": "Palauttaa kaiken alla olevan kerralla. Yksittäiset kytkimet ohitetaan tällöin."
+        },
+        "boost": {
+          "name": "Tehostus",
+          "description": "Keskeyttää aktiivisen tehostuksen ja palauttaa kohdetilan."
+        },
+        "offset": {
+          "name": "Lämpötilan siirtymä",
+          "description": "Palauttaa ryhmän lämpötilasiirtymän arvoon 0.0."
+        },
+        "schedule": {
+          "name": "Aikatauluentiteetti",
+          "description": "Palauttaa aktiivisen aikatauluentiteetin määritettyyn oletusaikatauluun."
+        },
+        "bypass": {
+          "name": "Ohitusentiteetti",
+          "description": "Palauttaa aktiivisen ohitusentiteetin oletukseen ja kumoaa ohitussäädöt."
+        },
+        "fallback": {
+          "name": "Varatilan hyötykuorma",
+          "description": "Palauttaa aikataulun varatilan hyötykuorman määritettyyn oletusarvoon."
+        },
+        "presets": {
+          "name": "Ryhmän esiasetukset",
+          "description": "Tyhjentää ajonaikaiset ryhmäesiasetukset ja palauttaa määritetyt esiasetukset."
         }
       }
     }

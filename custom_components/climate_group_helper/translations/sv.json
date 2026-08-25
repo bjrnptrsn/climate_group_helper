@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "Schemat kommer INTE att slå på medlemmar som för närvarande är AVSTÄNGDA."
             }
           },
+          "presets_section": {
+            "name": "Gruppförinställningar",
+            "description": "Definiera dina egna namngivna förinställningar för gruppen (t.ex. eco, guest, ventilate). När du väljer en tillämpas dess attribut på alla medlemmar samtidigt. En gruppförinställning har företräde framför en medlems egen förinställning med samma namn.",
+            "data": {
+              "group_presets": "Gruppförinställningar (YAML)",
+              "retain_service_changes_presets": "Behåll ändringar gjorda via tjänst (Förinställningar)"
+            },
+            "data_description": {
+              "group_presets": "Dina förinställningar i YAML: ett fritt valt namn per förinställning, var och en med de attribut den ska tillämpa (temperature, hvac_mode, fan_mode, swing_mode). En förinställning tillämpar bara de attribut den anger. Se dokumentationen för formatet och färdiga exempel.",
+              "retain_service_changes_presets": "Behåller förinställningar skapade eller uppdaterade via tjänst efter omstart. Annars återställs de till de konfigurerade förinställningarna."
+            }
+          },
           "temp_offsets_section": {
             "name": "Medlems Förskjutningar",
             "description": "Använd individuella temperatur-offsets så att specifika medlemmar körs proportionellt varmare eller kallare än gruppens mål.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Minst en klimatenhet måste finnas kvar i gruppen.",
-      "calibration_requires_sensors": "Kalibreringsmål kräver minst en extern temperatursensor.",
       "master_refresh_notice": "Master-enhet tillagd. Nya alternativ tillgängliga.",
       "master_options_notice": "Nytt alternativ för master-enhet",
       "isolation_all_selected": "Minst en medlem måste förbli utanför isoleringen.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Ange en fönstertemperatur eller ändra fönsteråtgärden.",
       "presence_action_value_required": "Ange ett värde för den valda frånvaroåtgärden eller ändra åtgärden.",
       "schedule_fallback_payload_invalid": "Ogiltigt YAML-format i reservnyttolast för schema. Måste vara en giltig nyckel-värde-mappning.",
+      "group_presets_invalid": "Ogiltigt YAML-format i gruppförinställningar. Måste vara en giltig nyckel-värde-mappning.",
+      "preset_name_collision_notice": "En eller flera gruppförinställningar delar namn med medlemmarnas inbyggda förinställningar. Gruppdefinitionen åsidosätter dem.",
       "sensor_loop_protection": "En Climate Group Helper-entitet kan inte användas som extern sensor eller kalibreringsmål — det skulle skapa en återkopplingsslinga."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Ställ in gruppförinställning",
+      "description": "Skapar, uppdaterar eller rensar virtuella gruppförinställningar under körning. Lämna tomt för att återställa.",
+      "fields": {
+        "payload": {
+          "name": "Nyttolast",
+          "description": "Gruppförinställningarna som YAML eller mappning. Lämna tomt för att återställa. Se dokumentationen för format och exempel."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Ställer tillfälligt in gruppen på en måltemperatur. När timern går ut återgår gruppen automatiskt till det aktiva schemat eller föregående tillstånd.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Inkludera entitetsväljare",
           "description": "Om sant, skrivs även länkade sensorer (temp, fuktighet, närvaro, fönster osv.) och per-medlem-offset över."
+        }
+      }
+    },
+    "reset": {
+      "name": "Återställ",
+      "description": "Återställer tillfälliga åsidosättanden och körtidstillstånd (boost, förskjutning, schema, förbikoppling, reserv, förinställningar) till de konfigurerade standardvärdena. Välj minst ett alternativ eller använd \"Allt\".",
+      "fields": {
+        "everything": {
+          "name": "Allt",
+          "description": "Återställer allt nedan på en gång. De enskilda reglagen ignoreras då."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Avbryter en aktiv boost och återställer målläget."
+        },
+        "offset": {
+          "name": "Temperaturförskjutning",
+          "description": "Återställer gruppens temperaturförskjutning till 0.0."
+        },
+        "schedule": {
+          "name": "Schemaentitet",
+          "description": "Återställer den aktiva schemaentiteten till det konfigurerade standardschemat."
+        },
+        "bypass": {
+          "name": "Bypass-entitet",
+          "description": "Återställer den aktiva bypass-entiteten till standard och rullar tillbaka bypass-justeringar."
+        },
+        "fallback": {
+          "name": "Fallback-nyttolast",
+          "description": "Återställer schemats fallback-nyttolast till den konfigurerade standarden."
+        },
+        "presets": {
+          "name": "Gruppförinställningar",
+          "description": "Rensar körtidsförinställningar och återställer konfigurerade förinställningar."
         }
       }
     }

@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "La Programación NO encenderá los miembros que estén actualmente APAGADOS."
             }
           },
+          "presets_section": {
+            "name": "Ajustes preestablecidos de grupo",
+            "description": "Define tus propios ajustes preestablecidos con nombre para el grupo (p. ej. eco, guest, ventilate). Al seleccionar uno, sus atributos se aplican a todos los miembros a la vez. Un ajuste preestablecido del grupo prevalece sobre el de un miembro con el mismo nombre.",
+            "data": {
+              "group_presets": "Ajustes preestablecidos de grupo (YAML)",
+              "retain_service_changes_presets": "Conservar cambios realizados por servicio (Preajustes)"
+            },
+            "data_description": {
+              "group_presets": "Tus ajustes preestablecidos en YAML: un nombre libre por ajuste, cada uno con los atributos que debe aplicar (temperature, hvac_mode, fan_mode, swing_mode). Un ajuste preestablecido aplica solo los atributos que enumera. Consulta la documentación para el formato y ejemplos listos para copiar.",
+              "retain_service_changes_presets": "Mantiene los preajustes creados o actualizados por servicio tras reiniciar. De lo contrario, se restablecen a los preajustes configurados."
+            }
+          },
           "temp_offsets_section": {
             "name": "Desviaciones de miembros",
             "description": "Aplica desviaciones de temperatura individuales para que miembros específicos funcionen proporcionalmente más calientes o fríos que el objetivo del grupo.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Al menos un dispositivo climático debe permanecer en el grupo.",
-      "calibration_requires_sensors": "Los objetivos de calibración requieren al menos un sensor de temperatura externo.",
       "master_refresh_notice": "Entidad Maestra añadida. Nuevas opciones disponibles.",
       "master_options_notice": "Nueva opción de entidad Maestra",
       "isolation_all_selected": "Al menos un miembro debe permanecer fuera del aislamiento.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Establece una temperatura de ventana o cambia la acción de ventana.",
       "presence_action_value_required": "Establece un valor para la acción de ausencia seleccionada o cambia la acción.",
       "schedule_fallback_payload_invalid": "Formato YAML no válido en el contenido de reserva del horario. Debe ser una asignación de clave-valor válida.",
+      "group_presets_invalid": "Formato YAML no válido en los ajustes preestablecidos de grupo. Debe ser una asignación clave-valor válida.",
+      "preset_name_collision_notice": "Uno o más ajustes preestablecidos de grupo comparten nombre con los ajustes nativos de los miembros. La definición virtual los anulará.",
       "sensor_loop_protection": "No se puede usar una entidad Climate Group Helper como sensor externo o destino de calibración — esto crearía un bucle de retroalimentación."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Establecer preajuste de grupo",
+      "description": "Crea, actualiza o borra preajustes de grupo virtuales en tiempo de ejecución. Deja vacío para restablecer.",
+      "fields": {
+        "payload": {
+          "name": "Carga útil",
+          "description": "Los preajustes de grupo como YAML o mapeo. Deja vacío para restablecer. Consulta la documentación para ver el formato y ejemplos."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Establece temporalmente el grupo a una temperatura objetivo. Al expirar el temporizador, el grupo vuelve automáticamente al horario activo o estado anterior.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Incluir selectores de entidad",
           "description": "Si es verdadero, también sobreescribe los sensores vinculados (temp, humedad, presencia, ventana, etc.) y los desplazamientos por miembro."
+        }
+      }
+    },
+    "reset": {
+      "name": "Restablecer",
+      "description": "Restablece las anulaciones temporales y el estado de ejecución (boost, desfase, programación, derivación, reserva, ajustes preestablecidos) a los valores predeterminados configurados. Selecciona al menos una opción o usa «Todo».",
+      "fields": {
+        "everything": {
+          "name": "Todo",
+          "description": "Restablece todo lo siguiente a la vez. Los interruptores individuales se ignoran entonces."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Cancela un boost activo y restablece el estado objetivo."
+        },
+        "offset": {
+          "name": "Desplazamiento de temperatura",
+          "description": "Restablece el desplazamiento de temperatura del grupo a 0.0."
+        },
+        "schedule": {
+          "name": "Entidad de programación",
+          "description": "Revierte la entidad de programación activa al horario predeterminado configurado."
+        },
+        "bypass": {
+          "name": "Entidad de bypass",
+          "description": "Revierte la entidad de bypass activa al valor predeterminado configurado y revierte los ajustes de bypass."
+        },
+        "fallback": {
+          "name": "Carga útil de reserva",
+          "description": "Revierte la carga útil de reserva de la programación al valor predeterminado configurado."
+        },
+        "presets": {
+          "name": "Preajustes de grupo",
+          "description": "Borra los preajustes de grupo en tiempo de ejecución y restaura los preajustes configurados."
         }
       }
     }

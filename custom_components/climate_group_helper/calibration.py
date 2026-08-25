@@ -45,7 +45,6 @@ class CalibrationHandler:
         self._climate_entity_ids = group.climate_entity_ids
         self._temp_sensor_entity_ids = group.temp_sensor_entity_ids
         self._humidity_sensor_entity_ids = group.humidity_sensor_entity_ids
-        self._get_valid_member_states = group._get_valid_member_states
 
         # Configuration
         self._temp_update_target_entity_ids: list[str] = self._group.temp_update_target_entity_ids
@@ -64,7 +63,11 @@ class CalibrationHandler:
     async def async_setup(self) -> None:
         """Build target→member mapping, start heartbeat timer if configured."""
         registry = er.async_get(self._hass)
-        for target_id in self._temp_update_target_entity_ids:
+        all_target_ids = [
+            *self._temp_update_target_entity_ids,
+            *self._humidity_update_target_entity_ids,
+        ]
+        for target_id in all_target_ids:
             if (entry := registry.async_get(target_id)) and entry.device_id:
                 for climate_id in self._climate_entity_ids:
                     if (c_entry := registry.async_get(climate_id)) and c_entry.device_id == entry.device_id:
@@ -152,7 +155,7 @@ class CalibrationHandler:
             elif event_entity_id not in self._humidity_sensor_entity_ids:
                 return
 
-        valid_states, _ = self._get_valid_member_states(entity_ids)
+        valid_states, _ = self._group.aggregator._get_valid_member_states(entity_ids)
 
         for target_state in valid_states:
             # Resolve the climate member paired with this calibration target (may be None)

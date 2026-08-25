@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "O Agendamento NÃO ligará os membros que estão atualmente DESLIGADOS."
             }
           },
+          "presets_section": {
+            "name": "Predefinições de grupo",
+            "description": "Defina as suas próprias predefinições nomeadas para o grupo (ex.: eco, guest, ventilate). Selecionar uma aplica os seus atributos a todos os membros de uma só vez. Uma predefinição do grupo prevalece sobre a predefinição de um membro com o mesmo nome.",
+            "data": {
+              "group_presets": "Predefinições de grupo (YAML)",
+              "retain_service_changes_presets": "Manter alterações feitas via serviço (Predefinições)"
+            },
+            "data_description": {
+              "group_presets": "As suas predefinições em YAML: um nome à escolha por predefinição, cada uma com os atributos que deve aplicar (temperature, hvac_mode, fan_mode, swing_mode). Uma predefinição aplica apenas os atributos que enumera. Consulte a documentação para o formato e exemplos prontos a copiar.",
+              "retain_service_changes_presets": "Mantém as predefinições criadas ou atualizadas via serviço após reiniciar. Caso contrário, voltam às predefinições configuradas."
+            }
+          },
           "temp_offsets_section": {
             "name": "Desvios de membros",
             "description": "Aplique desvios de temperatura individuais para que membros específicos funcionem proporcionalmente mais quentes ou frios que o destino do grupo.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Pelo menos um dispositivo climático deve permanecer no grupo.",
-      "calibration_requires_sensors": "Os alvos de calibração requerem pelo menos um sensor de temperatura externo.",
       "master_refresh_notice": "Entidade Mestre adicionada. Novas opções disponíveis.",
       "master_options_notice": "Nova opção de entidade Mestre",
       "isolation_all_selected": "Pelo menos um membro deve permanecer fora do isolamento.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Defina uma temperatura de janela ou altere a ação de janela.",
       "presence_action_value_required": "Defina um valor para a ação de ausência selecionada ou altere a ação.",
       "schedule_fallback_payload_invalid": "Formato YAML inválido nos dados de reserva do horário. Deve ser um mapeamento chave-valor válido.",
+      "group_presets_invalid": "Formato YAML inválido nas predefinições de grupo. Deve ser um mapeamento chave-valor válido.",
+      "preset_name_collision_notice": "Uma ou mais predefinições de grupo têm o mesmo nome que as predefinições nativas dos membros. A definição do grupo irá substituí-las.",
       "sensor_loop_protection": "Não é possível usar uma entidade Climate Group Helper como sensor externo ou alvo de calibração — isso criaria um ciclo de retroalimentação."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Definir predefinição de grupo",
+      "description": "Cria, atualiza ou limpa predefinições de grupo virtuais em tempo de execução. Deixe vazio para redefinir.",
+      "fields": {
+        "payload": {
+          "name": "Carga útil",
+          "description": "As predefinições de grupo como YAML ou mapeamento. Deixe vazio para redefinir. Consulte a documentação para formato e exemplos."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Define temporariamente o grupo para uma temperatura de destino. Quando o temporizador expira, o grupo regressa automaticamente ao agendamento ativo ou estado anterior.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Incluir seletores de entidade",
           "description": "Se verdadeiro, também substitui os sensores vinculados (temp, humidade, presença, janela, etc.) e os deslocamentos por membro."
+        }
+      }
+    },
+    "reset": {
+      "name": "Repor",
+      "description": "Repõe as substituições temporárias e o estado de execução (boost, desvio, agenda, derivação, recurso, predefinições) para os valores predefinidos configurados. Seleciona pelo menos uma opção ou usa «Tudo».",
+      "fields": {
+        "everything": {
+          "name": "Tudo",
+          "description": "Repõe tudo o que se segue de uma só vez. Os interruptores individuais são então ignorados."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Cancela um boost ativo e restaura o estado pretendido."
+        },
+        "offset": {
+          "name": "Desvio de temperatura",
+          "description": "Repõe o desvio de temperatura do grupo para 0.0."
+        },
+        "schedule": {
+          "name": "Entidade de agendamento",
+          "description": "Reverte a entidade de agendamento ativa para o agendamento predefinido configurado."
+        },
+        "bypass": {
+          "name": "Entidade de derivação",
+          "description": "Reverte a entidade de derivação ativa para a predefinição configurada e anula os ajustes da derivação."
+        },
+        "fallback": {
+          "name": "Carga de reserva",
+          "description": "Reverte a carga de reserva do agendamento para a predefinição configurada."
+        },
+        "presets": {
+          "name": "Predefinições de grupo",
+          "description": "Limpa as predefinições de grupo criadas em tempo de execução e restaura as predefinições configuradas."
         }
       }
     }

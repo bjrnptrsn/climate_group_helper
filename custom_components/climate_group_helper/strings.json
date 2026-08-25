@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "The Schedule will NOT turn on members that are currently Off."
             }
           },
+          "presets_section": {
+            "name": "Group Presets",
+            "description": "Define custom named presets for the group (e.g. eco, guest, ventilate). Selecting one applies its attributes to all members at once. A group preset overrides a member's own preset of the same name.",
+            "data": {
+              "group_presets": "Group Presets (YAML)",
+              "retain_service_changes_presets": "Retain Changes Made via Service (Presets)"
+            },
+            "data_description": {
+              "group_presets": "Your presets in YAML: a freely chosen name per preset, each with the attributes it should apply (temperature, hvac_mode, fan_mode, swing_mode). A preset applies only the attributes it lists. See the documentation for the format and ready-to-copy examples.",
+              "retain_service_changes_presets": "Keep presets created or updated via service after a restart. Otherwise they reset to the configured presets."
+            }
+          },
           "temp_offsets_section": {
             "name": "Member Offsets",
             "description": "Apply individual temperature offsets so specific members run proportionately warmer or cooler than the group's target setpoint.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "At least one climate device must remain in the group.",
-      "calibration_requires_sensors": "Calibration targets require at least one external temperature sensor.",
       "master_refresh_notice": "Master Entity added. New options available.",
       "master_options_notice": "New Master entity option",
       "isolation_all_selected": "At least one member must remain outside isolation.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Set a window temperature, or change the window action.",
       "presence_action_value_required": "Set a value for the selected away action, or change the action.",
       "schedule_fallback_payload_invalid": "Invalid YAML format in fallback schedule payload. Must be a valid key-value mapping.",
+      "group_presets_invalid": "Invalid YAML format in Group Presets. Must be a valid key-value mapping.",
+      "preset_name_collision_notice": "One or more virtual presets share names with native member presets. The virtual definition will override them.",
       "sensor_loop_protection": "Cannot use a Climate Group Helper entity as an external sensor or calibration target — this would create a feedback loop."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Set Group Preset",
+      "description": "Sets, updates, or clears virtual group presets at runtime. Set to null or empty to reset.",
+      "fields": {
+        "payload": {
+          "name": "Payload",
+          "description": "The group presets as YAML or mapping. Set to null or empty to reset. See the documentation for the format and examples."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Temporarily set the group to a target temperature for a fixed duration. When the timer expires, the group restores automatically to the active schedule slot (if configured) or its previous target state.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Include Entity Selectors",
           "description": "If true, also overwrites linked sensors (temp, humidity, presence, window, etc.) and per-member offsets."
+        }
+      }
+    },
+    "reset": {
+      "name": "Reset",
+      "description": "Resets temporary overrides and runtime state (boost, offset, schedule, bypass, fallback, presets) back to configured defaults. Select at least one option, or use \"Everything\".",
+      "fields": {
+        "everything": {
+          "name": "Everything",
+          "description": "Resets everything below at once. The individual switches are then ignored."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Aborts an active boost override and restores target state."
+        },
+        "offset": {
+          "name": "Temperature Offset",
+          "description": "Resets the group temperature offset to 0.0."
+        },
+        "schedule": {
+          "name": "Schedule Entity",
+          "description": "Reverts the active schedule entity to the configured default schedule."
+        },
+        "bypass": {
+          "name": "Bypass Entity",
+          "description": "Reverts the active bypass entity to the configured default and unwinds bypass adjustments."
+        },
+        "fallback": {
+          "name": "Fallback Payload",
+          "description": "Reverts the schedule fallback payload to the configured default."
+        },
+        "presets": {
+          "name": "Group Presets",
+          "description": "Clears runtime group presets and restores configured presets."
         }
       }
     }

@@ -5,23 +5,10 @@ from __future__ import annotations
 import logging
 import asyncio
 from abc import ABC, abstractmethod
-import yaml  # type: ignore[import-untyped]
-from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Callable
 
-from homeassistant.components.climate import (
-    ATTR_FAN_MODE,
-    ATTR_HUMIDITY,
-    ATTR_HVAC_MODE,
-    ATTR_PRESET_MODE,
-    ATTR_SWING_HORIZONTAL_MODE,
-    ATTR_SWING_MODE,
-    ATTR_TARGET_TEMP_HIGH,
-    ATTR_TARGET_TEMP_LOW,
-)
-from homeassistant.const import ATTR_TEMPERATURE, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import callback
-from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import (
@@ -31,6 +18,11 @@ from .const import (
     FLOAT_TOLERANCE,
 )
 from .meta_processor import MetaProcessResult
+from .payload import (
+    parse_entity_state,
+    parse_fallback_payload,
+    validate_climate_payload,
+)
 
 
 def _attr_values_match(val1: Any, val2: Any) -> bool:
@@ -39,23 +31,6 @@ def _attr_values_match(val1: Any, val2: Any) -> bool:
         return abs(val1 - val2) <= FLOAT_TOLERANCE
     return val1 == val2
 
-_CLIMATE_MODE_ATTRS: frozenset[str] = frozenset(
-    {
-        ATTR_HVAC_MODE,
-        ATTR_FAN_MODE,
-        ATTR_PRESET_MODE,
-        ATTR_SWING_MODE,
-        ATTR_SWING_HORIZONTAL_MODE,
-    }
-)
-_CLIMATE_NUMERIC_ATTRS: frozenset[str] = frozenset(
-    {
-        ATTR_TEMPERATURE,
-        ATTR_TARGET_TEMP_LOW,
-        ATTR_TARGET_TEMP_HIGH,
-        ATTR_HUMIDITY,
-    }
-)
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -64,51 +39,6 @@ if TYPE_CHECKING:
 
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def normalize_yaml_bool_modes(payload: dict[str, Any]) -> dict[str, Any]:
-    """Fix the YAML pitfall where unquoted 'on'/'off' is parsed as True/False.
-
-    Only applied to mode attributes (hvac_mode, fan_mode, …) — numeric/other
-    attributes must keep their native type.
-    """
-    return {
-        attr: ("on" if value else "off") if attr in _CLIMATE_MODE_ATTRS and isinstance(value, bool) else value
-        for attr, value in payload.items()
-    }
-
-
-def _parse_fallback_payload(raw: Any, entity_id: str, raise_on_error: bool = False) -> dict[str, Any]:
-    """Parse and validate a fallback schedule payload (dict or YAML string)."""
-    if not raw:
-        return {}
-    if isinstance(raw, dict):
-        return normalize_yaml_bool_modes(raw)
-    if isinstance(raw, str):
-        cleaned = raw.strip()
-        if not cleaned:
-            return {}
-        try:
-            parsed = yaml.safe_load(cleaned)
-            if isinstance(parsed, dict):
-                return normalize_yaml_bool_modes(parsed)
-            if parsed is None:
-                return {}
-            msg = f"Fallback schedule payload must be a mapping (got {type(parsed).__name__})."
-            if raise_on_error:
-                raise ServiceValidationError(msg)
-            _LOGGER.warning("[%s] %s — ignored.", entity_id, msg)
-            return {}
-        except yaml.YAMLError as err:
-            if raise_on_error:
-                raise ServiceValidationError(f"Fallback schedule payload has invalid YAML: {err}") from err
-            _LOGGER.warning("[%s] Fallback schedule payload has invalid YAML: %s — ignored.", entity_id, err)
-            return {}
-    msg = f"Fallback schedule payload must be a dictionary or YAML string (got {type(raw).__name__})."
-    if raise_on_error:
-        raise ServiceValidationError(msg)
-    _LOGGER.warning("[%s] %s — ignored.", entity_id, msg)
-    return {}
 
 
 class ScheduleBaseHandler(ABC):
@@ -169,64 +99,12 @@ class ScheduleBaseHandler(ABC):
         return "none"
 
     def parse_entity_state(self, state: Any) -> dict[str, Any]:
-        """Extract a slot data dict from a schedule or calendar entity.
-
-        schedule.*: attributes are used directly.
-        calendar.*: the 'description' attribute is YAML-parsed. Invalid or
-                    non-mapping YAML is discarded with a warning.
-        """
-        if not state:
-            return {}
-        if state.entity_id.split(".")[0] == "calendar":
-            raw = state.attributes.get("description")
-            if not raw:
-                return {}
-            try:
-                data = yaml.safe_load(raw)
-            except yaml.YAMLError:
-                _LOGGER.warning(
-                    "[%s] Calendar description is not valid YAML — ignored. Content: %r",
-                    state.entity_id, raw,
-                )
-                return {}
-            if not isinstance(data, dict):
-                _LOGGER.warning(
-                    "[%s] Calendar description parsed as %s, expected a mapping — ignored.",
-                    state.entity_id, type(data).__name__,
-                )
-                return {}
-            if title := state.attributes.get("message"):
-                data["message"] = title
-            return data
-        return dict(state.attributes)
+        """Extract a slot data dict from a schedule or calendar entity."""
+        return parse_entity_state(state)
 
     def _validate_climate_payload(self, entity_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Filter a climate payload, dropping invalid values with a warning.
-
-        Mode attributes (hvac_mode, fan_mode, …) must be non-empty strings.
-        Numeric attributes (temperature, humidity, …) must be float-convertible.
-        """
-        valid = {}
-        payload = normalize_yaml_bool_modes(payload)
-        for attr, value in payload.items():
-            if attr in _CLIMATE_MODE_ATTRS:
-                if not isinstance(value, str) or not value:
-                    _LOGGER.warning(
-                        "[%s] Schedule slot: '%s' expects a non-empty string, got %r — ignored.",
-                        entity_id, attr, value,
-                    )
-                    continue
-            elif attr in _CLIMATE_NUMERIC_ATTRS:
-                try:
-                    value = float(value)
-                except (TypeError, ValueError):
-                    _LOGGER.warning(
-                        "[%s] Schedule slot: '%s' expects a numeric value, got %r — ignored.",
-                        entity_id, attr, value,
-                    )
-                    continue
-            valid[attr] = value
-        return valid
+        """Filter a climate payload, dropping invalid values with a warning."""
+        return validate_climate_payload(entity_id, payload, context="Schedule slot")
 
     async def on_slot_change(self) -> None:
         """Read both entity states, process meta-keys, update target_state, sync members.
@@ -269,12 +147,14 @@ class ScheduleBaseHandler(ABC):
             # Handle bypass delta lifecycle
             if bypass_active:
                 if not was_active:
-                    # Off -> On transition: capture pre_value from target_state for each bypass attribute
+                    # Off -> On transition: capture pre_value from target_state for each bypass attribute.
+                    # A pre_value of None is an anchor like any other — it says the
+                    # group did not have this attribute set. Skipping it leaves an
+                    # attribute the bypass introduced in target_state for good,
+                    # because the restore below only ever sees what is in the delta.
                     delta_dict = {}
                     for attr, val in bypass_payload.items():
-                        pre_val = getattr(self.target_state, attr, None)
-                        if pre_val is not None:
-                            delta_dict[attr] = (pre_val, val)
+                        delta_dict[attr] = (getattr(self.target_state, attr, None), val)
                     self._group.run_state = self._group.run_state.set_bypass_delta(delta_dict)
                     self._bypass_was_active = True
                 else:
@@ -288,10 +168,8 @@ class ScheduleBaseHandler(ABC):
                                 current_delta[attr] = (pre_val, val)
                                 updated = True
                         else:
-                            pre_val = getattr(self.target_state, attr, None)
-                            if pre_val is not None:
-                                current_delta[attr] = (pre_val, val)
-                                updated = True
+                            current_delta[attr] = (getattr(self.target_state, attr, None), val)
+                            updated = True
                     if updated:
                         self._group.run_state = self._group.run_state.set_bypass_delta(current_delta)
                     self._bypass_was_active = True
@@ -334,15 +212,15 @@ class ScheduleHandler(ScheduleBaseHandler):
     def __init__(self, group: ClimateGroupHelper) -> None:
         self._schedule_entity = group.config.get(CONF_SCHEDULE_ENTITY) if group.advanced_mode else None
         raw_fallback = group.config.get(CONF_SCHEDULE_FALLBACK_PAYLOAD, "") if group.advanced_mode else ""
-        self._config_fallback_payload: dict[str, Any] = _parse_fallback_payload(
-            raw_fallback, group.entity_id, raise_on_error=False
+        self._config_fallback_payload: dict[str, Any] = parse_fallback_payload(
+            raw_fallback, group.entity_id, raise_on_error=False, context="Fallback schedule payload"
         )
         self._fallback_payload_override: dict[str, Any] | None = None
         super().__init__(group)
         self._unsub_listener: Callable[[], None] | None = None
         _LOGGER.debug(
             "[%s] Schedule basis handler initialized: basis='%s' (fallback_payload=%s)",
-            self._group.entity_id, self._schedule_entity,
+            group.log_id, self._schedule_entity,
             list(self.fallback_payload.keys()) or "(none)",
         )
 
@@ -408,51 +286,35 @@ class ScheduleHandler(ScheduleBaseHandler):
         """Restore fallback payload override from persisted state."""
         self._fallback_payload_override = fallback_payload
 
-    async def update_schedule_entity(self, new_entity_id: str | None) -> None:
+    async def update_schedule_entity(self, new_entity_id: str | None, apply: bool = True) -> None:
         """Switch the active schedule entity at runtime (service: set_schedule_entity).
 
-        Passing None reverts to the configured default and acts as a full reset:
-        the boost is aborted and group_offset is cleared.
-        Switching to a different entity preserves the current offset.
+        Passing None reverts to the configured default schedule entity.
         """
-        is_reset = not new_entity_id
         self._unsubscribe()
-        if is_reset:
-            self._group.boost_override_manager.abort()
+        is_reset = not new_entity_id
+        self._schedule_entity = new_entity_id or self._group.config.get(CONF_SCHEDULE_ENTITY)
 
         if is_reset:
-            new_entity_id = self._group.config.get(CONF_SCHEDULE_ENTITY)
             _LOGGER.debug(
                 "[%s] Schedule reset to configured default: %s",
-                self._group.entity_id, new_entity_id or "(none)",
+                self._group.entity_id,
+                self._schedule_entity or "(none)",
             )
-            # Full reset clears group_offset so the slot temperature reaches members
-            # without the offset skewing the diff check.
-            if self._group.run_state.group_offset != 0.0:
-                if self._group.offset_set_callback:
-                    await self._group.offset_set_callback(0.0)
-                else:
-                    self._group.run_state = replace(self._group.run_state, group_offset=0.0)
         else:
             _LOGGER.debug(
                 "[%s] Switching schedule entity: '%s' → '%s'",
-                self._group.entity_id, self._schedule_entity, new_entity_id,
+                self._group.entity_id,
+                self._schedule_entity,
+                new_entity_id,
             )
-
-        self._schedule_entity = new_entity_id or self._group.config.get(CONF_SCHEDULE_ENTITY)
 
         if self._schedule_entity:
             self._subscribe()
-            await self.on_slot_change()
-        else:
-            # Reset to "no schedule at all": unwind the meta-key state left by the last slot.
-            _LOGGER.debug(
-                "[%s] Schedule reset to none — running meta-key unwind",
-                self._group.entity_id,
-            )
+        if apply:
             await self.on_slot_change()
 
-    async def update_fallback_payload(self, new_payload: Any = None) -> None:
+    async def update_fallback_payload(self, new_payload: Any = None, apply: bool = True) -> None:
         """Switch or reset the fallback slot payload at runtime (service: set_schedule_fallback_payload).
 
         Passing None, an empty string, or an empty dict clears the runtime override
@@ -466,7 +328,12 @@ class ScheduleHandler(ScheduleBaseHandler):
                 list(self._config_fallback_payload.keys()) or "(none)",
             )
         else:
-            parsed = _parse_fallback_payload(new_payload, self._group.entity_id, raise_on_error=True)
+            parsed = parse_fallback_payload(
+                new_payload,
+                self._group.entity_id,
+                raise_on_error=True,
+                context="Fallback schedule payload",
+            )
             self._fallback_payload_override = parsed if parsed else None
             _LOGGER.debug(
                 "[%s] Schedule fallback payload override set: %s",
@@ -476,7 +343,7 @@ class ScheduleHandler(ScheduleBaseHandler):
 
         self._group.async_defer_or_update_ha_state()
 
-        if self._schedule_entity:
+        if self._schedule_entity and apply:
             await self.on_slot_change()
 
 
@@ -495,7 +362,7 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
         self._unsub_listener: Callable[[], None] | None = None
         _LOGGER.debug(
             "[%s] Schedule bypass handler initialized: bypass='%s'",
-            self._group.entity_id, self._bypass_entity
+            group.log_id, self._bypass_entity
         )
 
     @property
@@ -553,7 +420,7 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
             self._unsub_listener()
             self._unsub_listener = None
 
-    async def update_bypass_entity(self, new_entity_id: str | None) -> None:
+    async def update_bypass_entity(self, new_entity_id: str | None, apply: bool = True) -> None:
         """Switch the active bypass entity at runtime (service: set_schedule_bypass_entity).
 
         Passing None reverts to the configured default. If no default is configured,
@@ -562,10 +429,24 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
         the last bypass state.
         """
         self._unsubscribe()
+        is_reset = not new_entity_id
         self._bypass_entity = new_entity_id or self._group.config.get(CONF_SCHEDULE_BYPASS_ENTITY)
 
-        _LOGGER.debug("[%s] Bypass entity updated: %s", self._group.entity_id, self._bypass_entity or "(none)")
+        if is_reset:
+            _LOGGER.debug(
+                "[%s] Bypass reset to configured default: %s",
+                self._group.entity_id,
+                self._bypass_entity or "(none)",
+            )
+        else:
+            _LOGGER.debug(
+                "[%s] Switching bypass entity: '%s' → '%s'",
+                self._group.entity_id,
+                self._bypass_entity,
+                new_entity_id,
+            )
 
         if self._bypass_entity:
             self._subscribe()
-        await self.on_slot_change()
+        if apply:
+            await self.on_slot_change()

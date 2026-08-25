@@ -45,6 +45,7 @@ from .const import (
     CONF_FEATURE_STRATEGY,
     CONF_FORCE_RETRY,
     CONF_GRACE_PERIOD,
+    CONF_GROUP_PRESETS,
     CONF_HUMIDITY_CURRENT_AVG,
     CONF_HUMIDITY_SENSORS,
     CONF_HUMIDITY_TARGET_AVG,
@@ -70,6 +71,7 @@ from .const import (
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
+    CONF_RETAIN_SERVICE_CHANGES_PRESETS,
     CONF_RETAIN_SERVICE_CHANGES_SCHEDULE,
     CONF_PRESENCE_ACTION,
     CONF_PRESENCE_AWAY_DELAY,
@@ -134,7 +136,7 @@ from .const import (
     WindowControlMode,
 )
 
-from .climate import filter_cgh_entities
+from .initialization import filter_cgh_entities
 
 
 class ClimateGroupHelperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -205,6 +207,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         self._min_temp: float = DEFAULT_MIN_TEMP
         self._max_temp: float = DEFAULT_MAX_TEMP
         self._refresh_hint_shown = False
+        self._preset_collision_warning_shown = False
         self._from_adv_mode: bool = bool(
             config_entry.options.get(CONF_ADVANCED_MODE, False)
         )
@@ -322,6 +325,14 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 or (isinstance(fallback_val, str) and not fallback_val.strip())
             ):
                 current_config.pop(CONF_SCHEDULE_FALLBACK_PAYLOAD, None)
+
+            presets_val = user_input.get(CONF_GROUP_PRESETS)
+            if (
+                CONF_GROUP_PRESETS not in user_input
+                or not presets_val
+                or (isinstance(presets_val, str) and not presets_val.strip())
+            ):
+                current_config.pop(CONF_GROUP_PRESETS, None)
 
         # Master Entity Logic
         # Explicitly check for empty/None in input to allow deletion
@@ -949,6 +960,15 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         seen.add(mode)
                         available_presets.append(mode)
 
+        # Same reasoning as the isolation rules' preset options: if the member
+        # offering the configured preset is offline while the form renders, the
+        # value stays in the field but vanishes from the options — and a value
+        # outside the options makes HA reject the form on save, locking the user
+        # out of their own settings until the device is back.
+        configured_away_preset = config.get(CONF_PRESENCE_AWAY_PRESET)
+        if configured_away_preset and configured_away_preset not in seen:
+            available_presets.append(configured_away_preset)
+
         return {
             vol.Required("presence_section"): section(  # type: ignore[dict-item]
                 vol.Schema(
@@ -1120,6 +1140,30 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             )
         }
 
+    def _section_factory_presets(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Factory for group presets section."""
+        return {
+            vol.Required("presets_section"): section(  # type: ignore[dict-item]
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_GROUP_PRESETS,
+                            description={
+                                "suggested_value": config.get(CONF_GROUP_PRESETS, "")
+                            },
+                        ): selector.TextSelector(
+                            selector.TextSelectorConfig(multiline=True)
+                        ),
+                        vol.Optional(
+                            CONF_RETAIN_SERVICE_CHANGES_PRESETS,
+                            default=config.get(CONF_RETAIN_SERVICE_CHANGES_PRESETS, False),
+                        ): selector.BooleanSelector(),
+                    }
+                ),
+                {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
+            )
+        }
+
     def _section_factory_temp_offsets(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for per-member temperature offset section."""
         entities = config.get(CONF_ENTITIES, [])
@@ -1190,7 +1234,18 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
 
         slot_action_type = slot.get(CONF_ISOLATION_ACTION_TYPE, IsolationActionType.HVAC_MODE.value)
         slot_action_hvac_mode = slot.get(CONF_ISOLATION_ACTION_HVAC_MODE, HVACMode.OFF.value)
+        # Same reasoning as the trigger modes above, for the action side — and it
+        # is Required, so a default outside the options blocks the whole save.
+        if slot_action_hvac_mode not in hvac_mode_options:
+            hvac_mode_options = hvac_mode_options + [slot_action_hvac_mode]
         slot_action_preset_mode = slot.get(CONF_ISOLATION_ACTION_PRESET_MODE)
+        # Same reasoning as hvac_mode_options above: if every member is offline
+        # while the form renders, preset_options is empty and a configured
+        # preset would not appear as a selectable option — the selector then
+        # rejects the form on save ("Select a preset mode…"), making an
+        # existing PRESET_MODE rule unsavable until the devices are back online.
+        if slot_action_preset_mode and slot_action_preset_mode not in preset_options:
+            preset_options = preset_options + [slot_action_preset_mode]
 
         return {
             vol.Optional(
@@ -1738,6 +1793,40 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         form_errors={"schedule_section": "schedule_fallback_payload_invalid"},
                     )
 
+            # Validate: group_presets must be valid YAML mapping if provided
+            group_presets_raw = flattened_input.get(CONF_GROUP_PRESETS)
+            if group_presets_raw and isinstance(group_presets_raw, str) and group_presets_raw.strip():
+                try:
+                    parsed_presets = yaml.safe_load(group_presets_raw)
+                    if not isinstance(parsed_presets, dict):
+                        return await self._show_main_form(
+                            current_config,
+                            form_errors={"presets_section": "group_presets_invalid"},
+                        )
+                except yaml.YAMLError:
+                    return await self._show_main_form(
+                        current_config,
+                        form_errors={"presets_section": "group_presets_invalid"},
+                    )
+
+                # Check for name collisions with native member preset modes
+                members = flattened_input.get(
+                    CONF_ENTITIES, self._config_entry.options.get(CONF_ENTITIES, [])
+                )
+                native_presets: set[str] = set()
+                for entity_id in members:
+                    if state := self.hass.states.get(entity_id):
+                        for mode in state.attributes.get(ATTR_PRESET_MODES, []):
+                            native_presets.add(mode)
+
+                colliding = set(parsed_presets.keys()) & native_presets
+                if colliding and not self._preset_collision_warning_shown:
+                    self._preset_collision_warning_shown = True
+                    return await self._show_main_form(
+                        current_config,
+                        form_errors={"presets_section": "preset_name_collision_notice"},
+                    )
+
             new_adv_mode = bool(flattened_input.get(CONF_ADVANCED_MODE))
             adv_mode_changed = (
                 CONF_ADVANCED_MODE in flattened_input
@@ -1753,6 +1842,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
 
             # Reset markers and save
             self._refresh_hint_shown = False
+            self._preset_collision_warning_shown = False
 
             return self.async_create_entry(title="", data=final_options)
 
@@ -1778,6 +1868,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             schema_dict.update(self._section_factory_window_control(config))
             schema_dict.update(self._section_factory_presence(config))
             schema_dict.update(self._section_factory_schedule(config))
+            schema_dict.update(self._section_factory_presets(config))
             schema_dict.update(self._section_factory_temp_offsets(config))
             schema_dict.update(self._section_factory_isolation(config))
             schema_dict.update(self._section_factory_member_template(config))

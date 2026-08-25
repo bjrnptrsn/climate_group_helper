@@ -51,6 +51,13 @@ _TRUSTED_CONTEXT_IDS = frozenset(
 # Its echo must reach the enforcement branch (own_echo=False → active blocking
 # sources re-apply their state when isolation ends during a block), but it must
 # never be MIRROR-adopted — hence the suppression here.
+#
+# That makes this check the *only* thing keeping isolation_restore out of
+# adoption, so it must resolve the context the same way `_is_own_echo()` does —
+# `event.context.id` first, then `origin_event.context.id`. Production HA
+# normally takes the second path (the member writes its own context and links
+# ours through origin_event), so checking only the first held in tests and not
+# in production.
 _BLOCKING_ECHO_CONTEXT_IDS = frozenset(
     {"window_control", "isolation", "presence", "isolation_restore", "override"}
 )
@@ -83,7 +90,7 @@ class SyncModeHandler:
         )
         _LOGGER.debug(
             "[%s] Initialize sync mode: %s with FilterState: %s",
-            self._group.entity_id, self._sync_mode, self._filter_state
+            group.log_id, self._sync_mode, self._filter_state
         )
         self._active_sync_tasks: set[asyncio.Task[Any]] = set()
 
@@ -203,11 +210,23 @@ class SyncModeHandler:
         if not change_dict:
             return
 
-        # Suppress direct echoes: events fired with our own context IDs
         # Ignore echoes from blocking operations. These side effects
-        # (e.g. window_control restore, isolation restore, presence override) are not external changes.
-        if event.context.id in _BLOCKING_ECHO_CONTEXT_IDS:
-            _LOGGER.debug("[%s] Ignoring '%s' echo", self._group.entity_id, event.context.id)
+        # (e.g. window_control restore, isolation restore, presence override) are
+        # not external changes.
+        #
+        # Both context paths have to be checked, exactly as `_is_own_echo()` does:
+        # a member may report the change under its own context and link ours only
+        # through `origin_event` — the normal shape in production HA. Checking
+        # `event.context.id` alone made the suppression hold in tests and not in
+        # production, and `isolation_restore` (deliberately absent from
+        # `_TRUSTED_CONTEXT_IDS`, so its echo still reaches the enforcement loop)
+        # depends on this check alone to stay out of MIRROR adoption.
+        echo_context_id = event.context.id
+        if echo_context_id not in _BLOCKING_ECHO_CONTEXT_IDS and origin_event is not None:
+            echo_context_id = origin_event.context.id
+
+        if echo_context_id in _BLOCKING_ECHO_CONTEXT_IDS:
+            _LOGGER.debug("[%s] Ignoring '%s' echo", self._group.entity_id, echo_context_id)
             return
 
         # Deep Origin Analysis: Did we cause this change?
@@ -241,16 +260,23 @@ class SyncModeHandler:
         # is reporting its restored hardware state, not a deliberate user change.
         # LOCK enforcement below still runs to correct the member if needed.
         old_state = event.data.get("old_state")
+        new_state = event.data.get("new_state")
         is_reconnect = old_state is not None and old_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN)
 
         # Member-Template ownership: covered members are owned by the Range Template.
         # Their physical mode is implementation detail, NOT a user intention — never adopt
         # it into target_state (would corrupt the heat_cool target and disable the template).
         # Changeover/correction for these members is driven by the TemplateCallHandler.
-        is_covered = self._group.member_template_manager.is_covered_state(event.data.get("new_state"))
+        # `new_state` is already template-rendered (_state_change_listener recomputes
+        # entity_ids before wrapping), so this alone is authoritative.
+        is_covered = self._group.member_template_manager.is_covered_state(new_state)
+
+        # filter_state is a property reading config_overrides on every access —
+        # resolve once instead of per attribute in the comprehensions below.
+        filter_dict = self.filter_state.to_dict()
 
         if self.sync_mode in (SyncMode.MIRROR, SyncMode.MIRROR_LOCK) and not is_reconnect and not is_covered:
-            if filtered := {key: value for key, value in change_dict.items() if self.filter_state.to_dict().get(key)}:
+            if filtered := {key: value for key, value in change_dict.items() if filter_dict.get(key)}:
                 filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
                 was_boost = self._group.run_state.boost_temperature is not None
                 self.state_manager.update(entity_id=change_entity_id, **filtered)
@@ -281,7 +307,7 @@ class SyncModeHandler:
                 return
             master_id = self._group._master_entity_id
             if master_id and change_entity_id == master_id and not is_covered and not is_reconnect:
-                if filtered := {key: value for key, value in change_dict.items() if self.filter_state.to_dict().get(key)}:
+                if filtered := {key: value for key, value in change_dict.items() if filter_dict.get(key)}:
                     filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
                     was_boost = self._group.run_state.boost_temperature is not None
                     self.state_manager.update(entity_id=change_entity_id, **filtered)

@@ -26,7 +26,6 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from .const import (
-    ATTR_SERVICE_MAP,
     META_KEY_GROUP_OFFSET,
     META_KEY_SYNC_ATTRS,
     META_KEY_SYNC_MODE,
@@ -34,8 +33,10 @@ from .const import (
     META_KEY_PRESENCE,
     META_STATE_KEYS,
     PresenceMode,
+    SyncMode,
 )
-from .number import async_push_group_offset
+from .number import async_push_group_offset, clean_offset
+from .payload import extract_climate_payload, extract_meta_candidates
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -102,13 +103,13 @@ class SlotMetaProcessor:
         bypass_data keys overwrite basis_data keys for meta-processing (last writer wins).
         """
         # 1. Split: climate attributes remain separate for the caller
-        basis_climate  = {k: v for k, v in basis_data.items()  if k in ATTR_SERVICE_MAP}
-        bypass_climate = {k: v for k, v in bypass_data.items() if k in ATTR_SERVICE_MAP}
-        
+        basis_climate = extract_climate_payload(basis_data)
+        bypass_climate = extract_climate_payload(bypass_data)
+
         # Combined view for meta-key processing (bypass wins)
         combined = {**basis_data, **bypass_data}
 
-        meta_candidates = {k: v for k, v in combined.items() if k not in ATTR_SERVICE_MAP}
+        meta_candidates = extract_meta_candidates(combined)
 
         slot_message = meta_candidates.pop("message", None)
         prev_slot_title = self._group.run_state.active_slot_title
@@ -129,6 +130,15 @@ class SlotMetaProcessor:
                 if "switch" in self._group.run_state.blocking_sources:
                     _LOGGER.debug("[%s] Meta-Key: turn_off=false → switch block OFF", self._group.entity_id)
                     await self._group.switch_override_manager.restore()
+            else:
+                # The identity checks above are deliberate — a truthy string must
+                # not switch the group off. But silently doing nothing left a typo
+                # indistinguishable from a slot that was never meant to switch
+                # anything. The sibling meta-keys all warn here.
+                _LOGGER.warning(
+                    "[%s] Invalid value for meta-key 'turn_off': %s (expected true or false) — ignored",
+                    self._group.entity_id, turn_off_value,
+                )
 
         # Identify valid meta-keys; warn on unknown ones (typo guard)
         new_meta_keys: set[str] = set()
@@ -154,18 +164,33 @@ class SlotMetaProcessor:
                         self._group.entity_id, value,
                     )
                     continue
-                # group_offset is float-converted in _apply(), which runs AFTER the
-                # override marker is written. Without this guard an unparsable value
-                # registers the marker anyway, and the slot-end cleanup then resets a
-                # manually set offset to 0.0 for a value that was never applied.
-                if key == META_KEY_GROUP_OFFSET:
+                # sync_mode is resolved in a property (SyncModeHandler.sync_mode),
+                # read on every member event. An unusable value falls back to the
+                # configured mode there — correct, but it logs each time, so one
+                # typo becomes a continuous stream for the whole slot. Registering
+                # it would also advertise it as an active override in the
+                # entity attributes.
+                if key == META_KEY_SYNC_MODE:
                     try:
-                        float(value)
+                        SyncMode(value)
                     except (TypeError, ValueError):
                         _LOGGER.warning(
-                            "[%s] Invalid value for meta-key 'group_offset': %s (expected a number) — ignored",
+                            "[%s] Invalid value for meta-key 'sync_mode': %s — ignored",
                             self._group.entity_id, value,
                         )
+                        continue
+                # group_offset is validated in _apply(), which runs AFTER the override
+                # marker is written. Without this guard an unusable value registers the
+                # marker anyway, and the slot-end cleanup then resets a manually set
+                # offset to 0.0 for a value that was never applied.
+                #
+                # Must use the very validator _apply() uses, not a local float() check:
+                # float("nan") and float("inf") succeed, so a bare conversion accepts
+                # values clean_offset() goes on to reject — which is precisely the
+                # marker-without-effect state this guard exists to prevent. It warns
+                # on rejection itself.
+                if key == META_KEY_GROUP_OFFSET:
+                    if clean_offset(value, self._group.entity_id) is None:
                         continue
                 new_meta_keys.add(key)
             elif key not in _HA_SYSTEM_ATTRS:
@@ -217,7 +242,13 @@ class SlotMetaProcessor:
         """
         if key == META_KEY_GROUP_OFFSET:
             # Validated in process() before the marker was written — safe to convert.
-            offset_val = float(value)
+            # Clamped here, before anything compares or stores it: the slot value
+            # follows the same bounds as the slider, and the ownership check below
+            # compares it against `run_state.group_offset`, which is always stored
+            # clamped. Comparing a raw slot value against a clamped one would read
+            # the clamping itself as a user takeover.
+            if (offset_val := clean_offset(value, self._group.entity_id)) is None:
+                return
 
             # Ownership: the user moved the slider during this slot, which cleared the
             # marker (OffsetNumber.async_set_native_value). Re-applying the unchanged

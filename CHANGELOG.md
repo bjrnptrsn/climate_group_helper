@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.7.0 - 2026-08-25
+
+> 🎛️ **Group Presets.** Define custom presets with target temperatures and modes that apply to all members at once — configured statically or updated dynamically at runtime via service — see `EXAMPLES.md` for ready-to-use automations.
+
+### 🌟 New Features
+
+*   **Group Presets**: Define your own named presets for the group (e.g. `eco`, `guest`, `ventilate`), each applying a set of temperature and mode settings to all members at once without touching unlisted values.
+
+*   **Set Group Preset Service**: A new service lets you create, update, or remove group presets at runtime (e.g. from automations or scripts) without opening the group settings — updating the preset that is currently selected applies its new values right away.
+
+*   **Retain Changes Made via Service (Presets)**: A new setting decides whether presets created or changed via service survive a restart — off by default, so they stay temporary unless you say otherwise.
+
+*   **Reset Service**: A new service lets you reset temporary overrides and runtime states (boost, temperature offset, schedule, bypass, fallback, or presets) back to their configured defaults all at once or individually.
+
+### ⚠️ Breaking Changes
+
+*   **Schedule Entity Reset**: Calling the schedule-entity service without an entity now only reverts the active schedule back to the configured default instead of also ending an active boost and clearing the temperature offset.
+
+### 🔧 Fixes
+
+*   **Isolated Devices Released After a Reload**: Devices isolated by an isolation rule are now automatically included again after a reload if that rule has since been removed or disabled — previously they could stay excluded indefinitely with no way back.
+
 ## 1.6.0 - 2026-08-20
 
 > ⚡ **Schedule Automation, simplified.** The schedule now only takes effect on slot changes — it no longer reverts your manual changes in between, and the cyclic resync is gone. That made three settings unnecessary: **Manual Override Duration**, **Sticky Manual Override** and **Resync Interval**. If you had them configured, there is nothing to do: your schedules keep working, with less to set up and less that can surprise you.

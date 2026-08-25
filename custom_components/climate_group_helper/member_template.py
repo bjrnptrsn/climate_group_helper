@@ -6,7 +6,7 @@ but specialised and automated for specific transformation patterns.
 
 The pattern has two halves:
 
-* **Input gateway** — `ClimateGroupHelper.read_member_state()` /
+* **Input gateway** — `Aggregator.read_member_state()` /
   `read_member_event()` call `MemberTemplateManager.apply_state()` to wrap a
   real `State` into a template-specific proxy. Consumers (`SyncModeHandler`,
   `ChangeState`, service-call filters) see a transparent virtual entity and
@@ -206,7 +206,20 @@ class MemberTemplateManager:
 
         current_temp = self._read_current_temp(state)
         supported_modes = state.attributes.get(ATTR_HVAC_MODES)
-        expected_mode, expected_temp = self.expected_mode_for(entity_id, low, high, current_temp, supported_modes)
+        # Offsets: the band is raw (target_state / cache carry no offsets), so
+        # both halves of the template re-apply them before comparing. This input
+        # side must add member + group offset UNCONDITIONALLY — it does not know
+        # which handler consumes the wrapped state and cannot reproduce the
+        # output side's conditional `_apply_group_offset()`. During temporary
+        # state (boost/block) the output pushes offset-free, but the changeover
+        # and sync are suppressed then anyway (`TemplateCallHandler._block_all_calls`,
+        # no adoption of covered members) — the asymmetry is intentional.
+        member_offset = self._group._temp_offset_map.get(entity_id, 0.0)
+        group_offset = self._group.run_state.group_offset
+        offset = member_offset + group_offset
+        expected_mode, expected_temp = self.expected_mode_for(
+            entity_id, low + offset, high + offset, current_temp, supported_modes
+        )
         return RangeTemplateState(state, low, high, expected_mode, expected_temp)
 
     # ------------------------------------------------------------------
@@ -241,7 +254,16 @@ class MemberTemplateManager:
             # Every current caller guards on an active template; this keeps the
             # contract honest for future ones instead of raising on attribute access.
             return None, None
-        deadband = None if template.deadband_action == RangeTemplateDeadbandAction.NONE else template.deadband_action
+        # None also for a device that cannot perform the action: it would reject
+        # the call, so sending nothing is the honest result. `_mode_allowed()`
+        # does not catch this — it waves through everything but heat/cool.
+        action = template.deadband_action
+        deadband = (
+            None
+            if action == RangeTemplateDeadbandAction.NONE
+            or (supported_modes is not None and action not in supported_modes)
+            else action
+        )
 
         if current_temp is None:
             last_mode = template.last_physical_mode.get(entity_id)

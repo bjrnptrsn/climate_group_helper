@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "计划不会打开当前处于关闭状态的成员。"
             }
           },
+          "presets_section": {
+            "name": "群组预设",
+            "description": "为群组定义自己命名的预设（例如 eco、guest、ventilate）。选择某个预设会将其属性一次性应用到所有成员。群组预设会覆盖成员自身的同名预设。",
+            "data": {
+              "group_presets": "群组预设 (YAML)",
+              "retain_service_changes_presets": "保留通过服务所做的更改（预设）"
+            },
+            "data_description": {
+              "group_presets": "以 YAML 编写的预设：每个预设使用自由选择的名称，并附上要应用的属性（temperature、hvac_mode、fan_mode、swing_mode）。预设仅应用其中列出的属性。格式和可直接复制的示例请参见文档。",
+              "retain_service_changes_presets": "重启后保留通过服务创建或更新的预设。否则将重置为配置的预设。"
+            }
+          },
           "temp_offsets_section": {
             "name": "成员偏移",
             "description": "应用单独的温度偏移，使特定成员的运行温度按比例高于或低于群组目标。",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "组中必须至少保留一个空调设备。",
-      "calibration_requires_sensors": "校准目标需要至少一个外部温度传感器。",
       "master_refresh_notice": "已添加主实体。新选项可用。",
       "master_options_notice": "新的主实体选项",
       "isolation_all_selected": "至少一个成员必须保留在隔离之外。",
@@ -360,6 +371,8 @@
       "window_temperature_required": "请设置开窗温度，或更改开窗动作。",
       "presence_action_value_required": "请为所选的离开动作设置数值，或更改该动作。",
       "schedule_fallback_payload_invalid": "后备计划有效负载中的 YAML 格式无效。必须是有效的键值映射。",
+      "group_presets_invalid": "群组预设中的 YAML 格式无效。必须是有效的键值映射。",
+      "preset_name_collision_notice": "一个或多个群组预设与成员的原生预设同名。群组预设定义将覆盖它们。",
       "sensor_loop_protection": "不能将 Climate Group Helper 实体用作外部传感器或校准目标——这会产生反馈回路。"
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "设置群组预设",
+      "description": "在运行时创建、更新或清除虚拟群组预设。留空以重置。",
+      "fields": {
+        "payload": {
+          "name": "有效负载",
+          "description": "群组预设（YAML 或映射格式）。留空以重置。格式和示例请参见文档。"
+        }
+      }
+    },
     "boost": {
       "name": "Boost 加热",
       "description": "在指定时间内临时将群组设置为目标温度。计时器到期后，群组将自动恢复到活动日程或之前的状态。",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "包含实体选择器",
           "description": "如果为 true，同时覆盖已关联的传感器（温度、湿度、在场、窗户等）和每个成员的偏移量。"
+        }
+      }
+    },
+    "reset": {
+      "name": "重置",
+      "description": "将临时覆盖和运行时状态（增压、偏移、计划、旁路、回退、预设）重置为已配置的默认值。请至少选择一个选项，或使用“全部”。",
+      "fields": {
+        "everything": {
+          "name": "全部",
+          "description": "一次性重置下方所有项。此时各个单独开关将被忽略。"
+        },
+        "boost": {
+          "name": "增强",
+          "description": "中止活动的增强覆盖并恢复目标状态。"
+        },
+        "offset": {
+          "name": "温度偏移",
+          "description": "将组温度偏移重置为 0.0。"
+        },
+        "schedule": {
+          "name": "计划实体",
+          "description": "将活动计划实体恢复为配置的默认计划。"
+        },
+        "bypass": {
+          "name": "旁路实体",
+          "description": "将活动旁路实体恢复为配置的默认值并撤销旁路调整。"
+        },
+        "fallback": {
+          "name": "后备有效负载",
+          "description": "将计划后备有效负载恢复为配置的默认值。"
+        },
+        "presets": {
+          "name": "组预设",
+          "description": "清除运行时组预设并恢复配置的预设。"
         }
       }
     }

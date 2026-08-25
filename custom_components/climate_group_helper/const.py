@@ -23,6 +23,7 @@ from homeassistant.components.climate import (
     SERVICE_SET_SWING_HORIZONTAL_MODE,
     SERVICE_SET_SWING_MODE,
     SERVICE_SET_TEMPERATURE,
+    ClimateEntityFeature,
 )
 from homeassistant.const import ATTR_TEMPERATURE, CONF_ENTITIES, CONF_NAME
 
@@ -36,6 +37,25 @@ CONF_HVAC_MODE_STRATEGY = "hvac_mode_strategy"
 CONF_MASTER_ENTITY = "master_entity"
 CONF_UNION_OUT_OF_BOUNDS_ACTION = "union_out_of_bounds_action"
 CONF_UNION_UNSUPPORTED_HVAC_ACTION = "union_unsupported_hvac_action"
+
+# Supported features for the climate group entity. Shared by the aggregation,
+# restore and entity-setup paths (previously duplicated in climate.py and
+# aggregation.py — a single source of truth so they cannot drift).
+SUPPORTED_FEATURES = (
+    ClimateEntityFeature.TARGET_TEMPERATURE
+    | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+    | ClimateEntityFeature.TARGET_HUMIDITY
+    | ClimateEntityFeature.FAN_MODE
+    | ClimateEntityFeature.PRESET_MODE
+    | ClimateEntityFeature.SWING_MODE
+    | ClimateEntityFeature.TURN_OFF
+    | ClimateEntityFeature.TURN_ON
+    | ClimateEntityFeature.SWING_HORIZONTAL_MODE
+)
+
+DEFAULT_SUPPORTED_FEATURES = (
+    ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
+)
 
 # Temperature Settings
 CONF_CALIBRATION_HEARTBEAT = "calibration_heartbeat"
@@ -113,6 +133,10 @@ CONF_RETAIN_SERVICE_CHANGES_SCHEDULE = "retain_service_changes_schedule"
 CONF_SCHEDULE_BYPASS_ENTITY = "schedule_bypass_entity"
 CONF_SCHEDULE_FALLBACK_PAYLOAD = "schedule_fallback_payload"
 CONF_SCHEDULE_ENTITY = "schedule_entity"
+
+# Presets
+CONF_GROUP_PRESETS = "group_presets"
+CONF_RETAIN_SERVICE_CHANGES_PRESETS = "retain_service_changes_presets"
 
 # Advanced options
 CONF_DEBOUNCE_DELAY = "debounce_delay"
@@ -264,17 +288,29 @@ class IsolationActionType(StrEnum):
 SERVICE_SET_SCHEDULE_ENTITY = "set_schedule_entity"
 SERVICE_SET_SCHEDULE_BYPASS_ENTITY = "set_schedule_bypass_entity"
 SERVICE_SET_SCHEDULE_FALLBACK_PAYLOAD = "set_schedule_fallback_payload"
+SERVICE_SET_GROUP_PRESET = "set_group_preset"
 SERVICE_BOOST = "boost"
+SERVICE_RESET = "reset"
 SERVICE_APPLY_CONFIG = "apply_config"
 
 ATTR_SCHEDULE_ENTITY = "schedule_entity"
 ATTR_SCHEDULE_BYPASS_ENTITY = "schedule_bypass_entity"
 ATTR_FALLBACK_PAYLOAD = "fallback_payload"
+ATTR_PAYLOAD = "payload"
 ATTR_SETTINGS = "settings"
 ATTR_INCLUDE_MEMBER_LIST = "include_member_list"
 ATTR_INCLUDE_ENTITY_SELECTORS = "include_entity_selectors"
+ATTR_RESET_ALL = "everything"
+ATTR_RESET_BOOST = "boost"
+ATTR_RESET_OFFSET = "offset"
+ATTR_RESET_SCHEDULE = "schedule"
+ATTR_RESET_BYPASS = "bypass"
+ATTR_RESET_FALLBACK = "fallback"
+ATTR_RESET_PRESETS = "presets"
 
 # Extra attribute keys
+ATTR_ACTIVE_VIRTUAL_PRESET = "active_virtual_preset"
+ATTR_RUNTIME_GROUP_PRESETS = "runtime_group_presets"
 ATTR_BOOST_TEMPERATURE = "boost_temperature"
 ATTR_BOOST_UNTIL = "boost_until"
 ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY = "active_schedule_bypass_entity"

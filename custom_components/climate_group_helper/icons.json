@@ -47,8 +47,17 @@
     "set_schedule_bypass_entity": {
       "service": "mdi:calendar-sync"
     },
+    "set_schedule_fallback_payload": {
+      "service": "mdi:calendar-refresh"
+    },
+    "set_group_preset": {
+      "service": "mdi:tune-variant"
+    },
     "boost": {
       "service": "mdi:rocket-launch"
+    },
+    "reset": {
+      "service": "mdi:backup-restore"
     },
     "apply_config": {
       "service": "mdi:cog-transfer"

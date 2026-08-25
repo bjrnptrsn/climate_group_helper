@@ -184,6 +184,18 @@
               "ignore_off_members_schedule": "Harmonogram NIE włączy członków, którzy są obecnie WYŁĄCZENI."
             }
           },
+          "presets_section": {
+            "name": "Wstępne ustawienia grupy",
+            "description": "Zdefiniuj własne nazwane presety dla grupy (np. eco, guest, ventilate). Wybranie presetu stosuje jego atrybuty jednocześnie do wszystkich członków. Preset grupy ma pierwszeństwo przed presetem członka o tej samej nazwie.",
+            "data": {
+              "group_presets": "Wstępne ustawienia grupy (YAML)",
+              "retain_service_changes_presets": "Zachowaj zmiany wprowadzone przez usługę (Profile)"
+            },
+            "data_description": {
+              "group_presets": "Twoje presety w YAML: dowolnie wybrana nazwa każdego presetu wraz z atrybutami, które ma zastosować (temperature, hvac_mode, fan_mode, swing_mode). Preset stosuje tylko te atrybuty, które wymienia. Format i gotowe przykłady znajdziesz w dokumentacji.",
+              "retain_service_changes_presets": "Zachowuje profile utworzone lub zaktualizowane przez usługę po restarcie. W przeciwnym razie przywracane są skonfigurowane profile."
+            }
+          },
           "temp_offsets_section": {
             "name": "Offsety członków",
             "description": "Zastosuj indywidualne przesunięcia temperatury, aby konkretni członkowie pracowali proporcjonalnie cieplej lub zimniej niż cel grupy.",
@@ -351,7 +363,6 @@
     },
     "error": {
       "no_entities": "Co najmniej jedno urządzenie klimatyczne musi pozostać w grupie.",
-      "calibration_requires_sensors": "Cele kalibracji wymagają co najmniej jednego zewnętrznego czujnika temperatury.",
       "master_refresh_notice": "Dodano encję nadrzędną (Master). Dostępne nowe opcje.",
       "master_options_notice": "Nowa opcja encji nadrzędnej",
       "isolation_all_selected": "Co najmniej jeden członek musi pozostać poza izolacją.",
@@ -360,6 +371,8 @@
       "window_temperature_required": "Ustaw temperaturę przy otwartym oknie lub zmień akcję okna.",
       "presence_action_value_required": "Ustaw wartość dla wybranej akcji nieobecności lub zmień akcję.",
       "schedule_fallback_payload_invalid": "Nieprawidłowy format YAML w zapasowych danych harmonogramu. Musi to być prawidłowe mapowanie klucz-wartość.",
+      "group_presets_invalid": "Nieprawidłowy format YAML w ustawieniach wstępnych grupy. Musi być prawidłowym mapowaniem klucz-wartość.",
+      "preset_name_collision_notice": "Co najmniej jedno ustawienie wstępne grupy ma taką samą nazwę jak natywne ustawienia członków. Definicja grupy je zastąpi.",
       "sensor_loop_protection": "Encja Climate Group Helper nie może być używana jako zewnętrzny czujnik ani cel kalibracji — spowodowałoby to pętlę sprzężenia zwrotnego."
     },
     "abort": {
@@ -637,6 +650,16 @@
         }
       }
     },
+    "set_group_preset": {
+      "name": "Ustaw profil grupy",
+      "description": "Tworzy, aktualizuje lub czyści wirtualne profile grupy w czasie wykonywania. Pozostaw puste, aby zresetować.",
+      "fields": {
+        "payload": {
+          "name": "Ładunek",
+          "description": "Profile grupy jako YAML lub mapowanie. Pozostaw puste, aby zresetować. Zobacz dokumentację, aby zapoznać się z formatem i przykładami."
+        }
+      }
+    },
     "boost": {
       "name": "Boost",
       "description": "Tymczasowo ustawia grupę na temperaturę docelową. Po wygaśnięciu timera grupa automatycznie powraca do aktywnego harmonogramu lub poprzedniego stanu.",
@@ -670,6 +693,40 @@
         "include_entity_selectors": {
           "name": "Dołącz selektory encji",
           "description": "Jeśli prawda, nadpisuje również powiązane czujniki (temp, wilgotność, obecność, okno itp.) i przesunięcia dla poszczególnych członków."
+        }
+      }
+    },
+    "reset": {
+      "name": "Resetuj",
+      "description": "Przywraca tymczasowe zastąpienia i stan wykonawczy (boost, przesunięcie, harmonogram, obejście, wartość zapasowa, ustawienia wstępne) do skonfigurowanych wartości domyślnych. Wybierz co najmniej jedną opcję lub użyj opcji „Wszystko”.",
+      "fields": {
+        "everything": {
+          "name": "Wszystko",
+          "description": "Przywraca wszystko poniżej jednocześnie. Poszczególne przełączniki są wtedy ignorowane."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Przerywa aktywny boost i przywraca stan docelowy."
+        },
+        "offset": {
+          "name": "Przesunięcie temperatury",
+          "description": "Resetuje przesunięcie temperatury grupy do 0.0."
+        },
+        "schedule": {
+          "name": "Encja harmonogramu",
+          "description": "Przywraca aktywną encję harmonogramu do skonfigurowanego domyślnego harmonogramu."
+        },
+        "bypass": {
+          "name": "Encja obejścia",
+          "description": "Przywraca aktywną encję obejścia do wartości domyślnej i wycofuje korekty obejścia."
+        },
+        "fallback": {
+          "name": "Ładunek awaryjny",
+          "description": "Przywraca ładunek awaryjny harmonogramu do skonfigurowanej wartości domyślnej."
+        },
+        "presets": {
+          "name": "Profile grupy",
+          "description": "Czyści profile grupy utworzone w czasie działania i przywraca skonfigurowane profile."
         }
       }
     }
