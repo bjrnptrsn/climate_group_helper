@@ -4,8 +4,18 @@ from __future__ import annotations
 from dataclasses import fields
 from typing import Any
 
+from homeassistant.components.climate import (
+    ATTR_CURRENT_TEMPERATURE,
+    ATTR_FAN_MODE,
+    ATTR_HUMIDITY,
+    ATTR_HVAC_MODES,
+    ATTR_PRESET_MODE,
+    ATTR_SWING_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import ATTR_TEMPERATURE, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
@@ -69,10 +79,12 @@ async def async_get_config_entry_diagnostics(
             "isolated": entity_id in run.isolated_members,
             "oob": entity_id in run.oob_members,
         }
-        # Include relevant climate attributes
-        for attr in ("temperature", "target_temp_low", "target_temp_high",
-                      "current_temperature", "hvac_modes", "preset_mode",
-                      "fan_mode", "swing_mode", "humidity"):
+        # Include relevant climate attributes. Named via the HA constants: these
+        # are read out of `state.attributes`, so a rename upstream would drop the
+        # field from diagnostics with nothing to notice it.
+        for attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH,
+                     ATTR_CURRENT_TEMPERATURE, ATTR_HVAC_MODES, ATTR_PRESET_MODE,
+                     ATTR_FAN_MODE, ATTR_SWING_MODE, ATTR_HUMIDITY):
             if (val := state.attributes.get(attr)) is not None:
                 member[attr] = val
         members.append(member)

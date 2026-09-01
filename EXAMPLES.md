@@ -21,14 +21,16 @@ Real-world scenarios, ordered by complexity. Each example describes the situatio
   - [13. Better Thermostat / Versatile Thermostat + CGH](#13-better-thermostat--versatile-thermostat--cgh)
   - [14. Schedule with Temporary Local Overrides](#14-schedule-with-temporary-local-overrides)
   - [15. Seasonal Shutdown via Schedule](#15-seasonal-shutdown-via-schedule)
-  - [16. Calendar Bypass on Top of a Base Schedule](#16-calendar-bypass-on-top-of-a-base-schedule)
-  - [17. Night Setback when the Schedule is Inactive](#17-night-setback-when-the-schedule-is-inactive)
+  - [16. Pausing Automatic Features for One Slot](#16-pausing-automatic-features-for-one-slot)
+  - [17. Calendar Bypass on Top of a Base Schedule](#17-calendar-bypass-on-top-of-a-base-schedule)
+  - [18. Night Setback when the Schedule is Inactive](#18-night-setback-when-the-schedule-is-inactive)
 - [Edge Cases](#edge-cases) — mixed hardware, multiple constraints, edge cases from real support issues
-  - [18. Mixed Radiator + AC, One Device per Mode](#18-mixed-radiator--ac-one-device-per-mode)
-  - [19. Underfloor Heating That Can't Turn Off](#19-underfloor-heating-that-cant-turn-off)
-  - [20. Union Group with Out-of-Bounds Devices](#20-union-group-with-out-of-bounds-devices)
-  - [21. Multi-Head Mini-Split, Shared Mode Only](#21-multi-head-mini-split-shared-mode-only)
-  - [22. Interlocking Heat/Cool Across Two Systems](#22-interlocking-heatcool-across-two-systems)
+  - [19. Mixed Radiator + AC, One Device per Mode](#19-mixed-radiator--ac-one-device-per-mode)
+  - [20. Underfloor Heating That Can't Turn Off](#20-underfloor-heating-that-cant-turn-off)
+  - [21. Union Group with Out-of-Bounds Devices](#21-union-group-with-out-of-bounds-devices)
+  - [22. Multi-Head Mini-Split, Shared Mode Only](#22-multi-head-mini-split-shared-mode-only)
+  - [23. Interlocking Heat/Cool Across Two Systems](#23-interlocking-heatcool-across-two-systems)
+  - [24. Notice When a Device Swallows Commands](#24-notice-when-a-device-swallows-commands)
 
 ---
 
@@ -425,7 +427,58 @@ temperature: 20.0
 
 ---
 
-### 16. Calendar Bypass on Top of a Base Schedule
+### 16. Pausing Automatic Features for One Slot
+
+Some situations need a protective feature out of the way for a while: a party with
+the terrace door open, guests in a room the presence sensor reports as empty, a
+towel radiator that should run during a wellness evening even though a rule keeps
+it off.
+
+**Entities:** `climate.living_room_trv`, `calendar.house_events`
+
+| Setting | Value |
+|---|---|
+| Members | `climate.living_room_trv` |
+| Schedule Entity | `calendar.house_events` |
+
+**Calendar event descriptions:**
+```yaml
+# "Party" — the terrace door may stand open, and the room counts as occupied
+temperature: 21.5
+window_mode: disabled
+presence_mode: disabled
+
+# "Holiday" — force the away behaviour regardless of what the sensors report
+presence_mode: away
+
+# "Wellness evening" — let the second isolation rule's device heat along
+temperature: 23.0
+isolation_bypass: 2
+
+# "Airing out" — stop writing calibration values to the radiators
+calibration_mode: disabled
+```
+
+**Result:** Each key pauses its feature for as long as the event runs, and the
+starting state does not matter: if the door is already open when the party begins,
+the heating comes back on. When the event ends, the sensors are read fresh and take
+over again — the door still open means the heating goes back off, the room still
+empty means the away behaviour starts.
+
+Two details worth knowing:
+
+- **These keys only ever pause a feature, never switch one on.** A feature that is
+  switched off in the settings has nothing running that a schedule could take over,
+  so only `disabled` is accepted — plus `away` for presence, which forces the away
+  behaviour for the duration of the event.
+- **Isolation rules are addressed by their position in the settings** — `1` to `4`,
+  the order the rules appear in. `isolation_bypass: all` pauses every rule, and a
+  list such as `[1, 3]` pauses several. A device covered by two rules stays off as
+  long as the rule you did *not* pause still applies.
+
+---
+
+### 17. Calendar Bypass on Top of a Base Schedule
 
 A weekly `schedule.*` entity already drives day-to-day heating. On top of that, a shared household `calendar.*` (e.g. a Google Calendar everyone can add events to) should be able to temporarily override it — a guest staying over, a day working from home, a party — without touching the base schedule at all.
 
@@ -455,7 +508,7 @@ temperature: 22.0
 
 ---
 
-### 17. Night Setback when the Schedule is Inactive
+### 18. Night Setback when the Schedule is Inactive
 
 `schedule.*` entities report `off` without any slot attributes outside the configured time blocks. Instead of building a gapless 24/7 schedule (an explicit low-temperature block for every inactive hour), define one fallback state that the group applies whenever no slot is active.
 
@@ -499,7 +552,7 @@ The override takes effect immediately (if the slot is currently inactive). Enabl
 
 ## Edge Cases
 
-### 18. Mixed Radiator + AC, One Device per Mode
+### 19. Mixed Radiator + AC, One Device per Mode
 
 A room has a heat-only radiator (Wiser) and a heat/cool AC (Daikin/Faikin). The AC must **never** heat, even though it advertises `heat` — and each device needs different handling depending on which mode is active. (Based on a real mixed-hardware setup.)
 
@@ -519,7 +572,7 @@ A room has a heat-only radiator (Wiser) and a heat/cool AC (Daikin/Faikin). The 
 
 ---
 
-### 19. Underfloor Heating That Can't Turn Off
+### 20. Underfloor Heating That Can't Turn Off
 
 Water-based underfloor heating has no `off` mode — it only supports `heat`. When the group needs to stop heating (e.g. switching to cooling elsewhere in summer), the floor loop needs a safe fallback instead of a real `off` call. (Based on a real underfloor heating setup.)
 
@@ -536,7 +589,7 @@ Water-based underfloor heating has no `off` mode — it only supports `heat`. Wh
 
 ---
 
-### 20. Union Group with Out-of-Bounds Devices
+### 21. Union Group with Out-of-Bounds Devices
 
 Mixing devices with different temperature ranges — a low-range TRV and an AC with a higher minimum. When the target falls outside a device's range, that device should be excluded rather than clamped to a nonsensical value.
 
@@ -552,7 +605,7 @@ Mixing devices with different temperature ranges — a low-range TRV and an AC w
 
 ---
 
-### 21. Multi-Head Mini-Split, Shared Mode Only
+### 22. Multi-Head Mini-Split, Shared Mode Only
 
 A 4-head mini-split system (e.g. Daikin via Faikin) requires all heads to share the same HVAC mode to function correctly, but each room still needs its own setpoint and fan speed. Full Mirror/Lock would wrongly force temperature and fan speed to match too. (Based on a real multi-head setup.)
 
@@ -568,7 +621,7 @@ A 4-head mini-split system (e.g. Daikin via Faikin) requires all heads to share 
 
 ---
 
-### 22. Interlocking Heat/Cool Across Two Systems
+### 23. Interlocking Heat/Cool Across Two Systems
 
 An HRV (heat recovery ventilator) with heat/cool/auto acts as the "conductor". Several independent underfloor heating zones must turn fully off whenever the HRV is cooling, and back on when it's heating — pure interlocking, no shared setpoint. (Based on a real multi-system setup.)
 
@@ -586,11 +639,48 @@ An HRV (heat recovery ventilator) with heat/cool/auto acts as the "conductor". S
 
 ---
 
+### 24. Notice When a Device Swallows Commands
+
+Battery TRVs occasionally miss a command — the group sends 21°, the device stays at 23°, and nothing tells you. The group already spots this and lists it under `member_divergence`; this turns it into a notification.
+
+**Entities:** any group with two or more members, e.g. `climate.living_room`
+
+The delay is the whole point: a short disagreement is normal — commands are staggered, devices report back at their own pace, and a schedule slot takes a moment to reach everyone. Only a difference that *persists* is worth a message.
+
+```yaml
+automation:
+  - alias: "Heating: devices disagree"
+    trigger:
+      - platform: template
+        value_template: >
+          {{ state_attr('climate.living_room', 'member_divergence') | count > 0 }}
+        for: "00:15:00"
+    action:
+      - service: notify.persistent_notification
+        data:
+          title: "Living room heating"
+          message: >
+            {% set d = state_attr('climate.living_room', 'member_divergence') %}
+            {% for setting, devices in d.items() %}
+            {{ setting }}: {% for entity, value in devices.items() -%}
+            {{ entity }} = {{ value }}{{ ", " if not loop.last }}
+            {%- endfor %}
+            {% endfor %}
+```
+
+**Result:** If the devices are still set differently a quarter of an hour later, you get a message naming the setting, the devices and their values — e.g. `temperature: climate.living_left = 21.0, climate.living_right = 23.0`.
+
+Two things this deliberately does *not* fire on: an isolated device (it is meant to differ, and it is left out of the attribute) and devices with member offsets configured (they are compared on the logical setting, so an intentional +1/−1 counts as agreement).
+
+> A dashboard variant of the same idea: a conditional card that appears only while `member_divergence` is non-empty, so an agreeing group shows nothing at all.
+
+---
+
 ## Tips
 
 - **Start simple:** get basic grouping working first (just Members, no other settings), then layer on features one at a time.
 - **Advanced Mode:** toggle it on in the group's configuration to unlock everything beyond Basic-tier settings (Examples 3–18).
-- **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted; use `Mirror/Lock` when only some attributes should sync (Example 20).
+- **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted; use `Mirror/Lock` when only some attributes should sync (Example 22).
 - **Blocking priority:** Main Switch > Window Control > Presence Control — if several are active at once, only the highest-ranked one's action is sent to members.
 - **Schedule + Boost:** Boost outranks the schedule. Schedule slot changes still run in the background during a boost.
 - **Calibration:** only use CGH's own calibration if you're not already using Better Thermostat or Versatile Thermostat — they handle their own (Example 13).

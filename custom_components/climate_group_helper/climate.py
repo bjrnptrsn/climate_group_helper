@@ -37,7 +37,6 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .const import (
     CONF_ADVANCED_MODE,
     CONF_DEBOUNCE_DELAY,
-    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_GRACE_PERIOD,
     CONF_GROUP_PRESETS,
@@ -51,6 +50,7 @@ from .const import (
     CONF_IGNORE_OFF_MEMBERS_TEMPERATURE,
     CONF_ISOLATION_RULES,
     CONF_ISOLATION_RULES_COUNT,
+    CONF_ISOLATION_SLOT,
     CONF_MASTER_ENTITY,
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
@@ -69,6 +69,7 @@ from .const import (
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
     CONF_RANGE_TEMPLATE_COOL_ENTITIES,
+    DEFAULT_DEBOUNCE_DELAY,
     DEFAULT_GRACE_PERIOD,
     DEFAULT_SUPPORTED_FEATURES,
     DOMAIN,
@@ -212,7 +213,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # HVAC mode strategy
         self._hvac_mode_strategy = config.get(CONF_HVAC_MODE_STRATEGY, HvacModeStrategy.NORMAL)
         self._feature_strategy = config.get(CONF_FEATURE_STRATEGY, FeatureStrategy.INTERSECTION)
-        self.debounce_delay = config.get(CONF_DEBOUNCE_DELAY, 0)
+        self.debounce_delay = config.get(CONF_DEBOUNCE_DELAY, DEFAULT_DEBOUNCE_DELAY)
         self.retry_attempts = int(config.get(CONF_RETRY_ATTEMPTS, 0))
         self.retry_delay = config.get(CONF_RETRY_DELAY, 2.5)
         self.stagger_delay = config.get(CONF_STAGGERED_CALL_DELAY, 0.0)
@@ -220,7 +221,6 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.temp_update_target_entity_ids = _get_adv(CONF_TEMP_UPDATE_TARGETS, [])
         self.humidity_sensor_entity_ids = _get_adv(CONF_HUMIDITY_SENSORS, [])
         self.humidity_update_target_entity_ids = _get_adv(CONF_HUMIDITY_UPDATE_TARGETS, [])
-        self._expose_member_entities = config.get(CONF_EXPOSE_MEMBER_ENTITIES, False)
         self.min_temp_off = config.get(CONF_MIN_TEMP_OFF, False)
         self._window_adopt_manual_changes = config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES, AdoptManualChanges.OFF)
         self._temp_offset_map: dict[str, float] = config.get(CONF_MEMBER_TEMP_OFFSETS, {})
@@ -294,10 +294,16 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Written by the rule that isolates a free device, consumed by the rule
         # that performs the final release. See isolation.py.
         self.isolation_pre_action_presets: dict[str, str | None] = {}
+        # Selected by slot number, not by list position: a rule deleted in a
+        # visible slot shortens the list, and a positional slice would then pull
+        # a hidden rule into the active range. Rules without the field fall back
+        # to their list position — what it meant before the migration filled it
+        # in, so an un-migrated entry behaves exactly as it did before.
         self.member_isolation_handlers: list[MemberIsolationHandler] = (
             [
-                MemberIsolationHandler(self, rule)
-                for rule in isolation_rules[:isolation_rule_count]
+                MemberIsolationHandler(self, rule, index)
+                for index, rule in enumerate(isolation_rules, start=1)
+                if rule.get(CONF_ISOLATION_SLOT, index) <= isolation_rule_count
             ]
             if self.advanced_mode else []
         )
@@ -534,10 +540,11 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         For active Member Templates (e.g. Range Template), the event is
         reconstructed at the source with rendered `new_state`/`old_state` so
         all downstream consumers (`ChangeState.from_event`, `SyncModeHandler`,
-        …) see a template-rendered event transparently. HA's `Event` is
-        frozen, so a new object is built preserving `context`, `origin`, and
-        `time_fired_timestamp` — losing any of these would break echo
-        suppression and origin analysis.
+        …) see a template-rendered event transparently. A new object is built
+        rather than the original edited: the event's `data` dict is shared with
+        every other listener, so rendering into it would rewrite the states they
+        see. `context`, `origin` and `time_fired_timestamp` are carried over —
+        losing any of them would break echo suppression and origin analysis.
         """
         if event is not None:
             # Template coverage must be current BEFORE the event is rendered:
@@ -568,15 +575,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
     def _trigger_template_changeover(self) -> None:
         """Schedule a TemplateCallHandler enforcement for covered members.
 
-        Called from the member-event path (a sync `@callback`) when a template-covered
-        member reports a change (e.g. current_temperature crossing a band boundary).
-        `call_debounced` is a coroutine, so it is launched as an HA background task
-        (HA holds the reference and cancels it on stop; the handler's own
-        `async_shutdown` cancels the actual execution task on entity removal).
-
-        The handler diffs covered members against target_state, so only those actually
-        deviating from their expected physical mode receive a call — an echo of our own
-        command terminates naturally (no deviation left).
+        Called from the member-event path, a sync `@callback`: `call_debounced` is
+        a coroutine, hence the background task.
         """
         self.hass.async_create_background_task(
             self.template_call_handler.call_debounced(),

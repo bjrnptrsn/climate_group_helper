@@ -339,7 +339,6 @@
               "staggered_call_delay": "Retraso entre comandos (segundos)",
               "grace_period": "Período de gracia de la UI optimista (segundos)",
               "expose_smart_sensors": "Exponer sensores inteligentes",
-              "expose_member_entities": "Exponer lista de miembros",
               "expose_config": "Mostrar configuración (Depuración)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Tiempo de espera entre comandos individuales a los miembros del grupo. Escalonar los comandos evita la congestión de red en entornos Zigbee/Matter. Establecer en 0 para desactivar.",
               "grace_period": "Cuánto tiempo muestra el grupo el valor enviado antes de cambiar al promedio de los miembros. Evita el parpadeo de la UI cuando dispositivos lentos (puentes Cloud, Zigbee) devuelven su estado antiguo. Establecer en 0 para desactivar.",
               "expose_smart_sensors": "Crea entidades de sensor adicionales para temperatura y humedad del grupo (útil para gráficos).",
-              "expose_member_entities": "Crea un atributo listando todos los IDs de entidades miembro.",
               "expose_config": "Añade todos los valores de configuración a los atributos de la entidad. Útil para depuración."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Al menos un miembro debe permanecer fuera del aislamiento.",
       "isolation_entity_overlap": "Cada miembro solo puede aparecer en una regla de aislamiento.",
       "isolation_action_preset_required": "Selecciona un modo de ajuste previo para la acción de aislamiento.",
+      "isolation_sensor_required": "Selecciona un sensor para la regla de aislamiento o cambia su activador a Desactivado.",
+      "isolation_hvac_modes_required": "Selecciona al menos un modo para la regla de aislamiento o cambia su activador a Desactivado.",
       "window_temperature_required": "Establece una temperatura de ventana o cambia la acción de ventana.",
       "presence_action_value_required": "Establece un valor para la acción de ausencia seleccionada o cambia la acción.",
       "schedule_fallback_payload_invalid": "Formato YAML no válido en el contenido de reserva del horario. Debe ser una asignación de clave-valor válida.",

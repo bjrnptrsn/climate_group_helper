@@ -339,7 +339,6 @@
               "staggered_call_delay": "Forsinkelse mellem kommandoer (sekunder)",
               "grace_period": "Optimistisk UI-overgangsperiode (sekunder)",
               "expose_smart_sensors": "Udstil smarte sensorer",
-              "expose_member_entities": "Udstil medlemsliste",
               "expose_config": "Vis konfiguration (Fejlfinding)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Ventetid mellem individuelle kommandoer til gruppemedlemmer. Fordeling af kommandoer forhindrer netværksbelastning i Zigbee/Matter-miljøer. Sæt til 0 for at deaktivere.",
               "grace_period": "Hvor længe gruppen viser den befalede værdi, inden den skifter til medlemsgennemsnittet. Forhindrer UI-flimmer, når langsomme enheder (Cloud-broer, Zigbee) ekko deres gamle tilstand. Sæt til 0 for at deaktivere.",
               "expose_smart_sensors": "Opretter ekstra sensorenheder for gruppens temperatur og fugtighed (nyttigt til grafer).",
-              "expose_member_entities": "Opretter en attribut, der viser alle medlemsenheds-id'er.",
               "expose_config": "Tilføjer alle konfigurationsværdier til entitetsattributterne. Nyttigt til fejlfinding."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Mindst ét medlem skal forblive uden for isolation.",
       "isolation_entity_overlap": "Hvert medlem kan kun forekomme i én isolationsregel.",
       "isolation_action_preset_required": "Vælg en forudindstillet tilstand til isoleringshandlingen.",
+      "isolation_sensor_required": "Vælg en sensor til isoleringsreglen, eller sæt dens udløser til Deaktiveret.",
+      "isolation_hvac_modes_required": "Vælg mindst én tilstand til isoleringsreglen, eller sæt dens udløser til Deaktiveret.",
       "window_temperature_required": "Angiv en vinduestemperatur, eller skift vindueshandlingen.",
       "presence_action_value_required": "Angiv en værdi for den valgte fraværshandling, eller skift handlingen.",
       "schedule_fallback_payload_invalid": "Ugyldigt YAML-format i fallback-tidsplanens payload. Skal være en gyldig nøgle-værdi-tilknytning.",

@@ -339,7 +339,6 @@
               "staggered_call_delay": "Oneskorenie medzi príkazmi (sekundy)",
               "grace_period": "Optimistická prechodová doba UI (sekundy)",
               "expose_smart_sensors": "Zobraziť inteligentné senzory",
-              "expose_member_entities": "Zobraziť zoznam členov",
               "expose_config": "Zobraziť konfiguráciu (ladenie)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Čas čakania medzi jednotlivými príkazmi členom skupiny. Rozloženie príkazov zabraňuje preťaženiu siete v prostredí Zigbee/Matter. Nastavte na 0 pre vypnutie.",
               "grace_period": "Ako dlho skupina zobrazuje zadanú hodnotu pred prepnutím na priemer členov. Zabraňuje blikaniu UI, keď pomalé zariadenia (Cloud bridges, Zigbee) posielajú späť svoj starý stav. Nastavte na 0 pre vypnutie.",
               "expose_smart_sensors": "Vytvorí ďalšie entity senzorov pre teplotu a vlhkosť skupiny (užitočné pre grafy).",
-              "expose_member_entities": "Vytvorí atribút so zoznamom všetkých ID entít členov.",
               "expose_config": "Pridá všetky konfiguračné hodnoty do atribútov entity. Užitočné pre ladenie."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Aspoň jeden člen musí zostať mimo izolácie.",
       "isolation_entity_overlap": "Každý člen sa môže nachádzať iba v jednom izolačnom pravidle.",
       "isolation_action_preset_required": "Vyberte prednastavený režim pre izolačnú akciu.",
+      "isolation_sensor_required": "Vyberte senzor pre izolačné pravidlo alebo nastavte jeho spúšťač na Zakázané.",
+      "isolation_hvac_modes_required": "Vyberte aspoň jeden režim pre izolačné pravidlo alebo nastavte jeho spúšťač na Zakázané.",
       "window_temperature_required": "Nastavte teplotu pri otvorenom okne alebo zmeňte akciu okna.",
       "presence_action_value_required": "Nastavte hodnotu pre vybranú akciu neprítomnosti alebo zmeňte akciu.",
       "schedule_fallback_payload_invalid": "Neplatný formát YAML v náhradnom užitočnom zaťažení plánu. Musí to byť platné mapovanie kľúč-hodnota.",

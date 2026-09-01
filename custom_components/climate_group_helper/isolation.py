@@ -15,12 +15,16 @@ from .const import (
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_RESTORE_DELAY,
     CONF_ISOLATION_SENSOR,
+    CONF_ISOLATION_SLOT,
     CONF_ISOLATION_TRIGGER,
     CONF_ISOLATION_TRIGGER_HVAC_MODES,
     CONF_ISOLATION_ACTION_TYPE,
     CONF_ISOLATION_ACTION_HVAC_MODE,
     CONF_ISOLATION_ACTION_PRESET_MODE,
+    META_KEY_ISOLATION_BYPASS,
+    META_VALUE_ALL,
     MODE_MODES_MAP,
+    TEMP_TARGET_ATTRS,
     IsolationTrigger,
     IsolationActionType,
 )
@@ -42,7 +46,7 @@ class MemberIsolationHandler:
       - HVAC_MODE: Activates when target_state.hvac_mode is in the configured set.
         Hook: climate.py calls on_target_hvac_mode_changed() after every hvac_mode update.
       - MEMBER_OFF: Activates per-member when a member turns OFF manually (not via group
-        command). Handled in SyncModeHandler.resync() via _maybe_isolate_off_member().
+        command). Handled in SyncModeHandler.resync() via check_member_off_isolation().
         State mutation is synchronous so LOCK enforcement immediately sees updated state.
 
     When the trigger activates (SENSOR / HVAC_MODE):
@@ -56,14 +60,25 @@ class MemberIsolationHandler:
       3. Syncs each entity back to the current target_state (unless globally blocked).
     """
 
-    def __init__(self, group: ClimateGroupHelper, rule: dict[str, Any]) -> None:
+    def __init__(
+        self, group: ClimateGroupHelper, rule: dict[str, Any], position: int = 1
+    ) -> None:
         """Initialize the member isolation handler from a single rule dict.
 
         The advanced_mode guard lives in climate.py — the handler list is only
         populated when advanced mode is on, so each rule is always active here.
+
+        position is the rule's 1-based place in the configured list, used only as
+        the fallback slot number below.
         """
         self._group = group
         self._hass = group.hass
+
+        # UI slot this rule occupies (1-4) — how isolation_bypass addresses it.
+        # Absent only for a rule that predates the field, where the list position
+        # is what the slot number meant; the same fallback the other read sites
+        # use, so a rule cannot end up addressable under two different numbers.
+        self._slot: int = rule.get(CONF_ISOLATION_SLOT, position)
 
         self._trigger: IsolationTrigger = IsolationTrigger(
             rule.get(CONF_ISOLATION_TRIGGER, IsolationTrigger.DISABLED)
@@ -84,6 +99,12 @@ class MemberIsolationHandler:
         self._pending_timer: Callable[[], None] | None = None
         self._trigger_active: bool = False
 
+        # Entities this MEMBER_OFF rule currently holds. Neither _trigger_active
+        # nor the configured list can answer that: this trigger claims per event,
+        # and the list is only a filter for which members may be claimed (and may
+        # be empty, meaning "watch every member").
+        self._member_off_claims: set[str] = set()
+
         # Per-entity call handlers — created in async_setup, keyed by entity_id
         self._call_handlers: dict[str, IsolationCallHandler] = {}
         self._restore_call_handlers: dict[str, IsolationRestoreCallHandler] = {}
@@ -99,6 +120,35 @@ class MemberIsolationHandler:
     def target_state(self) -> TargetState:
         """Return the current target state (from central source)."""
         return self._group.shared_target_state
+
+    @property
+    def slot(self) -> int:
+        """Return the UI slot number (1-4) this rule occupies."""
+        return self._slot
+
+    @property
+    def bypassed(self) -> bool:
+        """Return True while a slot suspends this rule.
+
+        isolation_bypass carries either the "all" sentinel or a list of slot
+        numbers; both shapes are normalised in the meta-processor, so only these
+        two need handling here.
+        """
+        value = self._group.run_state.config_overrides.get(META_KEY_ISOLATION_BYPASS)
+        if value is None:
+            return False
+        return value == META_VALUE_ALL or self._slot in value
+
+    @property
+    def _effective_active(self) -> bool:
+        """Return whether this rule currently claims its entities.
+
+        _trigger_active stays untouched by the bypass: it carries the sensor
+        reading, and the sensor keeps running throughout. This property is what
+        the isolation logic asks — "does this rule hold anything right now" —
+        and it is the only thing the bypass changes.
+        """
+        return self._trigger_active and not self.bypassed
 
     @property
     def _pre_action_presets(self) -> dict[str, str | None]:
@@ -266,13 +316,21 @@ class MemberIsolationHandler:
         other rule's claim must survive — both in the isolated_members bookkeeping
         and in the restore calls (a full target-state restore would physically undo
         the other rule's protection).
+
+        A MEMBER_OFF rule is asked for its live claims instead: `_effective_active`
+        is never written on that path, and its claims count even while a slot
+        bypasses the rule, because `release_bypassed()` is a no-op for it — the
+        rule keeps holding its devices through the slot.
         """
-        return frozenset(
-            eid
-            for other in self._group.member_isolation_handlers
-            if other is not self and other._trigger_active
-            for eid in other._isolation_entity_ids
-        )
+        claims: set[str] = set()
+        for other in self._group.member_isolation_handlers:
+            if other is self:
+                continue
+            if other._trigger == IsolationTrigger.MEMBER_OFF:
+                claims |= other._member_off_claims
+            elif other._effective_active:
+                claims |= set(other._isolation_entity_ids)
+        return frozenset(claims)
 
     def _build_isolation_payload(self, entity_id: str) -> dict | None:
         """Return the service call payload for the isolation pre-action.
@@ -364,7 +422,7 @@ class MemberIsolationHandler:
         or send OFF commands after the deactivation already won (whichever
         coroutine runs LAST must not override the current trigger state).
         """
-        if not self._trigger_active:
+        if not self._effective_active:
             _LOGGER.debug("[%s] Stale isolation activation skipped (trigger no longer active)", self._group.entity_id)
             return
 
@@ -390,7 +448,7 @@ class MemberIsolationHandler:
         _LOGGER.debug("[%s] Isolation activated for: %s", self._group.entity_id, self._isolation_entity_ids)
 
         for entity_id in self._isolation_entity_ids:
-            if not self._trigger_active:
+            if not self._effective_active:
                 _LOGGER.debug("[%s] Isolation activation aborted mid-flight (trigger flipped)", self._group.entity_id)
                 return
             if handler := self._call_handlers.get(entity_id):
@@ -428,7 +486,7 @@ class MemberIsolationHandler:
         while the coroutine was queued — a stale deactivation must not release
         entities or send restore commands after the activation already won.
         """
-        if self._trigger_active:
+        if self._effective_active:
             _LOGGER.debug("[%s] Stale isolation deactivation skipped (trigger active again)", self._group.entity_id)
             return
 
@@ -488,6 +546,120 @@ class MemberIsolationHandler:
 
         self._group.async_defer_or_update_ha_state()
 
+    def covers_actively(self, entity_id: str) -> bool:
+        """Return True if this rule watches the entity and its trigger reads active.
+
+        For callers that run before `async_setup()` has filled `_trigger_active`:
+        the trigger state is read fresh from the sensor / target state, the same
+        way `reevaluate()` does and the same way this rule's own setup will read
+        it moments later.
+
+        MEMBER_OFF returns False — its trigger is an event, so there is nothing to
+        read at startup. That is also why the watch-list check may compare against
+        the configured list directly: the empty list meaning "watch every member"
+        only occurs on that trigger, which never gets past it.
+        """
+        if entity_id not in self._isolation_entity_ids:
+            return False
+        if self._trigger == IsolationTrigger.SENSOR:
+            if not self._sensor_id:
+                return False
+            state = self._hass.states.get(self._sensor_id)
+            return state is not None and state.state == STATE_ON
+        if self._trigger == IsolationTrigger.HVAC_MODE:
+            return self.target_state.hvac_mode in self._trigger_hvac_modes
+        return False
+
+    async def release_bypassed(self) -> None:
+        """Release the entities this rule holds, for the duration of the slot.
+
+        Routed through `_deactivate_isolation()` to inherit its still_claimed
+        guard — an entity a foreign active rule also covers stays isolated. Its
+        staleness check cannot fire here: `bypassed` already makes
+        `_effective_active` False.
+
+        MEMBER_OFF is exempt: it records a manual switch-off, which no slot undoes.
+        """
+        if self._trigger == IsolationTrigger.MEMBER_OFF:
+            return
+        if not self._trigger_active:
+            return
+        _LOGGER.debug(
+            "[%s] isolation_bypass: releasing isolation for %s",
+            self._group.entity_id, self._isolation_entity_ids,
+        )
+        self._cancel_timer()
+        await self._deactivate_isolation()
+
+    def drop_claims(self) -> None:
+        """Release this rule's entities for a group-wide OFF.
+
+        No restore calls, unlike `_deactivate_isolation()` — the members are
+        being switched off in the same breath. `_trigger_active` stays as it is;
+        `reevaluate()` re-reads the sensor when the group comes back on.
+
+        Every trigger has to prove itself again after the switch: a state-based
+        one is re-read right away, MEMBER_OFF needs a new off event. That is why
+        its claims go too — they record a past event, and nothing will replay it.
+        """
+        # MEMBER_OFF's entity list may be empty ("every member") and match
+        # nothing — its claims are tracked separately.
+        claimed = (
+            frozenset(self._isolation_entity_ids) | self._member_off_claims
+        ) & self._group.run_state.isolated_members
+
+        # Before the early return, not after: an earlier rule covering the same
+        # entity has already removed it from isolated_members, so there is
+        # nothing left to intersect and the claim would survive the switch.
+        self._member_off_claims.clear()
+
+        if not claimed:
+            return
+        self._cancel_timer()
+        self._group.run_state = replace(
+            self._group.run_state,
+            isolated_members=self._group.run_state.isolated_members - claimed,
+        )
+        _LOGGER.debug(
+            "[%s] Group switched off — releasing isolation claims on %s",
+            self._group.entity_id, sorted(claimed),
+        )
+
+    async def reevaluate(self) -> None:
+        """Re-apply the rule if its trigger is still active (slot end, switch on).
+
+        The trigger state is read fresh rather than taken from _trigger_active:
+        the listener does keep that field current during a bypass (only the
+        resulting action is suppressed), but relying on it would tie this method
+        to that detail — a later change gating the listener itself would leave
+        the field stale here, and the failure is silent (a device that quietly
+        stays un-isolated).
+
+        MEMBER_OFF has nothing to re-apply: its trigger is an event, not a state,
+        so the next one arrives on its own.
+        """
+        if self._trigger == IsolationTrigger.DISABLED:
+            return
+
+        if self._trigger == IsolationTrigger.SENSOR:
+            if not self._sensor_id:
+                return
+            state = self._hass.states.get(self._sensor_id)
+            if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                return
+            self._trigger_active = state.state == STATE_ON
+        elif self._trigger == IsolationTrigger.HVAC_MODE:
+            self._trigger_active = self.target_state.hvac_mode in self._trigger_hvac_modes
+        else:
+            return
+
+        if self._trigger_active:
+            _LOGGER.debug(
+                "[%s] isolation_bypass ended: trigger still active → re-isolating %s",
+                self._group.entity_id, self._isolation_entity_ids,
+            )
+            await self._activate_isolation()
+
     # --- Per-member methods for MEMBER_OFF trigger ---
 
     def check_member_off_isolation(self) -> None:
@@ -507,13 +679,6 @@ class MemberIsolationHandler:
         if entity_id is None or old_state is None or new_state is None:
             return
 
-        # A covered member's physical mode is band mechanics, not user intent:
-        # with deadband_action=none it reports "off" while resting inside the
-        # band. Isolating it there is permanent — the changeover that would
-        # release it is an own-echo this method never sees.
-        if self._group.member_template_manager.is_covered_state(new_state):
-            return
-
         if not (old_hvac_mode := old_state.state):
             return
         
@@ -526,15 +691,10 @@ class MemberIsolationHandler:
         # Transient new_state: member going offline — no meaningful state to act on.
         if new_hvac_mode in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
-        # Transient old_state + new OFF: member came back online already OFF (e.g. after a
-        # brief disconnect). Treat as a deliberate OFF — isolation should fire.
-        # Transient old_state + new active: not a deliberate user change, so it must not
-        # start anything — but a member we ALREADY hold isolated is a different matter.
-        # MEMBER_OFF means "the member is off, leave it alone"; once it reports an active
-        # mode that premise is gone, no matter how it got there. Keeping it isolated would
-        # mark a physically running device as off — invisible to sync and aggregation while
-        # it heats. The release is therefore exempt from this guard; adoption of the
-        # reconnected state into target_state stays blocked in sync_mode.py.
+        # Reconnect with an active mode is no deliberate change and must not
+        # start an isolation — but a member we already hold is released anyway:
+        # once it runs, "the member is off" no longer holds, and keeping the
+        # claim would hide a heating device from sync and aggregation.
         if (
             old_hvac_mode in (STATE_UNAVAILABLE, STATE_UNKNOWN)
             and new_hvac_mode != HVACMode.OFF
@@ -550,6 +710,24 @@ class MemberIsolationHandler:
             return
 
         if new_hvac_mode == HVACMode.OFF:
+            # A covered member's "off" is band mechanics, not user intent, and
+            # isolating it there is permanent (the changeover is an own-echo this
+            # method never sees). Isolation branch only — the release must stay
+            # reachable once a member becomes covered.
+            if self._group.member_template_manager.is_covered_state(new_state):
+                return
+            # MEMBER_OFF needs its own bypass gate: its trigger is an event, not a
+            # state, so it never reads _trigger_active and _effective_active does
+            # not reach it. The gate sits on the isolation branch only — a member
+            # that was isolated before the bypass and switches itself back on
+            # during the slot is still released below, or a running device would
+            # stay invisible to sync and aggregation.
+            if self.bypassed:
+                _LOGGER.debug(
+                    "[%s] MEMBER_OFF isolation of %s suppressed — isolation_bypass active",
+                    self._group.entity_id, entity_id,
+                )
+                return
             # Synchronously update run_state so the subsequent LOCK enforcement sees
             # the member as isolated and skips it — avoids a send→echo→re-isolate loop.
             self.isolate_member_sync(entity_id)
@@ -583,6 +761,7 @@ class MemberIsolationHandler:
 
         new_isolated = self._group.run_state.isolated_members | frozenset([entity_id])
         self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
+        self._member_off_claims.add(entity_id)
         _LOGGER.debug("[%s] MEMBER_OFF: isolated %s", self._group.entity_id, entity_id)
 
     def release_member_sync(self, entity_id: str) -> bool:
@@ -601,6 +780,11 @@ class MemberIsolationHandler:
         """
         if entity_id not in self._group.run_state.isolated_members:
             return False
+        # Dropped before the foreign-claim check: the member reported an active
+        # mode, so this rule's own premise ("it is off, leave it alone") is gone
+        # either way. Keeping the claim would make this rule hold a running
+        # device and block the *other* rule's release later on.
+        self._member_off_claims.discard(entity_id)
         if entity_id in self._foreign_claims():
             _LOGGER.debug(
                 "[%s] MEMBER_OFF: release of %s skipped — still claimed by another active rule",
@@ -624,6 +808,18 @@ class MemberIsolationHandler:
         self._group.async_defer_or_update_ha_state()
 
 
+def drop_all_claims(group: ClimateGroupHelper) -> None:
+    """Release every rule's claims (group-wide OFF)."""
+    for handler in group.member_isolation_handlers:
+        handler.drop_claims()
+
+
+async def reevaluate_all(group: ClimateGroupHelper) -> None:
+    """Let every rule decide again whether it still applies."""
+    for handler in group.member_isolation_handlers:
+        await handler.reevaluate()
+
+
 class IsolationCallHandler(BaseServiceCallHandler):
     """Call handler for Member Isolation operations.
 
@@ -642,6 +838,32 @@ class IsolationCallHandler(BaseServiceCallHandler):
     def _is_member_blocked(self, entity_id: str) -> bool:  # noqa: ARG002
         """Never block — isolation handler bypasses all blocking."""
         return False
+
+    def _get_target_value(self, attr: str, value: Any = None) -> Any:
+        """Use the explicit value if given, otherwise read from target_state.
+
+        The offset branch is keyed on the attribute, not on `value` being absent:
+        a restore reaches this hook with the raw target already filled in as
+        `value` (the caller expands `target_state` before selecting entities), so
+        an offset branch guarded on `value is None` would never run on the path
+        that needs it. `_get_target_value_with_offset()` shifts temperature
+        attributes only, which is what keeps the pre-action payloads
+        (`hvac_mode`, `preset_mode`) out of it.
+        """
+        if attr in TEMP_TARGET_ATTRS and self._apply_group_offset():
+            return self._get_target_value_with_offset(attr, value)
+        if value is not None:
+            return value
+        return getattr(self.target_state, attr, None)
+
+    def _apply_group_offset(self) -> bool:
+        """Shift the restore by the group offset, except during temporary state.
+
+        A released member has to land on the same setpoint as the rest of the
+        group. The pre-action payloads carry no temperature attribute, so only
+        the restore is affected.
+        """
+        return not self._group.run_state.temporary_state_active
 
     def _get_capable_entities(self, attr: str, value: Any = None) -> list[str]:
         """Return only the single isolated entity (if capable)."""

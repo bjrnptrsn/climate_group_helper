@@ -339,7 +339,6 @@
               "staggered_call_delay": "Porrastetun kutsun viive (sekuntia)",
               "grace_period": "Optimistisen käyttöliittymän armonaika (sekuntia)",
               "expose_smart_sensors": "Näytä älykkäät anturit",
-              "expose_member_entities": "Näytä jäsenluettelo",
               "expose_config": "Näytä konfiguraatioanturi"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Odotusaika yksittäisten ryhmän jäsenille lähetettävien komentojen välillä. Kutsujen porrastaminen estää verkkoruuhkat Zigbee/Matter-ympäristöissä. Aseta 0 poistaaksesi käytöstä.",
               "grace_period": "Kuinka kauan ryhmä näyttää komennetun arvon ennen siirtymistä jäsenten keskiarvoon. Estää käyttöliittymän välkkymisen, kun hitaat laitteet (pilvisillat, Zigbee) kaikuttavat vanhan tilansa takaisin. Aseta 0 poistaaksesi käytöstä.",
               "expose_smart_sensors": "Luo ylimääräisiä anturientiteettejä ryhmän lämpötilalle ja kosteudelle (hyödyllinen kaavioihin).",
-              "expose_member_entities": "Luo attribuutin, joka listaa kaikki jäsenentiteettien ID:t.",
               "expose_config": "Luo diagnostiikka-anturin (sensor.*_configuration), joka paljastaa siirrettävät asetukset JSON-attribuuttina. Hyödyllinen asetusten kopioimiseen ryhmien välillä automaatioiden avulla."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Vähintään yhden jäsenen on pysyttävä eristyksen ulkopuolella.",
       "isolation_entity_overlap": "Jokainen jäsen voi esiintyä vain yhdessä eristyssäännössä.",
       "isolation_action_preset_required": "Valitse esiasetustila eristystoiminnolle.",
+      "isolation_sensor_required": "Valitse anturi eristyssäännölle tai aseta sen liipaisimeksi Ei käytössä.",
+      "isolation_hvac_modes_required": "Valitse eristyssäännölle vähintään yksi tila tai aseta sen liipaisimeksi Ei käytössä.",
       "window_temperature_required": "Aseta ikkunan lämpötila tai vaihda ikkunatoimintoa.",
       "presence_action_value_required": "Aseta arvo valitulle poissaolotoiminnolle tai vaihda toimintoa.",
       "schedule_fallback_payload_invalid": "Virheellinen YAML-muoto aikataulun varakuormassa. Sen on oltava kelvollinen avain-arvo-kartoitus.",

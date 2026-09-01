@@ -339,7 +339,6 @@
               "staggered_call_delay": "Zpoždění mezi příkazy (sekundy)",
               "grace_period": "Optimistická doba přechodu UI (sekundy)",
               "expose_smart_sensors": "Zvolte zda vytvořit senzorové entity",
-              "expose_member_entities": "Zvolte zda zobrazit seznam členů",
               "expose_config": "Zobrazit konfiguraci (Ladění)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Doba čekání mezi jednotlivými příkazy členům skupiny. Rozložení příkazů zabraňuje přetížení sítě v prostředích Zigbee/Matter. Nastavte na 0 pro vypnutí.",
               "grace_period": "Jak dlouho skupina zobrazuje zadanou hodnotu před přepnutím na průměr členů. Zabraňuje blikání UI, když pomalá zařízení (Cloud bridges, Zigbee) hlásí zpět svůj starý stav. Nastavte na 0 pro vypnutí.",
               "expose_smart_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
-              "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
               "expose_config": "Přidá všechny konfigurační hodnoty do atributů entity. Užitečné pro ladění."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Alespoň jeden člen musí zůstat mimo izolaci.",
       "isolation_entity_overlap": "Každý člen může být pouze v jednom izolačním pravidle.",
       "isolation_action_preset_required": "Vyberte přednastavený režim pro izolační akci.",
+      "isolation_sensor_required": "Vyberte senzor pro izolační pravidlo nebo nastavte jeho spouštěč na Zakázáno.",
+      "isolation_hvac_modes_required": "Vyberte alespoň jeden režim pro izolační pravidlo nebo nastavte jeho spouštěč na Zakázáno.",
       "window_temperature_required": "Nastavte teplotu při otevřeném okně nebo změňte akci okna.",
       "presence_action_value_required": "Nastavte hodnotu pro vybranou akci nepřítomnosti nebo změňte akci.",
       "schedule_fallback_payload_invalid": "Neplatný formát YAML v náhradním payloadu plánu. Musí to být platné mapování klíč-hodnota.",

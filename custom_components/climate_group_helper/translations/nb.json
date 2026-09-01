@@ -339,7 +339,6 @@
               "staggered_call_delay": "Forsinkelse mellom kommandoer (sekunder)",
               "grace_period": "Optimistisk UI-overgangsperiode (sekunder)",
               "expose_smart_sensors": "Vis smarte sensorer",
-              "expose_member_entities": "Vis medlemsliste",
               "expose_config": "Vis konfigurasjon (Feilsøking)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Ventetid mellom individuelle kommandoer til gruppemedlemmer. Fordeling av kommandoer forhindrer nettverksbelastning i Zigbee/Matter-miljøer. Sett til 0 for å deaktivere.",
               "grace_period": "Hvor lenge gruppen viser den sendte verdien før den bytter til medlemsgjennomsnittet. Forhindrer UI-flimmer når trege enheter (Cloud-broer, Zigbee) sender tilbake sin gamle tilstand. Sett til 0 for å deaktivere.",
               "expose_smart_sensors": "Oppretter ekstra sensorentiteter for gruppens temperatur og luftfuktighet (nyttig for grafer).",
-              "expose_member_entities": "Oppretter en attributt som lister alle medlemsenhets-ID-er.",
               "expose_config": "Legger til alle konfigurasjonsverdier i entitetens attributter. Nyttig for feilsøking."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Minst ett medlem må forbli utenfor isolasjonen.",
       "isolation_entity_overlap": "Hvert medlem kan bare forekomme i én isolasjonsregel.",
       "isolation_action_preset_required": "Velg en forhåndsdefinert modus for isoleringshandlingen.",
+      "isolation_sensor_required": "Velg en sensor for isoleringsregelen, eller sett utløseren til Deaktivert.",
+      "isolation_hvac_modes_required": "Velg minst én modus for isoleringsregelen, eller sett utløseren til Deaktivert.",
       "window_temperature_required": "Angi en vindustemperatur, eller endre vindushandlingen.",
       "presence_action_value_required": "Angi en verdi for den valgte fraværshandlingen, eller endre handlingen.",
       "schedule_fallback_payload_invalid": "Ugyldig YAML-format i reserve-nyttelast for tidsplan. Må være en gyldig nøkkel-verdi-tilordning.",

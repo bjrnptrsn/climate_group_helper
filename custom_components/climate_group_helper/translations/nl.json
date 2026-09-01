@@ -339,7 +339,6 @@
               "staggered_call_delay": "Vertraging tussen opdrachten (seconden)",
               "grace_period": "Optimistische UI-overgangsperiode (seconden)",
               "expose_smart_sensors": "Slimme sensoren weergeven",
-              "expose_member_entities": "Ledenlijst weergeven",
               "expose_config": "Configuratie tonen (Debug)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Wachttijd tussen afzonderlijke opdrachten aan groepsleden. Gespreide opdrachten voorkomen netwerkcongestie in Zigbee/Matter-omgevingen. Stel in op 0 om te deactiveren.",
               "grace_period": "Hoe lang de groep de verzonden waarde toont voordat wordt overgeschakeld naar het ledengemiddelde. Voorkomt UI-flikkering wanneer trage apparaten (Cloud-bridges, Zigbee) hun oude toestand terugsturen. Stel in op 0 om te deactiveren.",
               "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
-              "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
               "expose_config": "Voegt alle configuratiewaarden toe aan de entiteitattributen. Handig voor debugging."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Ten minste één lid moet buiten de isolatie blijven.",
       "isolation_entity_overlap": "Elk lid mag slechts in één isolatieregel voorkomen.",
       "isolation_action_preset_required": "Selecteer een vooringestelde modus voor de isolatieactie.",
+      "isolation_sensor_required": "Selecteer een sensor voor de isolatieregel, of zet de trigger op Uitgeschakeld.",
+      "isolation_hvac_modes_required": "Selecteer ten minste één modus voor de isolatieregel, of zet de trigger op Uitgeschakeld.",
       "window_temperature_required": "Stel een raamtemperatuur in of wijzig de raamactie.",
       "presence_action_value_required": "Stel een waarde in voor de gekozen afwezigheidsactie of wijzig de actie.",
       "schedule_fallback_payload_invalid": "Ongeldig YAML-formaat in terugval-schema-payload. Moet een geldige sleutel-waarde-toewijzing zijn.",

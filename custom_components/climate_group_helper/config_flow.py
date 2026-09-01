@@ -40,7 +40,6 @@ from .const import (
     CONF_DEBOUNCE_DELAY,
     CONF_EXPAND_SECTIONS,
     CONF_EXPOSE_CONFIG,
-    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
     CONF_FORCE_RETRY,
@@ -61,6 +60,7 @@ from .const import (
     CONF_ISOLATION_RESTORE_DELAY,
     CONF_ISOLATION_RULES_COUNT,
     CONF_ISOLATION_RULES,
+    CONF_ISOLATION_SLOT,
     CONF_ISOLATION_SENSOR,
     CONF_ISOLATION_TRIGGER_HVAC_MODES,
     CONF_ISOLATION_TRIGGER,
@@ -112,6 +112,7 @@ from .const import (
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
     DEFAULT_CLOSE_DELAY,
+    DEFAULT_DEBOUNCE_DELAY,
     DEFAULT_GRACE_PERIOD,
     DEFAULT_NAME,
     DEFAULT_ROOM_OPEN_DELAY,
@@ -142,7 +143,7 @@ from .initialization import filter_cgh_entities
 class ClimateGroupHelperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 13
+    VERSION = 14
 
     @staticmethod
     @callback
@@ -402,6 +403,10 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 if slot_trigger == IsolationTrigger.DISABLED:
                     continue
                 rule: dict[str, Any] = {
+                    # The loop variable IS the slot number. Stored with the rule
+                    # because the list position stops matching it as soon as one
+                    # rule is deleted — everything behind it moves up a slot.
+                    CONF_ISOLATION_SLOT: i,
                     CONF_ISOLATION_TRIGGER: slot_trigger,
                     CONF_ISOLATION_ACTION_TYPE: current_config.get(
                         f"isolation_rule_{i}_action_type", IsolationActionType.HVAC_MODE.value
@@ -434,17 +439,31 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     rule[CONF_ISOLATION_ACTIVATE_DELAY] = current_config.get(f"isolation_rule_{i}_activate_delay", 0)
                     rule[CONF_ISOLATION_RESTORE_DELAY] = current_config.get(f"isolation_rule_{i}_restore_delay", 0)
                 elif slot_trigger == IsolationTrigger.MEMBER_OFF:
-                    # MEMBER_OFF: no sensor/hvac_modes, no delays
-                    rule[CONF_ISOLATION_ENTITIES] = entities or list(valid_members)
+                    # MEMBER_OFF: no sensor/hvac_modes, no delays.
+                    # An empty selection stays empty — this trigger reads that as
+                    # "watch every member", and every consumer does the same.
+                    # Materialising it into the members present at save time froze
+                    # the rule: a member added later was silently not covered, while
+                    # the form kept rendering the empty field as "all members".
+                    rule[CONF_ISOLATION_ENTITIES] = entities
                     rule[CONF_ISOLATION_ACTIVATE_DELAY] = 0
                     rule[CONF_ISOLATION_RESTORE_DELAY] = 0
                 rules.append(rule)
 
             # Rules beyond the chosen count are hidden, not deleted: keep the
-            # previously saved tail so a later count increase reveals the old
+            # previously saved ones so a later count increase reveals the old
             # rules again (matches the "reveal or hide" UI description). Only
             # the visible slots were rebuilt above.
-            hidden_rules = list(current_config.get(CONF_ISOLATION_RULES, []))[rule_count:]
+            #
+            # Selected by slot number, not by list position: a rule deleted in a
+            # visible slot shortens the list, and a tail slice would then pull a
+            # hidden rule into the visible range — instantiating a rule the user
+            # never revealed. Rules without the field fall back to their list
+            # position, which is what it meant before the migration filled it in.
+            hidden_rules = [
+                r for index, r in enumerate(current_config.get(CONF_ISOLATION_RULES, []), start=1)
+                if r.get(CONF_ISOLATION_SLOT, index) > rule_count
+            ]
             current_config[CONF_ISOLATION_RULES] = rules + hidden_rules
 
         # Remove all slot keys and legacy flat isolation keys from stored config
@@ -478,7 +497,11 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     pass
         if offset_map:
             current_config[CONF_MEMBER_TEMP_OFFSETS] = offset_map
-        elif advanced_mode:
+        elif advanced_mode and len(current_config.get(CONF_ENTITIES, [])) >= 2:
+            # Only clear when the section was actually rendered. It is omitted
+            # below two members, and a save in that state carries no offset
+            # fields — indistinguishable from "user zeroed them all" without
+            # this check, which silently dropped the remaining member's offset.
             current_config.pop(CONF_MEMBER_TEMP_OFFSETS, None)
 
         # Range Template logic. Only clear when the section was actually rendered
@@ -1055,7 +1078,6 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                             selector.SelectSelectorConfig(
                                 options=available_presets,
                                 mode=selector.SelectSelectorMode.DROPDOWN,
-                                translation_key="presence_away_preset",
                             )
                         ),
                         vol.Optional(
@@ -1282,7 +1304,6 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     options=hvac_mode_options,
                     multiple=True,
                     mode=selector.SelectSelectorMode.DROPDOWN,
-                    translation_key="isolation_trigger_hvac_modes",
                 )
             ),
             vol.Optional(
@@ -1316,7 +1337,6 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 selector.SelectSelectorConfig(
                     options=hvac_mode_options,
                     mode=selector.SelectSelectorMode.DROPDOWN,
-                    translation_key="isolation_action_hvac_mode",
                 )
             ),
             vol.Optional(
@@ -1326,7 +1346,6 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 selector.SelectSelectorConfig(
                     options=preset_options,
                     mode=selector.SelectSelectorMode.DROPDOWN,
-                    translation_key="isolation_action_preset_mode",
                 )
             ),
         }
@@ -1375,7 +1394,19 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         except (TypeError, ValueError):
             rule_count = max(len(saved_rules), 1)
 
-        slots: list[dict[str, Any]] = (list(saved_rules) + [{}] * rule_count)[:rule_count]
+        # Each form slot is filled from the rule carrying that slot number, not
+        # from the list position — a deleted rule leaves a gap in the numbering
+        # and the rules behind it must stay where the user put them. A slot with
+        # no rule renders empty.
+        #
+        # Rules without the field fall back to their list position: the migration
+        # assigns one, but this module is also reached before it runs (and from
+        # tests constructing options directly), and dropping such a rule would
+        # blank the form the user is looking at.
+        by_slot: dict[int, dict[str, Any]] = {}
+        for index, rule in enumerate(saved_rules, start=1):
+            by_slot.setdefault(rule.get(CONF_ISOLATION_SLOT, index), rule)
+        slots: list[dict[str, Any]] = [by_slot.get(i, {}) for i in range(1, rule_count + 1)]
 
         collapsed = not config.get(CONF_EXPAND_SECTIONS)
 
@@ -1508,7 +1539,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     {
                         vol.Optional(
                             CONF_DEBOUNCE_DELAY,
-                            default=config.get(CONF_DEBOUNCE_DELAY, 0),
+                            default=config.get(CONF_DEBOUNCE_DELAY, DEFAULT_DEBOUNCE_DELAY),
                         ): selector.NumberSelector(
                             selector.NumberSelectorConfig(
                                 min=0,
@@ -1573,10 +1604,6 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                             default=config.get(CONF_EXPOSE_SMART_SENSORS, False),
                         ): selector.BooleanSelector(),
                         vol.Optional(
-                            CONF_EXPOSE_MEMBER_ENTITIES,
-                            default=config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
-                        ): selector.BooleanSelector(),
-                        vol.Optional(
                             CONF_EXPOSE_CONFIG,
                             default=config.get(CONF_EXPOSE_CONFIG, False),
                         ): selector.BooleanSelector(),
@@ -1612,11 +1639,24 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             flattened_input = self._flatten_input(user_input)
             current_config = {**self._config_entry.options, **flattened_input}
 
-            # Re-render if rule count changed — shows/hides additional rule slots immediately
+            # Re-render if rule count changed — shows/hides additional rule slots immediately.
+            #
+            # Normalized against the OLD count, and from current_config rather than
+            # the submitted keys alone. A slot the form has not rendered yet carries
+            # no slot keys, so normalizing it under the new count rebuilds it as
+            # empty while its slot number no longer qualifies it as hidden — the
+            # stored rule falls out of both halves and the next save drops it. Under
+            # the old count the revealed slot stays in the hidden tail, and the
+            # section factory renders it from there. The new count is applied to the
+            # result afterwards, so the form shows the slots the user asked for.
             new_rule_count = flattened_input.get(CONF_ISOLATION_RULES_COUNT, self._isolation_rule_count)
             if new_rule_count != self._isolation_rule_count:
+                render_config = self._normalize_options(
+                    {**current_config, CONF_ISOLATION_RULES_COUNT: self._isolation_rule_count}
+                )
                 self._isolation_rule_count = new_rule_count
-                return await self._show_main_form(self._normalize_options(flattened_input))
+                render_config[CONF_ISOLATION_RULES_COUNT] = new_rule_count
+                return await self._show_main_form(render_config)
 
             # Validate: the group must keep at least one member
             if not flattened_input.get(
@@ -1671,21 +1711,37 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     },
                 )
 
-            # Validate: if action_type is preset_mode, action_preset_mode must be configured
+            # Validate: a rule must carry the value its trigger and its action
+            # need. Both halves report the same way, because both fail the same
+            # way without it — the assembly step skips the rule, the save
+            # succeeds, and the user only finds out by noticing it missing when
+            # they next open the form.
             for i in range(1, 5):
                 slot_trigger = flattened_input.get(f"isolation_rule_{i}_trigger", IsolationTrigger.DISABLED)
                 if slot_trigger == IsolationTrigger.DISABLED:
                     continue
                 action_type = flattened_input.get(f"isolation_rule_{i}_action_type", IsolationActionType.HVAC_MODE.value)
-                if action_type == IsolationActionType.PRESET_MODE.value:
-                    if not flattened_input.get(f"isolation_rule_{i}_action_preset_mode"):
-                        section_key = f"isolation_rule_{i}_section" if i > 1 else "isolation_section"
-                        return await self._show_main_form(
-                            current_config,
-                            form_errors={
-                                section_key: "isolation_action_preset_required"
-                            },
-                        )
+
+                error: str | None = None
+                if slot_trigger == IsolationTrigger.SENSOR and not flattened_input.get(
+                    f"isolation_rule_{i}_sensor"
+                ):
+                    error = "isolation_sensor_required"
+                elif slot_trigger == IsolationTrigger.HVAC_MODE and not flattened_input.get(
+                    f"isolation_rule_{i}_hvac_modes"
+                ):
+                    error = "isolation_hvac_modes_required"
+                elif action_type == IsolationActionType.PRESET_MODE.value and not flattened_input.get(
+                    f"isolation_rule_{i}_action_preset_mode"
+                ):
+                    error = "isolation_action_preset_required"
+
+                if error:
+                    section_key = f"isolation_rule_{i}_section" if i > 1 else "isolation_section"
+                    return await self._show_main_form(
+                        current_config,
+                        form_errors={section_key: error},
+                    )
 
             # Validate: no entity may appear in more than one isolation rule
             seen_isolation_entities: set[str] = set()
@@ -1804,6 +1860,18 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                             form_errors={"presets_section": "group_presets_invalid"},
                         )
                 except yaml.YAMLError:
+                    return await self._show_main_form(
+                        current_config,
+                        form_errors={"presets_section": "group_presets_invalid"},
+                    )
+
+                # Each preset's payload must be a mapping too, not just the
+                # document around them. The runtime drops a non-mapping payload
+                # with a log warning, so without this the preset is simply absent
+                # from the list the user configured, and nothing says why.
+                if any(
+                    not isinstance(payload, dict) for payload in parsed_presets.values()
+                ):
                     return await self._show_main_form(
                         current_config,
                         form_errors={"presets_section": "group_presets_invalid"},

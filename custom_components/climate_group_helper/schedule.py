@@ -267,7 +267,9 @@ class ScheduleHandler(ScheduleBaseHandler):
             new_state = event.data.get("new_state")
             if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 return
-            self._hass.async_create_task(self.on_slot_change())
+            self._hass.async_create_background_task(
+                self.on_slot_change(), name="climate_group_schedule_slot_change"
+            )
 
         self._unsub_listener = async_track_state_change_event(
             self._hass, [self._schedule_entity], handle_state_change
@@ -409,7 +411,9 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
             new_state = event.data.get("new_state")
             if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 return
-            self._hass.async_create_task(self.on_slot_change())
+            self._hass.async_create_background_task(
+                self.on_slot_change(), name="climate_group_schedule_bypass_slot_change"
+            )
 
         self._unsub_listener = async_track_state_change_event(
             self._hass, [self._bypass_entity], handle_state_change

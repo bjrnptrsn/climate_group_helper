@@ -339,7 +339,6 @@
               "staggered_call_delay": "Opóźnienie między poleceniami (sekundy)",
               "grace_period": "Optymistyczny okres przejścia UI (sekundy)",
               "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
-              "expose_member_entities": "Pokaż Listę Członków",
               "expose_config": "Pokaż konfigurację (Debug)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Czas oczekiwania między poszczególnymi poleceniami do członków grupy. Rozłożenie poleceń zapobiega przeciążeniu sieci w środowiskach Zigbee/Matter. Ustaw na 0, aby wyłączyć.",
               "grace_period": "Jak długo grupa wyświetla wysłaną wartość przed przełączeniem na średnią członków. Zapobiega migotaniu UI, gdy wolne urządzenia (mosty Cloud, Zigbee) odsyłają swój stary stan. Ustaw na 0, aby wyłączyć.",
               "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
-              "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
               "expose_config": "Dodaje wszystkie wartości konfiguracji do atrybutów encji. Przydatne do debugowania."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Co najmniej jeden członek musi pozostać poza izolacją.",
       "isolation_entity_overlap": "Każdy członek może znajdować się tylko w jednej regule izolacji.",
       "isolation_action_preset_required": "Wybierz tryb wstępny dla akcji izolacji.",
+      "isolation_sensor_required": "Wybierz czujnik dla reguły izolacji lub ustaw jej wyzwalacz na Wyłączony.",
+      "isolation_hvac_modes_required": "Wybierz co najmniej jeden tryb dla reguły izolacji lub ustaw jej wyzwalacz na Wyłączony.",
       "window_temperature_required": "Ustaw temperaturę przy otwartym oknie lub zmień akcję okna.",
       "presence_action_value_required": "Ustaw wartość dla wybranej akcji nieobecności lub zmień akcję.",
       "schedule_fallback_payload_invalid": "Nieprawidłowy format YAML w zapasowych danych harmonogramu. Musi to być prawidłowe mapowanie klucz-wartość.",

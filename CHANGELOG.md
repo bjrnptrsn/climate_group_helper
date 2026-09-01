@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.8.0 - 2026-09-01
+
+### 🌟 New Features
+
+*   **Pause Features for a Schedule Slot or a Preset**: A schedule slot, calendar event, or group preset can now suspend individual features for its duration — Window Control, Presence Control, Calibration, and individual member isolation rules or all of them at once.
+
+*   **See Which Members Disagree**: Whenever the group's devices are set differently from one another — one radiator at 19°, another at 21° — the group lists the disagreeing devices and their values in its state attributes, ready to show on a dashboard or act on in an automation.
+
+### 🔧 Fixes
+
+*   **Commands No Longer Dropped When a New One Arrives While an Older One Is Still Sending**: Commands sent to group members are no longer silently lost when a new change arrives while a previous one is still being sent out (e.g. to a slow device). On busy networks this may take slightly longer, but every command now reliably reaches its target.
+
+### 🔧 Changes
+
+*   **Debounce Delay Now Defaults to 0.3 Seconds for New Groups**: Newly created groups wait a moment before sending, so rapid changes are combined into a single command instead of several — existing groups keep their values.
+
+> ⚠️ **The schedule key `presence: away` is being retired.** It keeps working for now, but `presence_mode: away` replaces it and does the same thing — switch your schedules and calendar entries over when convenient. A slot carrying both uses `presence_mode`.
+
 ## 1.7.0 - 2026-08-25
 
 > 🎛️ **Group Presets.** Define custom presets with target temperatures and modes that apply to all members at once — configured statically or updated dynamically at runtime via service — see `EXAMPLES.md` for ready-to-use automations.

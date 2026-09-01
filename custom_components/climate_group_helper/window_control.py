@@ -26,6 +26,8 @@ from .const import (
     DEFAULT_CLOSE_DELAY,
     DEFAULT_ROOM_OPEN_DELAY,
     DEFAULT_ZONE_OPEN_DELAY,
+    META_KEY_WINDOW_MODE,
+    META_VALUE_DISABLED,
     WindowControlMode,
 )
 
@@ -81,6 +83,18 @@ class WindowControlHandler:
     def force_off(self) -> bool:
         """Return whether window control is active."""
         return self._control_state == WINDOW_OPEN
+
+    @property
+    def bypassed(self) -> bool:
+        """Return True while a slot suspends the window evaluation.
+
+        Read at call time rather than captured in __init__, so a slot can
+        suspend and resume the evaluation without reloading the handler.
+        """
+        return (
+            self._group.run_state.config_overrides.get(META_KEY_WINDOW_MODE)
+            == META_VALUE_DISABLED
+        )
 
     def async_teardown(self) -> None:
         """Unsubscribe from sensors and cancel timers."""
@@ -182,6 +196,18 @@ class WindowControlHandler:
         Delegates entirely to WindowOverrideManager which owns blocking_sources
         and knows the configured window action (OFF or temperature).
         """
+        # A slot may suspend the window evaluation. The guard sits before the
+        # _control_state assignment on purpose: the field names the last
+        # EXECUTED state, and nothing is executed here. Leaving it at the value
+        # from the slot start is what lets the slot-end re-evaluation tell "the
+        # window opened during the slot" from "it opened and closed again".
+        if self.bypassed:
+            _LOGGER.debug(
+                "[%s] Window action '%s' suppressed — window_mode bypass active",
+                self._group.entity_id, mode,
+            )
+            return
+
         self._control_state = mode
 
         if mode == WINDOW_OPEN:
@@ -190,6 +216,59 @@ class WindowControlHandler:
         elif mode == WINDOW_CLOSE:
             _LOGGER.debug("[%s] Window closed, restoring target_state", self._group.entity_id)
             await self.override_manager.restore()
+
+    async def apply_bypass(self) -> None:
+        """Release an active window block for the duration of the slot.
+
+        The `_control_state` write is load-bearing: it keeps the field meaning
+        "last executed state", which is what lets `reevaluate()` compare against
+        the block rather than against this field at slot end.
+        """
+        if "window" not in self._group.run_state.blocking_sources:
+            return
+        _LOGGER.debug(
+            "[%s] window_mode bypass: releasing active window block", self._group.entity_id
+        )
+        self._cancel_timer()
+        self._control_state = WINDOW_CLOSE
+        await self.override_manager.restore()
+
+    async def reevaluate(self) -> None:
+        """Re-read the sensors and align the block with them (slot end).
+
+        Step 3 of the bypass. Both directions are needed: the window may have
+        been opened during the slot and still be open (block must go on), or it
+        may have opened and closed again (block must stay off, but _control_state
+        still carries the value from the slot start).
+
+        The activate()/restore() calls carry no idempotency guard of their own —
+        activate() unconditionally aborts a running boost and re-sends OFF,
+        restore() unconditionally cancels and pushes target_state — so the call
+        is gated on the block state actually differing from the target.
+        """
+        result = self._window_control_logic()
+        if result is None:
+            return
+        mode, _ = result
+        block_active = "window" in self._group.run_state.blocking_sources
+
+        if mode == WINDOW_OPEN and not block_active:
+            _LOGGER.debug(
+                "[%s] window_mode bypass ended: window open → activating block",
+                self._group.entity_id,
+            )
+            self._control_state = WINDOW_OPEN
+            await self.override_manager.activate()
+        elif mode == WINDOW_CLOSE and block_active:
+            _LOGGER.debug(
+                "[%s] window_mode bypass ended: window closed → releasing block",
+                self._group.entity_id,
+            )
+            self._control_state = WINDOW_CLOSE
+            await self.override_manager.restore()
+        else:
+            # Block already matches the sensors — only the bookkeeping is stale.
+            self._control_state = mode
 
     def _window_control_logic(self) -> tuple[str, float] | None:
         """This method implements the core logic for window control.
@@ -212,6 +291,9 @@ class WindowControlHandler:
 
         # If no zone sensor is configured, use room sensor state.
         # Transient states (unavailable/unknown) preserve the last known value.
+        # Zone = group of openings — the zone entity must contain the room
+        # entity, so when the room opens the zone flips along: state and
+        # last_changed move with the room event, the anchor stays fresh.
         if self._zone_sensor and (state := self._hass.states.get(self._zone_sensor)):
             if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 self._zone_open = state.state in (STATE_ON, STATE_OPEN, STATE_OPENING, STATE_CLOSING) or self._room_open

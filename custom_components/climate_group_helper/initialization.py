@@ -61,6 +61,7 @@ from .const import (
     CONF_ZONE_SENSOR,
     DOMAIN,
     SUPPORTED_FEATURES,
+    IsolationTrigger,
 )
 from .number import clean_offset
 from .payload import normalize_yaml_bool_modes
@@ -125,6 +126,11 @@ def filter_sensor_entities(group: ClimateGroupHelper) -> None:
     Guards against feedback loops from misconfigured CGH sensors: `_entity_ids`
     drives the state listener, so a group's own sensor left in these lists would
     make it react to itself.
+
+    Runs from `async_added_to_hass`, i.e. after every handler has been built in
+    the entity's `__init__`. Handlers therefore read these lists off the group at
+    call time and never copy them — a copy taken in a constructor would keep the
+    unfiltered list and act on entities this function has just rejected.
     """
     group.temp_sensor_entity_ids = filter_cgh_entities(
         group.hass, group.temp_sensor_entity_ids, "temperature sensor", group.entity_id
@@ -303,9 +309,20 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
                     restored_fallback,
                 )
 
-    # Restore last active HVAC mode
+    # Restore last active HVAC mode. Validated here rather than at the consumers:
+    # the boost wake-up path writes it straight into a member service call, so an
+    # unusable persisted value would survive every restart and only ever surface
+    # as an invalid outgoing command.
     if (last_active := last_attrs.get(ATTR_LAST_ACTIVE_HVAC_MODE)) is not None:
-        group.run_state = replace(group.run_state, last_active_hvac_mode=last_active)
+        try:
+            group.run_state = replace(
+                group.run_state, last_active_hvac_mode=HVACMode(last_active)
+            )
+        except ValueError:
+            _LOGGER.warning(
+                "[%s] Ignoring unusable restored last active HVAC mode '%s'",
+                group.entity_id, last_active,
+            )
 
     # Restore runtime group presets before checking active virtual preset
     if (
@@ -334,6 +351,10 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
             group.run_state = replace(
                 group.run_state, active_virtual_preset=last_virtual
             )
+            # Re-register the preset's meta-key claims, so its suspensions
+            # survive the restart along with its name. Precedence is fixed, so
+            # it does not matter whether the slot or this runs first.
+            group.preset_manager.sync_meta_claims()
         else:
             _LOGGER.warning(
                 "[%s] Active group preset '%s' is no longer configured — cleared.",
@@ -371,7 +392,16 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
     ):
         covered: set[str] = set()
         for handler in group.member_isolation_handlers:
-            covered.update(handler._isolation_entity_ids)
+            if (
+                handler._trigger == IsolationTrigger.MEMBER_OFF
+                and not handler._isolation_entity_ids
+            ):
+                # An empty watchlist is this trigger's "watch every member"
+                # configuration, not an empty rule — reading it as covering
+                # nothing dropped the isolation on every restart.
+                covered.update(group.climate_entity_ids)
+            else:
+                covered.update(handler._isolation_entity_ids)
         valid_isolated = (
             set(saved_isolated) & set(group.climate_entity_ids) & covered
         )
@@ -386,6 +416,27 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
             group.run_state = replace(
                 group.run_state, isolated_members=frozenset(valid_isolated)
             )
+            # A MEMBER_OFF rule builds its claims from events, of which there are
+            # none after a restart — seed them from what was persisted instead.
+            # The skip is the judgement call: a physical OFF cannot say whether
+            # the user or a covering rule's pre-action caused it, and claiming a
+            # device an active rule holds would keep it isolated after that rule
+            # releases, with nothing left to free it.
+            for handler in group.member_isolation_handlers:
+                if handler._trigger != IsolationTrigger.MEMBER_OFF:
+                    continue
+                watch_list = handler._isolation_entity_ids
+                for entity_id in valid_isolated:
+                    if watch_list and entity_id not in watch_list:
+                        continue
+                    if any(
+                        other.covers_actively(entity_id)
+                        for other in group.member_isolation_handlers
+                    ):
+                        continue
+                    state = group.hass.states.get(entity_id)
+                    if state and state.state == HVACMode.OFF:
+                        handler._member_off_claims.add(entity_id)
             _LOGGER.debug(
                 "[%s] Restored isolated members: %s", group.entity_id, valid_isolated
             )

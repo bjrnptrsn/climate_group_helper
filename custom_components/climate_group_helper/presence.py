@@ -17,6 +17,9 @@ from .const import (
     DEFAULT_PRESENCE_AWAY_DELAY,
     DEFAULT_PRESENCE_RETURN_DELAY,
     META_KEY_PRESENCE,
+    META_KEY_PRESENCE_MODE,
+    META_VALUE_AWAY,
+    META_VALUE_DISABLED,
     PresenceMode,
 )
 from .override import PresenceOverrideManager
@@ -58,8 +61,49 @@ class PresenceHandler:
 
     @property
     def mode(self) -> PresenceMode:
-        """Return the presence mode."""
+        """Return the CONFIGURED presence mode, ignoring any slot override.
+
+        The slot-end cleanup runs before the override is withdrawn and has to
+        know what the group falls back to — reading the effective mode there
+        would see the bypass it is about to remove.
+        """
         return self._mode
+
+    @property
+    def bypassed(self) -> bool:
+        """Return True while a slot suspends the sensor evaluation.
+
+        Both values of the meta-key silence the sensors; they differ only in the
+        state they pin the block to (see forces_away).
+        """
+        return self._slot_override is not None
+
+    @property
+    def forces_away(self) -> bool:
+        """Return True while a slot pins the block to "away".
+
+        Covers the superseded `presence: away` key as well — both express the
+        same intent, and _go_restore() must not undercut either of them.
+        """
+        overrides = self._group.run_state.config_overrides
+        return (
+            overrides.get(META_KEY_PRESENCE_MODE) == META_VALUE_AWAY
+            or overrides.get(META_KEY_PRESENCE) == META_VALUE_AWAY
+        )
+
+    @property
+    def _slot_override(self) -> str | None:
+        """Return the active presence meta-key value, or None.
+
+        The superseded `presence: away` maps onto the same "away" value, so
+        every reader below sees one shape regardless of which key the slot used.
+        """
+        overrides = self._group.run_state.config_overrides
+        if (value := overrides.get(META_KEY_PRESENCE_MODE)) is not None:
+            return value
+        if overrides.get(META_KEY_PRESENCE) == META_VALUE_AWAY:
+            return META_VALUE_AWAY
+        return None
 
     @property
     def sensors(self) -> list[str]:
@@ -80,8 +124,10 @@ class PresenceHandler:
         )
         _LOGGER.debug("[%s] Presence control subscribed to: %s", self._group.entity_id, self._sensors)
 
-        # Check initial collective presence
-        if not self._get_collective_presence():
+        # Check initial collective presence. Skipped under an active slot bypass:
+        # a restored override (schedule slot spanning the restart) already names
+        # the state the block must be in, and apply_bypass() establishes it.
+        if not self.bypassed and not self._get_collective_presence():
             _LOGGER.debug("[%s] Initial collective presence absent — activating away mode immediately", self._group.entity_id)
             # Set before the await, like _go_away() — the listener is already
             # subscribed above, so a sensor reporting presence while activate()
@@ -153,6 +199,17 @@ class PresenceHandler:
         if old_state is not None and old_state.state == new_state.state:
             return
 
+        # A slot may silence the sensor evaluation entirely. Both meta-key values
+        # do this; they differ only in the state the block is pinned to, which
+        # apply_bypass() has already established. A sensor flipping during the
+        # slot changes nothing either way.
+        if self.bypassed:
+            _LOGGER.debug(
+                "[%s] Presence sensor change ignored — presence_mode bypass active",
+                self._group.entity_id,
+            )
+            return
+
         present = self._get_collective_presence()
         presence_block_active = "presence" in self._group.run_state.blocking_sources
 
@@ -217,9 +274,81 @@ class PresenceHandler:
         if "presence" not in self._group.run_state.blocking_sources:
             return
         self._away_active = False
-        # Slot-Away has priority: do not restore if the slot meta-key is active
-        if self._group.run_state.config_overrides.get(META_KEY_PRESENCE) != "away":
+        # Slot-Away has priority: do not restore against an active slot away,
+        # whichever of the two keys expresses it.
+        if not self.forces_away:
             await self.override_manager.restore()
+
+    async def apply_bypass(self, value: str) -> None:
+        """Pull the presence block through to the state the slot names.
+
+        The block state is the idempotency guard: this runs again on every slot
+        re-processing, and activate()/restore() both act unconditionally, so an
+        unguarded call would spam the members for the whole slot.
+
+        A running away/return timer was armed from the sensor reading the slot
+        now overrules — firing it mid-slot would fight the value set here.
+        """
+        block_active = "presence" in self._group.run_state.blocking_sources
+
+        if value == META_VALUE_AWAY:
+            if block_active:
+                self._away_active = True  # adopt a foreign block as ours for the slot
+                return
+            _LOGGER.debug(
+                "[%s] presence_mode bypass: forcing away block ON", self._group.entity_id
+            )
+            self._cancel_timer()
+            self._away_active = True
+            await self.override_manager.activate()
+        elif value == META_VALUE_DISABLED:
+            if not block_active:
+                self._away_active = False
+                return
+            _LOGGER.debug(
+                "[%s] presence_mode bypass: releasing away block", self._group.entity_id
+            )
+            self._cancel_timer()
+            self._away_active = False
+            await self.override_manager.restore()
+
+    async def reevaluate(self) -> None:
+        """Re-read the sensors and align the block with them (slot end).
+
+        Step 3 of the bypass, and the point at which ownership of the block goes
+        back to the sensors: whatever the slot pinned, what counts now is what
+        they report. Both directions occur — after `disabled` the block is off
+        and the room may have emptied, after `away` it is on and someone may be
+        home.
+
+        No away/return delay: those exist to ride out sensor blips, and the slot
+        duration has already served that purpose.
+        """
+        if self._mode == PresenceMode.DISABLED or not self._sensors:
+            return
+
+        present = self._get_collective_presence()
+        block_active = "presence" in self._group.run_state.blocking_sources
+
+        if not present and not block_active:
+            _LOGGER.debug(
+                "[%s] presence_mode bypass ended: sensors report away → activating block",
+                self._group.entity_id,
+            )
+            self._cancel_timer()
+            self._away_active = True
+            await self.override_manager.activate()
+        elif present and block_active:
+            _LOGGER.debug(
+                "[%s] presence_mode bypass ended: sensors report present → releasing block",
+                self._group.entity_id,
+            )
+            self._cancel_timer()
+            self._away_active = False
+            await self.override_manager.restore()
+        else:
+            # Block already matches the sensors — only the flag may be stale.
+            self._away_active = not present
 
     def _cancel_timer(self) -> None:
         if self._timer_cancel:

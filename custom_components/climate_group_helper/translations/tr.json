@@ -339,7 +339,6 @@
               "staggered_call_delay": "Kademeli Çağrı Gecikmesi (saniye)",
               "grace_period": "İyimser Arayüz Tolerans Süresi (saniye)",
               "expose_smart_sensors": "Akıllı Sensörleri Göster",
-              "expose_member_entities": "Üye Listesini Göster",
               "expose_config": "Yapılandırma Sensörünü Göster"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Grup üyelerine gönderilen tek tek komutlar arasında beklenecek süre. Çağrıları kademelendirmek, Zigbee/Matter ortamlarında ağ tıkanıklığını önler. Devre dışı bırakmak için 0 olarak ayarlayın.",
               "grace_period": "Grubun, üye ortalamasına geçmeden önce komut verilen değeri ne kadar süreyle göstereceği. Yavaş cihazlar (bulut köprüleri, Zigbee) eski durumlarını geri yansıttığında arayüz titremesini önler. Devre dışı bırakmak için 0 olarak ayarlayın.",
               "expose_smart_sensors": "Grubun sıcaklığı ve nemi için ekstra sensör varlıkları oluşturur (grafikler için kullanışlıdır).",
-              "expose_member_entities": "Tüm üye varlık kimliklerini listeleyen bir öznitelik oluşturur.",
               "expose_config": "Taşınabilir ayarları bir JSON özniteliği olarak açığa çıkaran bir tanılama sensörü (sensor.*_configuration) oluşturur. Otomasyonlar aracılığıyla gruplar arasında ayarları kopyalamak için kullanışlıdır."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "En az bir üye izolasyon dışında kalmalıdır.",
       "isolation_entity_overlap": "Her üye yalnızca bir izolasyon kuralında görünebilir.",
       "isolation_action_preset_required": "İzolasyon eylemi için bir ön ayar modu seçin.",
+      "isolation_sensor_required": "İzolasyon kuralı için bir sensör seçin veya tetikleyicisini Devre dışı olarak ayarlayın.",
+      "isolation_hvac_modes_required": "İzolasyon kuralı için en az bir mod seçin veya tetikleyicisini Devre dışı olarak ayarlayın.",
       "window_temperature_required": "Bir pencere sıcaklığı ayarlayın veya pencere eylemini değiştirin.",
       "presence_action_value_required": "Seçilen uzakta eylemi için bir değer ayarlayın veya eylemi değiştirin.",
       "schedule_fallback_payload_invalid": "Yedek zaman planı yükünde geçersiz YAML biçimi. Geçerli bir anahtar-değer eşlemesi olmalıdır.",

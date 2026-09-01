@@ -339,7 +339,6 @@
               "staggered_call_delay": "Verzögerung zwischen Befehlen (Sekunden)",
               "grace_period": "Optimistische UI-Übergangszeit (Sekunden)",
               "expose_smart_sensors": "Smarte Sensoren bereitstellen",
-              "expose_member_entities": "Mitgliederliste bereitstellen",
               "expose_config": "Konfiguration anzeigen (Debug)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Wartezeit zwischen einzelnen Befehlen an Gruppenmitglieder. Die gestaffelte Übertragung verhindert Netzwerküberlastung in Zigbee/Matter-Umgebungen. Auf 0 setzen zum Deaktivieren.",
               "grace_period": "Wie lange die Gruppe den gesendeten Wert anzeigt, bevor sie zum Mitgliederdurchschnitt wechselt. Verhindert UI-Flackern, wenn langsame Geräte (Cloud-Bridges, Zigbee) ihren alten Zustand zurückmelden. Auf 0 setzen zum Deaktivieren.",
               "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
-              "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
               "expose_config": "Fügt alle Konfigurationswerte den Entitätsattributen hinzu. Nützlich für die Fehlersuche."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Mindestens ein Mitglied muss außerhalb der Isolierung bleiben.",
       "isolation_entity_overlap": "Jedes Mitglied darf nur in einer Isolationsregel vorkommen.",
       "isolation_action_preset_required": "Wähle einen Preset-Modus für die Isolieraktion.",
+      "isolation_sensor_required": "Wähle einen Sensor für die Isolierregel oder setze ihren Auslöser auf Deaktiviert.",
+      "isolation_hvac_modes_required": "Wähle mindestens einen Modus für die Isolierregel oder setze ihren Auslöser auf Deaktiviert.",
       "window_temperature_required": "Lege eine Fenstertemperatur fest oder ändere die Fensteraktion.",
       "presence_action_value_required": "Lege einen Wert für die gewählte Abwesenheitsaktion fest oder ändere die Aktion.",
       "schedule_fallback_payload_invalid": "Ungültiges YAML-Format im Fallback-Zeitplan-Payload. Es muss ein gültiges Schlüssel-Wert-Mapping sein.",

@@ -339,7 +339,6 @@
               "staggered_call_delay": "Délai entre les commandes (secondes)",
               "grace_period": "Période de grâce UI optimiste (secondes)",
               "expose_smart_sensors": "Exposer des capteurs intelligents",
-              "expose_member_entities": "Exposer la liste des membres",
               "expose_config": "Afficher la configuration (Debug)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Temps d'attente entre les commandes individuelles aux membres du groupe. L'échelonnement des commandes évite la congestion réseau dans les environnements Zigbee/Matter. Mettre à 0 pour désactiver.",
               "grace_period": "Durée pendant laquelle le groupe affiche la valeur envoyée avant de revenir à la moyenne des membres. Évite le scintillement de l'UI lorsque des appareils lents (ponts Cloud, Zigbee) renvoient leur ancien état. Mettre à 0 pour désactiver.",
               "expose_smart_sensors": "Crée des entités de capteur supplémentaires pour la température et l'humidité du groupe (utile pour les graphiques).",
-              "expose_member_entities": "Crée un attribut listant tous les ID d'entité des membres.",
               "expose_config": "Ajoute toutes les valeurs de configuration aux attributs de l'entité. Utile pour le débogage."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Au moins un membre doit rester en dehors de l'isolation.",
       "isolation_entity_overlap": "Chaque membre ne peut apparaître que dans une seule règle d'isolation.",
       "isolation_action_preset_required": "Sélectionnez un mode prédéfini pour l'action d'isolation.",
+      "isolation_sensor_required": "Sélectionnez un capteur pour la règle d'isolation, ou réglez son déclencheur sur Désactivé.",
+      "isolation_hvac_modes_required": "Sélectionnez au moins un mode pour la règle d'isolation, ou réglez son déclencheur sur Désactivé.",
       "window_temperature_required": "Définissez une température de fenêtre ou modifiez l'action de fenêtre.",
       "presence_action_value_required": "Définissez une valeur pour l'action d'absence sélectionnée ou modifiez l'action.",
       "schedule_fallback_payload_invalid": "Format YAML invalide dans les données de secours du planning. Doit être un mappage clé-valeur valide.",

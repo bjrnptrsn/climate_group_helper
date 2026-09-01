@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.climate import ATTR_PRESET_MODE, ATTR_PRESET_MODES
 from homeassistant.exceptions import ServiceValidationError
 
+from .const import PRESET_META_KEYS
+from .meta_processor import SOURCE_PRESET
 from .payload import (
     extract_climate_payload,
     parse_fallback_payload,
@@ -29,16 +31,65 @@ class PresetManager:
         self._group = group
         self._config_presets: dict[str, dict[str, Any]] = {}
         self._runtime_presets: dict[str, dict[str, Any]] = {}
+        # Meta-keys per preset, kept apart from the climate payloads on purpose:
+        # `group_presets` feeds resolve_preset(), the exit rules and the entity
+        # attributes, all of which deal in climate attributes only. Mixing the
+        # two would put a meta-key into a service call.
+        self._config_meta: dict[str, dict[str, Any]] = {}
+        self._runtime_meta: dict[str, dict[str, Any]] = {}
 
     @property
     def group_presets(self) -> dict[str, dict[str, Any]]:
         """Return merged view of configured presets and runtime overrides."""
         return {**self._config_presets, **self._runtime_presets}
 
+    def meta_payload(self, name: str | None) -> dict[str, Any]:
+        """Return the meta-keys a preset carries (empty if it has none)."""
+        if not name:
+            return {}
+        merged = {**self._config_meta, **self._runtime_meta}
+        return merged.get(name, {})
+
+    def sync_meta_claims(self) -> None:
+        """Hand the active preset's meta-keys to the ownership registry.
+
+        Called after `active_virtual_preset` changed. The registry diffs against
+        what the preset source claimed before, so activation, switching and exit
+        all come down to this one call: an exited preset simply names nothing.
+
+        A background task because the registry's apply/release fire manager calls
+        (a preset may suspend the window block), while both callers are
+        synchronous — `BaseStateManager._resolve_group_preset()` and the runtime
+        removal path below.
+        """
+        values = self.meta_payload(self._group.run_state.active_virtual_preset)
+        self._group.hass.async_create_background_task(
+            self._group.slot_meta_processor.apply_source(SOURCE_PRESET, values),
+            name="climate_group_preset_meta_claims",
+        )
+
     @property
     def runtime_presets(self) -> dict[str, dict[str, Any]]:
         """Return currently active runtime presets."""
         return dict(self._runtime_presets)
+
+    @property
+    def persisted_runtime_presets(self) -> dict[str, dict[str, Any]]:
+        """Return runtime presets in the shape the service accepts them in.
+
+        The two halves are stored apart at runtime, but they have to be
+        persisted together: restoring only the climate payload brings a preset
+        back by name with its suspensions silently gone — the group would report
+        "party" while the window it claims to suspend switches it off again.
+
+        Merging them here rather than persisting two attributes keeps the stored
+        shape identical to the service payload, so `restore_runtime_presets()`
+        can split it with the very same code that wrote it.
+        """
+        return {
+            name: {**payload, **self._runtime_meta.get(name, {})}
+            for name, payload in self._runtime_presets.items()
+        }
 
     def update_config(self, raw_yaml: Any) -> None:
         """Parse and update configured group presets from YAML or dict.
@@ -48,6 +99,7 @@ class PresetManager:
         Runtime presets are preserved across config updates.
         """
         self._config_presets = {}
+        self._config_meta = {}
         if not raw_yaml:
             return
 
@@ -75,7 +127,7 @@ class PresetManager:
                 )
                 continue
 
-            climate_data = self._build_preset_payload(
+            climate_data, meta_data = self._split_preset_payload(
                 preset_name, payload, context=f"Group preset '{preset_name}'"
             )
 
@@ -85,7 +137,11 @@ class PresetManager:
             # compare against the preset's own attributes, of which it has none.
             # An intentionally empty payload (`name: {}`) is a different thing:
             # a marker preset, whose whole purpose is to carry only a name.
-            if payload and not climate_data:
+            #
+            # A preset carrying only meta-keys is usable and stays: it applies
+            # something (the suspensions) and is exited by selecting another
+            # preset. Only the climate half feeds the attribute-based exit rule.
+            if payload and not climate_data and not meta_data:
                 _LOGGER.warning(
                     "[%s] Preset '%s' has no usable attributes — ignored.",
                     self._group.log_id,
@@ -94,12 +150,45 @@ class PresetManager:
                 continue
 
             self._config_presets[preset_name] = climate_data
+            if meta_data:
+                self._config_meta[preset_name] = meta_data
             _LOGGER.debug(
                 "[%s] Registered group preset '%s' with payload: %s",
                 self._group.log_id,
                 preset_name,
                 climate_data,
             )
+
+    def _split_preset_payload(
+        self, preset_name: str, payload: dict[str, Any], context: str
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Split a preset definition into its climate payload and its meta-keys.
+
+        A preset may carry the same feature bypasses a schedule slot can, so a
+        manually chosen "party" or "holiday" brings its own suspensions along.
+        `turn_off` is deliberately not among them: presets set climate targets,
+        and the master switch stays out of their reach (a preset carrying it
+        could not be exited by an attribute change either — it has no attribute).
+        """
+        climate_data = self._build_preset_payload(preset_name, payload, context)
+
+        meta_candidates = {
+            key: value
+            for key, value in payload.items()
+            if key in PRESET_META_KEYS
+        }
+        if not meta_candidates:
+            return climate_data, {}
+
+        # Validation lives on the meta-processor so a preset and a slot accept
+        # exactly the same values. The isinstance guard keeps a non-dict return
+        # from ever counting as content: "did this preset yield anything usable"
+        # decides whether a typo-only definition is dropped, and a preset that
+        # slipped through would be selectable, apply nothing, and never exit.
+        meta_data = self._group.slot_meta_processor.validate_values(
+            meta_candidates, context=context, warn_unknown=False
+        )
+        return climate_data, meta_data if isinstance(meta_data, dict) else {}
 
     def _build_preset_payload(
         self, preset_name: str, payload: dict[str, Any], context: str
@@ -136,10 +225,9 @@ class PresetManager:
         # `validate_climate_payload` only warns about attributes it *knows* but
         # whose value is unusable — a misspelled name it has never heard of
         # passes it untouched and is then silently dropped by the extract filter.
-        # A preset has no legitimate use for non-climate keys (meta-keys belong
-        # to schedule slots, which use the same filter for exactly that reason),
-        # so anything left over here is a typo and the user gets told.
-        if dropped := sorted(set(valid) - set(climate_data)):
+        # Anything left over that is not an allowed meta-key is such a typo, and
+        # the user gets told; the meta-keys are handled by the caller.
+        if dropped := sorted(set(valid) - set(climate_data) - PRESET_META_KEYS):
             _LOGGER.warning(
                 "[%s] %s: unknown attribute(s) %s — ignored. Check the spelling.",
                 self._group.log_id,
@@ -199,6 +287,7 @@ class PresetManager:
         # Validate every entry before writing the first one, so a rejected call
         # leaves the runtime presets exactly as they were.
         to_write: dict[str, dict[str, Any]] = {}
+        to_write_meta: dict[str, dict[str, Any]] = {}
         to_remove: list[str] = []
 
         for raw_name, payload in parsed.items():
@@ -220,13 +309,14 @@ class PresetManager:
                     f"Preset '{preset_name}' must map to climate attributes, got {type(payload).__name__}."
                 )
 
-            climate_data = self._build_preset_payload(
+            climate_data, meta_data = self._split_preset_payload(
                 preset_name, payload, context=f"Runtime group preset '{preset_name}'"
             )
             # Stricter than the options path: a service call that produces nothing
             # usable is a caller error and must fail loudly, whereas an unusable
             # options entry stays visible in the form for the user to correct.
-            if not climate_data:
+            # A meta-key-only preset is usable — it applies its suspensions.
+            if not climate_data and not meta_data:
                 raise ServiceValidationError(
                     f"Preset '{preset_name}' contains no valid climate attributes."
                 )
@@ -241,6 +331,7 @@ class PresetManager:
                 )
 
             to_write[preset_name] = climate_data
+            to_write_meta[preset_name] = meta_data
 
         # From here on nothing can fail.
         for preset_name in to_remove:
@@ -248,9 +339,23 @@ class PresetManager:
 
         for preset_name, climate_data in to_write.items():
             self._runtime_presets[preset_name] = climate_data
+            # Written unconditionally, including the empty case: a redefinition
+            # that drops the meta-keys must not leave the previous ones behind.
+            self._runtime_meta[preset_name] = to_write_meta[preset_name]
             _LOGGER.info(
                 "[%s] Registered runtime group preset '%s'", self._group.entity_id, preset_name
             )
+
+        # Re-sync the claims against the definitions as they stand now, before
+        # the re-apply. The registry reads the active preset's current meta-keys,
+        # so this one call covers every way this method can have changed them:
+        # the active preset removed, redefined with different keys, or with none
+        # at all. It cannot be left to `_resolve_group_preset()` — that sits
+        # behind the blocking filter, so during a window or switch block the
+        # re-apply below never reaches it and a removed definition's suspensions
+        # would outlive it until the user picked a preset by hand again.
+        if active_before is not None and active_before in set(to_remove) | set(to_write):
+            self.sync_meta_claims()
 
         await self._async_reapply_if_active(active_before, set(to_remove) | set(to_write))
 
@@ -259,20 +364,10 @@ class PresetManager:
     async def _async_reapply_if_active(self, active_before: str | None, touched: set[str]) -> None:
         """Re-apply the active preset if this call changed its own definition.
 
-        Only the active preset's *own* definition may drive a new command — an
-        update to some other preset must leave the group untouched.
-
-        The `active_virtual_preset` check also covers removal: dropping the
-        active preset releases the name in `_remove_runtime_preset()`, so the
-        comparison fails and nothing is applied. If a config preset of the same
-        name survives, the name stays active and its values are applied here —
-        which is exactly right, the group must not keep the removed runtime
-        values.
-
         Routed through `async_set_preset_mode()` rather than writing
-        `target_state` directly: the blocking/partial-sync filter must still get
-        its say, and passing the name along keeps the payload-attribute exit
-        rule from deselecting the very preset being refreshed.
+        `target_state`: the blocking filter must still get its say, and carrying
+        the name along stops the exit rule from deselecting the preset being
+        refreshed.
         """
         if (
             active_before is not None
@@ -290,6 +385,7 @@ class PresetManager:
         """
         if self._runtime_presets.pop(preset_name, None) is None:
             return
+        self._runtime_meta.pop(preset_name, None)
 
         _LOGGER.info("[%s] Cleared runtime group preset '%s'", self._group.entity_id, preset_name)
 
@@ -298,12 +394,29 @@ class PresetManager:
             and preset_name not in self._config_presets
         ):
             self._group.run_state = replace(self._group.run_state, active_virtual_preset=None)
+            # The meta-key claims are not released here: the caller re-syncs them
+            # for every touched definition, which also covers the paths this
+            # method never reaches (a surviving config preset of the same name,
+            # a redefinition rather than a removal).
             if self._group.shared_target_state.preset_mode == preset_name:
                 self._group.shared_target_state = self._group.shared_target_state.update(preset_mode=None)
 
     def restore_runtime_presets(self, presets: dict[str, dict[str, Any]]) -> None:
-        """Restore runtime presets from persisted state."""
-        self._runtime_presets = dict(presets)
+        """Restore runtime presets from persisted state.
+
+        The persisted shape carries both halves in one mapping (see
+        `persisted_runtime_presets`), so each one is split again on the way in —
+        through the same code the write paths use, which also drops anything an
+        older stored payload carried that is no longer valid.
+        """
+        self._runtime_presets = {}
+        self._runtime_meta = {}
+        for name, payload in presets.items():
+            climate_data, meta_data = self._split_preset_payload(
+                name, payload, context=f"Restored runtime group preset '{name}'"
+            )
+            self._runtime_presets[name] = climate_data
+            self._runtime_meta[name] = meta_data
 
     def _get_native_member_preset_modes(self) -> set[str]:
         """Collect native preset modes supported by members."""
@@ -325,28 +438,9 @@ class PresetManager:
     def resolve_preset(self, payload: dict[str, Any] | None) -> dict[str, Any] | None:
         """Resolve a payload containing preset_mode into concrete climate attributes.
 
-        If preset_mode is a known virtual preset, its attributes are overlaid on payload.
-        Merge direction: {**payload, **preset_payload} — preset values overlay payload.
-
-        An empty payload passes through unchanged: the service-call handlers use
-        `None` for "no data", and a preset can only be resolved from a name that
-        such a payload does not carry.
-
-        Callers must not infer preset *activation* from this method — it only
-        merges attributes. `run_state.active_virtual_preset` is owned solely by
-        `BaseStateManager._resolve_group_preset()` (state.py), which sits behind
-        the blocking/partial-sync filter.
-
-        Called from `call_immediate()`/`call_debounced()` on the *base* handler,
-        so it applies to every handler, not just the user-command one.
-
-        Two other sources produce a `preset_mode` payload, and they differ. The
-        isolation pre-action validates its preset against the device's own
-        `preset_modes` first and can therefore never carry a virtual name in
-        here. The presence away-action (AWAY_PRESET) does not validate: a
-        configured away preset that shares its name with a group preset resolves
-        to the group preset's payload here. Everything else passes through
-        untouched.
+        Merges only — activation is owned by `BaseStateManager._resolve_group_preset()`,
+        which sits behind the blocking filter. Callers must not read activation
+        from here.
         """
         if not payload:
             return payload

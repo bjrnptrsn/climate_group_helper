@@ -29,6 +29,7 @@ from homeassistant.helpers.debounce import Debouncer
 
 from .const import (
     MODE_MODES_MAP,
+    TEMP_TARGET_ATTRS,
     ATTR_SERVICE_MAP,
     CONF_FEATURE_STRATEGY,
     CONF_FORCE_RETRY,
@@ -57,7 +58,8 @@ class BaseServiceCallHandler(ABC):
 
     This abstract base class provides the common infrastructure for:
     - Debouncing multiple rapid changes into a single execution
-    - Cancelling superseded retry tasks when a new command arrives
+    - Superseding an older command with a newer one by handing the newest payload
+      to the run already in flight, rather than cancelling it (see `call_debounced`)
     - Stale-call detection to abort zombie calls that arrived too late
     - Retry logic for failed operations
     - Context-based call tagging for echo detection
@@ -81,6 +83,8 @@ class BaseServiceCallHandler(ABC):
         self._active_tasks: set[asyncio.Task[Any]] = set()
         self._call_triggers: list[Callable[[dict[str, Any] | None], Any]] = []
         self._lock = asyncio.Lock()
+        self._pending_data: dict[str, Any] | None = None
+        self._pending_seq = 0
         # OOB marking collected by _process_oob_guard during call generation and
         # applied by _execute_calls once the calls have gone out.
         self._pending_oob_add: set[str] = set()
@@ -136,30 +140,57 @@ class BaseServiceCallHandler(ABC):
     async def call_debounced(self, data: dict[str, Any] | None = None) -> None:
         """Debounce and execute a service call.
 
-        Each new call cancels any running retry task from a previous command,
-        because a newer command completely supersedes it. The actual execution
-        is wrapped in an asyncio Task so it can be cancelled mid-retry-sleep.
-        Stale calls that slip through a blocking `async_call` are caught by
-        `_is_stale_call` inside `_execute_calls`.
+        A new call never cancels a run already in flight — `_execute_calls` makes
+        real, `blocking=True` service calls that can take seconds, and cancelling
+        mid-batch would abort it after only some of its entities had been sent.
+        Instead the newest payload is recorded in `_pending_data`, and the run
+        already executing picks it up itself once its current pass finishes.
+
+        The Debouncer cannot deliver that payload on its own: it runs its function
+        under `_execute_lock` and drops a trigger arriving while that lock is held,
+        which is correct for an idempotent refresh but not here, where every call
+        carries its own frozen payload.
+
+        `async_cancel_all()` (entity shutdown, blocking-source activation via
+        window/switch/boost override managers) still cancels outright — those
+        genuinely want nothing further sent.
         """
         data = self._group.preset_manager.resolve_preset(data)
-        # Cancel any running retry task — its stale data must not be sent.
-        for task in list(self._active_tasks):
-            task.cancel()
+
+        self._pending_data = data
+        self._pending_seq += 1
 
         async def debounce_func() -> None:
-            """Wrap _execute_calls as a cancellable Task."""
+            """Drive the pending payload, re-reading it until nothing new arrived.
+
+            Payload equality is the primary check, so two identical commands do
+            not buy a second pass — with `force_retry` that pass would resend to
+            every capable member. `_pending_seq` only breaks the tie for
+            `data=None` ("push target_state"), which stays `None` across calls
+            even when two members deviate independently and each needs its own
+            enforcement.
+            """
             task = asyncio.current_task()
             if task:
                 self._active_tasks.add(task)
             try:
                 async with self._lock:
-                    await self._execute_calls(data)
+                    while True:
+                        data = self._pending_data
+                        seq = self._pending_seq
+                        await self._execute_calls(data)
+
+                        if self._pending_data != data:
+                            continue
+                        if data is None and self._pending_seq != seq:
+                            continue
+                        break
             except asyncio.CancelledError:
-                pass  # Cancelled by a newer command — exit silently.
+                pass  # Cancelled by shutdown or a blocking-source activation.
             finally:
                 if task:
                     self._active_tasks.discard(task)
+                self._pending_seq = 0
 
         if not self._debouncer:
             self._debouncer = Debouncer(
@@ -230,8 +261,14 @@ class BaseServiceCallHandler(ABC):
                     service_data = {ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
 
                     # Stale guard: a new command may have arrived while the previous
-                    # blocking async_call was running. task.cancel() cannot interrupt
-                    # that await, so we check target_state here before each call.
+                    # blocking async_call was running, superseding this batch's frozen
+                    # payload. Nothing interrupts that await, so target_state is checked
+                    # here before each call; the abort returns into call_debounced's
+                    # re-read loop, which drives the newer payload IF _pending_data
+                    # itself changed too (the common case: a second user command).
+                    # A target_state change from elsewhere leaves _pending_data
+                    # untouched, so this batch's queued attribute is dropped and
+                    # nothing re-drives it — a known, deliberately accepted gap.
                     if self._is_stale_call(call):
                         _LOGGER.debug("[%s] Aborting stale call: kwargs=%s no longer match target_state", self._group.entity_id, call["kwargs"])
                         # Calls earlier in this batch already went out — their OOB
@@ -432,6 +469,13 @@ class BaseServiceCallHandler(ABC):
         template-covered member, whose physical state has no range attributes at
         all — from the template's cached band. A member for which the bound
         stays unresolvable yields no call rather than an invalid one.
+
+        The completed bound is marked `injected`: it is schema padding taken
+        from the member, not a group target, and `target_state` carries None for
+        it by definition. Without the marker the staleness check reads that None
+        as "deliberately cleared" and discards the whole batch, so a command on
+        the bound the group *does* hold would never reach the members. Only the
+        completed bound is marked — the commanded one must stay checkable.
         """
         template = self._group.member_template_manager.range_template
         group_low = group_band[ATTR_TARGET_TEMP_LOW]
@@ -454,11 +498,19 @@ class BaseServiceCallHandler(ABC):
             elif entity_low is None or entity_high is None:
                 continue
 
+            injected = [
+                attr for attr, group_value in (
+                    (ATTR_TARGET_TEMP_LOW, group_low),
+                    (ATTR_TARGET_TEMP_HIGH, group_high),
+                ) if group_value is None
+            ]
+
             calls.append({
                 "service": SERVICE_SET_TEMPERATURE,
                 "kwargs": {ATTR_TARGET_TEMP_LOW: entity_low, ATTR_TARGET_TEMP_HIGH: entity_high},
                 "raw_kwargs": dict(group_band),
                 "entity_ids": [entity_id],
+                "injected": injected,
             })
         return calls
 
@@ -489,24 +541,15 @@ class BaseServiceCallHandler(ABC):
     def _get_target_value_with_offset(self, attr: str, value: Any = None) -> Any:  # noqa: ARG002
         """Read from target_state, with group_offset applied for temperature attributes.
 
-        The rounding is unconditional — deliberately, and NOT a mismatch with the
-        call path's early return at offset 0.0. Devices round to one decimal
-        themselves, so an unrounded target like 19.75 sits ~0.05 away from the
-        19.8 the member reports back, which exceeds FLOAT_TOLERANCE by a float
-        epsilon and produces a redundant set_temperature on every single resync.
-        Rounding here compares against what the member can actually report.
+        Rounding is unconditional, also at offset 0.0: devices round to one
+        decimal themselves, so an unrounded target diffs against the value they
+        report back and fires a redundant call on every resync. Do not make it
+        conditional to match the call path.
 
-        Trade-off (accepted): for a target with more than one decimal that a
-        device *can* represent exactly, the diff compares against the rounded
-        value. Reverting to conditional rounding reintroduces the endless-resync
-        loop, which is the far worse failure — see the regression test
-        `test_bug1_rounding_causes_spurious_temperature_call`.
-
-        `value` is deliberately unused: handlers routing here always want the
-        group target, not the explicitly passed value.
+        `value` is unused — handlers routing here always want the group target.
         """
         raw = getattr(self.target_state, attr, None)
-        if raw is not None and attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
+        if raw is not None and attr in TEMP_TARGET_ATTRS:
             return round(float(raw) + self._group.run_state.group_offset, 1)
         return raw
 
@@ -535,7 +578,7 @@ class BaseServiceCallHandler(ABC):
         if entity_id in self._group.run_state.oob_members:
             # Check if current target_state would STILL put it OOB.
             # If target_state is now valid, unblock it so it can receive the call & restore.
-            temp_attrs = (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+            temp_attrs = TEMP_TARGET_ATTRS
             active_temps = [
                 getattr(self.target_state, attr) for attr in temp_attrs
                 if getattr(self.target_state, attr) is not None
@@ -630,7 +673,7 @@ class BaseServiceCallHandler(ABC):
             if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 continue
 
-            if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
+            if attr in TEMP_TARGET_ATTRS:
                 member_offset = self._group._temp_offset_map.get(entity_id, 0.0)
                 effective_target = target_value + member_offset if target_value is not None else None
             else:
@@ -814,7 +857,7 @@ class BaseServiceCallHandler(ABC):
             return calls  # No-op when no offsets configured
 
         result = []
-        temp_attrs = {ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH}
+        temp_attrs = TEMP_TARGET_ATTRS
 
         for call in calls:
             kwargs = call["kwargs"]
@@ -871,7 +914,7 @@ class BaseServiceCallHandler(ABC):
             return calls
 
         result = []
-        temp_attrs = {ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH}
+        temp_attrs = TEMP_TARGET_ATTRS
 
         for call in calls:
             kwargs = call["kwargs"]
@@ -1087,7 +1130,7 @@ class BaseServiceCallHandler(ABC):
         result = []
         action = self._group.config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, UnionOutOfBoundsAction.OFF)
 
-        temp_attrs = (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+        temp_attrs = TEMP_TARGET_ATTRS
 
         for call in calls:
             kwargs = call["kwargs"]
@@ -1237,7 +1280,7 @@ class BaseServiceCallHandler(ABC):
             return True
 
         if requested_hvac_mode == HVACMode.AUTO:
-            return attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+            return attr in TEMP_TARGET_ATTRS
 
         if requested_hvac_mode == HVACMode.HEAT_COOL:
             return attr == ATTR_TEMPERATURE
@@ -1278,9 +1321,11 @@ class BaseServiceCallHandler(ABC):
         if target_value == HVACMode.OFF:
             return False
 
-        # Deadlock Prevention: Don't skip if any other non-isolated member is still
-        # active. Isolated members never receive enforcement, so counting them as
-        # "active" would cause a deadlock where no member gets synced.
+        # Skip this OFF member only while another non-isolated one is still active
+        # — with every member OFF, skipping them all would leave nobody to sync
+        # (deadlock). Isolated members are excluded from the count because they
+        # never receive enforcement: counting one as "active" would keep the skip
+        # alive with no member left that could act on it.
         return any(
             member_state.state != HVACMode.OFF
             for member_id in self._group.climate_entity_ids
@@ -1392,9 +1437,7 @@ class ClimateCallHandler(BaseServiceCallHandler):
             # an in-flight call carrying the old value is stale.
             if getattr(self.target_state, attr, None) is None:
                 return True
-            t = target.get(attr)
-            if t is None:
-                continue
+            t = target[attr]
             if attr in _float_attrs and isinstance(t, (int, float)) and isinstance(value, (int, float)):
                 if abs(t - value) > FLOAT_TOLERANCE:
                     return True
@@ -1419,7 +1462,7 @@ class ClimateCallHandler(BaseServiceCallHandler):
         offset no longer applies to.
         """
         effective = self._dispatched_data if self._dispatched_data is not None else data
-        temp_attrs = {ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH}
+        temp_attrs = TEMP_TARGET_ATTRS
         if effective and temp_attrs & set(effective) and self._group.offset_set_callback:
             await self._group.offset_set_callback(0.0)
 
@@ -1630,10 +1673,16 @@ class SwitchEnforceCallHandler(BaseServiceCallHandler):
 class OverrideCallHandler(BaseServiceCallHandler):
     """Call handler for Override operations (boost).
 
-    Diffing and OOB-blocking like ScheduleCallHandler, but:
+    Diffing like ScheduleCallHandler, but:
     - context_id="override" (not "schedule")
     - no _block_all_calls: boost is already guarded in activate_boost()
     - no _block_unsynced_entity: OFF-member skipping is a future config option
+    - no _is_oob_blocked pre-filter: that check compares target_state against the
+      device limits, and a boost carries its own setpoint. A member marked OOB by
+      an earlier target would be excluded from every boost, including one that
+      lands inside its range. `_process_oob_guard` still runs at the end of the
+      pipeline and judges the values actually being sent, so a boost that really
+      is out of bounds for a device is handled there.
     """
 
     CONTEXT_ID = "override"
@@ -1641,10 +1690,6 @@ class OverrideCallHandler(BaseServiceCallHandler):
     def __init__(self, group: ClimateGroupHelper):
         """Initialize the override call handler."""
         super().__init__(group)
-
-    def _is_member_blocked(self, entity_id: str) -> bool:
-        """Extend base blocking with OOB check."""
-        return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Use explicit passed value if available, otherwise read from target_state."""

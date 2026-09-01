@@ -88,6 +88,7 @@ from homeassistant.helpers.event import async_call_later
 from .const import (
     FLOAT_TOLERANCE,
     SUPPORTED_FEATURES,
+    TEMP_TARGET_ATTRS,
     DEFAULT_SUPPORTED_FEATURES,
     FeatureStrategy,
     HvacModeStrategy,
@@ -416,7 +417,7 @@ class Aggregator:
         offset_correction = (
             bool(self._group._temp_offset_map)
             and self._group._member_offset_correction
-            and attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+            and attr in TEMP_TARGET_ATTRS
         )
 
         if use_master and self._group._master_entity_id and master_value is not None:
@@ -655,10 +656,10 @@ class Aggregator:
             self._group.climate_entity_ids, skip_isolated=False
         )
 
-        # One-time startup trigger once all members are ready: startup resync +
+        # One-time startup trigger once all members are ready: slot apply +
         # calibration force-sync. startup_time itself is armed in
         # async_added_to_hass() (independent of readiness) — this flag only guards
-        # the once-semantics of the startup resync.
+        # the once-semantics of the two.
         if all_members_ready and not self._group._startup_initialized:
             self._group._startup_initialized = True
             if self._group.advanced_mode:

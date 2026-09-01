@@ -119,6 +119,10 @@ CONF_ISOLATION_ENTITIES = "isolation_entities"
 CONF_ISOLATION_RESTORE_DELAY = "isolation_restore_delay"
 CONF_ISOLATION_RULES = "isolation_rules"
 CONF_ISOLATION_RULES_COUNT = "isolation_rule_count"
+# UI slot a rule belongs to (1-4). The sole link between a rule and its form
+# position: the list index cannot serve, because a deleted rule shifts every
+# rule behind it into a different slot.
+CONF_ISOLATION_SLOT = "isolation_slot"
 CONF_ISOLATION_SENSOR = "isolation_sensor"
 CONF_ISOLATION_TRIGGER = "isolation_trigger"
 CONF_ISOLATION_TRIGGER_HVAC_MODES = "isolation_trigger_hvac_modes"
@@ -141,7 +145,6 @@ CONF_RETAIN_SERVICE_CHANGES_PRESETS = "retain_service_changes_presets"
 # Advanced options
 CONF_DEBOUNCE_DELAY = "debounce_delay"
 CONF_EXPOSE_CONFIG = "expose_config"
-CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
 CONF_FORCE_RETRY = "force_retry"
 CONF_GRACE_PERIOD = "grace_period"
@@ -152,6 +155,10 @@ CONF_RANGE_TEMPLATE_ENABLED = "range_template_enabled"
 CONF_RANGE_TEMPLATE_HEAT_ENTITIES = "range_template_heat_entities"
 CONF_RETRY_ATTEMPTS = "retry_attempts"
 CONF_RETRY_DELAY = "retry_delay"
+# Small window so triggers arriving a few ms apart (startup resync next to a
+# schedule slot, a slider sending several values) collapse into one run
+# instead of each sending its own command batch to the devices.
+DEFAULT_DEBOUNCE_DELAY = 0.3
 DEFAULT_GRACE_PERIOD = 3.0
 
 # UI options
@@ -329,6 +336,7 @@ ATTR_ISOLATED_MEMBERS = "isolated_members"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
 ATTR_MASTER_FALLBACK_ACTIVE = "master_fallback_active"
 ATTR_MEMBER_ENTITIES = "member_entities"
+ATTR_MEMBER_DIVERGENCE = "member_divergence"
 ATTR_OOB_MEMBERS = "oob_members"
 ATTR_SETTINGS_JSON = "settings_json"
 ATTR_TARGET_STATE = "target_state"
@@ -374,7 +382,27 @@ META_KEY_TURN_OFF = "turn_off"  # no CONF_ mapping
 META_KEY_SYNC_MODE = CONF_SYNC_MODE  # == "sync_mode"
 META_KEY_GROUP_OFFSET = ATTR_GROUP_OFFSET  # RunState field, no CONF_ mapping
 META_KEY_SYNC_ATTRS = CONF_SYNC_ATTRS  # == "sync_attributes"
-META_KEY_PRESENCE = "presence"
+META_KEY_PRESENCE = "presence"  # superseded by META_KEY_PRESENCE_MODE, still tolerated
+
+# Feature bypasses: pause a feature for the duration of the slot.
+# window_mode/presence_mode carry the same string as their config key, so a slot
+# reads like the option it shadows. calibration_mode does NOT map to
+# CONF_TEMP_CALIBRATION_MODE — that key selects the arithmetic
+# (absolute/offset/scaled), while this one only suspends the writes.
+META_KEY_WINDOW_MODE = CONF_WINDOW_MODE  # == "window_mode"
+META_KEY_PRESENCE_MODE = CONF_PRESENCE_MODE  # == "presence_mode"
+META_KEY_CALIBRATION_MODE = "calibration_mode"  # no CONF_ mapping
+META_KEY_ISOLATION_BYPASS = "isolation_bypass"  # no CONF_ mapping
+
+# Only value a pure suspend-key accepts. "enabled" is deliberately absent: a
+# meta-key can silence a running evaluation, never create one — with the feature
+# disabled in the config there is no subscription to drive it, so the value would
+# be a marker without effect.
+META_VALUE_DISABLED = "disabled"
+# presence_mode's third state: force the away block regardless of the sensors.
+META_VALUE_AWAY = "away"
+# isolation_bypass sentinel: suspend every rule instead of a slot list.
+META_VALUE_ALL = "all"
 
 META_STATE_KEYS: frozenset[str] = frozenset({
     META_KEY_TURN_OFF,
@@ -382,6 +410,25 @@ META_STATE_KEYS: frozenset[str] = frozenset({
     META_KEY_GROUP_OFFSET,
     META_KEY_SYNC_ATTRS,
     META_KEY_PRESENCE,
+    META_KEY_WINDOW_MODE,
+    META_KEY_PRESENCE_MODE,
+    META_KEY_CALIBRATION_MODE,
+    META_KEY_ISOLATION_BYPASS,
+})
+
+# Meta-keys a group preset may carry, so a manually chosen "party" or "holiday"
+# brings its own suspensions along. Two are deliberately absent:
+#   turn_off — presets set climate targets; the master switch stays out of reach.
+#              It is also a one-shot trigger with no attribute to exit on.
+#   presence — superseded by presence_mode; a new definition should not adopt it.
+PRESET_META_KEYS: frozenset[str] = frozenset({
+    META_KEY_SYNC_MODE,
+    META_KEY_SYNC_ATTRS,
+    META_KEY_GROUP_OFFSET,
+    META_KEY_WINDOW_MODE,
+    META_KEY_PRESENCE_MODE,
+    META_KEY_CALIBRATION_MODE,
+    META_KEY_ISOLATION_BYPASS,
 })
 
 # Attribute to service call mapping
@@ -408,6 +455,16 @@ MODE_MODES_MAP = {
 
 # Controllable sync attributes
 SYNC_TARGET_ATTRS = list(ATTR_SERVICE_MAP.keys())
+
+# The attributes carrying a target temperature — everything the offsets shift,
+# the OOB guard bounds-checks and the divergence report compares numerically.
+# ATTR_HUMIDITY is deliberately absent: it is a float attribute too, but no
+# offset or temperature limit applies to it.
+TEMP_TARGET_ATTRS: frozenset[str] = frozenset({
+    ATTR_TEMPERATURE,
+    ATTR_TARGET_TEMP_LOW,
+    ATTR_TARGET_TEMP_HIGH,
+})
 
 # Float comparison tolerance for temperature and humidity
 FLOAT_TOLERANCE = 0.05

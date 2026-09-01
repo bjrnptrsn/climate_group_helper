@@ -339,7 +339,6 @@
               "staggered_call_delay": "Staggered Call Delay (seconds)",
               "grace_period": "Optimistic UI Grace Period (seconds)",
               "expose_smart_sensors": "Expose Smart Sensors",
-              "expose_member_entities": "Expose Member List",
               "expose_config": "Expose Configuration Sensor"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Time to wait between individual commands to group members. Staggering calls prevents network congestion in Zigbee/Matter environments. Set to 0 to disable.",
               "grace_period": "How long the group shows the commanded value before switching to the member average. Prevents UI flicker when slow devices (Cloud bridges, Zigbee) echo their old state back. Set to 0 to disable.",
               "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
-              "expose_member_entities": "Creates an attribute listing all member entity IDs.",
               "expose_config": "Creates a diagnostic sensor (sensor.*_configuration) that exposes portable settings as a JSON attribute. Useful for copying settings between groups via automations."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "At least one member must remain outside isolation.",
       "isolation_entity_overlap": "Each member can only appear in one isolation rule.",
       "isolation_action_preset_required": "Select a preset mode for the isolation action.",
+      "isolation_sensor_required": "Select a sensor for the isolation rule, or set its trigger to Disabled.",
+      "isolation_hvac_modes_required": "Select at least one mode for the isolation rule, or set its trigger to Disabled.",
       "window_temperature_required": "Set a window temperature, or change the window action.",
       "presence_action_value_required": "Set a value for the selected away action, or change the action.",
       "schedule_fallback_payload_invalid": "Invalid YAML format in fallback schedule payload. Must be a valid key-value mapping.",

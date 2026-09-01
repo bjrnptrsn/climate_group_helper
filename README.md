@@ -71,14 +71,15 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
   - [Presence Control](#presence-control)
   - [Schedule Automation](#schedule-automation)
     - [Schedule Meta-Keys](#schedule-configuration--meta-keys)
+  - [Group Presets](#group-presets)
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
   - [Member Template](#member-template)
-  - [Group Presets](#group-presets)
 - [Examples](EXAMPLES.md)
 - [Management Entities (Switch & Slider)](#management-entities-switch--slider)
   - [Main Switch](#main-switch)
   - [Group Offset](#group-offset)
+- [What the Group Reports About Itself](#what-the-group-reports-about-itself)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
 - [Backup & Migration](#backup--migration)
@@ -114,7 +115,7 @@ Unlock the full potential of your climate system. These specialized features are
 
 ### Master Entity
 
-Designate a single climate member as the **Reference Point** or **Leader** for the group. This is the first thing you configure in the setup wizard — and once set, it unlocks additional options in every subsequent step (Sync Mode, Window Control, and Temperature/Humidity averaging).
+Designate a single climate member as the **Reference Point** or **Leader** for the group. It is set in the **Members & Modes** section and requires **Advanced Mode** — once set, it unlocks additional options in several sections (Sync Mode, Window Control, and Temperature/Humidity averaging).
 
 *   **Centralized Target Display:** Show the Master's target settings (temperature, humidity) as the group's displayed target, rather than calculated averages across all members. This affects only how the group state is displayed — it does not control or synchronize members (use **Sync Mode: Master/Lock** for that).
 *   **Hierarchical Sync (Master/Lock):** Enables a "Follow the Leader" sync mode. Changes on the Master are mirrored to all members; manual changes on other members are automatically reverted.
@@ -257,7 +258,18 @@ You can omit attributes you don't need — for example, use only `hvac_mode: off
 | `sync_mode` | `disabled`, `lock`, `mirror`, `master_lock` | `sync_mode: disabled` | Temporarily overrides the configured **Sync Mode** for the slot duration. Useful for slots where you want members to be left alone (e.g. a "sleep" slot where manual adjustments are allowed). |
 | `sync_attributes` | Any subset of: `hvac_mode`, `temperature`, `target_temp_low`, `target_temp_high`, `humidity`, `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode` | `sync_attributes: [hvac_mode]` | Temporarily overrides which **Sync Attributes** are synchronized for the slot duration. Useful for slots where you want to sync only the mode but let members manage their own temperature. Restores to the configured Sync Attributes setting when the slot ends. |
 | `turn_off` | `true` / `false` | `turn_off: true` | Explicit two-state trigger: `true` turns all members off (equivalent to toggling the **Main Switch** off). `false` restores all members (equivalent to toggling the **Main Switch** back on). A slot without `turn_off` has no effect on the current state. The Main Switch and this meta-key are equal, interchangeable controls for the same block — whichever acts last wins, so you can always turn the Main Switch back on in the UI, even while a `turn_off: true` slot is active, and a later `turn_off: false` slot will likewise release a block you set manually via the Main Switch. |
-| `presence` | `away` | `presence: away` | Temporarily activates the **Presence Override** (away mode) for the slot duration. If presence sensors are configured, the block is only restored at the slot end if no physical absence is detected (slot-away wins during its slot; sensor-away takes over at the slot end if occupants are still absent). Boost commands are rejected during slot-away, and Window Control actions take precedence. |
+| `window_mode` | `disabled` | `window_mode: disabled` | Pauses **Window Control** for the slot duration — an open window no longer switches the heating off. If a window is already open when the slot starts, the heating comes back on. |
+| `presence_mode` | `disabled`, `away` | `presence_mode: disabled` | Pauses **Presence Control** for the slot duration. `disabled` keeps the heating running regardless of what the sensors report (guests, pre-heating); `away` forces the away behaviour for the whole slot, again regardless of the sensors (holidays). |
+| `calibration_mode` | `disabled` | `calibration_mode: disabled` | Pauses **Calibration** for the slot duration — no calibration values are written to the devices. At the slot end the current value is written once, so the devices are up to date again. |
+| `isolation_bypass` | `all`, a rule number, or a list of them | `isolation_bypass: 2` | Pauses the named **Member Isolation** rules for the slot duration, so their devices heat along. Rules are numbered by their position in the settings (1–4); `all` pauses every rule. A device covered by two rules stays off as long as the rule you did not pause still applies. |
+| `presence` | `away` | `presence: away` | Superseded by `presence_mode: away` and still accepted; it will be removed in a future version. If a slot carries both, `presence_mode` wins. |
+
+The last four keys **pause** a feature; they never switch one on. A feature that is
+switched off in the settings has nothing running for a slot to take over, so
+`disabled` is the only value they accept — apart from `away`, which forces the away
+behaviour rather than creating anything. When a slot ends, the sensors are read
+fresh and take over again in both directions: a window still open switches the
+heating back off, a room still empty starts the away behaviour.
 
 **Example — night slot that turns everything off:**
 ```yaml
@@ -271,6 +283,53 @@ group_offset: 1.5
 sync_mode: disabled
 ```
 The group normally runs in Lock mode. During this slot, `sync_mode: disabled` lets occupants tweak their own device without being reverted — useful when comfort preferences vary.
+
+#### Inactive Schedule Fallback
+
+Configure an optional fallback state in YAML under the group's **Schedule Automation** settings (**Fallback State for Inactive Base Schedule / Calendar (YAML)**). This state applies whenever the schedule is off or no calendar event is active, without requiring gapless 24/7 schedules. It uses the same format as a slot.
+
+**Example (Inactive Schedule Fallback — e.g. night setback):**
+```yaml
+hvac_mode: heat
+temperature: 17.0
+```
+
+To shut the group down outside the active slots, set `hvac_mode: off` here — not the `turn_off` meta-key. Only an explicit `turn_off: false` releases that block, and the fallback has no slot following it to do so, leaving the next heating slot blocked.
+
+### Group Presets
+
+Define your own named presets for the group — e.g. `eco`, `guest`, or `ventilate` — each mapping to a set of climate attributes (target temperature, HVAC mode, fan mode, swing mode) in YAML. Selecting one of these presets applies its attributes to the group and all members at once, the same way changing the temperature or HVAC mode directly would. This is a lightweight alternative to the Master Preset Pattern for groups that don't need a dedicated master entity.
+
+**Example (Group Presets configuration):**
+```yaml
+eco:
+  temperature: 17.0
+  hvac_mode: heat
+comfort:
+  temperature: 21.0
+  hvac_mode: heat
+ventilate:
+  hvac_mode: off
+```
+
+*   **Takes priority over device presets:** If a group preset shares a name with a preset a member device offers natively (e.g. both are called `eco`, as above), the group's own definition is used and the device's version is never sent. The settings page warns you if this happens so you can rename one of them.
+*   **Leaves the group as soon as you deviate:** Changing an attribute the active preset defines — on the group, via schedule, or by adjusting a member directly under Mirror sync — returns the group to its normal, un-presetted state. Adjusting an attribute the preset doesn't touch leaves it active.
+
+**Presets can pause automatic features too.** A preset may carry the same pause keys a schedule slot can (`window_mode`, `presence_mode`, `calibration_mode`, `isolation_bypass`, plus `sync_mode`, `sync_attributes` and `group_offset` — see the schedule meta-key table above). They apply while the preset is selected and are released when you leave it:
+
+```yaml
+party:
+  temperature: 21.5
+  window_mode: disabled     # the terrace door may stand open
+  presence_mode: disabled   # heating stays on regardless of the sensors
+wellness:
+  temperature: 23.0
+  isolation_bypass: 2       # let the second isolation rule's device heat along
+```
+
+*   **A preset may consist of pause keys alone** — a "ventilate" preset that only stops the window control from switching the heating off is a valid definition.
+*   **When a schedule slot and a preset want the same thing, the preset wins**, and the slot's value comes back as soon as you leave the preset. This holds in both directions: a slot ending does not cancel what the preset asked for.
+*   **`turn_off` is the one key presets cannot use** — presets set temperatures and modes; the Main Switch stays under your control and the schedule's.
 
 ### Member Offsets
 
@@ -305,13 +364,6 @@ Translates outgoing `heat_cool` range commands into single-setpoint commands for
 *   **Deadband Action:** What to do when the room is already within the target band: **None** (default), **Turn Off**, or **Fan Only**.
 *   **Automatic member detection:** All members that do **not** natively advertise `heat_cool` are automatically covered — no manual selection needed. Members with native `heat_cool` support are left unchanged. This also enables `heat_cool` mode for groups consisting entirely of heat-only and cool-only devices, with no native `heat_cool` device required.
 
-### Group Presets
-
-Define your own named presets for the group — e.g. `eco`, `guest`, or `ventilate` — each mapping to a set of climate attributes (target temperature, HVAC mode, fan mode, swing mode) in YAML. Selecting one of these presets applies its attributes to the group and all members at once, the same way changing the temperature or HVAC mode directly would. This is a lightweight alternative to the Master Preset Pattern for groups that don't need a dedicated master entity.
-
-*   **Takes priority over device presets:** If a group preset shares a name with a preset a member device offers natively (e.g. both are called `eco`, as above), the group's own definition is used and the device's version is never sent. The settings page warns you if this happens so you can rename one of them.
-*   **Leaves the group as soon as you deviate:** Changing an attribute the active preset defines — on the group, via schedule, or by adjusting a member directly under Mirror sync — returns the group to its normal, un-presetted state. Adjusting an attribute the preset doesn't touch leaves it active.
-
 ## Management Entities (Switch & Slider)
 
 Alongside the main climate entity, the integration creates additional helper entities to provide direct control points for your dashboards and automations.
@@ -329,6 +381,53 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 
 *   **Auto-reset:** Setting a temperature directly on the group (via UI or service) resets the offset to `0` automatically.
 *   **Persistence:** The offset value survives Home Assistant restarts.
+
+## What the Group Reports About Itself
+
+Beyond the usual climate values, the group publishes its own state as attributes — what it currently intends, why it is or isn't acting, and where its devices stand. You can read them in the more-info dialog under **Attributes**, show them on a dashboard, or branch on them in an automation.
+
+Most are self-explanatory. The ones worth knowing about:
+
+### Which devices disagree
+
+Two radiators in the living room, one set to 21° and the other to 23°: the group shows the average as its target temperature, and nothing about that number reveals that the devices have drifted apart. `member_divergence` lists exactly that — per setting, which device is on which value:
+
+```yaml
+member_divergence:
+  temperature:
+    climate.living_left: 21.0
+    climate.living_right: 23.0
+```
+
+When everything agrees, it is empty. Two details make it trustworthy:
+
+*   **Isolated and offline devices are left out.** An isolated device is meant to differ — counting it would report a disagreement for as long as the isolation lasts.
+*   **Member offsets are accounted for.** With offsets configured, the comparison happens on the logical setting while the listed values stay the real ones on the devices. Two thermostats at +1 and −1 therefore count as agreeing — that difference is what you asked for.
+
+### Why the group isn't doing what you expect
+
+*   **`blocking_sources`** — present whenever something is holding the group back, listing what: `window`, `presence`, `switch`. While one of these is listed, commands don't reach the devices. Absent when nothing blocks.
+*   **`isolated_members`** — devices an isolation rule currently excludes. They keep their own state and are left out of the group's readings.
+*   **`oob_members`** — devices that could not follow the last target because it lies outside their own temperature range.
+*   **`master_fallback_active`** — the configured master entity is unavailable and the group is aggregating without it.
+
+### What the group intends, and where it came from
+
+*   **`target_state`** — the settings the group is holding for its devices. This is what a window closing or an isolation ending restores to, and it survives restarts.
+*   **`last_source`, `last_entity`, `last_changed`** — what last changed the target state: a schedule, a direct command, a device under Mirror sync — and when.
+*   **`last_active_hvac_mode`** — the last non-`off` mode. Used to wake devices when a boost starts on a group that is off.
+*   **`active_member_count` / `total_member_count`** — how many devices are actually running, out of how many are configured.
+
+### What is currently in effect
+
+Everything in this group except `enabled_features` requires Advanced Mode — without it those features don't exist, and neither do their attributes.
+
+*   **`enabled_features`** — which features are configured at all (`window`, `presence`, `schedule`, `sync`, `isolation`), so a dashboard can tell "off" from "not set up".
+*   **`effective_sync_mode` / `effective_sync_attributes`** — the sync settings in force *right now*, including a schedule slot's or preset's temporary override — not necessarily what the settings page shows.
+*   **`config_overrides`** — the pause keys a slot or preset currently applies.
+*   **`active_schedule_slot_title`** — the title of the running calendar event, when a calendar drives the schedule.
+*   **`active_virtual_preset`** — the group preset in effect, if any.
+*   **`boost_temperature` / `boost_until`** — setpoint and end time of a running boost.
 
 ## Configuration Options
 
@@ -430,6 +529,13 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | **Respect Member Off State (Schedule)** | Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on. Direct group commands always reach all members regardless of this setting. |
 | **Retain Changes Made via Service (Schedule)** | Keep the base schedule, bypass entity and fallback state across restarts when changed via service. Without this, the group always reverts to its configured defaults on restart. |
 
+### Group Presets
+
+| Option | Description |
+|--------|-------------|
+| **Group Presets (YAML)** | Define named presets for the group as a YAML mapping, each with its own set of climate attributes (e.g. `eco:` with `temperature: 18.0` and `hvac_mode: heat`). Selecting one applies its attributes to the group and all members. If a name matches a preset a member device already offers natively, the settings page warns you and the group's own definition is used. |
+| **Retain Changes Made via Service (Presets)** | Keep presets created or updated via service after a restart. Otherwise they reset to the configured presets. |
+
 ### Member Offsets
 
 | Option | Description |
@@ -459,25 +565,17 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 | **Enable Range Template** | Enables automatic `heat_cool` range control for all members that do not natively advertise `heat_cool`. No manual selection needed — the group detects eligible members automatically. |
 | **Deadband Action** | What to do when the room temperature is already within the target band (between `target_temp_low` and `target_temp_high`). **None** (default — no command, device regulates itself to the setpoint it already received), **Turn Off**, or **Fan Only**. |
 
-### Group Presets
-
-| Option | Description |
-|--------|-------------|
-| **Group Presets (YAML)** | Define named presets for the group as a YAML mapping, each with its own set of climate attributes (e.g. `eco:` with `temperature: 18.0` and `hvac_mode: heat`). Selecting one applies its attributes to the group and all members. If a name matches a preset a member device already offers natively, the settings page warns you and the group's own definition is used. |
-| **Retain Changes Made via Service (Presets)** | Keep presets created or updated via service after a restart. Otherwise they reset to the configured presets. |
-
 ### Advanced Settings
 
 | Option | Description |
 |--------|-------------|
-| **Debounce Delay** | Wait before sending commands. Higher values prevent 'rapid-fire' commands when sliding controls, but feel slower (default: 0.5s). |
+| **Debounce Delay** | Wait before sending commands. Higher values prevent 'rapid-fire' commands when sliding controls, but feel slower (default: 0.3s). |
 | **Force Retry** | Always send commands to all members, even if they already report the target state. Useful for IR-based AC units or other devices that may not reliably update their state after receiving a command. |
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
-| **Staggered Call Delay** | Delay between service calls to individual group members (default: 0.0s = disabled). Helps reduce Zigbee/Z-Wave network congestion with large groups. |
-| **UI Grace Period** | Delay before members deviating from target state are flagged as out of sync (default: 3.0s). Gives slow-responding devices time to process commands. |
-| **Expose Smart Sensors** | When enabled, creates separate temperature and humidity sensor entities for the group. |
-| **Expose Member List** | When enabled, exposes an `entity_ids` attribute on the group listing all member entity IDs. |
+| **Staggered Call Delay** | Delay between service calls to individual group members (default: 0.0s = disabled). Helps reduce Zigbee/Z-Wave network congestion with large groups. Also applies to calibration writes. |
+| **UI Grace Period** | Duration (seconds) for which the group shows the commanded value right after a UI action, before slow member devices report their state back. Prevents visual flicker in the dashboard (default: 3.0s). Applies to all attributes: HVAC mode, temperature, humidity, fan/preset/swing modes. |
+| **Expose Smart Sensors** | When enabled, creates separate temperature and humidity sensor entities reflecting the group's current aggregated state (useful for history graphs and dashboards). |
 | **Expose Configuration** | When enabled, creates a diagnostic sensor exposing the group's configuration as portable JSON. |
 | **Expand all sections by default** | Keeps all configuration sections expanded by default in the options dialog. |
 
@@ -668,8 +766,8 @@ Apply a portable JSON configuration to a group. This is useful for copying logic
 | Field | Required | Description |
 |-------|----------|-------------|
 | `settings` | **Yes** | A JSON object containing the configuration. Source: `settings_json` attribute from a Configuration Sensor. |
-| `include_member_list` | **Yes** | If `true`, overwrites the member list, the master entity, the per-device heat/cool role assignment, and the member lists of the isolation rules. |
-| `include_entity_selectors` | **Yes** | If `true`, overwrites linked sensors, per-member offsets, and isolation sensors. |
+| `include_member_list` | No | If `true`, overwrites the member list, the master entity, the per-device heat/cool role assignment, and the member lists of the isolation rules. Defaults to `false`. |
+| `include_entity_selectors` | No | If `true`, overwrites linked sensors, per-member offsets, and isolation sensors. Defaults to `false`. |
 
 By default, only logic settings (Sync Modes, Window Control, Schedules, etc.) are transferred. Set the two inclusion flags to `true` if you also want to copy the member list, the linked sensors, and the isolation rules with their member lists and sensors. The group name is always preserved.
 

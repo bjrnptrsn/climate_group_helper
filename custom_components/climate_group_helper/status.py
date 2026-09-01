@@ -4,9 +4,20 @@ from __future__ import annotations
 from dataclasses import fields
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate import (
+    ATTR_FAN_MODE,
+    ATTR_HUMIDITY,
+    ATTR_HVAC_MODE,
+    ATTR_PRESET_MODE,
+    ATTR_SWING_HORIZONTAL_MODE,
+    ATTR_SWING_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
+    HVACMode,
+)
 from homeassistant.util import dt as dt_util
 from homeassistant.const import (
+    ATTR_TEMPERATURE,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
@@ -35,6 +46,7 @@ from .const import (
     ATTR_LAST_ENTITY,
     ATTR_LAST_SOURCE,
     ATTR_MASTER_FALLBACK_ACTIVE,
+    ATTR_MEMBER_DIVERGENCE,
     ATTR_MEMBER_ENTITIES,
     ATTR_OOB_MEMBERS,
     ATTR_PRESENCE_FALLBACK,
@@ -46,6 +58,7 @@ from .const import (
     CONF_PRESENCE_MODE,
     CONF_PRESENCE_SENSOR,
     CONF_WINDOW_MODE,
+    FLOAT_TOLERANCE,
     IsolationTrigger,
     PresenceMode,
     SyncMode,
@@ -55,6 +68,86 @@ from .state import ClimateState
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
+
+
+def _compute_member_divergence(group: ClimateGroupHelper) -> dict[str, dict[str, Any]]:
+    """Compute divergence across members for tracked attributes.
+
+    Source: aggregator.states only (excludes isolated and offline members).
+    Comparison is done on the logical level (offset-corrected if active),
+    while reported values are the raw member values.
+
+    `hvac_mode` is read via `display_mode()`, never `state.state`: for a
+    template-covered member the latter reports the *physical* mode as soon as it
+    differs from the expected one, so a member in the deadband or mid-changeover
+    would report a divergence that is template mechanics, not disagreement.
+    """
+    states = group.aggregator.states
+    if not states or len(states) < 2:
+        return {}
+
+    divergence: dict[str, dict[str, Any]] = {}
+    temp_offset_map = group._temp_offset_map
+    # Same condition as the display aggregation (`_resolve_master_or_avg`): the
+    # check must run on whichever level the group actually shows.
+    temp_offset_correction = bool(temp_offset_map) and group._member_offset_correction
+
+    # 1. HVAC Mode (via display_mode so template-covered members report heat_cool)
+    hvac_modes: dict[str, str] = {}
+    for s in states:
+        mode = group.member_template_manager.display_mode(s)
+        if mode is not None:
+            hvac_modes[s.entity_id] = mode
+    if len(hvac_modes) >= 2 and len(set(hvac_modes.values())) > 1:
+        divergence[ATTR_HVAC_MODE] = hvac_modes
+
+    # 2. Temperature attributes, in a fixed order: the result is written to a
+    # dict that becomes a user-visible entity attribute, and iterating the
+    # frozenset directly would reshuffle the keys on every restart.
+    for attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
+        raw_map: dict[str, Any] = {}
+        cmp_vals: list[float] = []
+        for s in states:
+            val = s.attributes.get(attr)
+            if val is not None:
+                try:
+                    fval = float(val)
+                except (ValueError, TypeError):
+                    continue
+                raw_map[s.entity_id] = val
+                offset = temp_offset_map.get(s.entity_id, 0.0) if temp_offset_correction else 0.0
+                cmp_vals.append(fval - offset)
+
+        if len(cmp_vals) >= 2 and (max(cmp_vals) - min(cmp_vals)) > FLOAT_TOLERANCE:
+            divergence[attr] = raw_map
+
+    # 3. Humidity (always raw float comparison)
+    raw_humidity: dict[str, Any] = {}
+    cmp_humidity: list[float] = []
+    for s in states:
+        val = s.attributes.get(ATTR_HUMIDITY)
+        if val is not None:
+            try:
+                fval = float(val)
+            except (ValueError, TypeError):
+                continue
+            raw_humidity[s.entity_id] = val
+            cmp_humidity.append(fval)
+
+    if len(cmp_humidity) >= 2 and (max(cmp_humidity) - min(cmp_humidity)) > FLOAT_TOLERANCE:
+        divergence[ATTR_HUMIDITY] = raw_humidity
+
+    # 4. Discrete string attributes (fan_mode, swing_mode, swing_horizontal_mode, preset_mode)
+    for attr in (ATTR_FAN_MODE, ATTR_SWING_MODE, ATTR_SWING_HORIZONTAL_MODE, ATTR_PRESET_MODE):
+        discrete_map: dict[str, Any] = {}
+        for s in states:
+            val = s.attributes.get(attr)
+            if val is not None:
+                discrete_map[s.entity_id] = val
+        if len(discrete_map) >= 2 and len(set(discrete_map.values())) > 1:
+            divergence[attr] = discrete_map
+
+    return divergence
 
 
 def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
@@ -68,10 +161,11 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     attrs[ATTR_LAST_ACTIVE_HVAC_MODE] = run_state.last_active_hvac_mode
     if run_state.active_virtual_preset:
         attrs[ATTR_ACTIVE_VIRTUAL_PRESET] = run_state.active_virtual_preset
-    if group.preset_manager.runtime_presets:
-        attrs[ATTR_RUNTIME_GROUP_PRESETS] = {k: dict(v) for k, v in group.preset_manager.runtime_presets.items()}
+    if runtime_presets := group.preset_manager.persisted_runtime_presets:
+        attrs[ATTR_RUNTIME_GROUP_PRESETS] = {k: dict(v) for k, v in runtime_presets.items()}
     attrs[ATTR_CURRENT_HVAC_MODES] = group._current_hvac_modes
     attrs[ATTR_GROUP_OFFSET] = run_state.group_offset
+    attrs[ATTR_MEMBER_DIVERGENCE] = _compute_member_divergence(group)
     attrs[ATTR_TARGET_STATE] = target.to_dict(
         attributes=[f.name for f in fields(ClimateState)]
     )
@@ -124,9 +218,12 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     if run_state.config_overrides:
         attrs[ATTR_CONFIG_OVERRIDES] = dict(run_state.config_overrides)
 
-    # --- Expose member entity IDs ---
-    if group._expose_member_entities:
-        attrs[ATTR_MEMBER_ENTITIES] = group.climate_entity_ids
+    # --- Member entity IDs ---
+    # Always emitted: this is the only place the member list is visible, since
+    # HA 2026.4 renders the more-info member list from `group_entities`, which
+    # only appears when an entity registers itself as a group — something we
+    # deliberately do not do (it would let service calls bypass our pipeline).
+    attrs[ATTR_MEMBER_ENTITIES] = group.climate_entity_ids
 
     # Configured features — always emitted (even as []) so the card knows the
     # attribute exists and can distinguish "not configured" from "not yet received".

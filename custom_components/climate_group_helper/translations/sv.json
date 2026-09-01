@@ -339,7 +339,6 @@
               "staggered_call_delay": "Fördröjning mellan kommandon (sekunder)",
               "grace_period": "Optimistisk UI-övergångsperiod (sekunder)",
               "expose_smart_sensors": "Visa smarta sensorer",
-              "expose_member_entities": "Visa medlemslista",
               "expose_config": "Visa konfiguration (Felsökning)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Väntetid mellan enskilda kommandon till gruppmedlemmar. Att fördela kommandon förhindrar nätverksbelastning i Zigbee/Matter-miljöer. Ange 0 för att inaktivera.",
               "grace_period": "Hur länge gruppen visar det skickade värdet innan den byter till medlemsgenomsnittet. Förhindrar UI-flimmer när långsamma enheter (Cloud-bryggor, Zigbee) ekar tillbaka sitt gamla tillstånd. Ange 0 för att inaktivera.",
               "expose_smart_sensors": "Skapar extra sensorenheter för gruppens temperatur och luftfuktighet (användbart för grafer).",
-              "expose_member_entities": "Skapar ett attribut som listar alla medlemsenhets-ID:n.",
               "expose_config": "Lägger till alla konfigurationsvärden till entitetsattributen. Användbart för felsökning."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Minst en medlem måste förbli utanför isoleringen.",
       "isolation_entity_overlap": "Varje medlem får bara förekomma i en isoleringsregel.",
       "isolation_action_preset_required": "Välj ett förinställt läge för isoleringsåtgärden.",
+      "isolation_sensor_required": "Välj en sensor för isoleringsregeln, eller ställ in dess utlösare på Inaktiverad.",
+      "isolation_hvac_modes_required": "Välj minst ett läge för isoleringsregeln, eller ställ in dess utlösare på Inaktiverad.",
       "window_temperature_required": "Ange en fönstertemperatur eller ändra fönsteråtgärden.",
       "presence_action_value_required": "Ange ett värde för den valda frånvaroåtgärden eller ändra åtgärden.",
       "schedule_fallback_payload_invalid": "Ogiltigt YAML-format i reservnyttolast för schema. Måste vara en giltig nyckel-värde-mappning.",

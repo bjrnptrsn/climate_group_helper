@@ -22,6 +22,7 @@ from .const import (
     PresenceAction,
     WindowControlAction,
 )
+from .isolation import drop_all_claims, reevaluate_all
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -102,7 +103,9 @@ class BaseOverrideManager:
         @callback
         def _handle_timeout(_now: Any) -> None:
             self._timer = None
-            self._hass.async_create_task(on_expired())
+            self._hass.async_create_background_task(
+                on_expired(), name=f"climate_group_override_expired:{self.OVERRIDE_NAME}"
+            )
 
         self._timer = async_call_later(self._hass, duration, _handle_timeout)
         _LOGGER.debug(
@@ -221,7 +224,9 @@ class BoostOverrideManager(BaseOverrideManager):
                 boost_until=None,
             )
             if push and not self._group.run_state.blocking_sources:
-                self._hass.async_create_task(self.call_handler.call_immediate())
+                self._hass.async_create_background_task(
+                    self.call_handler.call_immediate(), name="climate_group_boost_abort_push"
+                )
             self._group.async_defer_or_update_ha_state()
             _LOGGER.debug("[%s] Boost aborted (push=%s)", self._group.entity_id, push)
 
@@ -283,14 +288,22 @@ class SwitchOverrideManager(BaseOverrideManager):
 
         OFF is sent unconditionally — regardless of what members currently
         report — so the master switch is guaranteed to reach every device.
+
+        Isolation is reset like the boost: the group-wide OFF is what an
+        isolation wanted for its device anyway, and `restore()` decides anew.
         """
         self._group.boost_override_manager.abort(push=False)
+        drop_all_claims(self._group)
         self._block()
         self._notify_switch_entity()
         await self.call_handler.call_immediate({"hvac_mode": HVACMode.OFF})
 
     async def restore(self) -> None:
-        """Remove 'switch' from blocking_sources; restore members if no other block."""
+        """Remove 'switch' from blocking_sources; restore members if no other block.
+
+        Isolation starts over: `activate()` dropped the claims, so a rule whose
+        trigger still stands takes hold again here, one whose trigger ended does not.
+        """
         self._unblock()
         self._notify_switch_entity()
         # Cancel our own pending debounced enforce call — it carries a stale payload
@@ -300,6 +313,7 @@ class SwitchOverrideManager(BaseOverrideManager):
             await self.call_handler.call_immediate()
         else:
             await self._resolve_remaining_blocks()
+        await reevaluate_all(self._group)
 
     async def enforce_override(self) -> None:
         """Push OFF to deviating members when switch block is active.

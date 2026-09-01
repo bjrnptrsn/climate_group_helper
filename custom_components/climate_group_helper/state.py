@@ -17,6 +17,7 @@ from .const import (
     CONF_IGNORE_OFF_MEMBERS_SYNC,
     AdoptManualChanges,
 )
+from .meta_processor import SOURCE_PRESET
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -277,22 +278,34 @@ class BaseStateManager:
         kwargs = self._group.preset_manager.resolve_preset(kwargs) or kwargs
         preset_mode = kwargs.get("preset_mode")
         is_virtual = self._group.preset_manager.is_virtual(preset_mode)
+        was_active = self._group.run_state.active_virtual_preset
 
-        if self._group.run_state.active_virtual_preset:
+        if was_active:
             if is_virtual:
                 # Switching between virtual presets.
-                if self._group.run_state.active_virtual_preset != preset_mode:
+                if was_active != preset_mode:
                     self._group.run_state = replace(self._group.run_state, active_virtual_preset=preset_mode)
             elif preset_mode is not None:
                 # A native preset replaces the virtual one — it owns preset_mode now.
                 self._group.run_state = replace(self._group.run_state, active_virtual_preset=None)
             else:
-                active_payload = self._group.preset_manager.get_payload(self._group.run_state.active_virtual_preset)
+                active_payload = self._group.preset_manager.get_payload(was_active)
                 if active_payload and set(kwargs.keys()) & set(active_payload.keys()):
                     self._group.run_state = replace(self._group.run_state, active_virtual_preset=None)
                     kwargs["preset_mode"] = None
         elif is_virtual:
             self._group.run_state = replace(self._group.run_state, active_virtual_preset=preset_mode)
+
+        # Re-selecting the preset that is already active counts as a fresh
+        # instruction, not a repeat: the user asked for its values again, and a
+        # takeover (reset, manual slider) may have withdrawn some in between.
+        # Dropping the claims first makes the sync below re-apply them — the
+        # registry never has to know why it is being called.
+        if is_virtual and preset_mode == was_active:
+            self._group.slot_meta_processor.ownership.release_all(SOURCE_PRESET)
+            self._group.preset_manager.sync_meta_claims()
+        elif self._group.run_state.active_virtual_preset != was_active:
+            self._group.preset_manager.sync_meta_claims()
 
         return kwargs
 

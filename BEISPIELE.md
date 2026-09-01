@@ -21,14 +21,16 @@ Praxisnahe Szenarien, nach Komplexität geordnet. Jedes Beispiel beschreibt die 
   - [13. Better Thermostat / Versatile Thermostat + CGH](#13-better-thermostat--versatile-thermostat--cgh)
   - [14. Zeitplan mit temporären lokalen Überschreibungen](#14-zeitplan-mit-temporären-lokalen-überschreibungen)
   - [15. Saisonale Abschaltung per Zeitplan](#15-saisonale-abschaltung-per-zeitplan)
-  - [16. Kalender-Bypass über einem Basis-Zeitplan](#16-kalender-bypass-über-einem-basis-zeitplan)
-  - [17. Nachtabsenkung bei inaktivem Zeitplan](#17-nachtabsenkung-bei-inaktivem-zeitplan)
+  - [16. Automatikfunktionen für einen Zeitblock pausieren](#16-automatikfunktionen-für-einen-zeitblock-pausieren)
+  - [17. Kalender-Bypass über einem Basis-Zeitplan](#17-kalender-bypass-über-einem-basis-zeitplan)
+  - [18. Nachtabsenkung bei inaktivem Zeitplan](#18-nachtabsenkung-bei-inaktivem-zeitplan)
 - [Edge Cases](#edge-cases) — gemischte Hardware, mehrere Einschränkungen, Grenzfälle aus echten Support-Anfragen
-  - [18. Gemischt Heizkörper + Klimaanlage, ein Gerät pro Modus](#18-gemischt-heizkörper--klimaanlage-ein-gerät-pro-modus)
-  - [19. Fußbodenheizung, die sich nicht ausschalten lässt](#19-fußbodenheizung-die-sich-nicht-ausschalten-lässt)
-  - [20. Union-Gruppe mit Geräten außerhalb des Bereichs](#20-union-gruppe-mit-geräten-außerhalb-des-bereichs)
-  - [21. Multi-Kopf-Klimasplit, nur gemeinsamer Modus](#21-multi-kopf-klimasplit-nur-gemeinsamer-modus)
-  - [22. Verriegeltes Heizen/Kühlen über zwei Systeme](#22-verriegeltes-heizenkühlen-über-zwei-systeme)
+  - [19. Gemischt Heizkörper + Klimaanlage, ein Gerät pro Modus](#19-gemischt-heizkörper--klimaanlage-ein-gerät-pro-modus)
+  - [20. Fußbodenheizung, die sich nicht ausschalten lässt](#20-fußbodenheizung-die-sich-nicht-ausschalten-lässt)
+  - [21. Union-Gruppe mit Geräten außerhalb des Bereichs](#21-union-gruppe-mit-geräten-außerhalb-des-bereichs)
+  - [22. Multi-Kopf-Klimasplit, nur gemeinsamer Modus](#22-multi-kopf-klimasplit-nur-gemeinsamer-modus)
+  - [23. Verriegeltes Heizen/Kühlen über zwei Systeme](#23-verriegeltes-heizenkühlen-über-zwei-systeme)
+  - [24. Mitbekommen, wenn ein Gerät Befehle verschluckt](#24-mitbekommen-wenn-ein-gerät-befehle-verschluckt)
 
 ---
 
@@ -425,7 +427,61 @@ temperature: 20.0
 
 ---
 
-### 16. Kalender-Bypass über einem Basis-Zeitplan
+### 16. Automatikfunktionen für einen Zeitblock pausieren
+
+Manche Situationen brauchen eine Schutzfunktion vorübergehend aus dem Weg: eine
+Feier mit offener Terrassentür, Gäste in einem Raum, den der Anwesenheitssensor
+als leer meldet, oder ein Handtuchheizkörper, der am Wellness-Abend mitlaufen
+soll, obwohl eine Regel ihn ausgeschaltet hält.
+
+**Entitäten:** `climate.wohnzimmer_trv`, `calendar.haus_termine`
+
+| Einstellung | Wert |
+|---|---|
+| Mitglieder | `climate.wohnzimmer_trv` |
+| Zeitplan-Entität | `calendar.haus_termine` |
+
+**Beschreibungen der Kalendereinträge:**
+```yaml
+# "Feier" — die Terrassentür darf offen stehen, der Raum gilt als belegt
+temperature: 21.5
+window_mode: disabled
+presence_mode: disabled
+
+# "Urlaub" — Abwesenheitsverhalten erzwingen, unabhängig von den Sensoren
+presence_mode: away
+
+# "Wellness-Abend" — das Gerät der zweiten Isolationsregel darf mitheizen
+temperature: 23.0
+isolation_bypass: 2
+
+# "Durchlüften" — keine Kalibrierwerte mehr an die Heizkörper schreiben
+calibration_mode: disabled
+```
+
+**Ergebnis:** Jeder Schlüssel pausiert seine Funktion für die Dauer des Termins,
+und der Ausgangszustand spielt keine Rolle: Steht die Tür beim Beginn der Feier
+bereits offen, geht die Heizung wieder an. Endet der Termin, werden die Sensoren
+frisch gelesen und übernehmen wieder — steht die Tür weiterhin offen, geht die
+Heizung erneut aus; ist der Raum weiterhin leer, startet das
+Abwesenheitsverhalten.
+
+Zwei Details sind wichtig:
+
+- **Diese Schlüssel pausieren eine Funktion nur, sie schalten nie eine ein.** Eine
+  in den Einstellungen ausgeschaltete Funktion hat nichts laufen, was ein Zeitplan
+  übernehmen könnte — deshalb wird nur `disabled` akzeptiert, bei der Anwesenheit
+  zusätzlich `away`, das für die Dauer des Termins das Abwesenheitsverhalten
+  erzwingt.
+- **Isolationsregeln werden über ihre Position in den Einstellungen angesprochen** —
+  `1` bis `4`, in der Reihenfolge, in der die Regeln dort erscheinen.
+  `isolation_bypass: all` pausiert alle Regeln, eine Liste wie `[1, 3]` mehrere.
+  Ein Gerät, das von zwei Regeln erfasst wird, bleibt aus, solange die *nicht*
+  pausierte Regel weiterhin greift.
+
+---
+
+### 17. Kalender-Bypass über einem Basis-Zeitplan
 
 Eine wöchentliche `schedule.*`-Entität steuert bereits das alltägliche Heizen. Zusätzlich soll ein gemeinsamer Haushalts-`calendar.*` (z. B. ein Google-Kalender, dem jeder Ereignisse hinzufügen kann) das vorübergehend überschreiben können — ein Gast über Nacht, ein Homeoffice-Tag, eine Feier — ohne den Basis-Zeitplan überhaupt anzufassen.
 
@@ -455,7 +511,7 @@ temperature: 22.0
 
 ---
 
-### 17. Nachtabsenkung bei inaktivem Zeitplan
+### 18. Nachtabsenkung bei inaktivem Zeitplan
 
 `schedule.*`-Entitäten melden außerhalb der konfigurierten Zeitblöcke `off` ohne jegliche Zeitblock-Attribute. Statt einen lückenlosen 24/7-Zeitplan zu bauen (einen expliziten Niedrigtemperatur-Block für jede inaktive Stunde), definiere einen Fallback-Zustand, den die Gruppe anwendet, sobald kein Zeitblock aktiv ist.
 
@@ -499,7 +555,7 @@ Die Änderung wirkt sofort (falls der Zeitblock gerade inaktiv ist). Aktiviere d
 
 ## Edge Cases
 
-### 18. Gemischt Heizkörper + Klimaanlage, ein Gerät pro Modus
+### 19. Gemischt Heizkörper + Klimaanlage, ein Gerät pro Modus
 
 Ein Raum hat einen reinen Heizkörper (Wiser) und eine Heiz-/Kühl-Klimaanlage (Daikin/Faikin). Die Klimaanlage darf **niemals** heizen, obwohl sie `heat` meldet — und jedes Gerät braucht je nach aktivem Modus eine andere Behandlung. (Basierend auf einem echten Szenario mit gemischter Hardware.)
 
@@ -519,7 +575,7 @@ Ein Raum hat einen reinen Heizkörper (Wiser) und eine Heiz-/Kühl-Klimaanlage (
 
 ---
 
-### 19. Fußbodenheizung, die sich nicht ausschalten lässt
+### 20. Fußbodenheizung, die sich nicht ausschalten lässt
 
 Eine wasserbasierte Fußbodenheizung hat keinen `off`-Modus — sie unterstützt nur `heat`. Muss die Gruppe das Heizen stoppen (z. B. beim Umschalten auf Kühlen andernorts im Sommer), braucht der Fußbodenkreis statt eines echten `off`-Befehls einen sicheren Fallback. (Basierend auf einem realen Fußbodenheizungs-Setup.)
 
@@ -536,7 +592,7 @@ Eine wasserbasierte Fußbodenheizung hat keinen `off`-Modus — sie unterstützt
 
 ---
 
-### 20. Union-Gruppe mit Geräten außerhalb des Bereichs
+### 21. Union-Gruppe mit Geräten außerhalb des Bereichs
 
 Mischung von Geräten mit unterschiedlichen Temperaturbereichen — ein TRV mit niedrigem Bereich und eine Klimaanlage mit höherem Minimum. Fällt das Ziel außerhalb des Bereichs eines Geräts, soll dieses Gerät ausgeschlossen statt auf einen unsinnigen Wert geklemmt werden.
 
@@ -552,7 +608,7 @@ Mischung von Geräten mit unterschiedlichen Temperaturbereichen — ein TRV mit 
 
 ---
 
-### 21. Multi-Kopf-Klimasplit, nur gemeinsamer Modus
+### 22. Multi-Kopf-Klimasplit, nur gemeinsamer Modus
 
 Ein 4-Kopf-Klimasplit-System (z. B. Daikin über Faikin) benötigt, dass alle Köpfe denselben HVAC-Modus teilen, um korrekt zu funktionieren, aber jeder Raum braucht trotzdem seinen eigenen Sollwert und seine eigene Lüfterstufe. Vollständiges Mirror/Lock würde fälschlicherweise auch Temperatur und Lüfterstufe angleichen. (Basierend auf einem realen Multi-Kopf-Setup.)
 
@@ -568,7 +624,7 @@ Ein 4-Kopf-Klimasplit-System (z. B. Daikin über Faikin) benötigt, dass alle K�
 
 ---
 
-### 22. Verriegeltes Heizen/Kühlen über zwei Systeme
+### 23. Verriegeltes Heizen/Kühlen über zwei Systeme
 
 Ein HRV (Wärmerückgewinnungslüftung) mit heat/cool/auto fungiert als "Dirigent". Mehrere unabhängige Fußbodenheizungszonen müssen vollständig ausschalten, sobald der HRV kühlt, und wieder einschalten, wenn er heizt — reine Verriegelung, kein gemeinsamer Sollwert. (Basierend auf einem realen Mehrsystem-Setup.)
 
@@ -586,11 +642,48 @@ Ein HRV (Wärmerückgewinnungslüftung) mit heat/cool/auto fungiert als "Dirigen
 
 ---
 
+### 24. Mitbekommen, wenn ein Gerät Befehle verschluckt
+
+Batteriebetriebene Thermostate verpassen gelegentlich einen Befehl — die Gruppe sendet 21°, das Gerät bleibt auf 23°, und niemand merkt es. Die Gruppe erkennt das bereits und führt es unter `member_divergence` auf; hier wird eine Benachrichtigung daraus.
+
+**Entitäten:** eine beliebige Gruppe mit mindestens zwei Mitgliedern, z. B. `climate.wohnzimmer`
+
+Die Verzögerung ist der eigentliche Kniff: Eine kurze Abweichung ist normal — Befehle werden zeitversetzt gesendet, Geräte melden sich in ihrem eigenen Tempo zurück, und ein Zeitplan-Slot braucht einen Moment, bis er alle erreicht. Nur eine Abweichung, die *bleibt*, ist eine Meldung wert.
+
+```yaml
+automation:
+  - alias: "Heizung: Geräte laufen auseinander"
+    trigger:
+      - platform: template
+        value_template: >
+          {{ state_attr('climate.wohnzimmer', 'member_divergence') | count > 0 }}
+        for: "00:15:00"
+    action:
+      - service: notify.persistent_notification
+        data:
+          title: "Heizung Wohnzimmer"
+          message: >
+            {% set d = state_attr('climate.wohnzimmer', 'member_divergence') %}
+            {% for setting, devices in d.items() %}
+            {{ setting }}: {% for entity, value in devices.items() -%}
+            {{ entity }} = {{ value }}{{ ", " if not loop.last }}
+            {%- endfor %}
+            {% endfor %}
+```
+
+**Ergebnis:** Stehen die Geräte eine Viertelstunde später immer noch unterschiedlich, bekommst du eine Meldung mit Einstellung, Geräten und Werten — z. B. `temperature: climate.wohnzimmer_links = 21.0, climate.wohnzimmer_rechts = 23.0`.
+
+Zwei Fälle lösen bewusst *nicht* aus: ein isoliertes Gerät (es soll ja abweichen und bleibt aus dem Attribut heraus) und Geräte mit konfigurierten Mitglieder-Offsets (sie werden auf der logischen Einstellung verglichen, ein gewolltes +1/−1 gilt also als einig).
+
+> Als Dashboard-Variante derselben Idee: eine Bedingungs-Karte, die nur erscheint, solange `member_divergence` nicht leer ist — bei einer einigen Gruppe zeigt sie gar nichts.
+
+---
+
 ## Tipps
 
 - **Einfach anfangen:** Zuerst die grundlegende Gruppierung zum Laufen bringen (nur Mitglieder, keine weiteren Einstellungen), dann Funktionen nach und nach hinzufügen.
 - **Erweiterte Funktionen:** In der Gruppenkonfiguration aktivieren, um alles jenseits der Basic-Stufe freizuschalten (Beispiele 3–18).
-- **Sync-Modus:** Nutze `Lock`, wenn die Gruppe die alleinige Quelle der Wahrheit sein soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen werden sollen; nutze `Mirror/Lock`, wenn nur einige Attribute synchronisiert werden sollen (Beispiel 20).
+- **Sync-Modus:** Nutze `Lock`, wenn die Gruppe die alleinige Quelle der Wahrheit sein soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen werden sollen; nutze `Mirror/Lock`, wenn nur einige Attribute synchronisiert werden sollen (Beispiel 22).
 - **Sperr-Priorität:** Hauptschalter > Fenstersteuerung > Anwesenheitssteuerung — sind mehrere gleichzeitig aktiv, wird nur die Aktion der höchstrangigen an Mitglieder gesendet.
 - **Zeitplan + Boost:** Boost rangiert über dem Zeitplan. Zeitplan-Zeitblock-Änderungen laufen während eines Boosts weiterhin im Hintergrund.
 - **Kalibrierung:** Nutze CGHs eigene Kalibrierung nur, wenn du nicht bereits Better Thermostat oder Versatile Thermostat verwendest — die haben ihre eigene (Beispiel 13).

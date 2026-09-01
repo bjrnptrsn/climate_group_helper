@@ -339,7 +339,6 @@
               "staggered_call_delay": "命令间延迟（秒）",
               "grace_period": "乐观 UI 缓冲期（秒）",
               "expose_smart_sensors": "公开智能传感器",
-              "expose_member_entities": "公开成员列表",
               "expose_config": "显示配置 (调试)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "向组成员发送各条命令之间的等待时间。错开命令可防止 Zigbee/Matter 网络拥塞。设置为 0 可禁用。",
               "grace_period": "群组在切换到成员平均值之前显示已发送值的时长。防止慢速设备（Cloud 网关、Zigbee）回显旧状态时的 UI 闪烁。设置为 0 可禁用。",
               "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
-              "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
               "expose_config": "将所有配置值添加到实体属性中。用于调试。"
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "至少一个成员必须保留在隔离之外。",
       "isolation_entity_overlap": "每个成员只能出现在一条隔离规则中。",
       "isolation_action_preset_required": "请为隔离动作选择一个预设模式。",
+      "isolation_sensor_required": "请为隔离规则选择一个传感器，或将其触发器设为已禁用。",
+      "isolation_hvac_modes_required": "请为隔离规则至少选择一个模式，或将其触发器设为已禁用。",
       "window_temperature_required": "请设置开窗温度，或更改开窗动作。",
       "presence_action_value_required": "请为所选的离开动作设置数值，或更改该动作。",
       "schedule_fallback_payload_invalid": "后备计划有效负载中的 YAML 格式无效。必须是有效的键值映射。",

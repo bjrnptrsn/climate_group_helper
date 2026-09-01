@@ -16,7 +16,6 @@ from .const import (
     CONF_DEBOUNCE_DELAY,
     CONF_EXPAND_SECTIONS,
     CONF_EXPOSE_CONFIG,
-    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
     CONF_GRACE_PERIOD,
@@ -36,6 +35,7 @@ from .const import (
     CONF_ISOLATION_RESTORE_DELAY,
     CONF_ISOLATION_RULES,
     CONF_ISOLATION_RULES_COUNT,
+    CONF_ISOLATION_SLOT,
     CONF_ISOLATION_SENSOR,
     CONF_ISOLATION_TRIGGER_HVAC_MODES,
     CONF_ISOLATION_TRIGGER,
@@ -163,7 +163,6 @@ VALID_CONFIG_KEYS = {
     CONF_RETAIN_SERVICE_CHANGES_PRESETS,
     # Other options
     CONF_EXPOSE_SMART_SENSORS,
-    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_CONFIG,
     CONF_EXPAND_SECTIONS,
     CONF_RANGE_TEMPLATE_ENABLED,
@@ -218,7 +217,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old config entries to the current version.
 
-    Two stages: a Soft Reset to v12 for everything older, then v12→v13.
+    Three stages: a Soft Reset to v12 for everything older, then v12→v13 and v13→v14.
 
     The Soft Reset combines all historical transformations (v7–v12) into a single pass:
         - Combine data+options (covers pre-v7 entries)
@@ -237,6 +236,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     rename has to happen before the whitelist would drop the old key, and the
     whitelist has to run at all — otherwise keys retired after v12 (resync_interval,
     override_duration, persist_changes) linger in those entries forever.
+
+    v13→v14 gives every isolation rule the UI slot number it currently occupies, so
+    a rule can be addressed by slot rather than by list position. Its own step for
+    the same reason as above: entries already on v13 never enter the Soft Reset.
     """
     current_options = dict(entry.options)
 
@@ -339,6 +342,38 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=13)
         _LOGGER.info("[%s] Migration to v13 complete.", entry.title)
+
+        current_options = new_options
+
+    if entry.version < 14:
+        _LOGGER.info("[%s] Migrating config entry from version %s to 14", entry.title, entry.version)
+
+        # Give every isolation rule the UI slot number it currently occupies.
+        # Until now the list position carried that meaning, which breaks as soon
+        # as a rule is deleted: everything behind it moves up a slot, and
+        # isolation_bypass would then address a different rule than the options
+        # flow shows in that slot.
+        #
+        # The list position is the correct source here precisely because it was
+        # the identity so far — this is the last moment it still holds.
+        new_options = dict(current_options)
+        rules = new_options.get(CONF_ISOLATION_RULES)
+        if rules:
+            new_options[CONF_ISOLATION_RULES] = [
+                rule if CONF_ISOLATION_SLOT in rule else {**rule, CONF_ISOLATION_SLOT: index}
+                for index, rule in enumerate(rules, start=1)
+            ]
+
+        # Nested rule dicts are out of reach for VALID_CONFIG_KEYS (top-level
+        # only), so the new field needs no whitelist entry. Re-applying the
+        # whitelist here still matters for anything retired after v13.
+        dropped = sorted(key for key in new_options if key not in VALID_CONFIG_KEYS)
+        if dropped:
+            new_options = {key: value for key, value in new_options.items() if key in VALID_CONFIG_KEYS}
+            _LOGGER.info("[%s] Dropped retired config keys: %s", entry.title, ", ".join(dropped))
+
+        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=14)
+        _LOGGER.info("[%s] Migration to v14 complete.", entry.title)
 
     return True
 

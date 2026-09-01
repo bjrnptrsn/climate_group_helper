@@ -339,7 +339,6 @@
               "staggered_call_delay": "Ritardo tra i comandi (secondi)",
               "grace_period": "Periodo di grazia UI ottimistico (secondi)",
               "expose_smart_sensors": "Esponi sensori intelligenti",
-              "expose_member_entities": "Esponi elenco dei membri",
               "expose_config": "Mostra configurazione (Debug)"
             },
             "data_description": {
@@ -350,7 +349,6 @@
               "staggered_call_delay": "Tempo di attesa tra i singoli comandi ai membri del gruppo. Scaglionare i comandi previene la congestione della rete in ambienti Zigbee/Matter. Impostare a 0 per disattivare.",
               "grace_period": "Per quanto tempo il gruppo mostra il valore inviato prima di passare alla media dei membri. Evita il flickering dell'UI quando dispositivi lenti (bridge Cloud, Zigbee) restituiscono il loro vecchio stato. Impostare a 0 per disattivare.",
               "expose_smart_sensors": "Crea entità sensore aggiuntive per temperatura e umidità del gruppo (utile per i grafici).",
-              "expose_member_entities": "Crea un attributo che elenca tutti gli ID delle entità membro.",
               "expose_config": "Aggiunge tutti i valori di configurazione agli attributi dell'entità. Utile per il debug."
             }
           }
@@ -368,6 +366,8 @@
       "isolation_all_selected": "Almeno un membro deve rimanere fuori dall'isolamento.",
       "isolation_entity_overlap": "Ogni membro può comparire solo in una regola di isolamento.",
       "isolation_action_preset_required": "Seleziona una modalità predefinita per l'azione di isolamento.",
+      "isolation_sensor_required": "Seleziona un sensore per la regola di isolamento oppure imposta il suo trigger su Disattivato.",
+      "isolation_hvac_modes_required": "Seleziona almeno una modalità per la regola di isolamento oppure imposta il suo trigger su Disattivato.",
       "window_temperature_required": "Imposta una temperatura finestra o cambia l'azione finestra.",
       "presence_action_value_required": "Imposta un valore per l'azione di assenza selezionata o cambia l'azione.",
       "schedule_fallback_payload_invalid": "Formato YAML non valido nel payload di riserva della programmazione. Deve essere una mappatura chiave-valore valida.",
