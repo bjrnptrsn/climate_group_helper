@@ -16,6 +16,7 @@ from .const import (
     CONF_DEBOUNCE_DELAY,
     CONF_EXPAND_SECTIONS,
     CONF_EXPOSE_CONFIG,
+    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
     CONF_GRACE_PERIOD,
@@ -61,12 +62,15 @@ from .const import (
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_RANGE_TEMPLATE_COOL_ENTITIES,
     CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
+    CONF_RANGE_TEMPLATE_HUMIDITY_ACTION,
+    CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
+    CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED,
+    CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
     CONF_RETAIN_SERVICE_CHANGES_PRESETS,
     CONF_RETAIN_SERVICE_CHANGES_SCHEDULE,
     CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_FALLBACK_PAYLOAD,
     CONF_SCHEDULE_ENTITY,
-    CONF_STAGGERED_CALL_DELAY,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
     CONF_TEMP_CALIBRATION_MODE,
@@ -122,7 +126,6 @@ VALID_CONFIG_KEYS = {
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_FORCE_RETRY,
-    CONF_STAGGERED_CALL_DELAY,
     CONF_GRACE_PERIOD,
     # Sync mode options
     CONF_SYNC_MODE,
@@ -164,11 +167,16 @@ VALID_CONFIG_KEYS = {
     # Other options
     CONF_EXPOSE_SMART_SENSORS,
     CONF_EXPOSE_CONFIG,
+    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPAND_SECTIONS,
     CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
     CONF_RANGE_TEMPLATE_COOL_ENTITIES,
+    CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED,
+    CONF_RANGE_TEMPLATE_HUMIDITY_ACTION,
+    CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
+    CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
 
     # Member Isolation options — flat isolation_* keys are migrated into
     # CONF_ISOLATION_RULES (v11→v12) and intentionally excluded from the whitelist.
@@ -192,7 +200,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not entry.options:
         hass.config_entries.async_update_entry(entry, data={}, options=entry.data)
 
-    # Initialize domain data
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault(entry.entry_id, {})
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS] = set()
@@ -217,7 +224,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old config entries to the current version.
 
-    Three stages: a Soft Reset to v12 for everything older, then v12→v13 and v13→v14.
+    Four stages: a Soft Reset to v12 for everything older, then v12→v13, v13→v14, and v14→v15.
 
     The Soft Reset combines all historical transformations (v7–v12) into a single pass:
         - Combine data+options (covers pre-v7 entries)
@@ -230,16 +237,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         - Filter out invalid/renamed configuration keys via VALID_CONFIG_KEYS whitelist
         - Restore defaults for valid keys not present
 
-    v12→v13 renames persist_active_schedule → retain_service_changes_schedule and
-    re-applies the VALID_CONFIG_KEYS whitelist. It runs as its own step (not inside
-    the Soft Reset) because entries already on v12 never enter that block: the
-    rename has to happen before the whitelist would drop the old key, and the
-    whitelist has to run at all — otherwise keys retired after v12 (resync_interval,
-    override_duration, persist_changes) linger in those entries forever.
+    v12→v13 renames persist_active_schedule → retain_service_changes_schedule.
+    The rename has to happen before the whitelist drops the old key.
 
     v13→v14 gives every isolation rule the UI slot number it currently occupies, so
-    a rule can be addressed by slot rather than by list position. Its own step for
-    the same reason as above: entries already on v13 never enter the Soft Reset.
+    a rule can be addressed by slot rather than by list position.
+
+    v14→v15 re-applies the VALID_CONFIG_KEYS whitelist to drop all retired keys
+    (e.g. staggered_call_delay, resync_interval, override_duration, persist_changes).
     """
     current_options = dict(entry.options)
 
@@ -325,20 +330,9 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Rename persist_active_schedule → retain_service_changes_schedule. The flag
         # now covers every schedule change made via service (base entity, bypass
         # entity, fallback payload), not just the active schedule entity.
-        # Entries coming through the Soft Reset above were already renamed there
-        # (before the whitelist filter); this stage covers entries already on v12.
         new_options = dict(current_options)
         if "persist_active_schedule" in new_options:
             new_options[CONF_RETAIN_SERVICE_CHANGES_SCHEDULE] = new_options.pop("persist_active_schedule")
-
-        # Re-apply the whitelist. Entries already on v12 never enter the Soft Reset
-        # block, so keys retired after v12 (resync_interval, override_duration,
-        # persist_changes) would linger in their options forever — a stale value
-        # that the options flow no longer shows and nothing ever clears.
-        dropped = sorted(key for key in new_options if key not in VALID_CONFIG_KEYS)
-        if dropped:
-            new_options = {key: value for key, value in new_options.items() if key in VALID_CONFIG_KEYS}
-            _LOGGER.info("[%s] Dropped retired config keys: %s", entry.title, ", ".join(dropped))
 
         hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=13)
         _LOGGER.info("[%s] Migration to v13 complete.", entry.title)
@@ -349,13 +343,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("[%s] Migrating config entry from version %s to 14", entry.title, entry.version)
 
         # Give every isolation rule the UI slot number it currently occupies.
-        # Until now the list position carried that meaning, which breaks as soon
-        # as a rule is deleted: everything behind it moves up a slot, and
-        # isolation_bypass would then address a different rule than the options
-        # flow shows in that slot.
-        #
-        # The list position is the correct source here precisely because it was
-        # the identity so far — this is the last moment it still holds.
         new_options = dict(current_options)
         rules = new_options.get(CONF_ISOLATION_RULES)
         if rules:
@@ -364,16 +351,23 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 for index, rule in enumerate(rules, start=1)
             ]
 
-        # Nested rule dicts are out of reach for VALID_CONFIG_KEYS (top-level
-        # only), so the new field needs no whitelist entry. Re-applying the
-        # whitelist here still matters for anything retired after v13.
+        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=14)
+        _LOGGER.info("[%s] Migration to v14 complete.", entry.title)
+
+        current_options = new_options
+
+    if entry.version < 15:
+        _LOGGER.info("[%s] Migrating config entry from version %s to 15", entry.title, entry.version)
+
+        # Re-apply the whitelist: discards all deprecated/retired keys (e.g. staggered_call_delay)
+        new_options = dict(current_options)
         dropped = sorted(key for key in new_options if key not in VALID_CONFIG_KEYS)
         if dropped:
             new_options = {key: value for key, value in new_options.items() if key in VALID_CONFIG_KEYS}
             _LOGGER.info("[%s] Dropped retired config keys: %s", entry.title, ", ".join(dropped))
 
-        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=14)
-        _LOGGER.info("[%s] Migration to v14 complete.", entry.title)
+        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=15)
+        _LOGGER.info("[%s] Migration to v15 complete.", entry.title)
 
     return True
 
@@ -381,7 +375,6 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
 
-    # Get setup platforms
     entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
     platforms = list(entry_data.get(SETUP_PLATFORMS, {Platform.CLIMATE}))
 

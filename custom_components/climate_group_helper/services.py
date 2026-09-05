@@ -56,7 +56,6 @@ from .const import (
     CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
-    CONF_STAGGERED_CALL_DELAY,
     CONF_SYNC_MODE,
     CONF_TEMP_CALIBRATION_MODE,
     CONF_TEMP_CURRENT_AVG,
@@ -226,7 +225,6 @@ async def async_apply_config(
         CONF_RETRY_DELAY: float,
         CONF_GRACE_PERIOD: float,
         CONF_DEBOUNCE_DELAY: float,
-        CONF_STAGGERED_CALL_DELAY: float,
     }
     for key, caster in numeric_keys.items():
         if key not in filtered:
@@ -237,6 +235,14 @@ async def async_apply_config(
             raise ServiceValidationError(
                 f"Invalid value for '{key}': {filtered[key]!r} is not a valid number."
             ) from None
+        # All four are counts or durations, and the options flow has no negative
+        # range for any of them. A minus sign is silent otherwise: retry_attempts
+        # of -1 makes the retry loop run zero times, so not a single command
+        # reaches the members and nothing reports why.
+        if filtered[key] < 0:
+            raise ServiceValidationError(
+                f"Invalid value for '{key}': {filtered[key]!r} must not be negative."
+            )
 
     # Same reasoning for the enum-backed keys, in two groups. These abort the
     # entity setup on the next reload — far from the call that caused it — and

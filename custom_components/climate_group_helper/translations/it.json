@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Rispetta lo stato Off dei membri (Sincronizzazione)"
             },
             "data_description": {
-              "sync_mode": "Cosa fare quando un membro cambia fuori dal gruppo. Disabled: ignora. Mirror: rispecchia modifiche. Lock: ripristina modifiche. Mirror/Lock: rispecchia selezionati, ripristina non selezionati. Master/Lock: rispecchia master, ripristina altri.",
+              "sync_mode": "Cosa fare quando un membro cambia fuori dal gruppo. Disabled: ignora. Follow: adotta le modifiche senza trasmetterle. Mirror: rispecchia modifiche. Lock: ripristina modifiche. Mirror/Lock: rispecchia selezionati, ripristina non selezionati. Master/Lock: rispecchia master, ripristina altri.",
               "sync_attributes": "Definisce su quali attributi agisce la modalità di sincronizzazione. La gestione degli attributi selezionati e non selezionati (Mirror, Revert o Ignore) dipende dalla modalità scelta.",
               "ignore_off_members_sync": "I membri spenti manualmente vengono lasciati stare. Il loro stato non viene né rispecchiato né ripristinato. Nota: i comandi diretti del gruppo raggiungono sempre tutti i membri."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Abilita modello intervallo",
               "range_template_deadband_action": "Azione nella zona morta",
               "range_template_heat_entities": "Dispositivi di riscaldamento",
-              "range_template_cool_entities": "Dispositivi di raffreddamento"
+              "range_template_cool_entities": "Dispositivi di raffreddamento",
+              "range_template_humidity_enabled": "Deumidifica in banda morta",
+              "range_template_humidity_action": "Azione umidità",
+              "range_template_humidity_hysteresis": "Isteresi umidità",
+              "range_template_humidity_deactivation_delay": "Ritardo di disattivazione"
             },
             "data_description": {
               "range_template_enabled": "Visualizza automaticamente tutti i membri a setpoint singolo (senza caldo/freddo nativo) come dispositivi virtuali in modalità intervallo.",
               "range_template_deadband_action": "Azione da eseguire quando la temperatura attuale è all'interno dell'intervallo target (zona morta).",
               "range_template_heat_entities": "Membri autorizzati a riscaldare. I membri non elencati non hanno restrizioni (decide la capacità fisica). Un ruolo può solo limitare, mai estendere le capacità di un dispositivo.",
-              "range_template_cool_entities": "Membri autorizzati a raffreddare. I membri non elencati non hanno restrizioni (decide la capacità fisica). Un ruolo può solo limitare, mai estendere le capacità di un dispositivo."
+              "range_template_cool_entities": "Membri autorizzati a raffreddare. I membri non elencati non hanno restrizioni (decide la capacità fisica). Un ruolo può solo limitare, mai estendere le capacità di un dispositivo.",
+              "range_template_humidity_enabled": "All'interno dell'intervallo di temperatura target, passa all'azione di umidità se l'umidità supera il target.",
+              "range_template_humidity_action": "Azione da eseguire quando l'umidità corrente supera l'umidità target nella banda morta.",
+              "range_template_humidity_hysteresis": "Banda di isteresi del trigger di Schmitt attorno all'umidità target per prevenire cicli rapidi.",
+              "range_template_humidity_deactivation_delay": "Ritardo prima di disattivare l'azione di umidità dopo essere scesi sotto la soglia."
             }
           },
           "advanced_section": {
             "name": "Impostazioni Avanzate",
-            "description": "Affina i tempi dei comandi, il comportamento dei tentativi e le chiamate scaglionate. Alterna attributi diagnostici e sensori di configurazione.",
+            "description": "Affina i tempi dei comandi e il comportamento dei tentativi. Alterna attributi diagnostici e sensori di configurazione.",
             "data": {
               "debounce_delay": "Ritardo Debounce (secondi)",
               "retry_attempts": "Tentativi Riprova",
               "retry_delay": "Ritardo Riprova (secondi)",
               "force_retry": "Forza nuovo tentativo",
-              "staggered_call_delay": "Ritardo tra i comandi (secondi)",
               "grace_period": "Periodo di grazia UI ottimistico (secondi)",
               "expose_smart_sensors": "Esponi sensori intelligenti",
+              "expose_member_entities": "Esponi elenco dei membri",
               "expose_config": "Mostra configurazione (Debug)"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "Quante volte inviare nuovamente un comando se un dispositivo non risponde. Imposta a 0 per disabilitare.",
               "retry_delay": "Pausa tra i tentativi. Dare ai dispositivi un momento per recuperare può migliorare l'affidabilità.",
               "force_retry": "Invia sempre di nuovo i comandi a tutti i membri, anche se riportano già lo stato target.",
-              "staggered_call_delay": "Tempo di attesa tra i singoli comandi ai membri del gruppo. Scaglionare i comandi previene la congestione della rete in ambienti Zigbee/Matter. Impostare a 0 per disattivare.",
               "grace_period": "Per quanto tempo il gruppo mostra il valore inviato prima di passare alla media dei membri. Evita il flickering dell'UI quando dispositivi lenti (bridge Cloud, Zigbee) restituiscono il loro vecchio stato. Impostare a 0 per disattivare.",
               "expose_smart_sensors": "Crea entità sensore aggiuntive per temperatura e umidità del gruppo (utile per i grafici).",
+              "expose_member_entities": "Crea un attributo che elenca tutti gli ID delle entità membro.",
               "expose_config": "Aggiunge tutti i valori di configurazione agli attributi dell'entità. Utile per il debug."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Disattivato – Nessuna sincronizzazione automatica tra i membri",
+        "follow_only": "Follow – Le modifiche manuali su un dispositivo aggiornano il gruppo, ma non vengono applicate agli altri",
         "mirror": "Mirror – Le modifiche manuali su un dispositivo vengono applicate a tutti i membri",
         "lock": "Lock – Le modifiche manuali vengono ripristinate allo stato del gruppo",
         "mirror_lock": "Mirror/Lock – Gli attributi selezionati vengono sincronizzati, gli altri sono rigorosamente ripristinati",
@@ -540,6 +549,12 @@
         "none": "Nessuna",
         "off": "Spegni",
         "fan_only": "Solo ventilatore"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Solo ventola",
+        "dry": "Deumidificazione"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Applica configurazione",
-      "description": "Applica una configurazione JSON portatile a un gruppo. Utile per copiare le impostazioni tra i gruppi o ripristinare un backup.",
+      "description": "Applica una configurazione JSON portatile a un gruppo. Utile per copiare le impostazioni tra i gruppi o ripristinare un backup. Successivamente apri le impostazioni del gruppo e salva una volta: la finestra delle impostazioni verifica inoltre che la combinazione applicata sia sensata.",
       "fields": {
         "settings": {
           "name": "Impostazioni (JSON)",

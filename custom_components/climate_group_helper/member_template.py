@@ -40,13 +40,19 @@ from homeassistant.components.climate import (
 from homeassistant.const import (
     ATTR_SUPPORTED_FEATURES,
     ATTR_TEMPERATURE,
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
 )
-from homeassistant.core import State
+from homeassistant.core import CALLBACK_TYPE, State, callback
+from homeassistant.helpers.event import async_call_later
 from types import MappingProxyType
 
-from .const import RangeTemplateDeadbandAction
+from .const import (
+    DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION,
+    DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
+    DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
+    RangeTemplateDeadbandAction,
+    RangeTemplateHumidityAction,
+)
+from .state import available_state, is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -73,6 +79,11 @@ class RangeTemplate:
     heat_entities: set[str] = field(default_factory=set)
     cool_entities: set[str] = field(default_factory=set)
     last_physical_mode: dict[str, str] = field(default_factory=dict)
+    humidity_enabled: bool = False
+    humidity_action: str = DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION
+    humidity_hysteresis: float = DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS
+    humidity_deactivation_delay: float = DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY
+    humidity_active: bool = False
 
     def covers(self, entity_id: str | None) -> bool:
         """Return True if the template applies to `entity_id`."""
@@ -106,12 +117,19 @@ class RangeTemplateState:
 
     @property
     def state(self) -> str:
-        if self._real.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if not is_available(self._real):
             return self._real.state
+        # No expected mode means no command is due — the member is left alone
+        # deliberately and still reads as heat_cool. OFF is excluded: the
+        # template never commands it, and isolation release / Last Man Standing
+        # must keep seeing an off member.
+        if self._expected_mode is None and self._real.state != HVACMode.OFF:
+            return HVACMode.HEAT_COOL
         return HVACMode.HEAT_COOL if self._real.state == self._expected_mode else self._real.state
 
     @property
     def attributes(self) -> MappingProxyType[str, Any]:
+        """Render the member's attributes as those of a `heat_cool` range entity."""
         attrs = dict(self._real.attributes)
 
         features = attrs.get(ATTR_SUPPORTED_FEATURES, 0)
@@ -145,6 +163,10 @@ class MemberTemplateManager:
         deadband_action: str | None,
         heat_entities: set[str] | None = None,
         cool_entities: set[str] | None = None,
+        humidity_enabled: bool = False,
+        humidity_action: str = DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION,
+        humidity_hysteresis: float = DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
+        humidity_deactivation_delay: float = DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
     ) -> None:
         self._group = group
         self._range_template: RangeTemplate | None = (
@@ -153,10 +175,15 @@ class MemberTemplateManager:
                 deadband_action=deadband_action,
                 heat_entities=heat_entities or set(),
                 cool_entities=cool_entities or set(),
+                humidity_enabled=humidity_enabled,
+                humidity_action=humidity_action,
+                humidity_hysteresis=humidity_hysteresis,
+                humidity_deactivation_delay=humidity_deactivation_delay,
             )
             if deadband_action is not None
             else None
         )
+        self._deactivation_timer: CALLBACK_TYPE | None = None
 
     @property
     def range_template(self) -> RangeTemplate | None:
@@ -280,6 +307,34 @@ class MemberTemplateManager:
         elif current_temp > high:
             if self._mode_allowed(HVACMode.COOL, supported_modes, entity_id):
                 return HVACMode.COOL, high
+        else:
+            # Deadband branch (low <= current_temp <= high)
+            if template.humidity_enabled and template.humidity_active:
+                hum_action = template.humidity_action
+                if (
+                    self._mode_allowed(hum_action, supported_modes, entity_id)
+                    and (supported_modes is None or hum_action in supported_modes)
+                ):
+                    return hum_action, None
+
+            # `deadband_action: none` sends nothing, which would leave the member
+            # stuck in dry once the condition ends. Only for DRY: fan_only is also
+            # a mode the user may have set by hand, so forcing a recovery off it
+            # would override that.
+            if (
+                template.humidity_enabled
+                and not template.humidity_active
+                and deadband is None
+                and template.humidity_action == RangeTemplateHumidityAction.DRY
+            ):
+                real_state = self._group.hass.states.get(entity_id)
+                if real_state and real_state.state == template.humidity_action:
+                    last_mode = template.last_physical_mode.get(entity_id)
+                    if last_mode and (supported_modes is None or last_mode in supported_modes):
+                        return last_mode, None
+                    if supported_modes is None or HVACMode.OFF in supported_modes:
+                        return HVACMode.OFF, None
+
         return deadband, None
 
     def _mode_allowed(
@@ -289,10 +344,11 @@ class MemberTemplateManager:
 
         A member without an entry in either role list behaves as before ("auto"):
         physical capability is authoritative. A role-assigned member may only use
-        the modes its role grants. Modes other than `heat`/`cool` are never
-        governed by roles.
+        the modes its role grants. Modes other than `heat`/`cool`/`dry` are never
+        governed by roles. `dry` cools the evaporator physically, so it is treated
+        like `cool` (only allowed if cooling is allowed for this member).
         """
-        if mode not in (HVACMode.HEAT, HVACMode.COOL):
+        if mode not in (HVACMode.HEAT, HVACMode.COOL, HVACMode.DRY):
             return True
         if supported_modes is not None and mode not in supported_modes:
             return False
@@ -306,7 +362,110 @@ class MemberTemplateManager:
             return True  # Auto: no role assigned, capability check above is authoritative
         if mode == HVACMode.HEAT:
             return entity_id in template.heat_entities
+        # Both COOL and DRY require cool role permission
         return entity_id in template.cool_entities
+
+    @callback
+    def check_humidity(
+        self, current_humidity: float | None, target_humidity: float | None
+    ) -> None:
+        """Evaluate humidity threshold with Schmitt-trigger hysteresis and delays."""
+        template = self._range_template
+        if template is None or not template.humidity_enabled:
+            return
+
+        # End the action rather than freeze it: it only ends on a threshold, so
+        # a missing sensor would keep `dry` (and its cooling) running forever.
+        # Through the normal delay, so a brief dropout does not short-cycle.
+        if target_humidity is None or current_humidity is None:
+            self._deactivate_humidity(template)
+            return
+
+        half_hyst = template.humidity_hysteresis / 2.0
+        high_threshold = target_humidity + half_hyst
+        low_threshold = target_humidity - half_hyst
+
+        if current_humidity > high_threshold:
+            if self._deactivation_timer is not None:
+                self._deactivation_timer()
+                self._deactivation_timer = None
+
+            # Activation is immediate — unlike deactivation, delaying it only
+            # lets the humidity climb further while waiting (same reasoning as
+            # heat/cool never delaying when the temperature band is left).
+            if not template.humidity_active:
+                self._set_humidity_active(True)
+        elif current_humidity < low_threshold:
+            self._deactivate_humidity(template)
+        else:
+            if self._deactivation_timer is not None:
+                self._deactivation_timer()
+                self._deactivation_timer = None
+
+    @callback
+    def _deactivate_humidity(self, template: RangeTemplate) -> None:
+        """End the humidity action, honouring the configured deactivation delay."""
+        if not template.humidity_active or self._deactivation_timer is not None:
+            return
+        if template.humidity_deactivation_delay <= 0.0:
+            self._set_humidity_active(False)
+            return
+        self._deactivation_timer = async_call_later(
+            self._group.hass,
+            template.humidity_deactivation_delay,
+            self._on_deactivation_timer,
+        )
+
+    @callback
+    def _set_humidity_active(self, active: bool) -> None:
+        """Flip the deadband humidity condition, driving a changeover on a change."""
+        template = self._range_template
+        if template is None or template.humidity_active == active:
+            return
+        template.humidity_active = active
+        _LOGGER.debug(
+            "[%s] Range template humidity condition changed to %s",
+            self._group.entity_id,
+            active,
+        )
+        self._group._trigger_template_changeover()
+
+    @callback
+    def _recheck_humidity_threshold(self) -> bool:
+        """TOCTOU re-check of the humidity condition at timer fire time.
+
+        The delay timer was armed from an earlier evaluation; re-read the
+        current aggregated humidity and commanded target before acting, so a
+        humidity that climbed back over the threshold while the timer was
+        pending does not get deactivated anyway. Mirrors the presence handler's
+        TOCTOU re-check in `_go_away`/`_go_restore`.
+
+        A reading that is still missing confirms deactivation instead of
+        aborting it — that is the same reason the timer may have been armed in
+        the first place (see `check_humidity`).
+        """
+        template = self._range_template
+        if template is None or not template.humidity_enabled:
+            return False
+        current = getattr(self._group, "_attr_current_humidity", None)
+        target = self._group.shared_target_state.humidity
+        if current is None or target is None:
+            return True
+        half_hyst = template.humidity_hysteresis / 2.0
+        return current < target - half_hyst
+
+    @callback
+    def _on_deactivation_timer(self, _now: Any) -> None:
+        self._deactivation_timer = None
+        if not self._recheck_humidity_threshold():
+            return
+        self._set_humidity_active(False)
+
+    def async_cancel_timers(self) -> None:
+        """Cancel any running delay timer."""
+        if self._deactivation_timer is not None:
+            self._deactivation_timer()
+            self._deactivation_timer = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -320,8 +479,7 @@ class MemberTemplateManager:
 
         template.entity_ids = frozenset(
             eid for eid in self._group.climate_entity_ids
-            if (s := self._group.hass.states.get(eid)) is not None
-            and s.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            if (s := available_state(self._group.hass.states.get(eid)))
             and HVACMode.HEAT_COOL not in s.attributes.get(ATTR_HVAC_MODES, [])
         )
         self.initialize_last_modes()
@@ -342,7 +500,7 @@ class MemberTemplateManager:
             if entity_id in template.last_physical_mode:
                 continue
             real_state = self._group.hass.states.get(entity_id)
-            if real_state and real_state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            if is_available(real_state):
                 template.last_physical_mode[entity_id] = real_state.state
 
     # ------------------------------------------------------------------

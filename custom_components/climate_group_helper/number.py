@@ -73,6 +73,12 @@ async def async_push_group_offset(group: ClimateGroupHelper) -> None:
         await group.presence_override_manager.enforce_override()
     elif not group.run_state.temporary_state_active:
         await group.sync_mode_call_handler.call_debounced()
+        # The sync handler excludes Range-Template-covered members (they are
+        # owned by the template handler, which alone drives their changeover).
+        # Without this second push the covered devices keep their old setpoint
+        # until an unrelated member event happens to trigger one.
+        if group.member_template_manager.range_template is not None:
+            await group.template_call_handler.call_debounced()
     else:
         _LOGGER.debug(
             "[%s] Group offset not pushed. Sources: '%s', Temporary state active: %s",

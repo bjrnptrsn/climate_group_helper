@@ -25,7 +25,13 @@ from homeassistant.components.climate import (
     SERVICE_SET_TEMPERATURE,
     ClimateEntityFeature,
 )
-from homeassistant.const import ATTR_TEMPERATURE, CONF_ENTITIES, CONF_NAME
+from homeassistant.const import (
+    ATTR_TEMPERATURE,
+    CONF_ENTITIES,
+    CONF_NAME,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
+)
 
 DEFAULT_NAME = "Climate Group"
 DOMAIN = "climate_group_helper"
@@ -39,8 +45,7 @@ CONF_UNION_OUT_OF_BOUNDS_ACTION = "union_out_of_bounds_action"
 CONF_UNION_UNSUPPORTED_HVAC_ACTION = "union_unsupported_hvac_action"
 
 # Supported features for the climate group entity. Shared by the aggregation,
-# restore and entity-setup paths (previously duplicated in climate.py and
-# aggregation.py — a single source of truth so they cannot drift).
+# restore and entity-setup paths — one source of truth so they cannot drift.
 SUPPORTED_FEATURES = (
     ClimateEntityFeature.TARGET_TEMPERATURE
     | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
@@ -60,7 +65,6 @@ DEFAULT_SUPPORTED_FEATURES = (
 # Temperature Settings
 CONF_CALIBRATION_HEARTBEAT = "calibration_heartbeat"
 CONF_CALIBRATION_IGNORE_OFF = "calibration_ignore_off"
-CONF_STAGGERED_CALL_DELAY = "staggered_call_delay"
 CONF_TEMP_CALIBRATION_MODE = "temp_calibration_mode"
 CONF_TEMP_CURRENT_AVG = "temp_current_avg"
 CONF_TEMP_SENSORS = "temp_sensors"
@@ -145,6 +149,7 @@ CONF_RETAIN_SERVICE_CHANGES_PRESETS = "retain_service_changes_presets"
 # Advanced options
 CONF_DEBOUNCE_DELAY = "debounce_delay"
 CONF_EXPOSE_CONFIG = "expose_config"
+CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
 CONF_FORCE_RETRY = "force_retry"
 CONF_GRACE_PERIOD = "grace_period"
@@ -153,8 +158,15 @@ CONF_RANGE_TEMPLATE_COOL_ENTITIES = "range_template_cool_entities"
 CONF_RANGE_TEMPLATE_DEADBAND_ACTION = "range_template_deadband_action"
 CONF_RANGE_TEMPLATE_ENABLED = "range_template_enabled"
 CONF_RANGE_TEMPLATE_HEAT_ENTITIES = "range_template_heat_entities"
+CONF_RANGE_TEMPLATE_HUMIDITY_ACTION = "range_template_humidity_action"
+CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY = "range_template_humidity_deactivation_delay"
+CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED = "range_template_humidity_enabled"
+CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS = "range_template_humidity_hysteresis"
 CONF_RETRY_ATTEMPTS = "retry_attempts"
 CONF_RETRY_DELAY = "retry_delay"
+DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION = "dry"
+DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS = 3.0
+DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY = 0.0
 # Small window so triggers arriving a few ms apart (startup resync next to a
 # schedule slot, a slider sending several values) collapse into one run
 # instead of each sending its own command batch to the devices.
@@ -223,6 +235,7 @@ class SyncMode(StrEnum):
     """Enum for sync modes."""
 
     DISABLED = "disabled"
+    FOLLOW_ONLY = "follow_only"
     LOCK = "lock"
     MIRROR = "mirror"
     MASTER_LOCK = "master_lock"
@@ -257,6 +270,13 @@ class RangeTemplateDeadbandAction(StrEnum):
     NONE = "none"
     OFF = "off"
     FAN_ONLY = "fan_only"
+
+
+class RangeTemplateHumidityAction(StrEnum):
+    """Physical action when humidity condition is active in deadband."""
+
+    FAN_ONLY = "fan_only"
+    DRY = "dry"
 
 
 class PresenceMode(StrEnum):
@@ -471,3 +491,10 @@ FLOAT_TOLERANCE = 0.05
 
 # Startup phase protection: Delay (s) to prevent initial state flood from overwriting target.
 STARTUP_BLOCK_DELAY = 5.0
+
+# The two states that carry no usable value. "unknown" belongs with
+# "unavailable" everywhere in this integration: an entity that exists but has
+# not reported yet is as unusable as one that is gone, and treating them
+# differently would only move the missing-value handling one line further down.
+# The predicates reading this live in state.py.
+TRANSIENT_STATES: frozenset[str] = frozenset({STATE_UNAVAILABLE, STATE_UNKNOWN})

@@ -17,9 +17,8 @@ from homeassistant.components.climate import (
 )
 from homeassistant.util import dt as dt_util
 from homeassistant.const import (
+    ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
 )
 
 from .const import (
@@ -64,7 +63,7 @@ from .const import (
     SyncMode,
     WindowControlMode,
 )
-from .state import ClimateState
+from .state import ClimateState, is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -187,7 +186,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # exactly the situation where a dashboard needs to show "0 of N active".
     attrs[ATTR_ACTIVE_MEMBER_COUNT] = sum(
         1 for s in (group.aggregator.states or ())
-        if s.state not in (HVACMode.OFF, STATE_UNAVAILABLE, STATE_UNKNOWN)
+        if is_available(s) and s.state != HVACMode.OFF
     )
     attrs[ATTR_TOTAL_MEMBER_COUNT] = len(group.climate_entity_ids)
 
@@ -203,7 +202,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         sensors: list[str] = group.config.get(CONF_PRESENCE_SENSOR, [])
         if any(
             (s := group.hass.states.get(sid)) is not None
-            and s.state in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            and not is_available(s)
             for sid in sensors
         ):
             attrs[ATTR_PRESENCE_FALLBACK] = True
@@ -219,11 +218,11 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         attrs[ATTR_CONFIG_OVERRIDES] = dict(run_state.config_overrides)
 
     # --- Member entity IDs ---
-    # Always emitted: this is the only place the member list is visible, since
-    # HA 2026.4 renders the more-info member list from `group_entities`, which
-    # only appears when an entity registers itself as a group — something we
-    # deliberately do not do (it would let service calls bypass our pipeline).
+    # entity_id is opt-in: it renders the native member list in the More-Info
+    # dialog, but is HA-reserved and can break templates/cards expecting a string.
     attrs[ATTR_MEMBER_ENTITIES] = group.climate_entity_ids
+    if group._expose_member_entities:
+        attrs[ATTR_ENTITY_ID] = group.climate_entity_ids
 
     # Configured features — always emitted (even as []) so the card knows the
     # attribute exists and can distinguish "not configured" from "not yet received".

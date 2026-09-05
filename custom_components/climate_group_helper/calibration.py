@@ -1,14 +1,13 @@
 """Calibration handler for Climate Group Helper."""
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import ATTR_CURRENT_TEMPERATURE, HVACMode
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.debounce import Debouncer
@@ -23,6 +22,7 @@ from .const import (
     META_VALUE_DISABLED,
     CalibrationMode,
 )
+from .state import is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -147,7 +147,7 @@ class CalibrationHandler:
         member_state = self._hass.states.get(member_id)
         if member_state is None:
             return None
-        if member_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if not is_available(member_state):
             return "unavailable"
         if self._ignore_off and member_state.state == HVACMode.OFF:
             return "OFF (Battery Saver)"
@@ -300,25 +300,19 @@ class CalibrationHandler:
         )
 
     async def _flush(self) -> None:
-        """Write queued calibration values, with optional stagger delay between writes."""
-        stagger_delay = self._group.stagger_delay
+        """Write queued calibration values to number entities."""
         pending = list(self._pending.items())
         self._pending.clear()
 
-        for i, (entity_id, value) in enumerate(pending):
+        for entity_id, value in pending:
             # Re-checked here, not just at queue time: the member may have gone
-            # OFF or unavailable since, and the stagger delay below makes that
-            # window longer with every write in the batch.
+            # OFF or unavailable during the debouncer cooldown.
             if reason := self._skip_reason(entity_id):
                 _LOGGER.debug(
                     "[%s] Dropping queued calibration for %s — member is %s",
                     self._group.entity_id, entity_id, reason,
                 )
                 continue
-
-            # Stagger delay between calls (not before first, not after last)
-            if i > 0 and stagger_delay:
-                await asyncio.sleep(stagger_delay)
 
             _LOGGER.debug("[%s] Writing calibration %s → %s", self._group.entity_id, entity_id, value)
             try:

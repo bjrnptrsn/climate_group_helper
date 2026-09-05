@@ -7,7 +7,6 @@ import asyncio
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_state_change_event
 
@@ -17,6 +16,7 @@ from .const import (
     CONF_SCHEDULE_FALLBACK_PAYLOAD,
     FLOAT_TOLERANCE,
 )
+from .state import is_available
 from .meta_processor import MetaProcessResult
 from .payload import (
     parse_entity_state,
@@ -264,8 +264,7 @@ class ScheduleHandler(ScheduleBaseHandler):
 
         @callback
         def handle_state_change(event: Any) -> None:
-            new_state = event.data.get("new_state")
-            if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            if not is_available(event.data.get("new_state")):
                 return
             self._hass.async_create_background_task(
                 self.on_slot_change(), name="climate_group_schedule_slot_change"
@@ -408,8 +407,7 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
 
         @callback
         def handle_state_change(event: Any) -> None:
-            new_state = event.data.get("new_state")
-            if new_state is None or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            if not is_available(event.data.get("new_state")):
                 return
             self._hass.async_create_background_task(
                 self.on_slot_change(), name="climate_group_schedule_bypass_slot_change"

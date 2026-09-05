@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respekter medlemmers Off-tilstand (Synk)"
             },
             "data_description": {
-              "sync_mode": "Hvad skal man gøre, når et medlem ændres uden for gruppen. Disabled: ignorer. Mirror: spejl ændringer. Lock: fortryd ændringer. Mirror/Lock: spejl valgte, fortryd ikke-valgte. Master/Lock: spejl master, fortryd andre.",
+              "sync_mode": "Hvad skal man gøre, når et medlem ændres uden for gruppen. Disabled: ignorer. Follow: overtag ændringer uden at videregive dem. Mirror: spejl ændringer. Lock: fortryd ændringer. Mirror/Lock: spejl valgte, fortryd ikke-valgte. Master/Lock: spejl master, fortryd andre.",
               "sync_attributes": "Definerer, hvilke attributter Sync-tilstanden virker på. Håndteringen af valgte og ikke-valgte attributter (Mirror, Revert eller Ignore) afhænger af den valgte tilstand.",
               "ignore_off_members_sync": "Manuelt slukkede medlemmer lades være. Deres tilstand bliver hverken spejlet eller fortrudt. Bemærk: direkte gruppekommandoer når altid alle medlemmer."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Aktivér områdeskabelon",
               "range_template_deadband_action": "Deadband-handling",
               "range_template_heat_entities": "Varmeapparater",
-              "range_template_cool_entities": "Køleapparater"
+              "range_template_cool_entities": "Køleapparater",
+              "range_template_humidity_enabled": "Affugt i dødbånd",
+              "range_template_humidity_action": "Fugtighedshandling",
+              "range_template_humidity_hysteresis": "Fugtighedshysterese",
+              "range_template_humidity_deactivation_delay": "Deaktiveringsforsinkelse"
             },
             "data_description": {
               "range_template_enabled": "Gengiver automatisk alle enkelt-setpunkt-medlemmer (uden native heat/cool) som virtuelle område-enheder.",
               "range_template_deadband_action": "Handling, der udføres, når den aktuelle temperatur er inden for målrækkevidde (deadband).",
               "range_template_heat_entities": "Medlemmer, der må opvarme. Ulistede medlemmer er ubegrænsede (fysisk kapacitet afgør). En rolle kan kun begrænse, aldrig udvide en enheds kapacitet.",
-              "range_template_cool_entities": "Medlemmer, der må køle. Ulistede medlemmer er ubegrænsede (fysisk kapacitet afgør). En rolle kan kun begrænse, aldrig udvide en enheds kapacitet."
+              "range_template_cool_entities": "Medlemmer, der må køle. Ulistede medlemmer er ubegrænsede (fysisk kapacitet afgør). En rolle kan kun begrænse, aldrig udvide en enheds kapacitet.",
+              "range_template_humidity_enabled": "Når inden for måltemperaturområdet, skift til fugtighedshandlingen, hvis fugtigheden overstiger målfugtigheden.",
+              "range_template_humidity_action": "Handling der udføres, når aktuel fugtighed overstiger målfugtigheden i dødbåndet.",
+              "range_template_humidity_hysteresis": "Schmitt-trigger hysteresebånd omkring målfugtighed for at forhindre hurtig cykling.",
+              "range_template_humidity_deactivation_delay": "Forsinkelse før deaktivering af fugtighedshandlingen efter fald under tærsklen."
             }
           },
           "advanced_section": {
             "name": "Avancerede indstillinger",
-            "description": "Finjuster kommandotiming, genforsøgsadfærd og forskudte opkald. Skift mellem diagnosticeringsattributter og konfigurationssensorer.",
+            "description": "Finjuster kommandotiming og genforsøgsadfærd. Skift mellem diagnosticeringsattributter og konfigurationssensorer.",
             "data": {
               "debounce_delay": "Debounce Forsinkelse (sekunder)",
               "retry_attempts": "Genforsøg Forsøg",
               "retry_delay": "Genforsøg Forsinkelse (sekunder)",
               "force_retry": "Tving gentagelse",
-              "staggered_call_delay": "Forsinkelse mellem kommandoer (sekunder)",
               "grace_period": "Optimistisk UI-overgangsperiode (sekunder)",
               "expose_smart_sensors": "Udstil smarte sensorer",
+              "expose_member_entities": "Udstil medlemsliste",
               "expose_config": "Vis konfiguration (Fejlfinding)"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "Hvor mange gange en kommando skal gensendes, hvis en enhed ikke svarer. Sæt til 0 for at deaktivere.",
               "retry_delay": "Pause mellem genforsøg. At give enheder et øjeblik til at komme sig kan forbedre pålideligheden.",
               "force_retry": "Sender altid kommandoer til alle medlemmer igen, selv hvis de allerede rapporterer måltilstanden.",
-              "staggered_call_delay": "Ventetid mellem individuelle kommandoer til gruppemedlemmer. Fordeling af kommandoer forhindrer netværksbelastning i Zigbee/Matter-miljøer. Sæt til 0 for at deaktivere.",
               "grace_period": "Hvor længe gruppen viser den befalede værdi, inden den skifter til medlemsgennemsnittet. Forhindrer UI-flimmer, når langsomme enheder (Cloud-broer, Zigbee) ekko deres gamle tilstand. Sæt til 0 for at deaktivere.",
               "expose_smart_sensors": "Opretter ekstra sensorenheder for gruppens temperatur og fugtighed (nyttigt til grafer).",
+              "expose_member_entities": "Opretter en attribut, der viser alle medlemsenheds-id'er.",
               "expose_config": "Tilføjer alle konfigurationsværdier til entitetsattributterne. Nyttigt til fejlfinding."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Deaktiveret – Ingen automatisk synkronisering mellem medlemmer",
+        "follow_only": "Follow – Manuelle ændringer på en enhed opdaterer gruppen, men videregives ikke til de andre",
         "mirror": "Mirror – Manuelle ændringer på én enhed opdaterer alle medlemmer",
         "lock": "Lock – Manuelle ændringer tilbageføres til gruppetilstanden",
         "mirror_lock": "Mirror/Lock – Valgte attributter spejles, andre er strengt låst",
@@ -540,6 +549,12 @@
         "none": "Ingen",
         "off": "Sluk",
         "fan_only": "Kun blæser"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Kun ventilator",
+        "dry": "Tørring"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Anvend konfiguration",
-      "description": "Anvender en bærbar JSON-konfiguration på en gruppe. Nyttig til at kopiere logikindstillinger mellem grupper eller gendanne en sikkerhedskopi.",
+      "description": "Anvender en bærbar JSON-konfiguration på en gruppe. Nyttig til at kopiere logikindstillinger mellem grupper eller gendanne en sikkerhedskopi. Åbn derefter gruppens indstillinger og gem én gang — indstillingsdialogen kontrollerer desuden, om den anvendte kombination giver mening.",
       "fields": {
         "settings": {
           "name": "Indstillinger (JSON)",

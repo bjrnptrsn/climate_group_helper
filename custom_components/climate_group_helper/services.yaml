@@ -105,7 +105,7 @@ boost:
 
 apply_config:
   name: Apply Configuration
-  description: Overwrites existing group settings with a JSON configuration template. Identity keys (name) are always protected.
+  description: Overwrites existing group settings with a JSON configuration template. Identity keys (name) are always protected. Afterwards, open the group's settings and save once — the settings dialog additionally checks that the applied combination makes sense.
   target:
     entity:
       integration: climate_group_helper

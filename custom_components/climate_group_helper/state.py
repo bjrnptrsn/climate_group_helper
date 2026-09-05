@@ -8,13 +8,13 @@ from datetime import datetime
 from types import MappingProxyType
 from typing import Any, Self, TYPE_CHECKING
 
-from homeassistant.core import Event
+from homeassistant.core import Event, State
 
 from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from .const import (
     FLOAT_TOLERANCE,
     CONF_IGNORE_OFF_MEMBERS_SYNC,
+    TRANSIENT_STATES,
     AdoptManualChanges,
 )
 from .meta_processor import SOURCE_PRESET
@@ -23,6 +23,43 @@ if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def available_state(state: State | None) -> State | None:
+    """Return `state` if it carries a usable value, else None.
+
+    `unavailable` and `unknown` both mean "nothing to read here": an entity that
+    exists but has not reported yet is as unusable as one that is gone.
+
+    Returning the state rather than a verdict is what lets the read and the
+    check collapse into one statement — and it narrows the type, so the
+    attribute reads that follow are no longer working on an `Optional`:
+
+        if (state := available_state(hass.states.get(x))) is None:
+            return
+        state.attributes.get(...)
+
+    Where only the verdict is wanted, `is_available()` says so directly.
+    """
+    if state is None:
+        return None
+    # Read through `.state` by attribute, not by `isinstance(state, State)`:
+    # state-like stand-ins (the test mocks among them) must be read the same
+    # way, or they are compared as objects and silently count as available.
+    return state if getattr(state, "state", state) not in TRANSIENT_STATES else None
+
+
+def is_available(state: State | str | None) -> bool:
+    """Return True if this state carries a usable value.
+
+    The predicate half of `available_state()`, for filters and condition
+    chains. It also takes a bare state string, which that one cannot: event
+    handlers frequently hold `new_state.state` where the object itself is no
+    longer in reach, and a string has no useful falsy form to return.
+    """
+    if isinstance(state, str):
+        return state not in TRANSIENT_STATES
+    return available_state(state) is not None
 
 
 @dataclass(frozen=True)
@@ -360,16 +397,21 @@ class BaseStateManager:
             for handler in self._group.member_isolation_handlers:
                 handler.on_target_hvac_mode_changed(kwargs["hvac_mode"])
 
+        # Unlike every other target attribute, this one is never echoed back by
+        # a device, so no member event follows to drive the aggregation — the
+        # only other place the humidity condition is evaluated.
+        if "humidity" in kwargs:
+            self._group.member_template_manager.check_humidity(
+                self._group._attr_current_humidity, kwargs["humidity"]
+            )
+
         return True
 
     def _filter_update(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
-        """Filter hook - return False to block this update.
+        """Filter hook — return False to block this update.
 
-        Args:
-            entity_id: Entity causing the update
-            kwargs: Mutable dict of attributes to update
-        Returns:
-            True to allow update, False to block
+        `kwargs` is mutable: an override may drop or rewrite single attributes
+        instead of blocking the whole update.
         """
         return True
 
@@ -398,36 +440,33 @@ class BaseStateManager:
             return True
         return False
 
+    def _other_active_members(self, entity_id: str | None) -> list[str]:
+        """Members other than `entity_id` that are still running.
+
+        Isolated members are excluded — they don't participate in group state —
+        as are unavailable ones: an offline device must not keep the group from
+        going off.
+        """
+        return [
+            entity for entity in self._group.climate_entity_ids
+            if entity != entity_id
+            and entity not in self._group.run_state.isolated_members
+            and (state := available_state(self._group.aggregator.read_member_state(entity)))
+            and state.state != HVACMode.OFF
+        ]
+
     def _check_partial_sync(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
         """Check Partial Sync / Last Man Standing logic.
 
         Blocks updating TargetState HVACMode.OFF unless this is the last active member.
-        Args:
-            entity_id: Entity causing the update
-            kwargs: Attributes being updated
-        Returns:
-            True to allow, False to block
         """
-        # Only if CONF_IGNORE_OFF_MEMBERS_SYNC is enabled
         if not self._group.config.get(CONF_IGNORE_OFF_MEMBERS_SYNC):
             return True
 
-        # Only if setting hvac_mode to OFF
-        if kwargs.get("hvac_mode") != HVACMode.OFF:
+        if kwargs.get(ATTR_HVAC_MODE) != HVACMode.OFF:
             return True
 
-        # Allow if no other members are still ON (Last Man Standing)
-        # Isolated members are excluded — they don't participate in group state.
-        other_active_members = [
-            entity for entity in self._group.climate_entity_ids
-            if entity != entity_id
-            and entity not in self._group.run_state.isolated_members
-            and (state := self._group.aggregator.read_member_state(entity))
-            and state.state != HVACMode.OFF
-            and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
-        ]
-
-        if other_active_members:
+        if other_active_members := self._other_active_members(entity_id):
             _LOGGER.debug("[%s] Blocking sync_mode OFF update due to partial sync (Active members: %s)", self._group.entity_id, other_active_members)
             return False
 
@@ -484,6 +523,58 @@ class SyncModeStateManager(BaseStateManager):
 
         # 2. Partial Sync Filter (Last Man Standing)
         if not self._check_partial_sync(entity_id, kwargs):
+            return False
+
+        return True
+
+
+class FollowStateManager(SyncModeStateManager):
+    """State Manager for the follow_only sync mode.
+
+    Adoption is identical to MIRROR — the mode differs only in not pushing the
+    result at the members, which is decided in `resync()`, not here. So every
+    filter of the sync-mode manager applies unchanged, Last Man Standing
+    included: it *is* the "is anything still running?" threshold this mode is
+    built around.
+
+    Only two things are its own:
+    - `SOURCE`, so `last_source` tells an adopted change from a followed one.
+    - The boost filter. MIRROR aborts a running boost when it adopts and then
+      pushes the new target; without a push the boost would keep the members on
+      its own setpoint while the target silently moved underneath it.
+    """
+
+    SOURCE = "follow_only"
+
+    def _filter_update(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
+        """Apply the sync-mode filters, plus a boost guard."""
+        if self._group.run_state.boost_temperature is not None:
+            _LOGGER.debug("[%s] FollowState update blocked (boost active)", self._group.entity_id)
+            return False
+
+        return super()._filter_update(entity_id, kwargs)
+
+    def _check_partial_sync(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
+        """Last Man Standing, independent of the "respect member off state" option.
+
+        For the other sync modes that option answers "should an off member be
+        left alone by the enforcement", and gating the target update on it is
+        consistent there: a mode that pushes can correct a target it took too
+        eagerly. This mode never pushes, so a premature OFF just stands — and
+        the group would report itself off while members keep heating, with the
+        next restore turning them off for real.
+
+        The threshold is what this mode is: the group is off once nothing runs
+        any more, not as soon as one device does.
+        """
+        if kwargs.get(ATTR_HVAC_MODE) != HVACMode.OFF:
+            return True
+
+        if other_active_members := self._other_active_members(entity_id):
+            _LOGGER.debug(
+                "[%s] Blocking follow_only OFF update — still active: %s",
+                self._group.entity_id, other_active_members,
+            )
             return False
 
         return True

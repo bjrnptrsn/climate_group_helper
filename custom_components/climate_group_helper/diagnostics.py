@@ -15,10 +15,11 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_LOW,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
+from .state import is_available
 
 
 async def async_get_config_entry_diagnostics(
@@ -75,7 +76,7 @@ async def async_get_config_entry_diagnostics(
         member: dict[str, Any] = {
             "entity_id": entity_id,
             "state": state.state,
-            "available": state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN),
+            "available": is_available(state),
             "isolated": entity_id in run.isolated_members,
             "oob": entity_id in run.oob_members,
         }

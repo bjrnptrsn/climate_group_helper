@@ -7,7 +7,6 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import HVACMode
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
@@ -22,6 +21,7 @@ from .const import (
     PresenceAction,
     WindowControlAction,
 )
+from .state import available_state
 from .isolation import drop_all_claims, reevaluate_all
 
 if TYPE_CHECKING:
@@ -79,7 +79,7 @@ class BaseOverrideManager:
     Provides shared infrastructure:
     - call_handler property (override in derived classes)
     - enforce_block(): send OFF to deviating members during a block
-    - _start_timer() / _cancel_timer(): shared timer slot with token protection
+    - _start_timer() / _cancel_timer(): shared timer slot, one timer at a time
     """
 
     OVERRIDE_NAME: str = "base"
@@ -137,8 +137,7 @@ class BaseOverrideManager:
     def _any_member_not_off(self) -> bool:
         """Return True if any reachable, non-isolated member has an HVAC mode other than OFF."""
         return any(
-            (st := self._group.aggregator.read_member_state(eid))
-            and st.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            (st := available_state(self._group.aggregator.read_member_state(eid)))
             and st.state != HVACMode.OFF
             for eid in self._group.climate_entity_ids
             if eid not in self._group.run_state.isolated_members

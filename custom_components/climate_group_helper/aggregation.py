@@ -79,8 +79,6 @@ from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_SUPPORTED_FEATURES,
     ATTR_TEMPERATURE,
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
 )
 from homeassistant.core import Event, State, callback
 from homeassistant.helpers.event import async_call_later
@@ -95,7 +93,7 @@ from .const import (
     RoundOption,
     SyncMode,
 )
-from .state import ChangeState, CurrentState, TargetState
+from .state import ChangeState, CurrentState, TargetState, is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -232,7 +230,7 @@ class Aggregator:
             for entity_id in expected_entity_ids
             if (state := self.read_member_state(entity_id)) is not None
         ]
-        valid_states = [state for state in all_states if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)]
+        valid_states = [state for state in all_states if is_available(state)]
         all_ready = len(valid_states) == len(expected_entity_ids) if expected_entity_ids else True
         return valid_states, all_ready
 
@@ -549,13 +547,27 @@ class Aggregator:
             target_humidity = self._resolve_master_or_avg(
                 self._group._humidity_use_master, self._group.current_master_state.humidity, ATTR_HUMIDITY, self._group._humidity_target_avg_calc, self.states
             )
+        # The humidity action needs a setpoint even with no humidistat member:
+        # group target, else the room reading. A None target disables it.
+        if target_humidity is None:
+            range_template = self._group.member_template_manager.range_template
+            if range_template is not None and range_template.humidity_enabled:
+                target_humidity = self._group.shared_target_state.humidity
+                if target_humidity is None and current_humidity is not None:
+                    target_humidity = current_humidity
         if target_humidity is not None:
             target_humidity = mean_round(target_humidity, self._group._humidity_round)
+
+        target_humidity_step = reduce_attribute(self.capability_states, ATTR_TARGET_HUMIDITY_STEP, reduce=max)
+        if target_humidity_step is None:
+            range_template = self._group.member_template_manager.range_template
+            if range_template is not None and range_template.humidity_enabled:
+                target_humidity_step = 1
 
         return HumidityResult(
             current_humidity=current_humidity,
             target_humidity=target_humidity,
-            target_humidity_step=reduce_attribute(self.capability_states, ATTR_TARGET_HUMIDITY_STEP, reduce=max),
+            target_humidity_step=target_humidity_step,
             min_humidity=reduce_attribute(self.capability_states, ATTR_MIN_HUMIDITY, reduce=max, default=DEFAULT_MIN_HUMIDITY),
             max_humidity=reduce_attribute(self.capability_states, ATTR_MAX_HUMIDITY, reduce=min, default=DEFAULT_MAX_HUMIDITY),
             needs_calibration=needs_calibration,
@@ -607,6 +619,14 @@ class Aggregator:
         range_template = self._group.member_template_manager.range_template
         if range_template is not None and range_template.entity_ids:
             features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+        # Only worth offering where a reading can be compared against the
+        # setpoint. Keyed on configuration, not the current value: a sensor that
+        # is merely unavailable must not make the control come and go.
+        has_humidity_source = bool(self._group.humidity_sensor_entity_ids) or any(
+            ATTR_CURRENT_HUMIDITY in s.attributes for s in self.capability_states
+        )
+        if range_template is not None and range_template.humidity_enabled and has_humidity_source:
+            features |= ClimateEntityFeature.TARGET_HUMIDITY
         if preset_modes:
             features |= ClimateEntityFeature.PRESET_MODE
 
@@ -646,7 +666,6 @@ class Aggregator:
         - Update group attributes (min/max/step, supported features, hvac_modes).
         - Push calibration and temperature update targets if configured.
         """
-        # Check if there are any valid states
         self.states, all_members_ready = self._get_valid_member_states(self._group.climate_entity_ids)
         # Capability aggregation keeps isolated members: what a device *can* do
         # does not change while it is isolated. Without this, isolating the only
@@ -686,7 +705,7 @@ class Aggregator:
         # Load master entity state
         if self._group._master_entity_id:
             raw = self.read_member_state(self._group._master_entity_id)
-            if raw and raw.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            if is_available(raw):
                 self._group.master_state = raw
                 self._group.current_master_state = CurrentState(
                     hvac_mode=raw.state,
@@ -764,10 +783,7 @@ class Aggregator:
         self._group._attr_available = True
 
         # The group state is assumed if not all states are equal
-        display_modes = [
-            self._group.member_template_manager.display_mode(state) for state in self.states
-        ]
-        self._group._attr_assumed_state = len(set(display_modes)) > 1
+        self._group._attr_assumed_state = len(set(self._group._current_hvac_modes)) > 1
 
         # Determine HVAC action
         current_hvac_actions = list(find_state_attributes(self.states, ATTR_HVAC_ACTION))
@@ -788,6 +804,10 @@ class Aggregator:
         self._apply_humidity(humidity)
         if humidity.needs_calibration:
             self._group.calibration_handler.update("humidity", self._group._event_entity_id)
+
+        self._group.member_template_manager.check_humidity(
+            humidity.current_humidity, self._group.shared_target_state.humidity
+        )
 
         self._apply_modes(self._compute_modes())
 

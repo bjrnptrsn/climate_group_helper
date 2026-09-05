@@ -17,10 +17,14 @@
 <p align="center">
   🔗 <b>Geräte gruppieren</b> zu einem virtuellen Controller.<br>
   🌡️ <b>Ungenaue Sensoren korrigieren</b> mit externer Kalibrierung.<br>
-  🔄 <b>Auf manuelle Änderungen reagieren</b> mit Mirror-, Lock- oder Master-Sync-Modi.<br>
+  🔄 <b>Auf manuelle Änderungen reagieren</b> mit Follow-, Mirror-, Lock- oder Master-Sync-Modi.<br>
   🪟 <b>Offene Fenster erkennen</b>, um das Heizen automatisch zu pausieren.<br>
-  👤 <b>Anwesenheit automatisieren</b> mit Abwesenheits-Offsets und Presets.<br>
-  📅 <b>Zeitplan-Automatisierung</b> über Schedule- und Kalender-Entitäten.
+  👤 <b>Anwesenheit automatisieren</b> mit Abwesenheits-Offsets und -Temperaturen.<br>
+  📅 <b>Zeitplan-Automatisierung</b> über Schedule- und Kalender-Entitäten.<br>
+  🎯 <b>Eigene Presets festlegen</b>, die die ganze Gruppe auf einmal einstellen.<br>
+  🔥 <b>Temperatur boosten</b> für eine Weile, danach automatisch zurück.<br>
+  🚧 <b>Einzelne Geräte isolieren</b>, solange eine Bedingung zutrifft.<br>
+  ➕ <b>Die ganze Gruppe verschieben</b> mit einem einzigen Offset.
 </p>
 
 <p align="center">
@@ -144,12 +148,14 @@ Steuert, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z. B. üb
   | Sync-Modus | Attribut ausgewählt | Attribut nicht ausgewählt |
   |---|---|---|
   | **Deaktiviert** | Ignorieren | Ignorieren |
+  | **Follow** | Übernehmen ² | Ignorieren |
   | **Mirror** | Spiegeln ¹ | Ignorieren |
   | **Lock** | Zurücksetzen ¹ | Ignorieren |
   | **Mirror/Lock** | Spiegeln ¹ | Zurücksetzen ¹ |
   | **Master/Lock** | Master: Spiegeln · Nicht-Master: Zurücksetzen ¹ | Ignorieren |
 
   - *¹ Mit aktiviertem **Respektiere Aus-Status der Mitglieder (Sync)**: Mitglieder, die manuell `aus` geschaltet wurden, werden in Ruhe gelassen — ihr `aus` wird weder gespiegelt noch zurückgesetzt.*
+  - *² **Follow** passt die Einstellungen der Gruppe an das geänderte Gerät an, gibt die Änderung aber nie an die anderen Mitglieder weiter. Ein `aus` geschaltetes Gerät schaltet die ganze Gruppe erst dann `aus`, wenn kein anderes Mitglied mehr läuft — unabhängig von der Option **Respektiere Aus-Status der Mitglieder (Sync)**.*
 
 * **Sync-Attribute**
 
@@ -157,6 +163,7 @@ Steuert, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z. B. üb
 
   | Modus | Rolle der **Sync-Attribute** |
   |---|---|
+  | **Follow** | **ausgewählte** Attribute werden in die Einstellungen der Gruppe übernommen, **nicht ausgewählte** Attribute werden ignoriert. An die anderen Mitglieder wird nichts gesendet. |
   | **Mirror** | **ausgewählte** Attribute werden gespiegelt, **nicht ausgewählte** Attribute werden ignoriert. |
   | **Lock** | **ausgewählte** Attribute werden zurückgesetzt, **nicht ausgewählte** Attribute werden ignoriert. |
   | **Mirror/Lock** | **ausgewählte** Attribute werden gespiegelt, **nicht ausgewählte** Attribute werden zurückgesetzt. |
@@ -363,6 +370,7 @@ Eine **Mitglieder-Vorlage** umhüllt einzelne Gruppenmitglieder mit einem virtue
 *   Temperatur **innerhalb** des Bandes → sendet die konfigurierte **Totzonen-Aktion**
 
 *   **Totzonen-Aktion:** Was zu tun ist, wenn sich der Raum bereits innerhalb des Zielbandes befindet: **Keine** (Standard), **Ausschalten** oder **Nur Lüfter**.
+*   **Im Totband entfeuchten:** Wenn aktiviert, schaltet die Gruppe Geräte im Temperatur-Totband automatisch auf **Trocknen** (oder **Nur Lüfter**), wenn die aktuelle Luftfeuchtigkeit die Zielfeuchtigkeit überschreitet. Aktivierung erfolgt sofort; eine Schmitt-Trigger-Hysterese und eine konfigurierbare Deaktivierungsverzögerung verhindern schnelles Takten. Temperatur-Heizen und -Kühlen haben immer Vorrang, sobald der Raum das Totband verlässt. Ein Feuchtigkeitswert ist Voraussetzung — entweder von einem Mitglied, das ihn meldet, oder von einem der Gruppe hinzugefügten Feuchtigkeitssensor; ohne ihn bietet die Gruppe keine einstellbare Zielfeuchtigkeit an.
 *   **Automatische Mitgliedserkennung:** Alle Mitglieder, die `heat_cool` **nicht** nativ melden, werden automatisch erfasst — keine manuelle Auswahl nötig. Mitglieder mit nativer `heat_cool`-Unterstützung bleiben unverändert. Dies ermöglicht auch den `heat_cool`-Modus für Gruppen, die ausschließlich aus reinen Heiz- und Kühlgeräten bestehen, ganz ohne natives `heat_cool`-Gerät.
 
 ## Verwaltungs-Entitäten (Schalter & Regler)
@@ -490,8 +498,8 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Sync-Modus** | Was zu tun ist, wenn ein Mitglied außerhalb der Gruppe geändert wird. **Deaktiviert**: alles ignorieren. **Mirror**: Änderungen spiegeln. **Lock**: Änderungen zurücksetzen. **Mirror/Lock**: ausgewählte Attribute spiegeln, nicht ausgewählte zurücksetzen. **Master/Lock** *(erfordert Master-Entität)*: nur Änderungen der **Master-Entität** spiegeln, Änderungen von Nicht-Master-Entitäten zurücksetzen. |
-| **Sync-Attribute** | Auf welche Attribute der Modus wirkt. Bei **Mirror**: nur ausgewählte Attribute werden gespiegelt, nicht ausgewählt = keine Aktion. Bei **Lock**: nur ausgewählte Attribute werden zurückgesetzt, nicht ausgewählt = keine Aktion. Bei **Mirror/Lock**: ausgewählte Attribute werden gespiegelt, nicht ausgewählte zurückgesetzt. Bei **Master/Lock**: nur die Attribute der Master-Entität werden gespiegelt, nicht ausgewählt = keine Aktion. |
+| **Sync-Modus** | Was zu tun ist, wenn ein Mitglied außerhalb der Gruppe geändert wird. **Deaktiviert**: alles ignorieren. **Follow**: die Gruppe an das geänderte Gerät anpassen, ohne die anderen anzufassen. **Mirror**: Änderungen spiegeln. **Lock**: Änderungen zurücksetzen. **Mirror/Lock**: ausgewählte Attribute spiegeln, nicht ausgewählte zurücksetzen. **Master/Lock** *(erfordert Master-Entität)*: nur Änderungen der **Master-Entität** spiegeln, Änderungen von Nicht-Master-Entitäten zurücksetzen. |
+| **Sync-Attribute** | Auf welche Attribute der Modus wirkt. Bei **Follow**: nur ausgewählte Attribute werden in die Gruppe übernommen, nicht ausgewählt = keine Aktion. Bei **Mirror**: nur ausgewählte Attribute werden gespiegelt, nicht ausgewählt = keine Aktion. Bei **Lock**: nur ausgewählte Attribute werden zurückgesetzt, nicht ausgewählt = keine Aktion. Bei **Mirror/Lock**: ausgewählte Attribute werden gespiegelt, nicht ausgewählte zurückgesetzt. Bei **Master/Lock**: nur die Attribute der Master-Entität werden gespiegelt, nicht ausgewählt = keine Aktion. |
 | **Respektiere Aus-Status der Mitglieder (Sync)** | Mitglieder, die manuell `aus` geschaltet wurden, werden in Ruhe gelassen. Ihr `aus`-Zustand wird weder auf andere gespiegelt noch auf das Gruppenziel zurückgesetzt. Ausnahme: Ist es das letzte aktive Mitglied, wechselt die Gruppe selbst auf `aus` (Last Man Standing). Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
 
 ### Fenstersteuerung
@@ -565,6 +573,10 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 |--------|-------------|
 | **Bereichs-Vorlage aktivieren** | Aktiviert automatische `heat_cool`-Bereichssteuerung für alle Mitglieder, die `heat_cool` nicht nativ melden. Keine manuelle Auswahl nötig — die Gruppe erkennt geeignete Mitglieder automatisch. |
 | **Totzonen-Aktion** | Was zu tun ist, wenn die Raumtemperatur bereits innerhalb des Zielbandes liegt (zwischen `target_temp_low` und `target_temp_high`). **Keine** (Standard — kein Befehl, das Gerät regelt sich selbst auf den bereits erhaltenen Sollwert), **Ausschalten** oder **Nur Lüfter**. |
+| **Im Totband entfeuchten** | Schaltet im Temperatur-Totband automatisch auf Entfeuchtung oder Luftzirkulation um, wenn die Raumfeuchtigkeit die Zielfeuchtigkeit überschreitet. Setzt einen Feuchtigkeitswert von einem Mitglied oder einem Feuchtigkeitssensor voraus. |
+| **Feuchtigkeits-Aktion** | Physische Aktion bei Überschreitung des Feuchtigkeitsschwellwerts im Totband: **Trocknen** (Standard) oder **Nur Lüfter**. |
+| **Feuchtigkeits-Hysterese** | Symmetrisches Hystereseband um die Zielfeuchtigkeit zur Vermeidung schnellen Taktens (Standard: 3,0%). |
+| **Deaktivierungsverzögerung** | Verzögerung, bevor die Feuchtigkeits-Aktion nach Unterschreiten des Schwellwerts wieder beendet wird (Standard: 0s). Aktivierung erfolgt sofort — wie beim Verlassen des Temperaturbandes wird das Reagieren auf zu hohe Feuchtigkeit nicht künstlich verzögert. |
 
 ### Erweiterte Einstellungen
 
@@ -574,9 +586,9 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 | **Erzwungene Wiederholung** | Sendet Befehle immer an alle Mitglieder, auch wenn sie bereits den Zielzustand melden. Nützlich für IR-basierte Klimaanlagen oder andere Geräte, die ihren Zustand nach Erhalt eines Befehls möglicherweise nicht zuverlässig aktualisieren. |
 | **Wiederholungsversuche** | Anzahl der Wiederholungen bei fehlgeschlagenem Befehl. |
 | **Wiederholungs-Verzögerung** | Zeit zwischen Wiederholungen (z. B. 1,0s). |
-| **Gestaffelte Befehlsverzögerung** | Wartezeit zwischen einzelnen Befehlen an Gruppenmitglieder (0–2s, Standard: 0). Staffelung verhindert Funküberlastung in großen Zigbee-/Matter-Netzwerken. Gilt auch für Kalibrierungs-Schreibvorgänge. |
 | **UI-Schonfrist** | Dauer (Sekunden), für die die Gruppe den befohlenen Wert sofort nach einer UI-Aktion anzeigt, bevor langsame Mitgliedsgeräte ihren Zustand zurückmelden. Verhindert visuelles Flackern im Dashboard. Gilt für alle Attribute: HVAC-Modus, Temperatur, Luftfeuchtigkeit, Lüfter-/Preset-/Schwenk-Modi. |
 | **Smart-Sensoren anzeigen** | Erstellt zusätzliche Temperatur- und Feuchtigkeits-Sensor-Entitäten, die den aktuellen aggregierten Zustand der Gruppe widerspiegeln (nützlich für Verlaufsgraphen und Dashboards). |
+| **Mitgliederliste bereitstellen** | Fügt das Attribut `entity_id` mit der Liste aller Mitglieds-Entitäts-IDs hinzu, sodass Home Assistants More-Info-Dialog die native Mitgliederliste anzeigt (ermöglicht außerdem `expand()`-Templates). |
 | **Konfigurations-Sensor anzeigen** | Erstellt eine diagnostische Konfigurations-Sensor-Entität (`sensor.*_configuration`), die einen portablen JSON-Schnappschuss aller Gruppeneinstellungen unter dem Attribut `settings_json` enthält. |
 | **Alle Sektionen standardmäßig aufklappen** | Hält standardmäßig alle Konfigurationsabschnitte im Optionsdialog aufgeklappt. |
 
@@ -770,6 +782,9 @@ Standardmäßig werden nur Logikeinstellungen übertragen (Sync-Modi, Fensterste
 
 > [!IMPORTANT]
 > **Neuladeverhalten:** Der Aufruf dieses Dienstes löst ein vollständiges Neuladen der Gruppen-Entität aus. Alle aktiven, nicht persistierten Timer (z. B. Boost, Fenster-Verzögerungen) werden sofort zurückgesetzt. Dies ist dasselbe Verhalten wie bei Änderungen über die UI.
+
+> [!TIP]
+> **Öffne danach die Einstellungen der Gruppe und speichere einmal.** Der Dienst übernimmt, was du ihm übergibst; der Einstellungsdialog prüft zusätzlich, ob die Kombination sinnvoll ist, und weist auf alles hin, was noch korrigiert werden muss.
 
 ## Sicherung & Migration
 

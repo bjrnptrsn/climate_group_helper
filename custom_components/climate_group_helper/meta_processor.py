@@ -335,6 +335,16 @@ class SlotMetaProcessor:
             winner = self._ownership.effective(key)
             if winner is None:  # unreachable, guarded by is_claimed above
                 continue
+            # Same takeover guard as _apply_effective's direct-claim path: the
+            # outgoing source's exit must not let the inheriting source's value
+            # pull a user-moved group_offset back to the slot's — a handover is
+            # not a fresh instruction and deserves no more precedence than one.
+            if self._is_user_takeover(key, winner[1]):
+                _LOGGER.debug(
+                    "[%s] Meta-Key handover: %s=%s skipped — ownership held by user",
+                    self._group.entity_id, key, winner[1],
+                )
+                continue
             _LOGGER.debug(
                 "[%s] Meta-Key handover: %s now owned by %s", self._group.entity_id, key, winner[0]
             )
@@ -582,10 +592,12 @@ class SlotMetaProcessor:
 
         config_overrides has already been updated by the caller before this method
         is invoked, so manager calls can rely on the new value being visible in RunState.
+        Values arrive validated and normalised from `process()`, so every branch
+        uses its own unchecked.
         """
         if key == META_KEY_GROUP_OFFSET:
-            # Already clamped by the value guard, so it can be used as-is here and
-            # compared against run_state.group_offset by the takeover check.
+            # Stored clamped: the takeover check compares it against
+            # run_state.group_offset, which always is.
             offset_val = value
 
             _LOGGER.debug("[%s] Meta-Key apply: group_offset=%s", self._group.entity_id, offset_val)
@@ -618,16 +630,14 @@ class SlotMetaProcessor:
             _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
 
         elif key in (META_KEY_PRESENCE, META_KEY_PRESENCE_MODE):
-            # Values are validated in process(): "away" for the superseded
-            # presence key, "away" or "disabled" for presence_mode. Both silence
-            # the sensor evaluation and differ only in the state the block is
-            # pinned to — apply_bypass() carries that split, including the
-            # idempotency guard against re-sending on every slot re-process.
+            # Both values silence the sensor evaluation and differ only in the
+            # state the block is pinned to — apply_bypass() carries that split,
+            # including the idempotency guard against re-sending on every slot
+            # re-process.
             _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
             await self._group.presence_handler.apply_bypass(value)
 
         elif key == META_KEY_WINDOW_MODE:
-            # Value is validated in process() — only "disabled" reaches this point.
             # The handler's own guard makes this idempotent across slot
             # re-processing: once the block is released there is nothing left to do.
             _LOGGER.debug("[%s] Meta-Key apply: window_mode=disabled", self._group.entity_id)
@@ -750,27 +760,19 @@ class SlotMetaProcessor:
                 self._group.calibration_handler.update("humidity", force_sync=True)
 
             elif key in (META_KEY_PRESENCE, META_KEY_PRESENCE_MODE):
-                # Hand the block back to the sensors. Two cases, and only the
-                # second one has sensors to ask:
+                # Hand the block back to the sensors — without them nothing would
+                # ever release it, so the slot has to. `mode` is the CONFIGURED
+                # mode on purpose: the effective one would still show the bypass
+                # being withdrawn here.
                 #
-                # No presence control configured (mode disabled, or no sensors):
-                # nothing will ever release the block again, so the slot has to.
-                # `mode` is the CONFIGURED mode on purpose — the effective one
-                # would still show the bypass being withdrawn here.
-                #
-                # Otherwise re-evaluate: the room may have emptied during a
-                # `disabled` slot (block goes on) or filled during an `away` one
-                # (block comes off).
-                #
-                # Ordering: clear_config_overrides() runs at the end of this
-                # method, and both paths read config_overrides — the handler
-                # through `bypassed`, _go_restore() through `forces_away`.
-                # Withdraw the key first or the re-evaluation sees the bypass it
-                # is meant to end.
+                # Withdraw the key before either path runs — both read
+                # config_overrides (the handler through `bypassed`, _go_restore()
+                # through `forces_away`) and would see the bypass they are meant
+                # to end; the clear_config_overrides() at the end of this method
+                # comes too late. Only the expiring key: a slot never carries
+                # both, so the other one is a preset's claim.
                 presence_handler = self._group.presence_handler
-                self._group.run_state = self._group.run_state.clear_config_overrides(
-                    {META_KEY_PRESENCE, META_KEY_PRESENCE_MODE}
-                )
+                self._group.run_state = self._group.run_state.clear_config_overrides({key})
                 if presence_handler.mode == PresenceMode.DISABLED or not presence_handler.sensors:
                     _LOGGER.debug(
                         "[%s] Meta-Key cleanup: %s absent, no presence control → releasing block",

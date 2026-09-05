@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Kunnioita jäsenen pois-tilaa (synkronointi)"
             },
             "data_description": {
-              "sync_mode": "Mitä tehdä, kun jäsentä muutetaan ryhmän ulkopuolelta. Ei käytössä: ohita. Peilaus: peilaa muutokset. Lukitus: peru muutokset. Peilaus/Lukitus: peilaa valitut attribuutit, peru muut. Master/Lukitus: peilaa pääyksikköä, peru muut.",
+              "sync_mode": "Mitä tehdä, kun jäsentä muutetaan ryhmän ulkopuolelta. Ei käytössä: ohita. Seuranta: omaksu muutokset välittämättä niitä muille. Peilaus: peilaa muutokset. Lukitus: peru muutokset. Peilaus/Lukitus: peilaa valitut attribuutit, peru muut. Master/Lukitus: peilaa pääyksikköä, peru muut.",
               "sync_attributes": "Määrittää, mihin attribuutteihin synkronointitila vaikuttaa. Valittujen ja valitsemattomien attribuuttien käsittely (peilaus, peruutus tai ohitus) riippuu valitusta tilasta.",
               "ignore_off_members_sync": "Manuaalisesti pois päältä kytketyt jäsenet jätetään rauhaan. Niiden tilaa ei peilata eikä peruta. Huom: suorat ryhmäkomennot tavoittavat aina kaikki jäsenet tästä asetuksesta riippumatta."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Ota käyttöön aluemalli",
               "range_template_deadband_action": "Kuolleen vyöhykkeen toiminto",
               "range_template_heat_entities": "Lämmityslaitteet",
-              "range_template_cool_entities": "Jäähdytyslaitteet"
+              "range_template_cool_entities": "Jäähdytyslaitteet",
+              "range_template_humidity_enabled": "Kosteudenpoisto kuolleella alueella",
+              "range_template_humidity_action": "Kosteustoiminto",
+              "range_template_humidity_hysteresis": "Kosteushystereesi",
+              "range_template_humidity_deactivation_delay": "Deaktivointiviive"
             },
             "data_description": {
               "range_template_enabled": "Renderöi automaattisesti kaikki yhden asetusarvon jäsenet (ilman natiivia lämmitys/jäähdytys-tukea) virtuaalisiksi aluetilalaitteiksi.",
               "range_template_deadband_action": "Toiminto, joka suoritetaan, kun nykyinen lämpötila on tavoitealueen sisällä (kuollut vyöhyke).",
               "range_template_heat_entities": "Jäsenet, jotka saavat lämmittää. Listaamattomat jäsenet ovat rajoittamattomia (fyysinen ominaisuus ratkaisee). Rooli voi vain rajoittaa, ei koskaan laajentaa laitteen ominaisuuksia.",
-              "range_template_cool_entities": "Jäsenet, jotka saavat jäähdyttää. Listaamattomat jäsenet ovat rajoittamattomia (fyysinen ominaisuus ratkaisee). Rooli voi vain rajoittaa, ei koskaan laajentaa laitteen ominaisuuksia."
+              "range_template_cool_entities": "Jäsenet, jotka saavat jäähdyttää. Listaamattomat jäsenet ovat rajoittamattomia (fyysinen ominaisuus ratkaisee). Rooli voi vain rajoittaa, ei koskaan laajentaa laitteen ominaisuuksia.",
+              "range_template_humidity_enabled": "Kun lämpötila on tavoitealueella, vaihda kosteustoimintoon, jos kosteus ylittää tavoitteen.",
+              "range_template_humidity_action": "Toiminto, joka suoritetaan, kun nykyinen kosteus ylittää tavoitekosteuden kuolleella alueella.",
+              "range_template_humidity_hysteresis": "Schmitt-liipaisimen hystereesialue tavoitekosteuden ympärillä nopean syklauksen estämiseksi.",
+              "range_template_humidity_deactivation_delay": "Viive ennen kosteustoiminnon poiskytkentää kynnyksen alituksen jälkeen."
             }
           },
           "advanced_section": {
             "name": "Lisäasetukset",
-            "description": "Hienosäädä komentojen ajoitusta, uudelleenyritysten käyttäytymistä ja porrastettuja kutsuja. Vaihda diagnostiikka-attribuutteja ja konfiguraatioantureita.",
+            "description": "Hienosäädä komentojen ajoitusta ja uudelleenyritysten käyttäytymistä. Vaihda diagnostiikka-attribuutteja ja konfiguraatioantureita.",
             "data": {
               "debounce_delay": "Viiveen tasoitus (sekuntia)",
               "retry_attempts": "Uudelleenyritysten määrä",
               "retry_delay": "Uudelleenyrityksen viive (sekuntia)",
               "force_retry": "Pakota uudelleenyritys",
-              "staggered_call_delay": "Porrastetun kutsun viive (sekuntia)",
               "grace_period": "Optimistisen käyttöliittymän armonaika (sekuntia)",
               "expose_smart_sensors": "Näytä älykkäät anturit",
+              "expose_member_entities": "Näytä jäsenluettelo",
               "expose_config": "Näytä konfiguraatioanturi"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "Kuinka monta kertaa komento lähetetään uudelleen, jos laite ei vastaa. Aseta 0 poistaaksesi käytöstä.",
               "retry_delay": "Tauko uudelleenyritysten välillä. Hetken antaminen laitteille toipua voi parantaa luotettavuutta.",
               "force_retry": "Yritä aina lähettää komentoja uudelleen kaikille jäsenille, vaikka ne jo ilmoittaisivat tavoitetilan.",
-              "staggered_call_delay": "Odotusaika yksittäisten ryhmän jäsenille lähetettävien komentojen välillä. Kutsujen porrastaminen estää verkkoruuhkat Zigbee/Matter-ympäristöissä. Aseta 0 poistaaksesi käytöstä.",
               "grace_period": "Kuinka kauan ryhmä näyttää komennetun arvon ennen siirtymistä jäsenten keskiarvoon. Estää käyttöliittymän välkkymisen, kun hitaat laitteet (pilvisillat, Zigbee) kaikuttavat vanhan tilansa takaisin. Aseta 0 poistaaksesi käytöstä.",
               "expose_smart_sensors": "Luo ylimääräisiä anturientiteettejä ryhmän lämpötilalle ja kosteudelle (hyödyllinen kaavioihin).",
+              "expose_member_entities": "Luo attribuutin, joka listaa kaikki jäsenentiteettien ID:t.",
               "expose_config": "Luo diagnostiikka-anturin (sensor.*_configuration), joka paljastaa siirrettävät asetukset JSON-attribuuttina. Hyödyllinen asetusten kopioimiseen ryhmien välillä automaatioiden avulla."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Ei käytössä – Ei automaattista synkronointia jäsenten välillä",
+        "follow_only": "Seuranta – Manuaaliset muutokset laitteessa päivittävät ryhmän, mutta niitä ei välitetä muille",
         "mirror": "Peilaus – Manuaaliset muutokset yhdessä laitteessa päivittävät kaikki jäsenet",
         "lock": "Lukitus – Peruu manuaaliset muutokset vastaamaan ryhmän tilaa",
         "mirror_lock": "Peilaus/Lukitus – Valitut attribuutit peilataan, muut lukitaan tiukasti",
@@ -540,6 +549,12 @@
         "none": "Ei mitään",
         "off": "Sammuta",
         "fan_only": "Vain puhallin"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Vain tuuletin",
+        "dry": "Kuivaus"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Ota käyttöön kokoonpano",
-      "description": "Ottaa käyttöön siirrettävän JSON-konfiguraation ryhmässä. Hyödyllinen asetusten kopioimiseen ryhmien välillä tai varmuuskopion palauttamiseen.",
+      "description": "Ottaa käyttöön siirrettävän JSON-konfiguraation ryhmässä. Hyödyllinen asetusten kopioimiseen ryhmien välillä tai varmuuskopion palauttamiseen. Avaa tämän jälkeen ryhmän asetukset ja tallenna kerran — asetusikkuna tarkistaa lisäksi, että käyttöönotettu yhdistelmä on järkevä.",
       "fields": {
         "settings": {
           "name": "Asetukset (JSON)",

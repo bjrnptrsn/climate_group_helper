@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import Event
 from homeassistant.components.climate import HVACMode
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 
 from .const import (
     CONF_IGNORE_OFF_MEMBERS_SYNC,
@@ -22,11 +21,11 @@ from .const import (
     SYNC_TARGET_ATTRS,
     SyncMode,
 )
-from .state import ClimateState, FilterState
+from .state import ClimateState, FilterState, is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
-    from .state import SyncModeStateManager, TargetState
+    from .state import FollowStateManager, SyncModeStateManager, TargetState
     from .service_call import SyncCallHandler
 
 _TRUSTED_CONTEXT_IDS = frozenset(
@@ -55,9 +54,8 @@ _TRUSTED_CONTEXT_IDS = frozenset(
 # That makes this check the *only* thing keeping isolation_restore out of
 # adoption, so it must resolve the context the same way `_is_own_echo()` does —
 # `event.context.id` first, then `origin_event.context.id`. Production HA
-# normally takes the second path (the member writes its own context and links
-# ours through origin_event), so checking only the first held in tests and not
-# in production.
+# normally takes the second path, so checking only the first passes the tests
+# and fails on real hardware.
 _BLOCKING_ECHO_CONTEXT_IDS = frozenset(
     {"window_control", "isolation", "presence", "isolation_restore", "override"}
 )
@@ -70,6 +68,8 @@ class SyncModeHandler:
 
     Sync Modes:
     - DISABLED: No enforcement, passive aggregation only
+    - FOLLOW_ONLY: Adopts member changes like MIRROR, but never pushes them on.
+      An incoming OFF is adopted only once no member is running any more.
     - LOCK: Reverts member deviations to group target
     - MIRROR: Adopts member changes and propagates to all members
     - MASTER_LOCK: Only the master entity can change the group target
@@ -111,6 +111,11 @@ class SyncModeHandler:
     def state_manager(self) -> SyncModeStateManager:
         """Return the state manager for sync mode operations."""
         return self._group.sync_mode_state_manager
+
+    @property
+    def follow_state_manager(self) -> FollowStateManager:
+        """Return the state manager for follow_only operations."""
+        return self._group.follow_state_manager
 
     @property
     def call_handler(self) -> SyncCallHandler:
@@ -261,7 +266,7 @@ class SyncModeHandler:
         # LOCK enforcement below still runs to correct the member if needed.
         old_state = event.data.get("old_state")
         new_state = event.data.get("new_state")
-        is_reconnect = old_state is not None and old_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+        is_reconnect = old_state is not None and not is_available(old_state)
 
         # Member-Template ownership: covered members are owned by the Range Template.
         # Their physical mode is implementation detail, NOT a user intention — never adopt
@@ -275,13 +280,25 @@ class SyncModeHandler:
         # resolve once instead of per attribute in the comprehensions below.
         filter_dict = self.filter_state.to_dict()
 
-        if self.sync_mode in (SyncMode.MIRROR, SyncMode.MIRROR_LOCK) and not is_reconnect and not is_covered:
+        # FOLLOW_ONLY adopts like MIRROR and skips the enforcement at the end, so
+        # it shares every guard above. What its own state manager adds is the
+        # Last-Man-Standing threshold for an incoming OFF. It also leaves a
+        # running boost alone: that manager refuses to adopt during one, and
+        # without a push nothing would carry an adopted target to the members.
+        if (
+            self.sync_mode in (SyncMode.MIRROR, SyncMode.MIRROR_LOCK, SyncMode.FOLLOW_ONLY)
+            and not is_reconnect
+            and not is_covered
+        ):
             if filtered := {key: value for key, value in change_dict.items() if filter_dict.get(key)}:
                 filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
-                was_boost = self._group.run_state.boost_temperature is not None
-                self.state_manager.update(entity_id=change_entity_id, **filtered)
-                if was_boost:
-                    self._group.boost_override_manager.abort(push=True)
+                if self.sync_mode == SyncMode.FOLLOW_ONLY:
+                    self.follow_state_manager.update(entity_id=change_entity_id, **filtered)
+                else:
+                    was_boost = self._group.run_state.boost_temperature is not None
+                    self.state_manager.update(entity_id=change_entity_id, **filtered)
+                    if was_boost:
+                        self._group.boost_override_manager.abort(push=True)
                 _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
 
         # 2. Lock mode: only accept "Last Man Standing" OFF (Partial Sync).
@@ -315,6 +332,12 @@ class SyncModeHandler:
                         self._group.boost_override_manager.abort(push=True)
                     _LOGGER.debug("[%s] Master entity change adopted: %s", self._group.entity_id, filtered)
             # Non-master changes are enforced (reverted) via call_debounced below
+
+        # FOLLOW_ONLY is the adoption without the push: the target follows the
+        # members, it never drives them. The enforcement below is not staggered
+        # by sync mode, so without this return the mode would send commands.
+        if self.sync_mode == SyncMode.FOLLOW_ONLY:
+            return
 
         # Enforce target state on all members (skip during temporary state: blocking mode or boost)
         if not self._group.run_state.temporary_state_active:
@@ -388,7 +411,7 @@ class SyncModeHandler:
         initialising. There is nothing to adopt or enforce against.
         """
         new_state = event.data.get("new_state")
-        if new_state and new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if new_state is not None and not is_available(new_state):
             _LOGGER.debug(
                 "[%s] Ignoring transient new_state (%s) from %s",
                 self._group.entity_id, new_state.state, event.data.get("entity_id"),

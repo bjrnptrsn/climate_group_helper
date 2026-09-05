@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.9.0 - 2026-09-05
+
+### 🎂 Happy 1 Year Anniversary, Climate Group Helper!
+
+Released exactly a year after 0.1.0. Thank you for a great first year!
+
+### 🌟 New Features
+
+*   **New Sync Mode "Follow"**: Turning a single device up or down at the device itself now updates the group to match, without that change being passed on to the other members.
+
+*   **Dehumidification in Deadband for Range Template**: When enabled, the group automatically switches devices to dehumidification or fan circulation while room temperature is within the target range if humidity exceeds the target humidity.
+
+### 🐛 Bug Fixes
+
+*   **Debounce Now Uses a Queue — No Changes Lost**: A change arriving while an earlier one is still being sent to a slow device could previously be dropped entirely. Debounce now queues every change and sends them in order, so nothing is lost — whether it’s setting both temperature and mode at the same time or two changes made in quick succession.
+
+*   **Restore Member List in More-Info Dialog**: Re-added the option to display member devices directly in Home Assistant's More-Info dialog.
+
+### 🔧 Changes
+
+*   **Range Template mode selection**: Selecting Heat/Cool now takes effect with the Deadband Action set to "None", instead of falling back to the previous mode.
+
+*   **Staggered Call Delay Removed**: The staggered call delay option has been removed as outgoing commands are handled sequentially and reliably without artificial delays.
+
 ## 1.8.0 - 2026-09-01
 
 ### 🌟 New Features

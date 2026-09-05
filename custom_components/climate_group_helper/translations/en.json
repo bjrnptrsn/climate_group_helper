@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respect Member Off State (Sync)"
             },
             "data_description": {
-              "sync_mode": "What to do when a member is changed outside the group. Disabled: ignore it. Mirror: mirror changes. Lock: revert changes. Mirror/Lock: mirror selected attributes, revert unselected. Master/Lock: mirror master, revert others.",
+              "sync_mode": "What to do when a member is changed outside the group. Disabled: ignore it. Follow: adopt changes without passing them on. Mirror: mirror changes. Lock: revert changes. Mirror/Lock: mirror selected attributes, revert unselected. Master/Lock: mirror master, revert others.",
               "sync_attributes": "Defines which attributes the Sync Mode acts on. The handling of selected and unselected attributes (Mirror, Revert, or Ignore) depends on the chosen mode.",
               "ignore_off_members_sync": "Members that are manually turned Off are left alone. Their state is neither mirrored nor reverted. Note: direct group commands always reach all members regardless of this setting."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Enable Range Template",
               "range_template_deadband_action": "Deadband Action",
               "range_template_heat_entities": "Heating Devices",
-              "range_template_cool_entities": "Cooling Devices"
+              "range_template_cool_entities": "Cooling Devices",
+              "range_template_humidity_enabled": "Dehumidify in Deadband",
+              "range_template_humidity_action": "Humidity Action",
+              "range_template_humidity_hysteresis": "Humidity Hysteresis",
+              "range_template_humidity_deactivation_delay": "Deactivation Delay"
             },
             "data_description": {
               "range_template_enabled": "Automatically render all single-setpoint members (without native heat/cool) as virtual range-mode devices.",
               "range_template_deadband_action": "Action to perform when the current temperature is inside the target range (deadband). If set to 'None', a role-restricted member inside the band receives no command and keeps its current state — even if that state was reached by manual operation outside its role. Use 'Turn Off' to avoid this.",
               "range_template_heat_entities": "Members that are allowed to heat. Unlisted members are unrestricted (physical capability decides). A role can only restrict, never extend a device's capabilities.",
-              "range_template_cool_entities": "Members that are allowed to cool. Unlisted members are unrestricted (physical capability decides). A role can only restrict, never extend a device's capabilities."
+              "range_template_cool_entities": "Members that are allowed to cool. Unlisted members are unrestricted (physical capability decides). A role can only restrict, never extend a device's capabilities.",
+              "range_template_humidity_enabled": "When inside the target temperature range, switch to the humidity action if current humidity exceeds the target humidity.",
+              "range_template_humidity_action": "Action to perform when current humidity exceeds the target humidity while inside the deadband.",
+              "range_template_humidity_hysteresis": "Schmitt-trigger hysteresis band around target humidity to prevent rapid cycling.",
+              "range_template_humidity_deactivation_delay": "Delay before deactivating the humidity action after humidity falls below the threshold."
             }
           },
           "advanced_section": {
             "name": "Advanced Settings",
-            "description": "Fine-tune command timings, retry behavior, and staggered calls. Toggle diagnostic attributes and configuration sensors.",
+            "description": "Fine-tune command timings and retry behavior. Toggle diagnostic attributes and configuration sensors.",
             "data": {
               "debounce_delay": "Debounce Delay (seconds)",
               "retry_attempts": "Retry Attempts",
               "retry_delay": "Retry Delay (seconds)",
               "force_retry": "Force Retry",
-              "staggered_call_delay": "Staggered Call Delay (seconds)",
               "grace_period": "Optimistic UI Grace Period (seconds)",
               "expose_smart_sensors": "Expose Smart Sensors",
+              "expose_member_entities": "Expose Member List",
               "expose_config": "Expose Configuration Sensor"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "How many times to resend a command if a device doesn't respond. Set to 0 to disable.",
               "retry_delay": "Pause between retry attempts. Giving devices a moment to recover can improve reliability.",
               "force_retry": "Always retry sending commands to all members, even if they already report the target state.",
-              "staggered_call_delay": "Time to wait between individual commands to group members. Staggering calls prevents network congestion in Zigbee/Matter environments. Set to 0 to disable.",
               "grace_period": "How long the group shows the commanded value before switching to the member average. Prevents UI flicker when slow devices (Cloud bridges, Zigbee) echo their old state back. Set to 0 to disable.",
               "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
+              "expose_member_entities": "Creates an attribute listing all member entity IDs.",
               "expose_config": "Creates a diagnostic sensor (sensor.*_configuration) that exposes portable settings as a JSON attribute. Useful for copying settings between groups via automations."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Disabled – No automatic sync between members",
+        "follow_only": "Follow – Manual changes on a device update the group, but are not passed on to the others",
         "mirror": "Mirror – Manual changes on one device update all members",
         "lock": "Lock – Reverts manual changes to match the group state",
         "mirror_lock": "Mirror/Lock – Selective attributes are mirrored, others are strictly locked",
@@ -540,6 +549,12 @@
         "none": "None",
         "off": "Turn Off",
         "fan_only": "Fan Only"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Fan Only",
+        "dry": "Dry"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Apply Configuration",
-      "description": "Apply a portable JSON configuration to a group. This is useful for copying logic settings between groups or restoring a backup. Identity keys (name) are protected.",
+      "description": "Apply a portable JSON configuration to a group. This is useful for copying logic settings between groups or restoring a backup. Identity keys (name) are protected. Afterwards, open the group's settings and save once — the settings dialog additionally checks that the applied combination makes sense.",
       "fields": {
         "settings": {
           "name": "Settings (JSON)",

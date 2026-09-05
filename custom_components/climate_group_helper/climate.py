@@ -37,6 +37,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from .const import (
     CONF_ADVANCED_MODE,
     CONF_DEBOUNCE_DELAY,
+    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_FEATURE_STRATEGY,
     CONF_GRACE_PERIOD,
     CONF_GROUP_PRESETS,
@@ -57,7 +58,6 @@ from .const import (
     CONF_MIN_TEMP_OFF,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
-    CONF_STAGGERED_CALL_DELAY,
     CONF_TEMP_CURRENT_AVG,
     CONF_TEMP_SENSORS,
     CONF_TEMP_TARGET_AVG,
@@ -69,8 +69,15 @@ from .const import (
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
     CONF_RANGE_TEMPLATE_COOL_ENTITIES,
+    CONF_RANGE_TEMPLATE_HUMIDITY_ACTION,
+    CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
+    CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED,
+    CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
     DEFAULT_DEBOUNCE_DELAY,
     DEFAULT_GRACE_PERIOD,
+    DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION,
+    DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
+    DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
     DEFAULT_SUPPORTED_FEATURES,
     DOMAIN,
     AdoptManualChanges,
@@ -118,6 +125,7 @@ from .state import (
     RunState,
     TargetState,
     ClimateStateManager,
+    FollowStateManager,
     ScheduleStateManager,
     SyncModeStateManager,
     WindowControlStateManager,
@@ -216,11 +224,11 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.debounce_delay = config.get(CONF_DEBOUNCE_DELAY, DEFAULT_DEBOUNCE_DELAY)
         self.retry_attempts = int(config.get(CONF_RETRY_ATTEMPTS, 0))
         self.retry_delay = config.get(CONF_RETRY_DELAY, 2.5)
-        self.stagger_delay = config.get(CONF_STAGGERED_CALL_DELAY, 0.0)
         self.temp_sensor_entity_ids = _get_adv(CONF_TEMP_SENSORS, [])
         self.temp_update_target_entity_ids = _get_adv(CONF_TEMP_UPDATE_TARGETS, [])
         self.humidity_sensor_entity_ids = _get_adv(CONF_HUMIDITY_SENSORS, [])
         self.humidity_update_target_entity_ids = _get_adv(CONF_HUMIDITY_UPDATE_TARGETS, [])
+        self._expose_member_entities: bool = _get_adv(CONF_EXPOSE_MEMBER_ENTITIES, False)
         self.min_temp_off = config.get(CONF_MIN_TEMP_OFF, False)
         self._window_adopt_manual_changes = config.get(CONF_WINDOW_ADOPT_MANUAL_CHANGES, AdoptManualChanges.OFF)
         self._temp_offset_map: dict[str, float] = config.get(CONF_MEMBER_TEMP_OFFSETS, {})
@@ -232,11 +240,16 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         deadband_action = None
         if _get_adv(CONF_RANGE_TEMPLATE_ENABLED, False):
             deadband_action = config.get(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, RangeTemplateDeadbandAction.NONE)
+        humidity_enabled = _get_adv(CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED, False) and deadband_action is not None
         self.member_template_manager = MemberTemplateManager(
             group=self,
             deadband_action=deadband_action,
             heat_entities=set(config.get(CONF_RANGE_TEMPLATE_HEAT_ENTITIES, [])),
             cool_entities=set(config.get(CONF_RANGE_TEMPLATE_COOL_ENTITIES, [])),
+            humidity_enabled=humidity_enabled,
+            humidity_action=config.get(CONF_RANGE_TEMPLATE_HUMIDITY_ACTION, DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION),
+            humidity_hysteresis=float(config.get(CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS, DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS)),
+            humidity_deactivation_delay=float(config.get(CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY, DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY)),
         )
 
         # Aggregator first: CalibrationHandler reads member states through it.
@@ -255,6 +268,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # State managers
         self.climate_state_manager = ClimateStateManager(self)
+        self.follow_state_manager = FollowStateManager(self)
         self.schedule_state_manager = ScheduleStateManager(self)
         self.sync_mode_state_manager = SyncModeStateManager(self)
         self.window_control_state_manager = WindowControlStateManager(self)
@@ -519,6 +533,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         await self.sync_mode_call_handler.async_shutdown()
         await self.template_call_handler.async_shutdown()
         await self.window_control_call_handler.async_shutdown()
+        self.member_template_manager.async_cancel_timers()
         self.sync_mode_handler.async_teardown()
 
         if self.advanced_mode:
@@ -599,7 +614,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         await self.climate_call_handler.call_debounced(data=kwargs)
 
     async def async_set_humidity(self, humidity: int) -> None:
-        """Set new target humidity."""
+        """Forward the set_humidity command to all climate in the climate group."""
         self.climate_state_manager.update(humidity=humidity)
         await self.climate_call_handler.call_debounced(data={ATTR_HUMIDITY: humidity})
 
@@ -639,7 +654,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
                     "[%s] Restored last_active_hvac_mode '%s' is not a valid HVACMode, falling back",
                     self.entity_id, self.run_state.last_active_hvac_mode,
                 )
-        if last_mode is not None and last_mode in self._attr_hvac_modes:
+        if last_mode is not None and last_mode != HVACMode.OFF and last_mode in self._attr_hvac_modes:
             _LOGGER.debug("[%s] Turn on with the last active HVAC mode: %s", self.entity_id, last_mode)
             await self.async_set_hvac_mode(last_mode)
             return

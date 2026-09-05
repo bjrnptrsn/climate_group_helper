@@ -115,6 +115,7 @@ class PresenceHandler:
         return self._get_collective_presence()
 
     async def async_setup(self) -> None:
+        """Subscribe to the sensors and apply the presence state already in effect."""
         if self._mode == PresenceMode.DISABLED or not self._sensors:
             _LOGGER.debug("[%s] Presence control disabled (mode=%s, sensors=%s)", self._group.entity_id, self._mode, self._sensors)
             return
@@ -185,6 +186,7 @@ class PresenceHandler:
 
     @callback
     def _state_change_listener(self, event: Any) -> None:
+        """Start or cancel the away/return transition when a sensor changes."""
         new_state = event.data.get("new_state")
         if new_state is None:
             return

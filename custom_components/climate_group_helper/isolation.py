@@ -6,7 +6,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import HVACMode
-from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_ON
 from homeassistant.core import Event, EventStateChangedData, callback
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 
@@ -29,6 +29,7 @@ from .const import (
     IsolationActionType,
 )
 from .service_call import BaseServiceCallHandler
+from .state import available_state, is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -99,11 +100,13 @@ class MemberIsolationHandler:
         self._pending_timer: Callable[[], None] | None = None
         self._trigger_active: bool = False
 
-        # Entities this MEMBER_OFF rule currently holds. Neither _trigger_active
-        # nor the configured list can answer that: this trigger claims per event,
-        # and the list is only a filter for which members may be claimed (and may
-        # be empty, meaning "watch every member").
-        self._member_off_claims: set[str] = set()
+        # Entities this rule currently holds isolated. Neither _trigger_active nor
+        # the configured list can answer that: MEMBER_OFF claims per event and its
+        # list is only a filter (possibly empty, "watch every member"), while a
+        # continuous trigger can be refused by the full-isolation guard after the
+        # trigger was already recorded — its configured entities are then held by
+        # nobody.
+        self._claims: set[str] = set()
 
         # Per-entity call handlers — created in async_setup, keyed by entity_id
         self._call_handlers: dict[str, IsolationCallHandler] = {}
@@ -178,7 +181,6 @@ class MemberIsolationHandler:
             _LOGGER.debug("[%s] Member isolation disabled (no entities configured)", self._group.entity_id)
             return
 
-        # Create per-entity call handlers
         for entity_id in self._isolation_entity_ids:
             self._call_handlers[entity_id] = IsolationCallHandler(self._group, entity_id)
             self._restore_call_handlers[entity_id] = IsolationRestoreCallHandler(self._group, entity_id)
@@ -253,7 +255,7 @@ class MemberIsolationHandler:
         if new_state is None:
             return
 
-        if new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if not is_available(new_state):
             return
 
         now_active = new_state.state == STATE_ON
@@ -317,19 +319,18 @@ class MemberIsolationHandler:
         and in the restore calls (a full target-state restore would physically undo
         the other rule's protection).
 
-        A MEMBER_OFF rule is asked for its live claims instead: `_effective_active`
-        is never written on that path, and its claims count even while a slot
-        bypasses the rule, because `release_bypassed()` is a no-op for it — the
-        rule keeps holding its devices through the slot.
+        Every rule is asked what it actually holds, never what it is configured
+        for or what its trigger reads: a rule refused by the full-isolation guard
+        keeps an active trigger while holding nothing, and a MEMBER_OFF rule's
+        list is only a filter. Claims also survive a slot bypass for MEMBER_OFF,
+        because `release_bypassed()` is a no-op there — the rule keeps holding
+        its devices through the slot.
         """
         claims: set[str] = set()
         for other in self._group.member_isolation_handlers:
             if other is self:
                 continue
-            if other._trigger == IsolationTrigger.MEMBER_OFF:
-                claims |= other._member_off_claims
-            elif other._effective_active:
-                claims |= set(other._isolation_entity_ids)
+            claims |= other._claims
         return frozenset(claims)
 
     def _build_isolation_payload(self, entity_id: str) -> dict | None:
@@ -337,8 +338,7 @@ class MemberIsolationHandler:
 
         Returns None if the device is unavailable or already in the target state.
         """
-        state = self._group.aggregator.read_member_state(entity_id)
-        if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if (state := available_state(self._group.aggregator.read_member_state(entity_id))) is None:
             return None
 
         if self._action_type == IsolationActionType.PRESET_MODE:
@@ -367,8 +367,7 @@ class MemberIsolationHandler:
 
     def _read_current_preset(self, entity_id: str) -> str | None:
         """Read the device's current preset_mode (None if unavailable or unset)."""
-        state = self._group.aggregator.read_member_state(entity_id)
-        if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if (state := available_state(self._group.aggregator.read_member_state(entity_id))) is None:
             return None
         return state.attributes.get("preset_mode")
 
@@ -393,8 +392,7 @@ class MemberIsolationHandler:
         pre_preset = self._pre_action_presets.get(entity_id)
         if not pre_preset:
             return None
-        state = self._group.aggregator.read_member_state(entity_id)
-        if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if (state := available_state(self._group.aggregator.read_member_state(entity_id))) is None:
             return None
         supported = state.attributes.get("preset_modes", [])
         if (
@@ -445,6 +443,7 @@ class MemberIsolationHandler:
             self._group.run_state,
             isolated_members=new_isolated,
         )
+        self._claims.update(self._isolation_entity_ids)
         _LOGGER.debug("[%s] Isolation activated for: %s", self._group.entity_id, self._isolation_entity_ids)
 
         for entity_id in self._isolation_entity_ids:
@@ -490,6 +489,10 @@ class MemberIsolationHandler:
             _LOGGER.debug("[%s] Stale isolation deactivation skipped (trigger active again)", self._group.entity_id)
             return
 
+        # Dropped before the foreign-claim query: this rule is releasing, so it
+        # must not count itself among the claimants.
+        self._claims.clear()
+
         still_claimed = self._foreign_claims()
         new_isolated = self._group.run_state.isolated_members - (
             frozenset(self._isolation_entity_ids) - still_claimed
@@ -525,8 +528,7 @@ class MemberIsolationHandler:
                 if restore_handler := self._restore_call_handlers.get(entity_id):
                     await restore_handler.call_immediate(payload)
             else:
-                state = self._group.aggregator.read_member_state(entity_id)
-                if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+                if not is_available(self._group.aggregator.read_member_state(entity_id)):
                     # Offline device: the restore did not happen, it was
                     # postponed. Keeping the snapshot is the only chance to
                     # still get the device off the isolation preset once it
@@ -602,16 +604,12 @@ class MemberIsolationHandler:
         one is re-read right away, MEMBER_OFF needs a new off event. That is why
         its claims go too — they record a past event, and nothing will replay it.
         """
-        # MEMBER_OFF's entity list may be empty ("every member") and match
-        # nothing — its claims are tracked separately.
-        claimed = (
-            frozenset(self._isolation_entity_ids) | self._member_off_claims
-        ) & self._group.run_state.isolated_members
+        claimed = frozenset(self._claims) & self._group.run_state.isolated_members
 
         # Before the early return, not after: an earlier rule covering the same
         # entity has already removed it from isolated_members, so there is
         # nothing left to intersect and the claim would survive the switch.
-        self._member_off_claims.clear()
+        self._claims.clear()
 
         if not claimed:
             return
@@ -644,8 +642,7 @@ class MemberIsolationHandler:
         if self._trigger == IsolationTrigger.SENSOR:
             if not self._sensor_id:
                 return
-            state = self._hass.states.get(self._sensor_id)
-            if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            if (state := available_state(self._hass.states.get(self._sensor_id))) is None:
                 return
             self._trigger_active = state.state == STATE_ON
         elif self._trigger == IsolationTrigger.HVAC_MODE:
@@ -689,14 +686,14 @@ class MemberIsolationHandler:
             return
 
         # Transient new_state: member going offline — no meaningful state to act on.
-        if new_hvac_mode in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if not is_available(new_hvac_mode):
             return
         # Reconnect with an active mode is no deliberate change and must not
         # start an isolation — but a member we already hold is released anyway:
         # once it runs, "the member is off" no longer holds, and keeping the
         # claim would hide a heating device from sync and aggregation.
         if (
-            old_hvac_mode in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+            not is_available(old_hvac_mode)
             and new_hvac_mode != HVACMode.OFF
             and entity_id not in self._group.run_state.isolated_members
         ):
@@ -761,7 +758,7 @@ class MemberIsolationHandler:
 
         new_isolated = self._group.run_state.isolated_members | frozenset([entity_id])
         self._group.run_state = replace(self._group.run_state, isolated_members=new_isolated)
-        self._member_off_claims.add(entity_id)
+        self._claims.add(entity_id)
         _LOGGER.debug("[%s] MEMBER_OFF: isolated %s", self._group.entity_id, entity_id)
 
     def release_member_sync(self, entity_id: str) -> bool:
@@ -784,7 +781,7 @@ class MemberIsolationHandler:
         # mode, so this rule's own premise ("it is off, leave it alone") is gone
         # either way. Keeping the claim would make this rule hold a running
         # device and block the *other* rule's release later on.
-        self._member_off_claims.discard(entity_id)
+        self._claims.discard(entity_id)
         if entity_id in self._foreign_claims():
             _LOGGER.debug(
                 "[%s] MEMBER_OFF: release of %s skipped — still claimed by another active rule",
@@ -867,8 +864,7 @@ class IsolationCallHandler(BaseServiceCallHandler):
 
     def _get_capable_entities(self, attr: str, value: Any = None) -> list[str]:
         """Return only the single isolated entity (if capable)."""
-        state = self._hass.states.get(self._entity_id)
-        if not state or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+        if (state := available_state(self._hass.states.get(self._entity_id))) is None:
             return []
         # For float attrs just check existence; for mode attrs check supported values
         if attr in MODE_MODES_MAP:

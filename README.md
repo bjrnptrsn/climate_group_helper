@@ -17,10 +17,14 @@
 <p align="center">
   🔗 <b>Group devices</b> into one virtual controller.<br>
   🌡️ <b>Fix inaccurate sensors</b> with external calibration.<br>
-  🔄 <b>React to manual changes</b> on members with Mirror, Lock or Master sync modes.<br>
+  🔄 <b>React to manual changes</b> on members with Follow, Mirror, Lock or Master sync modes.<br>
   🪟 <b>Detect open windows</b> to pause heating automatically.<br>
-  👤 <b>Automate presence</b> using away offsets and presets.<br>
-  📅 <b>Schedule automation</b> via Schedule and Calendar entities.
+  👤 <b>Automate presence</b> using away offsets and temperatures.<br>
+  📅 <b>Schedule automation</b> via Schedule and Calendar entities.<br>
+  🎯 <b>Define your own presets</b> that set the whole group at once.<br>
+  🔥 <b>Boost the temperature</b> for a while, then fall back automatically.<br>
+  🚧 <b>Isolate single devices</b> from the group while a condition holds.<br>
+  ➕ <b>Shift the whole group</b> up or down with a single offset.
 </p>
 
 <p align="center">
@@ -144,12 +148,14 @@ Controls what happens when a member device is changed directly (e.g. via its own
   | Sync Mode | Attribute selected | Attribute not selected |
   |---|---|---|
   | **Disabled** | Ignore | Ignore |
+  | **Follow** | Adopt ² | Ignore |
   | **Mirror** | Mirror ¹ | Ignore |
   | **Lock** | Revert ¹ | Ignore |
   | **Mirror/Lock** | Mirror ¹ | Revert ¹ |
   | **Master/Lock** | Master: Mirror · Non-master: Revert ¹ | Ignore |
 
   - *¹ With **Respect Member Off State (Sync)** enabled: members that are manually turned `off` are left alone and their `off` is neither mirrored nor reverted.*
+  - *² **Follow** updates the group's own settings to match the changed device, but never passes the change on to the other members. A device turned `off` takes the whole group `off` only once no other member is still running — regardless of the **Respect Member Off State (Sync)** option.*
 
 * **Sync Attributes**
 
@@ -157,6 +163,7 @@ Controls what happens when a member device is changed directly (e.g. via its own
 
   | Mode | Role of **Sync Attributes** |
   |---|---|
+  | **Follow** | **selected** attributes are adopted into the group's settings, **unselected** attributes are ignored. Nothing is sent to the other members. |
   | **Mirror** | **selected** attributes are mirrored, **unselected** attributes are ignored. |
   | **Lock** | **selected** attributes are reverted, **unselected** attributes are ignored. |
   | **Mirror/Lock** | **selected** attributes are mirrored, **unselected** attributes are reverted. |
@@ -362,6 +369,7 @@ Translates outgoing `heat_cool` range commands into single-setpoint commands for
 *   Temperature **within** the band → send the configured **Deadband Action**
 
 *   **Deadband Action:** What to do when the room is already within the target band: **None** (default), **Turn Off**, or **Fan Only**.
+*   **Dehumidify in Deadband:** When enabled, the group can automatically switch devices to **Dry** (or **Fan Only**) while inside the temperature deadband if current humidity exceeds the target humidity. Activation is immediate; a Schmitt-trigger hysteresis and a configurable deactivation delay prevent short cycling. Temperature heating and cooling always take priority when the room leaves the deadband. A humidity reading is required — either from a member that reports one or from a humidity sensor added to the group; without one, the group offers no target humidity to set.
 *   **Automatic member detection:** All members that do **not** natively advertise `heat_cool` are automatically covered — no manual selection needed. Members with native `heat_cool` support are left unchanged. This also enables `heat_cool` mode for groups consisting entirely of heat-only and cool-only devices, with no native `heat_cool` device required.
 
 ## Management Entities (Switch & Slider)
@@ -489,8 +497,8 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 
 | Option | Description |
 |--------|-------------|
-| **Sync Mode** | What to do when a member is changed outside the group. **Disabled**: ignore everything. **Mirror**: mirror changes. **Lock**: revert changes. **Mirror/Lock**: mirror selected attributes, revert unselected attributes. **Master/Lock** *(requires Master Entity)*: mirror changes from the **Master Entity** only, revert changes from non-master entities. |
-| **Sync Attributes** | Which attributes the mode acts on. In **Mirror**: only selected attributes are mirrored, unselected = no action. In **Lock**: only selected attributes are reverted, unselected = no action. In **Mirror/Lock**: selected attributes are mirrored, unselected attributes are reverted. In **Master/Lock**: only the Master Entity's attributes are mirrored, unselected = no action. |
+| **Sync Mode** | What to do when a member is changed outside the group. **Disabled**: ignore everything. **Follow**: update the group to match the changed device, without touching the others. **Mirror**: mirror changes. **Lock**: revert changes. **Mirror/Lock**: mirror selected attributes, revert unselected attributes. **Master/Lock** *(requires Master Entity)*: mirror changes from the **Master Entity** only, revert changes from non-master entities. |
+| **Sync Attributes** | Which attributes the mode acts on. In **Follow**: only selected attributes are adopted into the group, unselected = no action. In **Mirror**: only selected attributes are mirrored, unselected = no action. In **Lock**: only selected attributes are reverted, unselected = no action. In **Mirror/Lock**: selected attributes are mirrored, unselected attributes are reverted. In **Master/Lock**: only the Master Entity's attributes are mirrored, unselected = no action. |
 | **Respect Member Off State (Sync)** | Members that are manually turned `off` are left alone. Their `off` state is neither mirrored to others nor reverted back to the group target. Exception: if it is the last active member, the group itself switches to `off` (Last Man Standing). Direct group commands always reach all members regardless of this setting. |
 
 ### Window Control
@@ -564,6 +572,10 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 |--------|-------------|
 | **Enable Range Template** | Enables automatic `heat_cool` range control for all members that do not natively advertise `heat_cool`. No manual selection needed — the group detects eligible members automatically. |
 | **Deadband Action** | What to do when the room temperature is already within the target band (between `target_temp_low` and `target_temp_high`). **None** (default — no command, device regulates itself to the setpoint it already received), **Turn Off**, or **Fan Only**. |
+| **Dehumidify in Deadband** | Automatically switch to dehumidification or fan circulation when inside the temperature deadband if room humidity exceeds the target humidity. Requires a humidity reading from a member or a humidity sensor. |
+| **Humidity Action** | Physical action when the humidity threshold is exceeded inside the deadband: **Dry** (default) or **Fan Only**. |
+| **Humidity Hysteresis** | Symmetrical hysteresis band around the target humidity to prevent rapid cycling (default: 3.0%). |
+| **Deactivation Delay** | Delay before ending the humidity action after humidity falls back below the threshold (default: 0s). Activation is immediate — like leaving the temperature band, reacting to excess humidity is never artificially delayed. |
 
 ### Advanced Settings
 
@@ -573,9 +585,9 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 | **Force Retry** | Always send commands to all members, even if they already report the target state. Useful for IR-based AC units or other devices that may not reliably update their state after receiving a command. |
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
-| **Staggered Call Delay** | Delay between service calls to individual group members (default: 0.0s = disabled). Helps reduce Zigbee/Z-Wave network congestion with large groups. Also applies to calibration writes. |
 | **UI Grace Period** | Duration (seconds) for which the group shows the commanded value right after a UI action, before slow member devices report their state back. Prevents visual flicker in the dashboard (default: 3.0s). Applies to all attributes: HVAC mode, temperature, humidity, fan/preset/swing modes. |
 | **Expose Smart Sensors** | When enabled, creates separate temperature and humidity sensor entities reflecting the group's current aggregated state (useful for history graphs and dashboards). |
+| **Expose Member List** | When enabled, adds the `entity_id` attribute with the list of member entity IDs, so Home Assistant's More-Info dialog shows the native member breakdown (also enables `expand()` templates). |
 | **Expose Configuration** | When enabled, creates a diagnostic sensor exposing the group's configuration as portable JSON. |
 | **Expand all sections by default** | Keeps all configuration sections expanded by default in the options dialog. |
 
@@ -773,6 +785,9 @@ By default, only logic settings (Sync Modes, Window Control, Schedules, etc.) ar
 
 > [!IMPORTANT]
 > **Reload Behavior:** Calling this service triggers a full reload of the group entity. All active, non-persisted timers (e.g., Boost, Window delays) will be reset immediately. This is the same behavior as when making changes through the UI.
+
+> [!TIP]
+> **Open the group's settings afterwards and save once.** The service applies what you hand it, while the settings dialog additionally checks that the combination makes sense and points out anything that needs fixing.
 
 ## Backup & Migration
 

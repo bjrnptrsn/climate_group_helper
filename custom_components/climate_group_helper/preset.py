@@ -16,6 +16,7 @@ from .payload import (
     parse_fallback_payload,
     validate_climate_payload,
 )
+from .service_call import SYNC_TARGET, SyncTarget
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -435,14 +436,16 @@ class PresetManager:
         """Return the payload for a virtual preset, or None if not found."""
         return self.group_presets.get(name) if name else None
 
-    def resolve_preset(self, payload: dict[str, Any] | None) -> dict[str, Any] | None:
+    def resolve_preset(
+        self, payload: dict[str, Any] | SyncTarget
+    ) -> dict[str, Any] | SyncTarget:
         """Resolve a payload containing preset_mode into concrete climate attributes.
 
         Merges only — activation is owned by `BaseStateManager._resolve_group_preset()`,
         which sits behind the blocking filter. Callers must not read activation
         from here.
         """
-        if not payload:
+        if payload is SYNC_TARGET or not payload:
             return payload
 
         preset_name = payload.get(ATTR_PRESET_MODE)

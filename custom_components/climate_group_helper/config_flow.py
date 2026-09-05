@@ -22,8 +22,6 @@ from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import (
     CONF_ENTITIES,
     CONF_NAME,
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
     UnitOfTemperature,
 )
 from homeassistant.util.unit_conversion import TemperatureConverter
@@ -40,6 +38,7 @@ from .const import (
     CONF_DEBOUNCE_DELAY,
     CONF_EXPAND_SECTIONS,
     CONF_EXPOSE_CONFIG,
+    CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPOSE_SMART_SENSORS,
     CONF_FEATURE_STRATEGY,
     CONF_FORCE_RETRY,
@@ -86,6 +85,10 @@ from .const import (
     CONF_RANGE_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_COOL_ENTITIES,
     CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
+    CONF_RANGE_TEMPLATE_HUMIDITY_ACTION,
+    CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
+    CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED,
+    CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_ROOM_OPEN_DELAY,
@@ -93,7 +96,6 @@ from .const import (
     CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_FALLBACK_PAYLOAD,
     CONF_SCHEDULE_ENTITY,
-    CONF_STAGGERED_CALL_DELAY,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
     CONF_TEMP_CALIBRATION_MODE,
@@ -115,6 +117,9 @@ from .const import (
     DEFAULT_DEBOUNCE_DELAY,
     DEFAULT_GRACE_PERIOD,
     DEFAULT_NAME,
+    DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION,
+    DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
+    DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
     DEFAULT_ROOM_OPEN_DELAY,
     DEFAULT_ZONE_OPEN_DELAY,
     DOMAIN,
@@ -128,14 +133,16 @@ from .const import (
     IsolationActionType,
     PresenceAction,
     PresenceMode,
+    RangeTemplateDeadbandAction,
+    RangeTemplateHumidityAction,
     RoundOption,
     SyncMode,
-    RangeTemplateDeadbandAction,
     UnionOutOfBoundsAction,
     UnsupportedHvacAction,
     WindowControlAction,
     WindowControlMode,
 )
+from .state import available_state
 
 from .initialization import filter_cgh_entities
 
@@ -143,7 +150,7 @@ from .initialization import filter_cgh_entities
 class ClimateGroupHelperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Climate Group."""
 
-    VERSION = 14
+    VERSION = 15
 
     @staticmethod
     @callback
@@ -254,8 +261,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             valid_states = [
                 state
                 for entity_id in entities
-                if (state := self.hass.states.get(entity_id)) is not None
-                and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+                if (state := available_state(self.hass.states.get(entity_id)))
             ]
             if valid_states:
                 # Min = Highest minimum
@@ -346,8 +352,17 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 entities.append(new_master)
                 current_config[CONF_ENTITIES] = entities
             current_config[CONF_MASTER_ENTITY] = new_master
-        elif advanced_mode:
-            # Clean up all master-dependent keys
+        elif not refresh:
+            # Clean up all master-dependent keys. Gated on `not refresh`, not
+            # `advanced_mode`: unlike a plain sensor value (window/presence),
+            # which is deliberately left "hibernated" across an Advanced->Simple
+            # round-trip (see test_advanced_mode_toggle_preserves_config), a
+            # removed master must not survive it — it carries active side
+            # effects (auto-added group membership, MASTER_LOCK sync mode) that
+            # would otherwise silently reactivate once Advanced Mode returns.
+            # An Advanced->Simple downgrade's *final* save has advanced_mode=False
+            # (the Simple form has no master field either), so gating this on
+            # advanced_mode skipped it on exactly the save meant to run it.
             current_config.pop(CONF_MASTER_ENTITY, None)
             current_config.pop(CONF_TEMP_USE_MASTER, None)
             current_config.pop(CONF_HUMIDITY_USE_MASTER, None)
@@ -445,6 +460,13 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     # Materialising it into the members present at save time froze
                     # the rule: a member added later was silently not covered, while
                     # the form kept rendering the empty field as "all members".
+                    #
+                    # A selection emptied by the member filter is the opposite
+                    # case: the rule was targeted, and keeping it would widen it
+                    # to every member rather than leave it alone. Drop it, the
+                    # same way `apply_config` drops such a rule.
+                    if current_config.get(f"isolation_rule_{i}_entities") and not entities:
+                        continue
                     rule[CONF_ISOLATION_ENTITIES] = entities
                     rule[CONF_ISOLATION_ACTIVATE_DELAY] = 0
                     rule[CONF_ISOLATION_RESTORE_DELAY] = 0
@@ -514,6 +536,14 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 current_config.pop(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, None)
                 current_config.pop(CONF_RANGE_TEMPLATE_HEAT_ENTITIES, None)
                 current_config.pop(CONF_RANGE_TEMPLATE_COOL_ENTITIES, None)
+                current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED, None)
+                current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_ACTION, None)
+                current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS, None)
+                current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY, None)
+            elif not user_input.get(CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED, False):
+                current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_ACTION, None)
+                current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS, None)
+                current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY, None)
 
         return current_config
 
@@ -1469,8 +1499,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         # them at runtime. Saved values are always kept in the options so a
         # legacy entry is never lost on save.
         def _mode_selectable(entity_id: str, mode: str) -> bool:
-            state = self.hass.states.get(entity_id)
-            if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            if (state := available_state(self.hass.states.get(entity_id))) is None:
                 return True  # unknown/offline — capability not trustworthy, stay selectable
             modes = state.attributes.get(ATTR_HVAC_MODES)
             if not modes:
@@ -1525,6 +1554,56 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                                 mode=selector.SelectSelectorMode.DROPDOWN,
                             )
                         ),
+                        vol.Optional(
+                            CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED,
+                            default=config.get(CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED, False),
+                        ): selector.BooleanSelector(),
+                        vol.Optional(
+                            CONF_RANGE_TEMPLATE_HUMIDITY_ACTION,
+                            default=config.get(
+                                CONF_RANGE_TEMPLATE_HUMIDITY_ACTION,
+                                DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION,
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in RangeTemplateHumidityAction],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="range_template_humidity_action",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
+                            default=config.get(
+                                CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
+                                DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
+                            ),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                # Not 0: a zero band leaves a dead point at exactly
+                                # target, where neither threshold comparison is true
+                                # and the last verdict would stand indefinitely.
+                                min=0.5,
+                                max=20.0,
+                                step=0.5,
+                                mode=selector.NumberSelectorMode.BOX,
+                                unit_of_measurement="%",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
+                            default=config.get(
+                                CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
+                                DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
+                            ),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=3600,
+                                step=1,
+                                mode=selector.NumberSelectorMode.BOX,
+                                unit_of_measurement="s",
+                            )
+                        ),
                     }
                 ),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
@@ -1576,18 +1655,6 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                             default=config.get(CONF_FORCE_RETRY, False),
                         ): selector.BooleanSelector(),
                         vol.Optional(
-                            CONF_STAGGERED_CALL_DELAY,
-                            default=config.get(CONF_STAGGERED_CALL_DELAY, 0.0),
-                        ): selector.NumberSelector(
-                            selector.NumberSelectorConfig(
-                                min=0,
-                                max=2,
-                                step=0.1,
-                                unit_of_measurement="s",
-                                mode=selector.NumberSelectorMode.SLIDER,
-                            )
-                        ),
-                        vol.Optional(
                             CONF_GRACE_PERIOD,
                             default=config.get(CONF_GRACE_PERIOD, DEFAULT_GRACE_PERIOD),
                         ): selector.NumberSelector(
@@ -1602,6 +1669,10 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         vol.Optional(
                             CONF_EXPOSE_SMART_SENSORS,
                             default=config.get(CONF_EXPOSE_SMART_SENSORS, False),
+                        ): selector.BooleanSelector(),
+                        vol.Optional(
+                            CONF_EXPOSE_MEMBER_ENTITIES,
+                            default=config.get(CONF_EXPOSE_MEMBER_ENTITIES, False),
                         ): selector.BooleanSelector(),
                         vol.Optional(
                             CONF_EXPOSE_CONFIG,

@@ -10,8 +10,6 @@ from homeassistant.const import (
     STATE_ON,
     STATE_OPEN,
     STATE_OPENING,
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
 )
 from homeassistant.core import Event, EventStateChangedData, callback
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
@@ -30,6 +28,7 @@ from .const import (
     META_VALUE_DISABLED,
     WindowControlMode,
 )
+from .state import is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -65,6 +64,8 @@ class WindowControlHandler:
 
         self._room_open = False
         self._zone_open = False
+        self._room_last_changed = float("inf")
+        self._zone_last_changed = float("inf")
 
         _LOGGER.debug(
             "[%s] WindowControl initialized. (room: %s.open_delay: %ds), (zone: %s.open_delay: %ds), (room/zone: close_delay: %ds)",
@@ -279,15 +280,14 @@ class WindowControlHandler:
         if not self._room_sensor and not self._zone_sensor:
             return None
 
-        room_last_changed = float("inf")
-        zone_last_changed = float("inf")
-
         # If no room sensor is configured, room is always closed.
-        # Transient states (unavailable/unknown) preserve the last known value.
+        # Transient states (unavailable/unknown) preserve the last known value —
+        # both the open/closed booleans and the last-changed timestamps, so a
+        # blip mid-delay does not collapse the remaining wait to zero.
         if self._room_sensor and (state := self._hass.states.get(self._room_sensor)):
-            if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            if is_available(state):
                 self._room_open = state.state in (STATE_ON, STATE_OPEN, STATE_OPENING, STATE_CLOSING)
-                room_last_changed = time.time() - state.last_changed.timestamp()
+                self._room_last_changed = time.time() - state.last_changed.timestamp()
 
         # If no zone sensor is configured, use room sensor state.
         # Transient states (unavailable/unknown) preserve the last known value.
@@ -295,17 +295,17 @@ class WindowControlHandler:
         # entity, so when the room opens the zone flips along: state and
         # last_changed move with the room event, the anchor stays fresh.
         if self._zone_sensor and (state := self._hass.states.get(self._zone_sensor)):
-            if state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            if is_available(state):
                 self._zone_open = state.state in (STATE_ON, STATE_OPEN, STATE_OPENING, STATE_CLOSING) or self._room_open
-                zone_last_changed = time.time() - state.last_changed.timestamp()
+                self._zone_last_changed = time.time() - state.last_changed.timestamp()
         elif self._zone_sensor is None:
             self._zone_open = self._room_open
-            zone_last_changed = room_last_changed
+            self._zone_last_changed = self._room_last_changed
 
         # Calculate timers
-        timer_room_open = max(self._room_delay - room_last_changed, 0) if self._room_open else self._room_delay
-        timer_zone_open = max(self._zone_delay - zone_last_changed, 0) if self._zone_open else self._zone_delay
-        timer_zone_close = max(self._close_delay - zone_last_changed, 0) if not self._zone_open else self._close_delay
+        timer_room_open = max(self._room_delay - self._room_last_changed, 0) if self._room_open else self._room_delay
+        timer_zone_open = max(self._zone_delay - self._zone_last_changed, 0) if self._zone_open else self._zone_delay
+        timer_zone_close = max(self._close_delay - self._zone_last_changed, 0) if not self._zone_open else self._close_delay
 
         # Calculate delays
         delay_room_open = min(timer_room_open, timer_zone_open) if self._room_open else None

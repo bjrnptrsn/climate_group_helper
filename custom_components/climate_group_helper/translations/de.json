@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respektiere 'Aus'-Status der Mitglieder (Sync)"
             },
             "data_description": {
-              "sync_mode": "Was geschieht, wenn ein Mitglied außerhalb der Gruppe geändert wird. Disabled: Ignorieren. Mirror: Änderungen spiegeln. Lock: Änderungen zurücksetzen. Mirror/Lock: Ausgewählte spiegeln, nicht ausgewählte zurücksetzen. Master/Lock: Master spiegeln, andere zurücksetzen.",
+              "sync_mode": "Was geschieht, wenn ein Mitglied außerhalb der Gruppe geändert wird. Disabled: Ignorieren. Follow: Änderungen übernehmen, ohne sie weiterzugeben. Mirror: Änderungen spiegeln. Lock: Änderungen zurücksetzen. Mirror/Lock: Ausgewählte spiegeln, nicht ausgewählte zurücksetzen. Master/Lock: Master spiegeln, andere zurücksetzen.",
               "sync_attributes": "Legt fest, auf welche Attribute der Sync-Modus wirkt. Die Behandlung ausgewählter und nicht ausgewählter Attribute (Mirror, Revert oder Ignore) hängt vom gewählten Modus ab.",
               "ignore_off_members_sync": "Manuell ausgeschaltete Mitglieder werden ignoriert. Ihr Zustand wird weder gespiegelt noch zurückgesetzt. Hinweis: Direkte Gruppenbefehle erreichen immer alle Mitglieder."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Bereichsvorlage aktivieren",
               "range_template_deadband_action": "Deadband-Aktion",
               "range_template_heat_entities": "Geräte, die heizen dürfen",
-              "range_template_cool_entities": "Geräte, die kühlen dürfen"
+              "range_template_cool_entities": "Geräte, die kühlen dürfen",
+              "range_template_humidity_enabled": "Im Totband entfeuchten",
+              "range_template_humidity_action": "Feuchtigkeits-Aktion",
+              "range_template_humidity_hysteresis": "Feuchtigkeits-Hysterese",
+              "range_template_humidity_deactivation_delay": "Deaktivierungsverzögerung"
             },
             "data_description": {
               "range_template_enabled": "Stellt alle Einzelsollwert-Mitglieder (ohne natives Heizen/Kühlen) automatisch als virtuelle Bereichsgeräte dar.",
               "range_template_deadband_action": "Aktion, die ausgeführt wird, wenn die aktuelle Temperatur innerhalb des Zielbereichs (Deadband) liegt.",
               "range_template_heat_entities": "Mitglieder, die heizen dürfen. Nicht gelistete Mitglieder sind uneingeschränkt (die physische Fähigkeit entscheidet). Eine Rolle kann eine Fähigkeit nur einschränken, nie erweitern.",
-              "range_template_cool_entities": "Mitglieder, die kühlen dürfen. Nicht gelistete Mitglieder sind uneingeschränkt (die physische Fähigkeit entscheidet). Eine Rolle kann eine Fähigkeit nur einschränken, nie erweitern."
+              "range_template_cool_entities": "Mitglieder, die kühlen dürfen. Nicht gelistete Mitglieder sind uneingeschränkt (die physische Fähigkeit entscheidet). Eine Rolle kann eine Fähigkeit nur einschränken, nie erweitern.",
+              "range_template_humidity_enabled": "Schaltet innerhalb des Ziel-Temperaturbereichs auf die Feuchtigkeits-Aktion um, wenn die Feuchtigkeit die Zielfeuchtigkeit überschreitet.",
+              "range_template_humidity_action": "Aktion, die ausgeführt wird, wenn die aktuelle Feuchtigkeit im Totband die Zielfeuchtigkeit überschreitet.",
+              "range_template_humidity_hysteresis": "Schmitt-Trigger-Hystereseband um die Zielfeuchtigkeit, um schnelles Takten zu verhindern.",
+              "range_template_humidity_deactivation_delay": "Verzögerung vor Deaktivierung der Feuchtigkeits-Aktion nach Unterschreiten des Schwellwerts."
             }
           },
           "advanced_section": {
             "name": "Erweiterte Einstellungen",
-            "description": "Feineinstellung von Befehls-Timings, Wiederholungen und verzögerten Aufrufen. Diagnose-Attribute und Konfigurations-Sensoren umschalten.",
+            "description": "Feineinstellung von Befehls-Timings und Wiederholungen. Diagnose-Attribute und Konfigurations-Sensoren umschalten.",
             "data": {
               "debounce_delay": "Entprellverzögerung (Sekunden)",
               "retry_attempts": "Wiederholungsversuche",
               "retry_delay": "Wiederholungsverzögerung (Sekunden)",
               "force_retry": "Wiederholung erzwingen",
-              "staggered_call_delay": "Verzögerung zwischen Befehlen (Sekunden)",
               "grace_period": "Optimistische UI-Übergangszeit (Sekunden)",
               "expose_smart_sensors": "Smarte Sensoren bereitstellen",
+              "expose_member_entities": "Mitgliederliste bereitstellen",
               "expose_config": "Konfiguration anzeigen (Debug)"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "Wie oft Befehle erneut gesendet werden, falls ein Gerät nicht antwortet. Auf 0 setzen zum Deaktivieren.",
               "retry_delay": "Pause zwischen Wiederholungsversuchen. Gibt Geräten einen Moment zur Erholung.",
               "force_retry": "Sendet Befehle immer an alle Mitglieder, auch wenn diese den Zielzustand bereits melden.",
-              "staggered_call_delay": "Wartezeit zwischen einzelnen Befehlen an Gruppenmitglieder. Die gestaffelte Übertragung verhindert Netzwerküberlastung in Zigbee/Matter-Umgebungen. Auf 0 setzen zum Deaktivieren.",
               "grace_period": "Wie lange die Gruppe den gesendeten Wert anzeigt, bevor sie zum Mitgliederdurchschnitt wechselt. Verhindert UI-Flackern, wenn langsame Geräte (Cloud-Bridges, Zigbee) ihren alten Zustand zurückmelden. Auf 0 setzen zum Deaktivieren.",
               "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
+              "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
               "expose_config": "Fügt alle Konfigurationswerte den Entitätsattributen hinzu. Nützlich für die Fehlersuche."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Deaktiviert – Keine automatische Synchronisierung zwischen Mitgliedern",
+        "follow_only": "Follow – Manuelle Änderungen an einem Gerät aktualisieren die Gruppe, werden aber nicht weitergegeben",
         "mirror": "Mirror – Manuelle Änderungen an einem Gerät werden auf alle Mitglieder übertragen",
         "lock": "Lock – Manuelle Änderungen werden auf den Gruppenstand zurückgesetzt",
         "mirror_lock": "Mirror/Lock – Gewählte Attribute werden übernommen, alle anderen streng erzwungen",
@@ -540,6 +549,12 @@
         "none": "Keine",
         "off": "Ausschalten",
         "fan_only": "Nur Lüftung"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Nur Lüftung",
+        "dry": "Trocknen"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Konfiguration anwenden",
-      "description": "Übernimmt eine portable JSON-Konfiguration. Nützlich zum Kopieren von Einstellungen oder Wiederherstellen von Backups.",
+      "description": "Übernimmt eine portable JSON-Konfiguration. Nützlich zum Kopieren von Einstellungen oder Wiederherstellen von Backups. Öffne danach die Einstellungen der Gruppe und speichere einmal — der Einstellungsdialog prüft zusätzlich, ob die übernommene Kombination sinnvoll ist.",
       "fields": {
         "settings": {
           "name": "Einstellungen (JSON)",

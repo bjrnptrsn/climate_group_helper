@@ -312,11 +312,18 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
     # Restore last active HVAC mode. Validated here rather than at the consumers:
     # the boost wake-up path writes it straight into a member service call, so an
     # unusable persisted value would survive every restart and only ever surface
-    # as an invalid outgoing command.
+    # as an invalid outgoing command. OFF is rejected the same way — it is a
+    # valid HVACMode so the enum conversion alone would not catch it, but
+    # aggregation.py's live writer excludes it by definition (the field exists
+    # to answer "what to turn back on to"), and a persisted OFF (older version,
+    # hand-edited storage) would otherwise turn async_turn_on() back off.
     if (last_active := last_attrs.get(ATTR_LAST_ACTIVE_HVAC_MODE)) is not None:
         try:
+            restored_mode = HVACMode(last_active)
+            if restored_mode == HVACMode.OFF:
+                raise ValueError(last_active)
             group.run_state = replace(
-                group.run_state, last_active_hvac_mode=HVACMode(last_active)
+                group.run_state, last_active_hvac_mode=restored_mode
             )
         except ValueError:
             _LOGGER.warning(
@@ -416,6 +423,19 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
             group.run_state = replace(
                 group.run_state, isolated_members=frozenset(valid_isolated)
             )
+            # Claims are runtime state and start empty after a restart, so every
+            # rule is seeded from what was persisted. A continuous trigger can be
+            # read back directly (`covers_actively()` asks the sensor / target
+            # mode), which is what its own setup will do moments later.
+            for handler in group.member_isolation_handlers:
+                if handler._trigger == IsolationTrigger.MEMBER_OFF:
+                    continue
+                handler._claims.update(
+                    entity_id
+                    for entity_id in valid_isolated
+                    if handler.covers_actively(entity_id)
+                )
+
             # A MEMBER_OFF rule builds its claims from events, of which there are
             # none after a restart — seed them from what was persisted instead.
             # The skip is the judgement call: a physical OFF cannot say whether
@@ -436,7 +456,7 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
                         continue
                     state = group.hass.states.get(entity_id)
                     if state and state.state == HVACMode.OFF:
-                        handler._member_off_claims.add(entity_id)
+                        handler._claims.add(entity_id)
             _LOGGER.debug(
                 "[%s] Restored isolated members: %s", group.entity_id, valid_isolated
             )

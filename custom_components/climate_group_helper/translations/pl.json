@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respektuj stan WYŁ członków (Synchronizacja)"
             },
             "data_description": {
-              "sync_mode": "Co zrobić, gdy członek zmieni się poza grupą. Disabled: ignoruj. Mirror: lustrzane odbicie. Lock: cofnij zmiany. Mirror/Lock: lustrzane wybrane, cofnij niewybrane. Master/Lock: lustrzane master, cofnij inne.",
+              "sync_mode": "Co zrobić, gdy członek zmieni się poza grupą. Disabled: ignoruj. Follow: przejmij zmiany bez przenoszenia ich dalej. Mirror: lustrzane odbicie. Lock: cofnij zmiany. Mirror/Lock: lustrzane wybrane, cofnij niewybrane. Master/Lock: lustrzane master, cofnij inne.",
               "sync_attributes": "Definiuje, na które atrybuty wpływa tryb synchronizacji. Obsługa wybranych i niewybranych atrybutów (Mirror, Revert lub Ignore) zależy od wybranego trybu.",
               "ignore_off_members_sync": "Ręcznie wyłączeni członkowie są pozostawiani w spokoju. Ich stan nie jest ani odzwierciedlany, ani cofany. Uwaga: bezpośrednie polecenia grupowe zawsze docierają do wszystkich."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Włącz szablon zakresu",
               "range_template_deadband_action": "Akcja w martwej strefie",
               "range_template_heat_entities": "Urządzenia grzewcze",
-              "range_template_cool_entities": "Urządzenia chłodzące"
+              "range_template_cool_entities": "Urządzenia chłodzące",
+              "range_template_humidity_enabled": "Osuszanie w strefie nieczułości",
+              "range_template_humidity_action": "Działanie wilgotności",
+              "range_template_humidity_hysteresis": "Histereza wilgotności",
+              "range_template_humidity_deactivation_delay": "Opóźnienie dezaktywacji"
             },
             "data_description": {
               "range_template_enabled": "Automatycznie renderuje wszystkich członków z jednym punktem nastawy (bez natywnego ogrzewania/chłodzenia) jako wirtualne urządzenia w trybie zakresu.",
               "range_template_deadband_action": "Akcja wykonywana, gdy aktualna temperatura znajduje się wewnątrz zakresu docelowego (martwa strefa).",
               "range_template_heat_entities": "Członkowie, którzy mogą grzać. Niewymienieni członkowie nie mają ograniczeń (decyduje fizyczna zdolność). Rola może tylko ograniczać, nigdy nie rozszerzać możliwości urządzenia.",
-              "range_template_cool_entities": "Członkowie, którzy mogą chłodzić. Niewymienieni członkowie nie mają ograniczeń (decyduje fizyczna zdolność). Rola może tylko ograniczać, nigdy nie rozszerzać możliwości urządzenia."
+              "range_template_cool_entities": "Członkowie, którzy mogą chłodzić. Niewymienieni członkowie nie mają ograniczeń (decyduje fizyczna zdolność). Rola może tylko ograniczać, nigdy nie rozszerzać możliwości urządzenia.",
+              "range_template_humidity_enabled": "W docelowym zakresie temperatur przełącz na działanie wilgotności, jeśli wilgotność przekroczy wartość docelową.",
+              "range_template_humidity_action": "Działanie wykonywane, gdy bieżąca wilgotność przekracza docelową w strefie nieczułości.",
+              "range_template_humidity_hysteresis": "Pasmo histerezy przerzutnika Schmitta wokół wilgotności docelowej, aby zapobiec częstemu przełączaniu.",
+              "range_template_humidity_deactivation_delay": "Opóźnienie przed dezaktywacją działania wilgotności po spadku poniżej progu."
             }
           },
           "advanced_section": {
             "name": "Ustawienia zaawansowane",
-            "description": "Dostosuj czasy poleceń, zachowanie ponawiania i wywołania rozłożone w czasie. Przełączaj atrybuty diagnostyczne i czujniki konfiguracji.",
+            "description": "Dostosuj czasy poleceń i zachowanie ponawiania. Przełączaj atrybuty diagnostyczne i czujniki konfiguracji.",
             "data": {
               "debounce_delay": "Opóźnienie Debounce (sekundy)",
               "retry_attempts": "Próby Ponowienia",
               "retry_delay": "Opóźnienie Ponowienia (sekundy)",
               "force_retry": "Wymuś ponowną próbę",
-              "staggered_call_delay": "Opóźnienie między poleceniami (sekundy)",
               "grace_period": "Optymistyczny okres przejścia UI (sekundy)",
               "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
+              "expose_member_entities": "Pokaż Listę Członków",
               "expose_config": "Pokaż konfigurację (Debug)"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "Ile razy ponownie wysłać polecenie, jeśli urządzenie nie odpowiada. Ustaw na 0, aby wyłączyć.",
               "retry_delay": "Pauza między próbami. Danie urządzeniom chwili na odzyskanie sprawności może poprawić niezawodność.",
               "force_retry": "Zawsze ponawia wysyłanie poleceń do wszystkich członków, nawet jeśli już raportują stan docelowy.",
-              "staggered_call_delay": "Czas oczekiwania między poszczególnymi poleceniami do członków grupy. Rozłożenie poleceń zapobiega przeciążeniu sieci w środowiskach Zigbee/Matter. Ustaw na 0, aby wyłączyć.",
               "grace_period": "Jak długo grupa wyświetla wysłaną wartość przed przełączeniem na średnią członków. Zapobiega migotaniu UI, gdy wolne urządzenia (mosty Cloud, Zigbee) odsyłają swój stary stan. Ustaw na 0, aby wyłączyć.",
               "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
+              "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
               "expose_config": "Dodaje wszystkie wartości konfiguracji do atrybutów encji. Przydatne do debugowania."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Dezaktywowano – Brak automatycznej synchronizacji między członkami",
+        "follow_only": "Follow – Ręczne zmiany na urządzeniu aktualizują grupę, ale nie są przenoszone na pozostałych",
         "mirror": "Mirror – Ręczne zmiany na jednym urządzeniu są przenoszone na wszystkich członków",
         "lock": "Lock – Ręczne zmiany są cofane do stanu grupy",
         "mirror_lock": "Mirror/Lock – Wybrane atrybuty są kopiowane, inne są ściśle przywracane",
@@ -540,6 +549,12 @@
         "none": "Brak",
         "off": "Wyłącz",
         "fan_only": "Tylko wentylator"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Tylko wentylator",
+        "dry": "Osuszanie"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Zastosuj konfigurację",
-      "description": "Stosuje przenośną konfigurację JSON do grupy. Przydatne do kopiowania ustawień między grupami lub przywracania kopii zapasowej.",
+      "description": "Stosuje przenośną konfigurację JSON do grupy. Przydatne do kopiowania ustawień między grupami lub przywracania kopii zapasowej. Następnie otwórz ustawienia grupy i zapisz raz — okno ustawień dodatkowo sprawdza, czy zastosowana kombinacja ma sens.",
       "fields": {
         "settings": {
           "name": "Ustawienia (JSON)",

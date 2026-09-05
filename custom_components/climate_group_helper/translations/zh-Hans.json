@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "尊重成员关闭状态（同步）"
             },
             "data_description": {
-              "sync_mode": "当成员在组外更改时该怎么办。禁用：忽略。镜像：镜像更改。锁定：恢复更改。镜像/锁定：镜像所选，恢复未选。大师/锁定：镜像大师，恢复其他。",
+              "sync_mode": "当成员在组外更改时该怎么办。禁用：忽略。跟随：采纳更改但不向其他成员传递。镜像：镜像更改。锁定：恢复更改。镜像/锁定：镜像所选，恢复未选。大师/锁定：镜像大师，恢复其他。",
               "sync_attributes": "定义同步模式作用于哪些属性。所选和未选属性的处理方式（镜像、恢复或忽略）取决于所选模式。",
               "ignore_off_members_sync": "手动关闭的成员将被忽略。它们的状态既不会被镜像也不会被恢复。注意：直接群组命令始终会到达所有成员。"
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "启用范围模板",
               "range_template_deadband_action": "死区动作",
               "range_template_heat_entities": "制热设备",
-              "range_template_cool_entities": "制冷设备"
+              "range_template_cool_entities": "制冷设备",
+              "range_template_humidity_enabled": "死区内除湿",
+              "range_template_humidity_action": "湿度动作",
+              "range_template_humidity_hysteresis": "湿度滞后",
+              "range_template_humidity_deactivation_delay": "停止延迟"
             },
             "data_description": {
               "range_template_enabled": "自动将所有单设定点成员（不支持原生制热/制冷）呈现为虚拟范围模式设备。",
               "range_template_deadband_action": "当前温度在目标范围（死区）内时执行的动作。",
               "range_template_heat_entities": "允许制热的成员。未列出的成员不受限制（由物理能力决定）。角色只能限制，绝不能扩展设备的能力。",
-              "range_template_cool_entities": "允许制冷的成员。未列出的成员不受限制（由物理能力决定）。角色只能限制，绝不能扩展设备的能力。"
+              "range_template_cool_entities": "允许制冷的成员。未列出的成员不受限制（由物理能力决定）。角色只能限制，绝不能扩展设备的能力。",
+              "range_template_humidity_enabled": "在目标温度范围内，若当前湿度超过目标湿度，则切换至湿度动作。",
+              "range_template_humidity_action": "死区内当前湿度超过目标湿度时执行的动作。",
+              "range_template_humidity_hysteresis": "目标湿度周围的施密特触发滞后带，防止频繁启停。",
+              "range_template_humidity_deactivation_delay": "湿度降至阈值以下后停止湿度动作的延迟时间。"
             }
           },
           "advanced_section": {
             "name": "高级设置",
-            "description": "微调命令时间、重试行为和交错调用。切换诊断属性和配置传感器。",
+            "description": "微调命令时间和重试行为。切换诊断属性和配置传感器。",
             "data": {
               "debounce_delay": "防抖延迟 (秒)",
               "retry_attempts": "重试次数",
               "retry_delay": "重试延迟 (秒)",
               "force_retry": "强制重试",
-              "staggered_call_delay": "命令间延迟（秒）",
               "grace_period": "乐观 UI 缓冲期（秒）",
               "expose_smart_sensors": "公开智能传感器",
+              "expose_member_entities": "公开成员列表",
               "expose_config": "显示配置 (调试)"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
               "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。",
               "force_retry": "始终向所有成员重新发送命令，即使它们已报告目标状态。",
-              "staggered_call_delay": "向组成员发送各条命令之间的等待时间。错开命令可防止 Zigbee/Matter 网络拥塞。设置为 0 可禁用。",
               "grace_period": "群组在切换到成员平均值之前显示已发送值的时长。防止慢速设备（Cloud 网关、Zigbee）回显旧状态时的 UI 闪烁。设置为 0 可禁用。",
               "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
+              "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
               "expose_config": "将所有配置值添加到实体属性中。用于调试。"
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "禁用 – 成员之间无自动同步",
+        "follow_only": "Follow – 在一台设备上的手动更改会更新组，但不会应用于其他成员",
         "mirror": "Mirror – 在一台设备上的手动更改将应用于所有成员",
         "lock": "Lock – 手动更改将恢复为组状态",
         "mirror_lock": "Mirror/Lock – 选定属性会被同步，其他属性则被严格还原",
@@ -540,6 +549,12 @@
         "none": "无",
         "off": "关闭",
         "fan_only": "仅风扇"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "仅风扇",
+        "dry": "除湿"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "应用配置",
-      "description": "将便携式 JSON 配置应用到群组。适用于在群组之间复制逻辑设置或恢复备份。",
+      "description": "将便携式 JSON 配置应用到群组。适用于在群组之间复制逻辑设置或恢复备份。之后请打开该群组的设置并保存一次——设置对话框会额外检查所应用的组合是否合理。",
       "fields": {
         "settings": {
           "name": "设置 (JSON)",

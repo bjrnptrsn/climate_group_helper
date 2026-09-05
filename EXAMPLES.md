@@ -31,6 +31,8 @@ Real-world scenarios, ordered by complexity. Each example describes the situatio
   - [22. Multi-Head Mini-Split, Shared Mode Only](#22-multi-head-mini-split-shared-mode-only)
   - [23. Interlocking Heat/Cool Across Two Systems](#23-interlocking-heatcool-across-two-systems)
   - [24. Notice When a Device Swallows Commands](#24-notice-when-a-device-swallows-commands)
+  - [25. Heat/Cool for Thermostats That Only Have One Setpoint](#25-heatcool-for-thermostats-that-only-have-one-setpoint)
+  - [26. Dehumidify While the Room Sits at Temperature](#26-dehumidify-while-the-room-sits-at-temperature)
 
 ---
 
@@ -645,7 +647,7 @@ Battery TRVs occasionally miss a command — the group sends 21°, the device st
 
 **Entities:** any group with two or more members, e.g. `climate.living_room`
 
-The delay is the whole point: a short disagreement is normal — commands are staggered, devices report back at their own pace, and a schedule slot takes a moment to reach everyone. Only a difference that *persists* is worth a message.
+The delay is the whole point: a short disagreement is normal — commands go out one after another, devices report back at their own pace, and a schedule slot takes a moment to reach everyone. Only a difference that *persists* is worth a message.
 
 ```yaml
 automation:
@@ -674,12 +676,51 @@ Two things this deliberately does *not* fire on: an isolated device (it is meant
 
 > A dashboard variant of the same idea: a conditional card that appears only while `member_divergence` is non-empty, so an agreeing group shows nothing at all.
 
+### 25. Heat/Cool for Thermostats That Only Have One Setpoint
+
+Several thermostats (e.g. Honeywell Lyric T5) physically support auto-changeover, but their integration only exposes a single target temperature — so the group inherits that and can never offer a range. The Range Template synthesizes `heat_cool` by switching each device's physical mode from its own `current_temperature` against the commanded band. (Based on a real single-setpoint thermostat setup.)
+
+**Entities:** `climate.lyric_living`, `climate.lyric_bedroom` (both heat/cool/off, single setpoint only)
+
+| Setting | Value |
+|---|---|
+| Members | `climate.lyric_living`, `climate.lyric_bedroom` |
+| Enable Range Template | on |
+| Deadband Action | Fan Only |
+
+**Result:** The group offers `heat_cool` with a low/high band even though no member advertises range support. Below the band a device gets `heat` with the low setpoint, above it `cool` with the high one, and inside it the Deadband Action. Members are detected automatically — anything already advertising `heat_cool` natively is left alone.
+
+**Deadband Action "None"** sends no command inside the band, leaving each device on the setpoint it last received. Use it for devices that regulate themselves; use "Turn Off" or "Fan Only" when the group should actively idle them.
+
+---
+
+### 26. Dehumidify While the Room Sits at Temperature
+
+An AC covered by the Range Template idles on Fan Only inside the band — but on humid days the room stays comfortable in temperature and clammy in humidity. The group can switch it to Dry instead whenever humidity runs above target, without giving up temperature control.
+
+**Entities:** `climate.bedroom_ac` (heat/cool/dry/fan_only/off, single setpoint), `sensor.bedroom_humidity`
+
+| Setting | Value |
+|---|---|
+| Members | `climate.bedroom_ac` |
+| External Humidity Sensors | `sensor.bedroom_humidity` |
+| Enable Range Template | on |
+| Deadband Action | Fan Only |
+| Dehumidify in Deadband | on |
+| Humidity Action | Dry |
+| Humidity Hysteresis | 3.0 % |
+| Deactivation Delay | 600 s |
+
+**Result:** Inside the temperature band the AC runs Fan Only while humidity is on target, and switches to Dry once it climbs above the target humidity. Leaving the band always wins — heating and cooling take priority over dehumidifying. The delay keeps a shower or a pot of pasta from cycling the unit straight back.
+
+A humidity reading is required: either a sensor as above, or a member that reports one. Without it the group offers no target humidity, and the option stays inactive. Devices that can't do Dry fall back to the Deadband Action, and if heating/cooling roles are assigned, Dry counts as cooling — a heat-only device never gets it.
+
 ---
 
 ## Tips
 
 - **Start simple:** get basic grouping working first (just Members, no other settings), then layer on features one at a time.
-- **Advanced Mode:** toggle it on in the group's configuration to unlock everything beyond Basic-tier settings (Examples 3–18).
+- **Advanced Mode:** toggle it on in the group's configuration to unlock everything beyond Basic-tier settings — every example past the Basic section needs it.
 - **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted; use `Mirror/Lock` when only some attributes should sync (Example 22).
 - **Blocking priority:** Main Switch > Window Control > Presence Control — if several are active at once, only the highest-ranked one's action is sent to members.
 - **Schedule + Boost:** Boost outranks the schedule. Schedule slot changes still run in the background during a boost.

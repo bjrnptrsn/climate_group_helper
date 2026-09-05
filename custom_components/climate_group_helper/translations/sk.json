@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Rešpektovať stav Vypnuté u členov (Synchronizácia)"
             },
             "data_description": {
-              "sync_mode": "Čo robiť, keď sa člen zmení mimo skupiny. Disabled: ignorovať. Mirror: zrkadliť zmeny. Lock: vrátiť zmeny. Mirror/Lock: zrkadliť vybrané, vrátiť nevybrané. Master/Lock: zrkadliť master, vrátiť ostatné.",
+              "sync_mode": "Čo robiť, keď sa člen zmení mimo skupiny. Disabled: ignorovať. Follow: prevziať zmeny bez ich prenosu. Mirror: zrkadliť zmeny. Lock: vrátiť zmeny. Mirror/Lock: zrkadliť vybrané, vrátiť nevybrané. Master/Lock: zrkadliť master, vrátiť ostatné.",
               "sync_attributes": "Definuje, na ktoré atribúty sa režim synchronizácie vzťahuje. Spracovanie vybraných a nevybraných atribútov (Mirror, Revert alebo Ignore) závisí od zvoleného režimu.",
               "ignore_off_members_sync": "Ručne vypnutí členovia sú ponechaní na pokoji. Ich stav sa nezrkadlí ani nevracia. Poznámka: priame skupinové príkazy vždy zasiahnu všetkých členov."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Povoliť šablónu rozsahu",
               "range_template_deadband_action": "Akcia v mŕtvom pásme",
               "range_template_heat_entities": "Vykurovacie zariadenia",
-              "range_template_cool_entities": "Chladiace zariadenia"
+              "range_template_cool_entities": "Chladiace zariadenia",
+              "range_template_humidity_enabled": "Odvlhčovať v pásme necitlivosti",
+              "range_template_humidity_action": "Akcia vlhkosti",
+              "range_template_humidity_hysteresis": "Hysterézia vlhkosti",
+              "range_template_humidity_deactivation_delay": "Oneskorenie deaktivácie"
             },
             "data_description": {
               "range_template_enabled": "Automaticky zobrazuje všetkých členov s jedným nastavením (bez natívneho kúrenia/chladenia) ako virtuálne zariadenia v režime rozsahu.",
               "range_template_deadband_action": "Akcia, ktorá sa vykoná, keď je aktuálna teplota v rámci cieľového rozsahu (mŕtve pásmo).",
               "range_template_heat_entities": "Členovia, ktorí môžu vykurovať. Neuvedení členovia sú neobmedzení (rozhoduje fyzická schopnosť). Rola môže schopnosť len obmedziť, nikdy nie rozšíriť.",
-              "range_template_cool_entities": "Členovia, ktorí môžu chladiť. Neuvedení členovia sú neobmedzení (rozhoduje fyzická schopnosť). Rola môže schopnosť len obmedziť, nikdy nie rozšíriť."
+              "range_template_cool_entities": "Členovia, ktorí môžu chladiť. Neuvedení členovia sú neobmedzení (rozhoduje fyzická schopnosť). Rola môže schopnosť len obmedziť, nikdy nie rozšíriť.",
+              "range_template_humidity_enabled": "V cieľovom rozsahu teplôt prepne na akciu vlhkosti, ak vlhkosť prekročí cieľovú hodnotu.",
+              "range_template_humidity_action": "Akcia, ktorá sa vykoná, keď aktuálna vlhkosť v pásme necitlivosti prekročí cieľovú vlhkosť.",
+              "range_template_humidity_hysteresis": "Hysterézne pásmo Schmittovho klopného obvodu okolo cieľovej vlhkosti na zabránenie častému cyklovaniu.",
+              "range_template_humidity_deactivation_delay": "Oneskorenie pred deaktiváciou akcie vlhkosti po poklese pod prah."
             }
           },
           "advanced_section": {
             "name": "Pokročilé nastavenia",
-            "description": "Doladenie časovania príkazov, pokusov o opakovanie a odložených volaní. Prepínanie diagnostických atribútov a konfiguračných senzorov.",
+            "description": "Doladenie časovania príkazov a pokusov o opakovanie. Prepínanie diagnostických atribútov a konfiguračných senzorov.",
             "data": {
               "debounce_delay": "Debounce oneskorenie (sekundy)",
               "retry_attempts": "Počet opakovaných pokusov",
               "retry_delay": "Oneskorenie opakovania (sekundy)",
               "force_retry": "Vynútiť opakovanie",
-              "staggered_call_delay": "Oneskorenie medzi príkazmi (sekundy)",
               "grace_period": "Optimistická prechodová doba UI (sekundy)",
               "expose_smart_sensors": "Zobraziť inteligentné senzory",
+              "expose_member_entities": "Zobraziť zoznam členov",
               "expose_config": "Zobraziť konfiguráciu (ladenie)"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "Koľkokrát znovu odoslať príkaz, ak zariadenie nereaguje. Nastavte na 0 pre vypnutie.",
               "retry_delay": "Pauza medzi pokusmi. Dať zariadeniam chvíľu na zotavenie môže zlepšiť spoľahlivosť.",
               "force_retry": "Vždy znovu odosiela príkazy všetkým členom, aj keď už hlásia cieľový stav.",
-              "staggered_call_delay": "Čas čakania medzi jednotlivými príkazmi členom skupiny. Rozloženie príkazov zabraňuje preťaženiu siete v prostredí Zigbee/Matter. Nastavte na 0 pre vypnutie.",
               "grace_period": "Ako dlho skupina zobrazuje zadanú hodnotu pred prepnutím na priemer členov. Zabraňuje blikaniu UI, keď pomalé zariadenia (Cloud bridges, Zigbee) posielajú späť svoj starý stav. Nastavte na 0 pre vypnutie.",
               "expose_smart_sensors": "Vytvorí ďalšie entity senzorov pre teplotu a vlhkosť skupiny (užitočné pre grafy).",
+              "expose_member_entities": "Vytvorí atribút so zoznamom všetkých ID entít členov.",
               "expose_config": "Pridá všetky konfiguračné hodnoty do atribútov entity. Užitočné pre ladenie."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Zakázané – Žiadna automatická synchronizácia medzi členmi",
+        "follow_only": "Follow – Manuálne zmeny na zariadení aktualizujú skupinu, ale neprenesú sa na ostatných",
         "mirror": "Mirror – Manuálne zmeny na jednom zariadení sa prenesú na všetkých členov",
         "lock": "Lock – Manuálne zmeny sa vrátia na stav skupiny",
         "mirror_lock": "Mirror/Lock – Vybrané atribúty sú zrkadlené, ostatné sú striktne obnovené",
@@ -540,6 +549,12 @@
         "none": "Žiadna",
         "off": "Vypnúť",
         "fan_only": "Iba ventilátor"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Iba ventilátor",
+        "dry": "Odvlhčovanie"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Použiť konfiguráciu",
-      "description": "Použije prenosnú JSON konfiguráciu na skupinu. Užitočné pre kopírovanie nastavení alebo obnovu zálohy.",
+      "description": "Použije prenosnú JSON konfiguráciu na skupinu. Užitočné pre kopírovanie nastavení alebo obnovu zálohy. Potom otvorte nastavenia skupiny a raz uložte — dialóg nastavení navyše skontroluje, či je použitá kombinácia zmysluplná.",
       "fields": {
         "settings": {
           "name": "Nastavenia (JSON)",

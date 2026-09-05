@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respetar estado Off de miembros (Sincronización)"
             },
             "data_description": {
-              "sync_mode": "Qué hacer cuando un miembro cambia fuera del grupo. Disabled: ignorar. Mirror: reflejar cambios. Lock: revertir cambios. Mirror/Lock: reflejar seleccionados, revertir no seleccionados. Master/Lock: reflejar maestro, revertir otros.",
+              "sync_mode": "Qué hacer cuando un miembro cambia fuera del grupo. Disabled: ignorar. Follow: adoptar los cambios sin aplicarlos a los demás. Mirror: reflejar cambios. Lock: revertir cambios. Mirror/Lock: reflejar seleccionados, revertir no seleccionados. Master/Lock: reflejar maestro, revertir otros.",
               "sync_attributes": "Define sobre qué atributos actúa el modo de sincronización. El manejo de los atributos seleccionados y no seleccionados (Mirror, Revert o Ignore) depende del modo elegido.",
               "ignore_off_members_sync": "Los miembros apagados manualmente se ignoran. Su estado no se refleja ni se revierte. Nota: los comandos directos del grupo siempre llegan a todos los miembros."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Activar plantilla de rango",
               "range_template_deadband_action": "Acción en zona muerta",
               "range_template_heat_entities": "Dispositivos de calefacción",
-              "range_template_cool_entities": "Dispositivos de refrigeración"
+              "range_template_cool_entities": "Dispositivos de refrigeración",
+              "range_template_humidity_enabled": "Deshumidificar en banda muerta",
+              "range_template_humidity_action": "Acción de humedad",
+              "range_template_humidity_hysteresis": "Histéresis de humedad",
+              "range_template_humidity_deactivation_delay": "Retardo de desactivación"
             },
             "data_description": {
               "range_template_enabled": "Representa automáticamente todos los miembros de punto de ajuste único (sin calor/frío nativo) como dispositivos virtuales en modo rango.",
               "range_template_deadband_action": "Acción a realizar cuando la temperatura actual está dentro del rango objetivo (zona muerta).",
               "range_template_heat_entities": "Miembros que pueden calentar. Los miembros no listados no tienen restricciones (decide la capacidad física). Un rol solo puede restringir, nunca ampliar las capacidades de un dispositivo.",
-              "range_template_cool_entities": "Miembros que pueden enfriar. Los miembros no listados no tienen restricciones (decide la capacidad física). Un rol solo puede restringir, nunca ampliar las capacidades de un dispositivo."
+              "range_template_cool_entities": "Miembros que pueden enfriar. Los miembros no listados no tienen restricciones (decide la capacidad física). Un rol solo puede restringir, nunca ampliar las capacidades de un dispositivo.",
+              "range_template_humidity_enabled": "Dentro del rango de temperatura objetivo, cambia a la acción de humedad si la humedad supera el objetivo.",
+              "range_template_humidity_action": "Acción a realizar cuando la humedad actual supera la humedad objetivo dentro de la banda muerta.",
+              "range_template_humidity_hysteresis": "Banda de histéresis de disparo Schmitt alrededor de la humedad objetivo para evitar ciclos rápidos.",
+              "range_template_humidity_deactivation_delay": "Retardo antes de desactivar la acción de humedad tras descender por debajo del umbral."
             }
           },
           "advanced_section": {
             "name": "Ajustes Avanzados",
-            "description": "Ajusta los tiempos de comando, el comportamiento de reintento y las llamadas escalonadas. Alterna atributos de diagnóstico y sensores de configuración.",
+            "description": "Ajusta los tiempos de comando y el comportamiento de reintento. Alterna atributos de diagnóstico y sensores de configuración.",
             "data": {
               "debounce_delay": "Retardo de Rebote (segundos)",
               "retry_attempts": "Intentos de Reintento",
               "retry_delay": "Retardo de Reintento (segundos)",
               "force_retry": "Forzar reintento",
-              "staggered_call_delay": "Retraso entre comandos (segundos)",
               "grace_period": "Período de gracia de la UI optimista (segundos)",
               "expose_smart_sensors": "Exponer sensores inteligentes",
+              "expose_member_entities": "Exponer lista de miembros",
               "expose_config": "Mostrar configuración (Depuración)"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "Cuántas veces reenviar un comando si un dispositivo no responde. Poner a 0 para desactivar.",
               "retry_delay": "Pausa entre intentos. Dar un momento a los dispositivos para recuperarse puede mejorar la fiabilidad.",
               "force_retry": "Siempre reintenta enviar comandos a todos los miembros, incluso si ya informan el estado objetivo.",
-              "staggered_call_delay": "Tiempo de espera entre comandos individuales a los miembros del grupo. Escalonar los comandos evita la congestión de red en entornos Zigbee/Matter. Establecer en 0 para desactivar.",
               "grace_period": "Cuánto tiempo muestra el grupo el valor enviado antes de cambiar al promedio de los miembros. Evita el parpadeo de la UI cuando dispositivos lentos (puentes Cloud, Zigbee) devuelven su estado antiguo. Establecer en 0 para desactivar.",
               "expose_smart_sensors": "Crea entidades de sensor adicionales para temperatura y humedad del grupo (útil para gráficos).",
+              "expose_member_entities": "Crea un atributo listando todos los IDs de entidades miembro.",
               "expose_config": "Añade todos los valores de configuración a los atributos de la entidad. Útil para depuración."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Desactivado – Sin sincronización automática entre miembros",
+        "follow_only": "Follow – Los cambios manuales en un dispositivo actualizan el grupo, pero no se aplican a los demás",
         "mirror": "Mirror – Los cambios manuales en un dispositivo se aplican a todos los miembros",
         "lock": "Lock – Los cambios manuales se revierten al estado del grupo",
         "mirror_lock": "Mirror/Lock – Los atributos seleccionados se sincronizan, los demás se revierten estrictamente",
@@ -540,6 +549,12 @@
         "none": "Ninguna",
         "off": "Apagar",
         "fan_only": "Solo ventilador"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Solo ventilador",
+        "dry": "Deshumidificar"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Aplicar configuración",
-      "description": "Aplica una configuración JSON portátil a un grupo. Útil para copiar ajustes de lógica entre grupos o restaurar una copia de seguridad.",
+      "description": "Aplica una configuración JSON portátil a un grupo. Útil para copiar ajustes de lógica entre grupos o restaurar una copia de seguridad. Después, abre los ajustes del grupo y guarda una vez: el diálogo de ajustes comprueba además que la combinación aplicada tenga sentido.",
       "fields": {
         "settings": {
           "name": "Ajustes (JSON)",

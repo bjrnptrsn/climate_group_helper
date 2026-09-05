@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Üyenin Kapalı Durumuna Saygı Göster (Senkronizasyon)"
             },
             "data_description": {
-              "sync_mode": "Bir üye grup dışından değiştirildiğinde ne yapılacağı. Devre dışı: yoksay. Yansıt: değişiklikleri yansıt. Kilitle: değişiklikleri geri al. Yansıt/Kilitle: seçilen öznitelikleri yansıt, diğerlerini geri al. Master/Kilitle: ana varlığı yansıt, diğerlerini geri al.",
+              "sync_mode": "Bir üye grup dışından değiştirildiğinde ne yapılacağı. Devre dışı: yoksay. Takip: değişiklikleri aktarmadan benimse. Yansıt: değişiklikleri yansıt. Kilitle: değişiklikleri geri al. Yansıt/Kilitle: seçilen öznitelikleri yansıt, diğerlerini geri al. Master/Kilitle: ana varlığı yansıt, diğerlerini geri al.",
               "sync_attributes": "Senkronizasyon Modunun hangi özniteliklerde etkili olduğunu tanımlar. Seçilen ve seçilmeyen özniteliklerin işlenmesi (Yansıtma, Geri Alma veya Yoksayma) seçilen moda bağlıdır.",
               "ignore_off_members_sync": "Manuel olarak kapatılan üyeler kendi haline bırakılır. Durumları ne yansıtılır ne de geri alınır. Not: doğrudan grup komutları bu ayardan bağımsız olarak her zaman tüm üyelere ulaşır."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Aralık Şablonunu Etkinleştir",
               "range_template_deadband_action": "Ölü Bant Eylemi",
               "range_template_heat_entities": "Isıtma Cihazları",
-              "range_template_cool_entities": "Soğutma Cihazları"
+              "range_template_cool_entities": "Soğutma Cihazları",
+              "range_template_humidity_enabled": "Ölü bölgede nem alma",
+              "range_template_humidity_action": "Nem eylemi",
+              "range_template_humidity_hysteresis": "Nem histerezisi",
+              "range_template_humidity_deactivation_delay": "Devre dışı bırakma gecikmesi"
             },
             "data_description": {
               "range_template_enabled": "Tüm tek ayar noktalı üyeleri (yerel ısıtma/soğutma desteği olmadan) otomatik olarak sanal aralık modu cihazları olarak oluşturur.",
               "range_template_deadband_action": "Mevcut sıcaklık hedef aralığın içindeyken (ölü bant) gerçekleştirilecek eylem.",
               "range_template_heat_entities": "Isıtmasına izin verilen üyeler. Listede olmayan üyeler sınırsızdır (fiziksel kapasite karar verir). Bir rol yalnızca kısıtlayabilir, bir cihazın yeteneklerini asla genişletemez.",
-              "range_template_cool_entities": "Soğutmasına izin verilen üyeler. Listede olmayan üyeler sınırsızdır (fiziksel kapasite karar verir). Bir rol yalnızca kısıtlayabilir, bir cihazın yeteneklerini asla genişletemez."
+              "range_template_cool_entities": "Soğutmasına izin verilen üyeler. Listede olmayan üyeler sınırsızdır (fiziksel kapasite karar verir). Bir rol yalnızca kısıtlayabilir, bir cihazın yeteneklerini asla genişletemez.",
+              "range_template_humidity_enabled": "Hedef sıcaklık aralığındayken nem hedef nemi aşarsa nem eylemine geçin.",
+              "range_template_humidity_action": "Ölü bölgedeyken mevcut nem hedef nemi aştığında gerçekleştirilecek eylem.",
+              "range_template_humidity_hysteresis": "Hızlı döngüyü önlemek için hedef nem etrafındaki Schmitt tetikleyici histerezis bandı.",
+              "range_template_humidity_deactivation_delay": "Eşiğin altına düşüldükten sonra nem eylemini devre dışı bırakmadan önceki gecikme."
             }
           },
           "advanced_section": {
             "name": "Gelişmiş Ayarlar",
-            "description": "Komut zamanlamasını, yeniden deneme davranışını ve kademeli çağrıları ince ayarlayın. Tanılama özniteliklerini ve yapılandırma sensörlerini değiştirin.",
+            "description": "Komut zamanlamasını ve yeniden deneme davranışını ince ayarlayın. Tanılama özniteliklerini ve yapılandırma sensörlerini değiştirin.",
             "data": {
               "debounce_delay": "Debounce Gecikmesi (saniye)",
               "retry_attempts": "Yeniden Deneme Sayısı",
               "retry_delay": "Yeniden Deneme Gecikmesi (saniye)",
               "force_retry": "Yeniden Denemeyi Zorla",
-              "staggered_call_delay": "Kademeli Çağrı Gecikmesi (saniye)",
               "grace_period": "İyimser Arayüz Tolerans Süresi (saniye)",
               "expose_smart_sensors": "Akıllı Sensörleri Göster",
+              "expose_member_entities": "Üye Listesini Göster",
               "expose_config": "Yapılandırma Sensörünü Göster"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "Bir cihaz yanıt vermezse bir komutun kaç kez yeniden gönderileceği. Devre dışı bırakmak için 0 olarak ayarlayın.",
               "retry_delay": "Yeniden deneme girişimleri arasındaki duraklama. Cihazlara toparlanmaları için bir an vermek güvenilirliği artırabilir.",
               "force_retry": "Hedef durumu zaten bildiriyor olsalar bile komutları her zaman tüm üyelere yeniden gönder.",
-              "staggered_call_delay": "Grup üyelerine gönderilen tek tek komutlar arasında beklenecek süre. Çağrıları kademelendirmek, Zigbee/Matter ortamlarında ağ tıkanıklığını önler. Devre dışı bırakmak için 0 olarak ayarlayın.",
               "grace_period": "Grubun, üye ortalamasına geçmeden önce komut verilen değeri ne kadar süreyle göstereceği. Yavaş cihazlar (bulut köprüleri, Zigbee) eski durumlarını geri yansıttığında arayüz titremesini önler. Devre dışı bırakmak için 0 olarak ayarlayın.",
               "expose_smart_sensors": "Grubun sıcaklığı ve nemi için ekstra sensör varlıkları oluşturur (grafikler için kullanışlıdır).",
+              "expose_member_entities": "Tüm üye varlık kimliklerini listeleyen bir öznitelik oluşturur.",
               "expose_config": "Taşınabilir ayarları bir JSON özniteliği olarak açığa çıkaran bir tanılama sensörü (sensor.*_configuration) oluşturur. Otomasyonlar aracılığıyla gruplar arasında ayarları kopyalamak için kullanışlıdır."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Devre Dışı – Üyeler arasında otomatik senkronizasyon yok",
+        "follow_only": "Takip – Bir cihazdaki manuel değişiklikler grubu günceller, ancak diğerlerine aktarılmaz",
         "mirror": "Yansıt – Bir cihazdaki manuel değişiklikler tüm üyeleri günceller",
         "lock": "Kilitle – Manuel değişiklikleri grup durumuna uyacak şekilde geri alır",
         "mirror_lock": "Yansıt/Kilitle – Seçilen öznitelikler yansıtılır, diğerleri sıkı bir şekilde kilitlenir",
@@ -540,6 +549,12 @@
         "none": "Hiçbiri",
         "off": "Kapat",
         "fan_only": "Yalnızca Fan"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Yalnızca fan",
+        "dry": "Nem alma"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Yapılandırmayı Uygula",
-      "description": "Bir gruba taşınabilir bir JSON yapılandırması uygular. Gruplar arasında mantık ayarlarını kopyalamak veya bir yedeği geri yüklemek için kullanışlıdır.",
+      "description": "Bir gruba taşınabilir bir JSON yapılandırması uygular. Gruplar arasında mantık ayarlarını kopyalamak veya bir yedeği geri yüklemek için kullanışlıdır. Ardından grubun ayarlarını açıp bir kez kaydedin — ayarlar iletişim kutusu ayrıca uygulanan kombinasyonun anlamlı olup olmadığını denetler.",
       "fields": {
         "settings": {
           "name": "Ayarlar (JSON)",

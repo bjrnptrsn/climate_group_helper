@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respecteer de UIT-status van leden (Synchronisatie)"
             },
             "data_description": {
-              "sync_mode": "Wat te doen als een lid buiten de groep wordt gewijzigd. Disabled: negeren. Mirror: wijzigingen spiegelen. Lock: wijzigingen herstellen. Mirror/Lock: geselecteerde spiegelen, niet-geselecteerde herstellen. Master/Lock: master spiegelen, andere herstellen.",
+              "sync_mode": "Wat te doen als een lid buiten de groep wordt gewijzigd. Disabled: negeren. Follow: wijzigingen overnemen zonder ze door te voeren. Mirror: wijzigingen spiegelen. Lock: wijzigingen herstellen. Mirror/Lock: geselecteerde spiegelen, niet-geselecteerde herstellen. Master/Lock: master spiegelen, andere herstellen.",
               "sync_attributes": "Bepaalt op welke attributen de synchronisatiemodus werkt. De verwerking van geselecteerde en niet-geselecteerde attributen (Mirror, Revert of Ignore) hangt af van de gekozen modus.",
               "ignore_off_members_sync": "Handmatig uitgeschakelde leden worden met rust gelaten. Hun status wordt niet gespiegelt of herstelt. Opmerking: directe groepsopdrachten bereiken altijd alle leden."
             }
@@ -319,26 +319,34 @@
               "range_template_enabled": "Bereiksjabloon inschakelen",
               "range_template_deadband_action": "Deadband-actie",
               "range_template_heat_entities": "Verwarmingsapparaten",
-              "range_template_cool_entities": "Koelapparaten"
+              "range_template_cool_entities": "Koelapparaten",
+              "range_template_humidity_enabled": "Ontvochtigen in dode band",
+              "range_template_humidity_action": "Luchtvochtigheidsactie",
+              "range_template_humidity_hysteresis": "Luchtvochtigheidshysterese",
+              "range_template_humidity_deactivation_delay": "Uitschakelvertraging"
             },
             "data_description": {
               "range_template_enabled": "Geeft automatisch alle leden met één instelpunt (zonder native verwarming/koeling) weer als virtuele apparaten in bereikmodus.",
               "range_template_deadband_action": "Actie die wordt uitgevoerd wanneer de huidige temperatuur zich binnen het doelbereik (deadband) bevindt.",
               "range_template_heat_entities": "Leden die mogen verwarmen. Niet-geliste leden zijn onbeperkt (fysieke mogelijkheid bepaalt). Een rol kan een mogelijkheid alleen beperken, nooit uitbreiden.",
-              "range_template_cool_entities": "Leden die mogen koelen. Niet-geliste leden zijn onbeperkt (fysieke mogelijkheid bepaalt). Een rol kan een mogelijkheid alleen beperken, nooit uitbreiden."
+              "range_template_cool_entities": "Leden die mogen koelen. Niet-geliste leden zijn onbeperkt (fysieke mogelijkheid bepaalt). Een rol kan een mogelijkheid alleen beperken, nooit uitbreiden.",
+              "range_template_humidity_enabled": "Binnen het doeltemperatuurbereik overschakelen naar de vochtigheidsactie als de vochtigheid de doelwaarde overschrijdt.",
+              "range_template_humidity_action": "Actie die wordt uitgevoerd wanneer de huidige vochtigheid de doelvochtigheid overschrijdt in de dode zone.",
+              "range_template_humidity_hysteresis": "Schmitt-trigger hystereseband rond de doelvochtigheid om snel schakelen te voorkomen.",
+              "range_template_humidity_deactivation_delay": "Vertraging voor deactivatie van de vochtigheidsactie na daling onder de drempelwaarde."
             }
           },
           "advanced_section": {
             "name": "Geavanceerde instellingen",
-            "description": "Verfijn opdracht-timings, herhaalpogingen en gespreide oproepen. Schakel diagnostische attributen en configuratiesensoren in.",
+            "description": "Verfijn opdracht-timings en herhaalpogingen. Schakel diagnostische attributen en configuratiesensoren in.",
             "data": {
               "debounce_delay": "Debounce Vertraging (seconden)",
               "retry_attempts": "Herhaalpogingen",
               "retry_delay": "Herhaalvertraging (seconden)",
               "force_retry": "Opnieuw proberen afdwingen",
-              "staggered_call_delay": "Vertraging tussen opdrachten (seconden)",
               "grace_period": "Optimistische UI-overgangsperiode (seconden)",
               "expose_smart_sensors": "Slimme sensoren weergeven",
+              "expose_member_entities": "Ledenlijst weergeven",
               "expose_config": "Configuratie tonen (Debug)"
             },
             "data_description": {
@@ -346,9 +354,9 @@
               "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
               "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren.",
               "force_retry": "Stuurt altijd opnieuw opdrachten naar alle leden, ook als ze de doeltoestand al melden.",
-              "staggered_call_delay": "Wachttijd tussen afzonderlijke opdrachten aan groepsleden. Gespreide opdrachten voorkomen netwerkcongestie in Zigbee/Matter-omgevingen. Stel in op 0 om te deactiveren.",
               "grace_period": "Hoe lang de groep de verzonden waarde toont voordat wordt overgeschakeld naar het ledengemiddelde. Voorkomt UI-flikkering wanneer trage apparaten (Cloud-bridges, Zigbee) hun oude toestand terugsturen. Stel in op 0 om te deactiveren.",
               "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
+              "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
               "expose_config": "Voegt alle configuratiewaarden toe aan de entiteitattributen. Handig voor debugging."
             }
           }
@@ -449,6 +457,7 @@
     "sync_mode": {
       "options": {
         "disabled": "Uitgeschakeld – Geen automatische synchronisatie tussen leden",
+        "follow_only": "Follow – Handmatige wijzigingen op een apparaat werken de groep bij, maar worden niet doorgevoerd naar de andere",
         "mirror": "Mirror – Handmatige wijzigingen op één apparaat worden doorgevoerd naar alle leden",
         "lock": "Lock – Handmatige wijzigingen worden teruggezet naar de groepsstatus",
         "mirror_lock": "Mirror/Lock – Geselecteerde attributen worden gespiegeld, andere zijn strikt vergrendeld",
@@ -540,6 +549,12 @@
         "none": "Geen",
         "off": "Uitschakelen",
         "fan_only": "Alleen ventilator"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Alleen ventilator",
+        "dry": "Drogen"
       }
     }
   },
@@ -680,7 +695,7 @@
     },
     "apply_config": {
       "name": "Configuratie toepassen",
-      "description": "Past een draagbare JSON-configuratie toe op een groep. Handig voor het kopiëren van instellingen of het herstellen van een back-up.",
+      "description": "Past een draagbare JSON-configuratie toe op een groep. Handig voor het kopiëren van instellingen of het herstellen van een back-up. Open daarna de instellingen van de groep en sla één keer op — het instellingenvenster controleert bovendien of de toegepaste combinatie zinvol is.",
       "fields": {
         "settings": {
           "name": "Instellingen (JSON)",
