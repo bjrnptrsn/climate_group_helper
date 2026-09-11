@@ -329,6 +329,15 @@ class PresenceHandler:
         if self._mode == PresenceMode.DISABLED or not self._sensors:
             return
 
+        # Another presence key still pins the block. `presence` and
+        # `presence_mode` are separate claims; when one expires while the other
+        # holds, the sensors stay silenced for as long as the remaining key is
+        # in force — re-evaluating would release (or re-activate) a block that
+        # key owns. The caller clears the expiring key before this runs, so
+        # `bypassed` here reflects only the other key.
+        if self.bypassed:
+            return
+
         present = self._get_collective_presence()
         block_active = "presence" in self._group.run_state.blocking_sources
 

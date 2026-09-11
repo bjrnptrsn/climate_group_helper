@@ -101,6 +101,7 @@ DEFAULT_ROOM_OPEN_DELAY = 15
 DEFAULT_ZONE_OPEN_DELAY = 300
 
 # Presence Control
+CONF_IGNORE_OFF_MEMBERS_PRESENCE = "ignore_off_members_presence"
 CONF_PRESENCE_ACTION = "presence_action"
 CONF_PRESENCE_AWAY_DELAY = "presence_away_delay"
 CONF_PRESENCE_AWAY_OFFSET = "presence_away_offset"
@@ -153,6 +154,7 @@ CONF_EXPOSE_MEMBER_ENTITIES = "expose_member_entities"
 CONF_EXPOSE_SMART_SENSORS = "expose_smart_sensors"
 CONF_FORCE_RETRY = "force_retry"
 CONF_GRACE_PERIOD = "grace_period"
+CONF_MEMBER_COMMAND_DELAY = "member_command_delay"
 CONF_MIN_TEMP_OFF = "min_temp_off"
 CONF_RANGE_TEMPLATE_COOL_ENTITIES = "range_template_cool_entities"
 CONF_RANGE_TEMPLATE_DEADBAND_ACTION = "range_template_deadband_action"
@@ -167,10 +169,17 @@ CONF_RETRY_DELAY = "retry_delay"
 DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION = "dry"
 DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS = 3.0
 DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY = 0.0
-# Small window so triggers arriving a few ms apart (startup resync next to a
-# schedule slot, a slider sending several values) collapse into one run
-# instead of each sending its own command batch to the devices.
+# Debounce cooldowns. DEFAULT_DEBOUNCE_DELAY (CONF_DEBOUNCE_DELAY, 0-10s) is the
+# user-tunable input cooldown: a small window so triggers arriving a few ms apart
+# (startup resync next to a schedule slot, a slider sending several values)
+# collapse into one run instead of each sending its own command batch.
+# The fixed reactive-path cooldowns below are deliberately NOT config-derived — a
+# large user-tuned UI cooldown must not delay a window/switch/presence block
+# re-assert or the template changeover.
 DEFAULT_DEBOUNCE_DELAY = 0.3
+OVERRIDE_ENFORCE_DEBOUNCE_DELAY = 0.5   # block enforcement: single deviating device
+RANGE_TEMPLATE_DEBOUNCE_DELAY = 1.0     # template changeover: threshold-driven, several devices
+
 DEFAULT_GRACE_PERIOD = 3.0
 
 # UI options
@@ -235,11 +244,11 @@ class SyncMode(StrEnum):
     """Enum for sync modes."""
 
     DISABLED = "disabled"
-    FOLLOW_ONLY = "follow_only"
     LOCK = "lock"
     MIRROR = "mirror"
     MASTER_LOCK = "master_lock"
     MIRROR_LOCK = "mirror_lock"
+    ADOPT_ONLY = "adopt_only"
 
 
 class WindowControlMode(StrEnum):
@@ -295,6 +304,20 @@ class PresenceAction(StrEnum):
     AWAY_PRESET = "away_preset"
 
 
+class PresenceOffRespect(StrEnum):
+    """Which presence phases leave a member the user switched off alone.
+
+    Two independent axes: the away push and the home restore. Does not apply
+    when the away action is OFF — there the group switched the members off
+    itself, so an `off` state is its own command rather than a user decision.
+    """
+
+    DISABLED = "disabled"
+    AWAY = "away"
+    HOME = "home"
+    AWAY_HOME = "away_home"
+
+
 class IsolationTrigger(StrEnum):
     """Isolation trigger modes."""
 
@@ -347,13 +370,14 @@ ATTR_SCHEDULE_FALLBACK_PAYLOAD = "schedule_fallback_payload"
 ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE = "schedule_fallback_payload_active"
 ATTR_ASSUMED_STATE = "assumed_state"
 ATTR_BLOCKING_SOURCES = "blocking_sources"
-ATTR_BYPASS_DELTA = "bypass_delta"
+ATTR_SCHEDULE_BYPASS_CLAIMS = "schedule_bypass_claims"
 ATTR_CONFIG_OVERRIDES = "config_overrides"
 ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
 ATTR_GROUP_OFFSET = "group_offset"
 ATTR_OFFSET_ENTITY_ID = "offset_entity_id"
 ATTR_ISOLATED_MEMBERS = "isolated_members"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
+ATTR_MASTER_ENTITY_ID = "master_entity_id"
 ATTR_MASTER_FALLBACK_ACTIVE = "master_fallback_active"
 ATTR_MEMBER_ENTITIES = "member_entities"
 ATTR_MEMBER_DIVERGENCE = "member_divergence"

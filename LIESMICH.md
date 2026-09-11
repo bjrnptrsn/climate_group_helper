@@ -17,7 +17,7 @@
 <p align="center">
   🔗 <b>Geräte gruppieren</b> zu einem virtuellen Controller.<br>
   🌡️ <b>Ungenaue Sensoren korrigieren</b> mit externer Kalibrierung.<br>
-  🔄 <b>Auf manuelle Änderungen reagieren</b> mit Follow-, Mirror-, Lock- oder Master-Sync-Modi.<br>
+  🔄 <b>Auf manuelle Änderungen reagieren</b> mit Mirror-, Lock-, Master- oder „Nur übernehmen“-Sync-Modi.<br>
   🪟 <b>Offene Fenster erkennen</b>, um das Heizen automatisch zu pausieren.<br>
   👤 <b>Anwesenheit automatisieren</b> mit Abwesenheits-Offsets und -Temperaturen.<br>
   📅 <b>Zeitplan-Automatisierung</b> über Schedule- und Kalender-Entitäten.<br>
@@ -148,14 +148,14 @@ Steuert, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z. B. üb
   | Sync-Modus | Attribut ausgewählt | Attribut nicht ausgewählt |
   |---|---|---|
   | **Deaktiviert** | Ignorieren | Ignorieren |
-  | **Follow** | Übernehmen ² | Ignorieren |
   | **Mirror** | Spiegeln ¹ | Ignorieren |
   | **Lock** | Zurücksetzen ¹ | Ignorieren |
   | **Mirror/Lock** | Spiegeln ¹ | Zurücksetzen ¹ |
   | **Master/Lock** | Master: Spiegeln · Nicht-Master: Zurücksetzen ¹ | Ignorieren |
+  | **Nur übernehmen** | Übernehmen ² | Ignorieren |
 
   - *¹ Mit aktiviertem **Respektiere Aus-Status der Mitglieder (Sync)**: Mitglieder, die manuell `aus` geschaltet wurden, werden in Ruhe gelassen — ihr `aus` wird weder gespiegelt noch zurückgesetzt.*
-  - *² **Follow** passt die Einstellungen der Gruppe an das geänderte Gerät an, gibt die Änderung aber nie an die anderen Mitglieder weiter. Ein `aus` geschaltetes Gerät schaltet die ganze Gruppe erst dann `aus`, wenn kein anderes Mitglied mehr läuft — unabhängig von der Option **Respektiere Aus-Status der Mitglieder (Sync)**.*
+  - *² **Nur übernehmen** passt die Einstellungen der Gruppe an das geänderte Gerät an, gibt die Änderung aber nie an die anderen Mitglieder weiter. Ein `aus` geschaltetes Gerät schaltet die ganze Gruppe erst dann `aus`, wenn kein anderes Mitglied mehr läuft — unabhängig von der Option **Respektiere Aus-Status der Mitglieder (Sync)**.*
 
 * **Sync-Attribute**
 
@@ -163,11 +163,11 @@ Steuert, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z. B. üb
 
   | Modus | Rolle der **Sync-Attribute** |
   |---|---|
-  | **Follow** | **ausgewählte** Attribute werden in die Einstellungen der Gruppe übernommen, **nicht ausgewählte** Attribute werden ignoriert. An die anderen Mitglieder wird nichts gesendet. |
   | **Mirror** | **ausgewählte** Attribute werden gespiegelt, **nicht ausgewählte** Attribute werden ignoriert. |
   | **Lock** | **ausgewählte** Attribute werden zurückgesetzt, **nicht ausgewählte** Attribute werden ignoriert. |
   | **Mirror/Lock** | **ausgewählte** Attribute werden gespiegelt, **nicht ausgewählte** Attribute werden zurückgesetzt. |
   | **Master/Lock** | **ausgewählte** Attribute werden von der **Master-Entität** gespiegelt, **nicht ausgewählte** Attribute werden ignoriert. Änderungen von Nicht-Master-Geräten werden immer zurückgesetzt. |
+  | **Nur übernehmen** | **ausgewählte** Attribute werden in die Einstellungen der Gruppe übernommen, **nicht ausgewählte** Attribute werden ignoriert. An die anderen Mitglieder wird nichts gesendet. |
 
 *  **Respektiere Aus-Status der Mitglieder (Sync):** Wenn ein Mitglied manuell `aus` geschaltet wird, spiegelt die Gruppe dieses `aus` weder auf andere, noch erzwingt sie es zurück — das Mitglied wird einfach in Ruhe gelassen. Die eine Ausnahme: Wenn es das *letzte* aktive Mitglied ist, akzeptiert die Gruppe das `aus`, und ihr eigenes Ziel wechselt ebenfalls auf `aus`.
 
@@ -194,6 +194,8 @@ Verwaltet Klimaeinstellungen basierend auf Raumanwesenheit. Wähle einen oder me
 
 Kehrt die Anwesenheit zurück, stellt die Gruppe alle Mitglieder auf den aktuellen Zielzustand wieder her. Prioritätsreihenfolge: Der **Hauptschalter** gewinnt immer gegen die **Fenstersteuerung**, die wiederum immer gegen die **Anwesenheitssteuerung** gewinnt.
 
+*   **Aus-Zustand der Mitglieder respektieren (Anwesenheit):** Selbst ausgeschaltete Geräte bleiben in Ruhe — beim Verlassen, bei der Rückkehr oder in beiden Fällen, je nach Auswahl. Das gilt nicht bei der Abwesenheits-Aktion **Ausschalten**: dort hat die Gruppe die Geräte selbst ausgeschaltet und schaltet sie bei der Rückkehr alle wieder ein.
+
 ### Zeitplan-Automatisierung
 
 Integriere native HA-`schedule`- oder `calendar`-Helfer, um deine Klimaeinstellungen pro Zeitblock zu automatisieren. Du kannst Temperatur und HVAC-Modus direkt in den Daten des Zeitplans festlegen, und die Gruppe handhabt Übergänge intelligent: Wenn eine Zeitplanänderung eintritt, während die **Fenstersteuerung** aktiv ist (z. B. die Heizung pausiert ist), wird das neue Ziel sofort angewendet, sobald alles geschlossen ist.
@@ -201,10 +203,10 @@ Integriere native HA-`schedule`- oder `calendar`-Helfer, um deine Klimaeinstellu
 Zeitpläne können per Dienst live umgeschaltet werden (z. B. für "Urlaub"- oder "Gäste"-Modi). Wird der Dienst ohne Entität aufgerufen, setzt er auf den konfigurierten Standard zurück und wendet den aktuellen Zeitblock erneut an.
 
 *   **Kalender-Unterstützung:** `calendar.*`-Entitäten funktionieren genauso wie `schedule.*`-Entitäten. Die Zeitblock-Daten werden aus dem **Beschreibungsfeld** jedes Ereignisses gelesen, im selben `key: value`-YAML-Format wie die zusätzlichen Zeitplan-Daten. Siehe [Zeitplan-Konfiguration & Meta-Keys](#zeitplan-konfiguration--meta-keys) für Details.
-*   **Bypass-Ebene:** Eine zweite `schedule.*`- oder `calendar.*`-Entität kann als **Prioritätsebene** über deinem Basis-Zeitplan fungieren. Ist ein Bypass-Zeitblock aktiv, überschreiben dessen Attribute den Basis-Zeitblock (Bypass gewinnt bei Konflikten).
-*   **Fallback bei inaktivem Zeitplan:** Ein optionaler Zustand (z. B. Nachtabsenkung oder Ausschalten), der außerhalb der aktiven Zeitblöcke für den Basis-Zeitplan einspringt — lückenlose 24/7-Zeitpläne sind damit unnötig. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist.
+*   **Bypass-Ebene:** Eine zweite `schedule.*`- oder `calendar.*`-Entität kann als **Prioritätsebene** über deinem Haupt-Zeitplan fungieren. Ist ein Bypass-Zeitblock aktiv, überschreiben dessen Attribute den Haupt-Zeitblock (Bypass gewinnt bei Konflikten).
+*   **Fallback bei inaktivem Zeitplan:** Ein optionaler Zustand (z. B. Nachtabsenkung oder Ausschalten), der außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan einspringt — lückenlose 24/7-Zeitpläne sind damit unnötig. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist.
 *   **Manuelle Überschreibungen:** Manuelle Anpassungen gelten einfach bis zum nächsten geplanten Zeitblock, der dann wieder übernimmt. Kein Timer zu konfigurieren.
-*   **Per Dienst geänderte Werte beibehalten (Zeitplan):** Stellt sicher, dass per Dienst geänderter Basis-Zeitplan, Bypass-Entität und Fallback-Zustand einen Home-Assistant-Neustart überstehen. Wenn deaktiviert, kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück.
+*   **Per Dienst geänderte Werte beibehalten (Zeitplan):** Stellt sicher, dass per Dienst geänderter Haupt-Zeitplan, Bypass-Entität und Fallback-Zustand einen Home-Assistant-Neustart überstehen. Wenn deaktiviert, kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück.
 *   **Respektiere Aus-Status der Mitglieder (Zeitplan):** Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet.
 
 > **Hinweis — Ausschalten außerhalb aktiver Zeitblöcke:** Um die Gruppe in der inaktiven Phase abzuschalten, setze `hvac_mode: off` im Fallback. Verwende hier **nicht** den `turn_off`-Meta-Key — er ist ein einmaliger Auslöser für die Hauptschalter-Sperre, die aktiv bleibt, bis ein Zeitblock sie explizit mit `turn_off: false` freigibt. Ein `turn_off: true` im Fallback würde also den nächsten Heiz-Zeitblock blockiert lassen.
@@ -294,7 +296,7 @@ Die Gruppe läuft normalerweise im Lock-Modus. Während dieses Zeitblocks erlaub
 
 #### Fallback bei inaktivem Zeitplan
 
-Konfiguriere einen optionalen Fallback-Zustand in YAML unter den Einstellungen der Gruppe (**Zeitplan-Automatisierung** > **Fallback-Zustand bei inaktivem Basis-Zeitplan / Kalender (YAML)**). Dieser Zustand wird automatisch angewendet, wenn der Zeitplan aus ist oder kein Kalenderereignis aktiv ist — ganz ohne lückenlose 24/7-Zeitpläne. Er verwendet dasselbe Format wie ein Zeitblock.
+Konfiguriere einen optionalen Fallback-Zustand in YAML unter den Einstellungen der Gruppe (**Zeitplan-Automatisierung** > **Fallback-Zustand bei inaktivem Haupt-Zeitplan / Kalender (YAML)**). Dieser Zustand wird automatisch angewendet, wenn der Zeitplan aus ist oder kein Kalenderereignis aktiv ist — ganz ohne lückenlose 24/7-Zeitpläne. Er verwendet dasselbe Format wie ein Zeitblock.
 
 **Beispiel (Fallback bei inaktivem Zeitplan — z. B. Nachtabsenkung):**
 ```yaml
@@ -418,6 +420,7 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 *   **`blocking_sources`** — vorhanden, sobald etwas die Gruppe zurückhält, samt Angabe wodurch: `window`, `presence`, `switch`. Solange dort etwas steht, erreichen Befehle die Geräte nicht. Blockiert nichts, fehlt das Attribut.
 *   **`isolated_members`** — Geräte, die eine Isolationsregel gerade ausschließt. Sie behalten ihren eigenen Zustand und bleiben aus den Werten der Gruppe heraus.
 *   **`oob_members`** — Geräte, die dem letzten Ziel nicht folgen konnten, weil es außerhalb ihres eigenen Temperaturbereichs liegt.
+*   **`master_entity_id`** — welches Gerät gerade als Master-Entität der Gruppe festgelegt ist. Nur vorhanden, wenn eine konfiguriert ist.
 *   **`master_fallback_active`** — die konfigurierte Master-Entität ist nicht verfügbar und die Gruppe rechnet ohne sie.
 
 ### Was die Gruppe vorhat und woher es kam
@@ -498,8 +501,8 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Sync-Modus** | Was zu tun ist, wenn ein Mitglied außerhalb der Gruppe geändert wird. **Deaktiviert**: alles ignorieren. **Follow**: die Gruppe an das geänderte Gerät anpassen, ohne die anderen anzufassen. **Mirror**: Änderungen spiegeln. **Lock**: Änderungen zurücksetzen. **Mirror/Lock**: ausgewählte Attribute spiegeln, nicht ausgewählte zurücksetzen. **Master/Lock** *(erfordert Master-Entität)*: nur Änderungen der **Master-Entität** spiegeln, Änderungen von Nicht-Master-Entitäten zurücksetzen. |
-| **Sync-Attribute** | Auf welche Attribute der Modus wirkt. Bei **Follow**: nur ausgewählte Attribute werden in die Gruppe übernommen, nicht ausgewählt = keine Aktion. Bei **Mirror**: nur ausgewählte Attribute werden gespiegelt, nicht ausgewählt = keine Aktion. Bei **Lock**: nur ausgewählte Attribute werden zurückgesetzt, nicht ausgewählt = keine Aktion. Bei **Mirror/Lock**: ausgewählte Attribute werden gespiegelt, nicht ausgewählte zurückgesetzt. Bei **Master/Lock**: nur die Attribute der Master-Entität werden gespiegelt, nicht ausgewählt = keine Aktion. |
+| **Sync-Modus** | Was zu tun ist, wenn ein Mitglied außerhalb der Gruppe geändert wird. **Deaktiviert**: alles ignorieren. **Mirror**: Änderungen spiegeln. **Lock**: Änderungen zurücksetzen. **Mirror/Lock**: ausgewählte Attribute spiegeln, nicht ausgewählte zurücksetzen. **Master/Lock** *(erfordert Master-Entität)*: nur Änderungen der **Master-Entität** spiegeln, Änderungen von Nicht-Master-Entitäten zurücksetzen. **Nur übernehmen**: die Gruppe an das geänderte Gerät anpassen, ohne die anderen anzufassen. |
+| **Sync-Attribute** | Auf welche Attribute der Modus wirkt. Bei **Mirror**: nur ausgewählte Attribute werden gespiegelt, nicht ausgewählt = keine Aktion. Bei **Lock**: nur ausgewählte Attribute werden zurückgesetzt, nicht ausgewählt = keine Aktion. Bei **Mirror/Lock**: ausgewählte Attribute werden gespiegelt, nicht ausgewählte zurückgesetzt. Bei **Master/Lock**: nur die Attribute der Master-Entität werden gespiegelt, nicht ausgewählt = keine Aktion. Bei **Nur übernehmen**: nur ausgewählte Attribute werden in die Gruppe übernommen, nicht ausgewählt = keine Aktion. |
 | **Respektiere Aus-Status der Mitglieder (Sync)** | Mitglieder, die manuell `aus` geschaltet wurden, werden in Ruhe gelassen. Ihr `aus`-Zustand wird weder auf andere gespiegelt noch auf das Gruppenziel zurückgesetzt. Ausnahme: Ist es das letzte aktive Mitglied, wechselt die Gruppe selbst auf `aus` (Last Man Standing). Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
 
 ### Fenstersteuerung
@@ -527,16 +530,17 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 | **Abwesenheits-Preset** | *(Aktion Abwesenheits-Preset)* Preset-Modus, der bei Abwesenheit aktiviert wird. |
 | **Abwesenheits-Verzögerung** | Wartezeit (Sekunden) nach Meldung der Abwesenheit durch den Sensor, bevor der Abwesenheitsmodus aktiviert wird. |
 | **Rückkehr-Verzögerung** | Wartezeit (Sekunden) nach Meldung der Anwesenheit durch den Sensor, bevor wiederhergestellt wird. |
+| **Aus-Zustand der Mitglieder respektieren (Anwesenheit)** | Lässt ausgeschaltete Geräte in Ruhe — **Deaktiviert** (Standard), **Beim Verlassen**, **Bei der Rückkehr** oder **Beim Verlassen und bei der Rückkehr**. Gilt nicht bei der Abwesenheits-Aktion **Ausschalten**, da die Gruppe die Geräte dort selbst ausgeschaltet hat. Anders als bei der Sync- und Zeitplan-Variante dieser Option greift sie auch, wenn *alle* Geräte aus sind. |
 
 ### Zeitplan-Automatisierung
 
 | Option | Beschreibung |
 |--------|-------------|
 | **Zeitplan-Entität** | Eine Home-Assistant-`schedule.*`- oder `calendar.*`-Entität zur Steuerung der Gruppe. |
-| **Fallback-Zustand bei inaktivem Basis-Zeitplan / Kalender (YAML)** | *(Optional)* Zustand, der außerhalb der aktiven Zeitblöcke für den Basis-Zeitplan einspringt (z. B. Nachtabsenkung oder vollständiges Ausschalten). Die Bypass-Ebene überschreibt ihn, solange sie aktiv ist. |
-| **Bypass-Entität** | *(Optional)* Eine zweite `schedule.*`- oder `calendar.*`-Entität, die als Prioritätsebene fungiert. Ist ein Bypass-Zeitblock aktiv, überschreibt er den Basis-Zeitplan. |
+| **Fallback-Zustand bei inaktivem Haupt-Zeitplan / Kalender (YAML)** | *(Optional)* Zustand, der außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan einspringt (z. B. Nachtabsenkung oder vollständiges Ausschalten). Die Bypass-Ebene überschreibt ihn, solange sie aktiv ist. |
+| **Bypass-Entität** | *(Optional)* Eine zweite `schedule.*`- oder `calendar.*`-Entität, die als Prioritätsebene fungiert. Ist ein Bypass-Zeitblock aktiv, überschreibt er den Haupt-Zeitplan. |
 | **Respektiere Aus-Status der Mitglieder (Zeitplan)** | Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet. Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
-| **Per Dienst geänderte Werte beibehalten (Zeitplan)** | Behält Basis-Zeitplan, Bypass-Entität und Fallback-Zustand über Neustarts hinweg bei, wenn sie über einen Dienst geändert wurden. Ohne diese Option kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück. |
+| **Per Dienst geänderte Werte beibehalten (Zeitplan)** | Behält Haupt-Zeitplan, Bypass-Entität und Fallback-Zustand über Neustarts hinweg bei, wenn sie über einen Dienst geändert wurden. Ohne diese Option kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück. |
 
 ### Gruppen-Presets
 
@@ -580,12 +584,19 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 
 ### Erweiterte Einstellungen
 
+Wenn das gleichzeitige Ansteuern der ganzen Gruppe dein Netzwerk oder deine
+Bridge überlastet — ein bekanntes Problem bei IR-Blastern und manchen
+Zigbee-Koordinatoren, wenn mehrere Geräte im selben Moment angesprochen
+werden — stelle eine **Verzögerung zwischen Mitglieder-Befehlen** ein, um die
+Befehle zeitlich zu strecken, statt sie alle gleichzeitig zu senden.
+
 | Option | Beschreibung |
 |--------|-------------|
 | **Entprellungs-Verzögerung** | Wartezeit vor dem Senden von Befehlen. Höhere Werte verhindern 'Schnellfeuer'-Befehle beim Verschieben von Reglern, fühlen sich aber langsamer an (Standard: 0,3s). |
-| **Erzwungene Wiederholung** | Sendet Befehle immer an alle Mitglieder, auch wenn sie bereits den Zielzustand melden. Nützlich für IR-basierte Klimaanlagen oder andere Geräte, die ihren Zustand nach Erhalt eines Befehls möglicherweise nicht zuverlässig aktualisieren. |
 | **Wiederholungsversuche** | Anzahl der Wiederholungen bei fehlgeschlagenem Befehl. |
 | **Wiederholungs-Verzögerung** | Zeit zwischen Wiederholungen (z. B. 1,0s). |
+| **Erzwungene Wiederholung** | Sendet Befehle immer an alle Mitglieder, auch wenn sie bereits den Zielzustand melden. Nützlich für IR-basierte Klimaanlagen oder andere Geräte, die ihren Zustand nach Erhalt eines Befehls möglicherweise nicht zuverlässig aktualisieren. |
+| **Verzögerung zwischen Mitglieder-Befehlen** | Pause zwischen Befehlen an einzelne Mitglieder, statt sie alle gleichzeitig zu senden. Hilft, wenn das gleichzeitige Ansteuern mehrerer Geräte dein Netzwerk oder deine Bridge überlastet — ein bekanntes Problem bei IR-Blastern und manchen Zigbee-Koordinatoren (Standard: 0s, deaktiviert). |
 | **UI-Schonfrist** | Dauer (Sekunden), für die die Gruppe den befohlenen Wert sofort nach einer UI-Aktion anzeigt, bevor langsame Mitgliedsgeräte ihren Zustand zurückmelden. Verhindert visuelles Flackern im Dashboard. Gilt für alle Attribute: HVAC-Modus, Temperatur, Luftfeuchtigkeit, Lüfter-/Preset-/Schwenk-Modi. |
 | **Smart-Sensoren anzeigen** | Erstellt zusätzliche Temperatur- und Feuchtigkeits-Sensor-Entitäten, die den aktuellen aggregierten Zustand der Gruppe widerspiegeln (nützlich für Verlaufsgraphen und Dashboards). |
 | **Mitgliederliste bereitstellen** | Fügt das Attribut `entity_id` mit der Liste aller Mitglieds-Entitäts-IDs hinzu, sodass Home Assistants More-Info-Dialog die native Mitgliederliste anzeigt (ermöglicht außerdem `expand()`-Templates). |
@@ -690,7 +701,7 @@ data:
 
 ### `climate_group_helper.set_schedule_bypass_entity`
 
-Ändert die aktive Bypass-Zeitplan-Entität einer Gruppe zur Laufzeit dynamisch. Der Bypass-Zeitplan fungiert als Prioritätsebene, die den Basis-Zeitplan überschreibt. Während ein Bypass aktiv ist, verfolgt die Gruppe den Basis-Zeitplan weiterhin im Hintergrund; endet der Bypass, wird der aktuell gültige Basis-Zustand wiederhergestellt (Attribute, die nur der Bypass geändert hat, fallen auf ihre Werte vor dem Bypass zurück). Mit aktivierter Option **Per Dienst geänderte Werte beibehalten (Zeitplan)** übersteht die hier gesetzte Entität einen Neustart.
+Ändert die aktive Bypass-Zeitplan-Entität einer Gruppe zur Laufzeit dynamisch. Der Bypass-Zeitplan fungiert als Prioritätsebene, die den Haupt-Zeitplan überschreibt. Während ein Bypass aktiv ist, verfolgt die Gruppe den Haupt-Zeitplan weiterhin im Hintergrund; endet der Bypass, wird der aktuell gültige Haupt-Zustand wiederhergestellt (Attribute, die nur der Bypass geändert hat, fallen auf ihre Werte vor dem Bypass zurück). Mit aktivierter Option **Per Dienst geänderte Werte beibehalten (Zeitplan)** übersteht die hier gesetzte Entität einen Neustart.
 
 **Dienst-Felder:**
 

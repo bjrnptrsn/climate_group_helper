@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respect Member Off State (Sync)"
             },
             "data_description": {
-              "sync_mode": "What to do when a member is changed outside the group. Disabled: ignore it. Follow: adopt changes without passing them on. Mirror: mirror changes. Lock: revert changes. Mirror/Lock: mirror selected attributes, revert unselected. Master/Lock: mirror master, revert others.",
+              "sync_mode": "What to do when a member is changed outside the group. Disabled: ignore it. Mirror: mirror changes. Lock: revert changes. Mirror/Lock: mirror selected attributes, revert unselected. Master/Lock: mirror master, revert others. Adopt Only: adopt changes without passing them on.",
               "sync_attributes": "Defines which attributes the Sync Mode acts on. The handling of selected and unselected attributes (Mirror, Revert, or Ignore) depends on the chosen mode.",
               "ignore_off_members_sync": "Members that are manually turned Off are left alone. Their state is neither mirrored nor reverted. Note: direct group commands always reach all members regardless of this setting."
             }
@@ -152,7 +152,8 @@
               "presence_away_temperature": "Away Temperature",
               "presence_away_preset": "Away Preset",
               "presence_away_delay": "Away Delay (seconds)",
-              "presence_return_delay": "Return Delay (seconds)"
+              "presence_return_delay": "Return Delay (seconds)",
+              "ignore_off_members_presence": "Respect Member Off State (Presence)"
             },
             "data_description": {
               "presence_mode": "Enable or disable automatic away-fallback when absence is detected.",
@@ -163,24 +164,25 @@
               "presence_away_temperature": "Fixed temperature to set when away.",
               "presence_away_preset": "Preset mode to activate when away.",
               "presence_away_delay": "Wait time after sensor reports absence before activating away mode.",
-              "presence_return_delay": "Wait time after sensor reports presence before restoring."
+              "presence_return_delay": "Wait time after sensor reports presence before restoring.",
+              "ignore_off_members_presence": "Leave members that are switched off alone — when going away, when returning, or both. Does not apply when the Away Action is \"Turn Off\", since the group switched the members off itself."
             }
           },
           "schedule_section": {
             "name": "Schedule Automation",
             "description": "Link a schedule or calendar entity to automate climate settings. Slot data can include climate attributes (temperature, hvac_mode) and meta-keys (turn_off, sync_mode, sync_attributes) to adjust group behavior per slot.",
             "data": {
-              "schedule_entity": "Base Schedule / Calendar Entity",
-              "schedule_fallback_payload": "Fallback State for Inactive Base Schedule / Calendar (YAML)",
+              "schedule_entity": "Main Schedule / Calendar Entity",
+              "schedule_fallback_payload": "Fallback State for Inactive Main Schedule / Calendar (YAML)",
               "schedule_bypass_entity": "Bypass Schedule / Calendar Entity",
               "retain_service_changes_schedule": "Retain Changes Made via Service (Schedule)",
               "ignore_off_members_schedule": "Respect Member Off State (Schedule)"
             },
             "data_description": {
               "schedule_entity": "Select a schedule.* or calendar.* entity. For schedule entities, slot data is read from the slot's attributes. For calendar entities, slot data is read from the event's description field as YAML. Supported keys: climate attributes and meta-keys.",
-              "schedule_fallback_payload": "Stands in for the base schedule outside its active slots, so you don't need gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active. Same YAML format as above (e.g. temperature: 17, hvac_mode: heat).",
+              "schedule_fallback_payload": "Stands in for the main schedule outside its active slots, so you don't need gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active. Same YAML format as above (e.g. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optional higher-priority layer (e.g. a vacation calendar). When active, its slot data overrides the main schedule. Slot data is read the same way: attributes for schedule.* entities, YAML description for calendar.* entities.",
-              "retain_service_changes_schedule": "Keep base schedule, bypass and fallback state changes made via service after a restart. Otherwise they reset to the configured defaults.",
+              "retain_service_changes_schedule": "Keep main schedule, bypass and fallback state changes made via service after a restart. Otherwise they reset to the configured defaults.",
               "ignore_off_members_schedule": "The Schedule will NOT turn on members that are currently Off."
             }
           },
@@ -344,6 +346,7 @@
               "retry_attempts": "Retry Attempts",
               "retry_delay": "Retry Delay (seconds)",
               "force_retry": "Force Retry",
+              "member_command_delay": "Member Command Delay (seconds)",
               "grace_period": "Optimistic UI Grace Period (seconds)",
               "expose_smart_sensors": "Expose Smart Sensors",
               "expose_member_entities": "Expose Member List",
@@ -354,6 +357,7 @@
               "retry_attempts": "How many times to resend a command if a device doesn't respond. Set to 0 to disable.",
               "retry_delay": "Pause between retry attempts. Giving devices a moment to recover can improve reliability.",
               "force_retry": "Always retry sending commands to all members, even if they already report the target state.",
+              "member_command_delay": "Pause between commands to each individual member. Helps when commanding several devices at once overloads your network or bridge (e.g. IR blasters, some Zigbee coordinators). Set to 0 to disable.",
               "grace_period": "How long the group shows the commanded value before switching to the member average. Prevents UI flicker when slow devices (Cloud bridges, Zigbee) echo their old state back. Set to 0 to disable.",
               "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
               "expose_member_entities": "Creates an attribute listing all member entity IDs.",
@@ -369,6 +373,7 @@
     },
     "error": {
       "no_entities": "At least one climate device must remain in the group.",
+      "master_not_in_members": "The master entity must be a member of the group.",
       "master_refresh_notice": "Master Entity added. New options available.",
       "master_options_notice": "New Master entity option",
       "isolation_all_selected": "At least one member must remain outside isolation.",
@@ -457,11 +462,11 @@
     "sync_mode": {
       "options": {
         "disabled": "Disabled – No automatic sync between members",
-        "follow_only": "Follow – Manual changes on a device update the group, but are not passed on to the others",
         "mirror": "Mirror – Manual changes on one device update all members",
         "lock": "Lock – Reverts manual changes to match the group state",
         "mirror_lock": "Mirror/Lock – Selective attributes are mirrored, others are strictly locked",
-        "master_lock": "Master/Lock – Only the master entity can change the group target"
+        "master_lock": "Master/Lock – Only the master entity can change the group target",
+        "adopt_only": "Adopt Only – The group takes on manual changes from a device, without passing them to the others"
       }
     },
     "sync_attributes": {
@@ -542,6 +547,14 @@
         "away_offset": "Away Offset",
         "away_temperature": "Away Temperature",
         "away_preset": "Away Preset"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Disabled – Off members are switched on",
+        "away": "When going away",
+        "home": "When returning",
+        "away_home": "When going away and returning"
       }
     },
     "range_template_deadband_action": {
@@ -657,7 +670,7 @@
     },
     "set_schedule_fallback_payload": {
       "name": "Set Schedule Fallback Payload",
-      "description": "Sets or clears a fallback payload applied when the base schedule is off. Overrides the configured fallback payload.",
+      "description": "Sets or clears a fallback payload applied when the main schedule is off. Overrides the configured fallback payload.",
       "fields": {
         "fallback_payload": {
           "name": "Fallback Payload",

@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Kunnioita jäsenen pois-tilaa (synkronointi)"
             },
             "data_description": {
-              "sync_mode": "Mitä tehdä, kun jäsentä muutetaan ryhmän ulkopuolelta. Ei käytössä: ohita. Seuranta: omaksu muutokset välittämättä niitä muille. Peilaus: peilaa muutokset. Lukitus: peru muutokset. Peilaus/Lukitus: peilaa valitut attribuutit, peru muut. Master/Lukitus: peilaa pääyksikköä, peru muut.",
+              "sync_mode": "Mitä tehdä, kun jäsentä muutetaan ryhmän ulkopuolelta. Ei käytössä: ohita. Peilaus: peilaa muutokset. Lukitus: peru muutokset. Peilaus/Lukitus: peilaa valitut attribuutit, peru muut. Master/Lukitus: peilaa pääyksikköä, peru muut. Vain omaksu: omaksu muutokset välittämättä niitä muille.",
               "sync_attributes": "Määrittää, mihin attribuutteihin synkronointitila vaikuttaa. Valittujen ja valitsemattomien attribuuttien käsittely (peilaus, peruutus tai ohitus) riippuu valitusta tilasta.",
               "ignore_off_members_sync": "Manuaalisesti pois päältä kytketyt jäsenet jätetään rauhaan. Niiden tilaa ei peilata eikä peruta. Huom: suorat ryhmäkomennot tavoittavat aina kaikki jäsenet tästä asetuksesta riippumatta."
             }
@@ -152,7 +152,8 @@
               "presence_away_temperature": "Poissaololämpötila",
               "presence_away_preset": "Poissaoloesiasetus",
               "presence_away_delay": "Poissaoloviive (sekuntia)",
-              "presence_return_delay": "Paluuviive (sekuntia)"
+              "presence_return_delay": "Paluuviive (sekuntia)",
+              "ignore_off_members_presence": "Kunnioita jäsenen pois-tilaa (läsnäolo)"
             },
             "data_description": {
               "presence_mode": "Ota käyttöön tai poista käytöstä automaattinen poissaolo-varatoiminto, kun poissaolo havaitaan.",
@@ -163,24 +164,25 @@
               "presence_away_temperature": "Kiinteä lämpötila asetettavaksi poissa ollessa.",
               "presence_away_preset": "Esiasetustila, joka aktivoidaan poissa ollessa.",
               "presence_away_delay": "Odotusaika sen jälkeen, kun anturi ilmoittaa poissaolosta, ennen poissaolotilan aktivointia.",
-              "presence_return_delay": "Odotusaika sen jälkeen, kun anturi ilmoittaa läsnäolosta, ennen palautusta."
+              "presence_return_delay": "Odotusaika sen jälkeen, kun anturi ilmoittaa läsnäolosta, ennen palautusta.",
+              "ignore_off_members_presence": "Jättää pois päältä olevat jäsenet rauhaan — poistuttaessa, palattaessa tai molemmissa. Ei koske tilannetta, jossa poissaolotoiminto on ”Sammuta”, koska silloin ryhmä sammutti jäsenet itse."
             }
           },
           "schedule_section": {
             "name": "Aikataulun automaatio",
             "description": "Linkitä aikataulu- tai kalenteri-entiteetti automatisoimaan ilmastointiasetuksia. Aikavälin tiedot voivat sisältää ilmastointiattribuutteja (lämpötila, hvac_mode) ja meta-avaimia (turn_off, sync_mode, sync_attributes) ryhmän käyttäytymisen säätämiseksi aikavälikohtaisesti.",
             "data": {
-              "schedule_entity": "Perusaikataulu-/kalenteriobjekti",
-              "schedule_fallback_payload": "Varatila epäaktiiviselle perusaikataululle/kalenterille (YAML)",
+              "schedule_entity": "Pääaikataulu-/kalenteriobjekti",
+              "schedule_fallback_payload": "Varatila epäaktiiviselle pääaikataululle/kalenterille (YAML)",
               "schedule_bypass_entity": "Ohitusaikataulu-/kalenteriobjekti",
               "retain_service_changes_schedule": "Säilytä palvelun kautta tehdyt muutokset (aikataulu)",
               "ignore_off_members_schedule": "Kunnioita jäsenen pois-tilaa (aikataulu)"
             },
             "data_description": {
               "schedule_entity": "Valitse schedule.* tai calendar.* -entiteetti. Aikatauluentiteeteillä aikavälin tiedot luetaan aikavälin attribuuteista. Kalenterientiteeteillä aikavälin tiedot luetaan tapahtuman description-kentästä YAML-muodossa. Tuetut avaimet: ilmastointiattribuutit ja meta-avaimet.",
-              "schedule_fallback_payload": "Korvaa perusaikataulun sen aktiivisten jaksojen ulkopuolella, joten aukottomia 24/7-aikatauluja ei tarvita. Ohituskerros toimii ennallaan ja ohittaa sen ollessaan aktiivinen. Sama YAML-muoto kuin yllä (esim. temperature: 17, hvac_mode: heat).",
+              "schedule_fallback_payload": "Korvaa pääaikataulun sen aktiivisten jaksojen ulkopuolella, joten aukottomia 24/7-aikatauluja ei tarvita. Ohituskerros toimii ennallaan ja ohittaa sen ollessaan aktiivinen. Sama YAML-muoto kuin yllä (esim. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valinnainen korkeamman prioriteetin taso (esim. loma-kalenteri). Kun aktiivinen, sen aikavälin tiedot ohittavat pääaikataulun. Aikavälin tiedot luetaan samalla tavalla: attribuutit schedule.*-entiteeteille, YAML-kuvaus calendar.*-entiteeteille.",
-              "retain_service_changes_schedule": "Säilyttää palvelun kautta muutetun perusaikataulun, ohituksen ja varatilan uudelleenkäynnistyksen jälkeen. Muuten ne palautuvat määritettyihin oletusarvoihin.",
+              "retain_service_changes_schedule": "Säilyttää palvelun kautta muutetun pääaikataulun, ohituksen ja varatilan uudelleenkäynnistyksen jälkeen. Muuten ne palautuvat määritettyihin oletusarvoihin.",
               "ignore_off_members_schedule": "Aikataulu EI kytke päälle jäseniä, jotka ovat tällä hetkellä pois päältä."
             }
           },
@@ -344,6 +346,7 @@
               "retry_attempts": "Uudelleenyritysten määrä",
               "retry_delay": "Uudelleenyrityksen viive (sekuntia)",
               "force_retry": "Pakota uudelleenyritys",
+              "member_command_delay": "Viive jäsenkomentojen välillä (sekuntia)",
               "grace_period": "Optimistisen käyttöliittymän armonaika (sekuntia)",
               "expose_smart_sensors": "Näytä älykkäät anturit",
               "expose_member_entities": "Näytä jäsenluettelo",
@@ -354,6 +357,7 @@
               "retry_attempts": "Kuinka monta kertaa komento lähetetään uudelleen, jos laite ei vastaa. Aseta 0 poistaaksesi käytöstä.",
               "retry_delay": "Tauko uudelleenyritysten välillä. Hetken antaminen laitteille toipua voi parantaa luotettavuutta.",
               "force_retry": "Yritä aina lähettää komentoja uudelleen kaikille jäsenille, vaikka ne jo ilmoittaisivat tavoitetilan.",
+              "member_command_delay": "Tauko yksittäisille jäsenille lähetettävien komentojen välillä. Auttaa, kun useiden laitteiden ohjaaminen samanaikaisesti kuormittaa verkkoa tai yhdyskäytävää liikaa (esim. IR-lähettimet, jotkin Zigbee-koordinaattorit). Aseta arvoon 0 poistaaksesi käytöstä.",
               "grace_period": "Kuinka kauan ryhmä näyttää komennetun arvon ennen siirtymistä jäsenten keskiarvoon. Estää käyttöliittymän välkkymisen, kun hitaat laitteet (pilvisillat, Zigbee) kaikuttavat vanhan tilansa takaisin. Aseta 0 poistaaksesi käytöstä.",
               "expose_smart_sensors": "Luo ylimääräisiä anturientiteettejä ryhmän lämpötilalle ja kosteudelle (hyödyllinen kaavioihin).",
               "expose_member_entities": "Luo attribuutin, joka listaa kaikki jäsenentiteettien ID:t.",
@@ -369,6 +373,7 @@
     },
     "error": {
       "no_entities": "Vähintään yhden ilmastointilaitteen on pysyttävä ryhmässä.",
+      "master_not_in_members": "Pääentiteetin on oltava ryhmän jäsen.",
       "master_refresh_notice": "Pääyksikkö lisätty. Uusia asetuksia saatavilla.",
       "master_options_notice": "Uusi pääyksikön asetus",
       "isolation_all_selected": "Vähintään yhden jäsenen on pysyttävä eristyksen ulkopuolella.",
@@ -457,11 +462,11 @@
     "sync_mode": {
       "options": {
         "disabled": "Ei käytössä – Ei automaattista synkronointia jäsenten välillä",
-        "follow_only": "Seuranta – Manuaaliset muutokset laitteessa päivittävät ryhmän, mutta niitä ei välitetä muille",
         "mirror": "Peilaus – Manuaaliset muutokset yhdessä laitteessa päivittävät kaikki jäsenet",
         "lock": "Lukitus – Peruu manuaaliset muutokset vastaamaan ryhmän tilaa",
         "mirror_lock": "Peilaus/Lukitus – Valitut attribuutit peilataan, muut lukitaan tiukasti",
-        "master_lock": "Master/Lukitus – Vain pääyksikkö voi muuttaa ryhmän tavoitetta"
+        "master_lock": "Master/Lukitus – Vain pääyksikkö voi muuttaa ryhmän tavoitetta",
+        "adopt_only": "Vain omaksu – Ryhmä omaksuu laitteen manuaaliset muutokset välittämättä niitä muille"
       }
     },
     "sync_attributes": {
@@ -542,6 +547,14 @@
         "away_offset": "Poissaolosiirtymä",
         "away_temperature": "Poissaololämpötila",
         "away_preset": "Poissaoloesiasetus"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Pois käytöstä – Sammutetut jäsenet kytketään päälle",
+        "away": "Poistuttaessa",
+        "home": "Palattaessa",
+        "away_home": "Poistuttaessa ja palattaessa"
       }
     },
     "range_template_deadband_action": {
@@ -657,7 +670,7 @@
     },
     "set_schedule_fallback_payload": {
       "name": "Aseta aikataulun varakuorma",
-      "description": "Asettaa tai tyhjentää varakuorman, jota käytetään, kun perusaikataulu on pois päältä. Korvaa määritetyn varakuorman.",
+      "description": "Asettaa tai tyhjentää varakuorman, jota käytetään, kun pääaikataulu on pois päältä. Korvaa määritetyn varakuorman.",
       "fields": {
         "fallback_payload": {
           "name": "Varakuorma",

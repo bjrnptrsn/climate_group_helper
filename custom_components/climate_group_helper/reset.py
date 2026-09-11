@@ -77,6 +77,9 @@ async def async_reset_group(
     # The boost abort runs with push=False — the restore push happens once, at
     # the end, together with the offset push (diff-based, so a slot re-apply
     # that already reconciled the members turns them into no-ops).
+    # Bypass reset is the exception: switching away from an active bypass entity
+    # is itself a transition and is processed as such inside
+    # update_bypass_entity(), regardless of apply=False.
     steps: list[tuple[str, bool, Callable[[], Awaitable[None] | None]]] = [
         (ATTR_RESET_BOOST, reset_boost, lambda: group.boost_override_manager.abort(push=False)),
         (ATTR_RESET_PRESETS, reset_presets, lambda: group.preset_manager.async_update_runtime_presets(None)),
@@ -106,7 +109,7 @@ async def async_reset_group(
     # may end up pushing nothing — no schedule entity, an inactive slot without
     # fallback, or a slot payload lacking the reset attribute.
     schedule_changed = any(
-        k in succeeded for k in (ATTR_RESET_SCHEDULE, ATTR_RESET_BYPASS, ATTR_RESET_FALLBACK)
+        key in succeeded for key in (ATTR_RESET_SCHEDULE, ATTR_RESET_BYPASS, ATTR_RESET_FALLBACK)
     )
     if schedule_changed or (group.schedule_handler.schedule_entity_id and (reset_offset or reset_presets)):
         try:

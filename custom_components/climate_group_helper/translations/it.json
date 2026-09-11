@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Rispetta lo stato Off dei membri (Sincronizzazione)"
             },
             "data_description": {
-              "sync_mode": "Cosa fare quando un membro cambia fuori dal gruppo. Disabled: ignora. Follow: adotta le modifiche senza trasmetterle. Mirror: rispecchia modifiche. Lock: ripristina modifiche. Mirror/Lock: rispecchia selezionati, ripristina non selezionati. Master/Lock: rispecchia master, ripristina altri.",
+              "sync_mode": "Cosa fare quando un membro cambia fuori dal gruppo. Disabled: ignora. Mirror: rispecchia modifiche. Lock: ripristina modifiche. Mirror/Lock: rispecchia selezionati, ripristina non selezionati. Master/Lock: rispecchia master, ripristina altri. Solo adotta: adotta le modifiche senza trasmetterle.",
               "sync_attributes": "Definisce su quali attributi agisce la modalità di sincronizzazione. La gestione degli attributi selezionati e non selezionati (Mirror, Revert o Ignore) dipende dalla modalità scelta.",
               "ignore_off_members_sync": "I membri spenti manualmente vengono lasciati stare. Il loro stato non viene né rispecchiato né ripristinato. Nota: i comandi diretti del gruppo raggiungono sempre tutti i membri."
             }
@@ -152,7 +152,8 @@
               "presence_away_temperature": "Temperatura in assenza",
               "presence_away_preset": "Preset in assenza",
               "presence_away_delay": "Ritardo assenza (secondi)",
-              "presence_return_delay": "Ritardo ritorno (secondi)"
+              "presence_return_delay": "Ritardo ritorno (secondi)",
+              "ignore_off_members_presence": "Rispetta lo stato spento dei membri (presenza)"
             },
             "data_description": {
               "presence_mode": "Abilita o disabilita il fallback automatico in assenza quando viene rilevata l'assenza.",
@@ -163,24 +164,25 @@
               "presence_away_temperature": "Temperatura target fissa in assenza.",
               "presence_away_preset": "Preset in assenza (es. 'eco', 'away').",
               "presence_away_delay": "Tempo di attesa dopo il rilevamento assenza prima di attivare la modalità assenza.",
-              "presence_return_delay": "Tempo di attesa dopo il rilevamento presenza prima di ripristinare lo stato precedente."
+              "presence_return_delay": "Tempo di attesa dopo il rilevamento presenza prima di ripristinare lo stato precedente.",
+              "ignore_off_members_presence": "Lascia in pace i membri spenti — all'uscita, al rientro o in entrambi i casi. Non si applica quando l'azione di assenza è «Spegni», perché in tal caso è stato il gruppo a spegnere i membri."
             }
           },
           "schedule_section": {
             "name": "Automazione programmazione",
             "description": "Collega un'entità di programmazione o calendario per automatizzare le impostazioni climatiche. I dati dello slot possono includere attributi climatici (temperature, hvac_mode) e meta-chiavi (turn_off, sync_mode, sync_attributes) per regolare il comportamento del gruppo per slot.",
             "data": {
-              "schedule_entity": "Entità pianificazione/calendario di base",
-              "schedule_fallback_payload": "Stato di riserva per programmazione di base/calendario inattivo (YAML)",
+              "schedule_entity": "Entità pianificazione/calendario principale",
+              "schedule_fallback_payload": "Stato di riserva per programmazione principale/calendario inattivo (YAML)",
               "schedule_bypass_entity": "Entità pianificazione/calendario di bypass",
               "retain_service_changes_schedule": "Mantieni le modifiche effettuate tramite servizio (Pianificazione)",
               "ignore_off_members_schedule": "Rispetta lo stato Off dei membri (Pianificazione)"
             },
             "data_description": {
               "schedule_entity": "Seleziona un'entità schedule.* o calendar.*. Per le entità di programmazione, i dati dello slot vengono letti dagli attributi dello slot. Per le entità calendario, i dati dello slot vengono letti come YAML dal campo descrizione dell'evento. Chiavi supportate: attributi climatici e meta-chiavi.",
-              "schedule_fallback_payload": "Sostituisce la programmazione di base al di fuori delle sue fasce attive, così non servono programmazioni continue 24/7. Il livello di bypass continua a funzionare normalmente e la sovrascrive mentre è attivo. Stesso formato YAML di sopra (es. temperature: 17, hvac_mode: heat).",
-              "schedule_bypass_entity": "Livello di priorità opzionale (es. un calendario vacanze). Quando attivo, i suoi dati di slot sostituiscono il programma base. I dati dello slot vengono letti allo stesso modo: attributi per entità schedule.*, descrizione YAML per entità calendar.*.",
-              "retain_service_changes_schedule": "Mantiene la programmazione di base, il bypass e lo stato di riserva modificati tramite servizio dopo un riavvio. In caso contrario tornano ai valori predefiniti configurati.",
+              "schedule_fallback_payload": "Sostituisce la programmazione principale al di fuori delle sue fasce attive, così non servono programmazioni continue 24/7. Il livello di bypass continua a funzionare normalmente e la sovrascrive mentre è attivo. Stesso formato YAML di sopra (es. temperature: 17, hvac_mode: heat).",
+              "schedule_bypass_entity": "Livello di priorità opzionale (es. un calendario vacanze). Quando attivo, i suoi dati di slot sostituiscono il programma principale. I dati dello slot vengono letti allo stesso modo: attributi per entità schedule.*, descrizione YAML per entità calendar.*.",
+              "retain_service_changes_schedule": "Mantiene la programmazione principale, il bypass e lo stato di riserva modificati tramite servizio dopo un riavvio. In caso contrario tornano ai valori predefiniti configurati.",
               "ignore_off_members_schedule": "La Pianificazione NON accenderà i membri attualmente SPENTI."
             }
           },
@@ -344,6 +346,7 @@
               "retry_attempts": "Tentativi Riprova",
               "retry_delay": "Ritardo Riprova (secondi)",
               "force_retry": "Forza nuovo tentativo",
+              "member_command_delay": "Ritardo tra i comandi ai membri (secondi)",
               "grace_period": "Periodo di grazia UI ottimistico (secondi)",
               "expose_smart_sensors": "Esponi sensori intelligenti",
               "expose_member_entities": "Esponi elenco dei membri",
@@ -354,6 +357,7 @@
               "retry_attempts": "Quante volte inviare nuovamente un comando se un dispositivo non risponde. Imposta a 0 per disabilitare.",
               "retry_delay": "Pausa tra i tentativi. Dare ai dispositivi un momento per recuperare può migliorare l'affidabilità.",
               "force_retry": "Invia sempre di nuovo i comandi a tutti i membri, anche se riportano già lo stato target.",
+              "member_command_delay": "Pausa tra i comandi inviati a ciascun membro. Utile quando comandare più dispositivi contemporaneamente sovraccarica la rete o il bridge (es. trasmettitori IR, alcuni coordinatori Zigbee). Imposta a 0 per disattivare.",
               "grace_period": "Per quanto tempo il gruppo mostra il valore inviato prima di passare alla media dei membri. Evita il flickering dell'UI quando dispositivi lenti (bridge Cloud, Zigbee) restituiscono il loro vecchio stato. Impostare a 0 per disattivare.",
               "expose_smart_sensors": "Crea entità sensore aggiuntive per temperatura e umidità del gruppo (utile per i grafici).",
               "expose_member_entities": "Crea un attributo che elenca tutti gli ID delle entità membro.",
@@ -369,6 +373,7 @@
     },
     "error": {
       "no_entities": "Almeno un dispositivo climatico deve rimanere nel gruppo.",
+      "master_not_in_members": "L'entità master deve essere un membro del gruppo.",
       "master_refresh_notice": "Entità Master aggiunta. Nuove opzioni disponibili.",
       "master_options_notice": "Nuova opzione entità Master",
       "isolation_all_selected": "Almeno un membro deve rimanere fuori dall'isolamento.",
@@ -457,11 +462,11 @@
     "sync_mode": {
       "options": {
         "disabled": "Disattivato – Nessuna sincronizzazione automatica tra i membri",
-        "follow_only": "Follow – Le modifiche manuali su un dispositivo aggiornano il gruppo, ma non vengono applicate agli altri",
         "mirror": "Mirror – Le modifiche manuali su un dispositivo vengono applicate a tutti i membri",
         "lock": "Lock – Le modifiche manuali vengono ripristinate allo stato del gruppo",
         "mirror_lock": "Mirror/Lock – Gli attributi selezionati vengono sincronizzati, gli altri sono rigorosamente ripristinati",
-        "master_lock": "Master/Lock – Solo l'entità master può modificare l'obiettivo del gruppo"
+        "master_lock": "Master/Lock – Solo l'entità master può modificare l'obiettivo del gruppo",
+        "adopt_only": "Solo adotta – Il gruppo adotta le modifiche manuali di un dispositivo senza trasmetterle agli altri"
       }
     },
     "sync_attributes": {
@@ -542,6 +547,14 @@
         "away_offset": "Offset in assenza",
         "away_temperature": "Temperatura in assenza",
         "away_preset": "Preset in assenza"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Disattivato – I membri spenti vengono accesi",
+        "away": "All'uscita",
+        "home": "Al rientro",
+        "away_home": "All'uscita e al rientro"
       }
     },
     "range_template_deadband_action": {
@@ -657,7 +670,7 @@
     },
     "set_schedule_fallback_payload": {
       "name": "Imposta payload di riserva della programmazione",
-      "description": "Imposta o cancella un payload di riserva applicato quando la programmazione di base è inattiva. Sovrascrive il payload di riserva configurato.",
+      "description": "Imposta o cancella un payload di riserva applicato quando la programmazione principale è inattiva. Sovrascrive il payload di riserva configurato.",
       "fields": {
         "fallback_payload": {
           "name": "Payload di riserva",

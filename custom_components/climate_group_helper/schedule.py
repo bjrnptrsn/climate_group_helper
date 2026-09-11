@@ -5,8 +5,10 @@ from __future__ import annotations
 import logging
 import asyncio
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable
 
+from homeassistant.const import STATE_ON
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_state_change_event
 
@@ -18,9 +20,11 @@ from .const import (
 )
 from .state import is_available
 from .meta_processor import MetaProcessResult
+from .service_call import SYNC_TARGET, SyncTarget
 from .payload import (
     parse_entity_state,
     parse_fallback_payload,
+    split_payload,
     validate_climate_payload,
 )
 
@@ -41,21 +45,147 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-class ScheduleBaseHandler(ABC):
-    """Shared logic for basis schedule and bypass layers.
+@dataclass(frozen=True)
+class SlotContext:
+    """One slot run's climate payloads, as read and meta-processed.
+
+    Pure data — no policy. `_read_slots()` builds it; `SlotResolver.record()`
+    and the handlers' `on_slot_change()` decide what it means for
+    `target_state` and for the members.
+    """
+
+    main_payload: dict[str, Any]
+    bypass_payload: dict[str, Any]
+    bypass_active: bool
+
+
+class SlotResolver:
+    """Bookkeeping for the main/bypass merge and the bypass claims.
+
+    Runs on every slot change, not only while a bypass is active: the bypass is
+    a priority *layer* over the main slot, and `record()` merges the two of
+    them into what belongs in `target_state`.
+
+    It owns `run_state.schedule_bypass_claims` (persisted, hence the established name):
+    one entry per attribute the bypass currently holds, `(pre_value,
+    written_value)`.
+
+    - `pre_value` is the anchor — what the attribute falls back to when the
+      bypass lets go. It is kept up to date from the main, so an attribute
+      returns to the slot that is current then, not to the one that was current
+      when the bypass took over.
+    - `written_value` is what this class last wrote there itself, which is how a
+      manual change is recognised: nothing else writes the bypass layer, so a
+      live value differing from it came from somebody else. That only holds as
+      long as `written_value` is never updated without an actual write.
+
+    Carries no policy on what to *send* — only the handlers know whether a
+    given run may reach the members (§ handler docstrings).
+    """
+
+    def __init__(self, group: ClimateGroupHelper) -> None:
+        self._group = group
+
+    @property
+    def _entries(self) -> dict[str, tuple[Any, Any]]:
+        return dict(self._group.run_state.schedule_bypass_claims)
+
+    def _store(self, entries: dict[str, tuple[Any, Any]]) -> None:
+        self._group.run_state = self._group.run_state.set_bypass_claims(entries)
+
+    @property
+    def _target_state(self) -> TargetState:
+        return self._group.shared_target_state
+
+    def record(self, ctx: SlotContext) -> dict[str, Any]:
+        """Merge one slot run into what belongs in `target_state`.
+
+        Bypass active: the main is written, the bypass sits on top (claim
+        upkeep below). Bypass inactive: releases every claim still held — a
+        slot can go inactive without the bypass handler's own event marking
+        it (a runtime entity switch), and leftover claims must not linger in
+        persisted state forever — and merges the main over the restores.
+        """
+        if ctx.bypass_active:
+            return self._record_active(ctx.main_payload, ctx.bypass_payload)
+        return {**self.release(), **ctx.main_payload}
+
+    def _record_active(
+        self,
+        main_payload: dict[str, Any],
+        bypass_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Bypass is running: the main is written, the bypass sits on top.
+
+        Two pieces of claim upkeep happen here, and the order between them
+        matters: the anchor is refreshed from the main *before* keys that left
+        the bypass are released, so a released key falls back to the main value
+        that is current now, not to the one the bypass first covered.
+        """
+        entries: dict[str, tuple[Any, Any]] = self._entries
+        released: dict[str, Any] = {}
+
+        # Anchor upkeep: the main moving underneath a held attribute is what
+        # that attribute has to return to, not whatever it held days ago.
+        for attr, (pre_value, written) in entries.items():
+            if attr in main_payload:
+                entries[attr] = (main_payload[attr], written)
+
+        # Keys that left the bypass payload end there and then.
+        for attr in list(entries):
+            if attr in bypass_payload:
+                continue
+            pre_value, written = entries.pop(attr)
+            if attr not in main_payload:
+                released[attr] = self._release_value(attr, pre_value, written)
+
+        for attr, value in bypass_payload.items():
+            pre_value = (
+                entries[attr][0]
+                if attr in entries
+                else main_payload.get(attr, getattr(self._target_state, attr, None))
+            )
+            entries[attr] = (pre_value, value)
+
+        self._store(entries)
+        return {**released, **main_payload, **bypass_payload}
+
+    def release(self) -> dict[str, Any]:
+        """Release every claim and return what each attribute falls back to."""
+        restored = {
+            attr: self._release_value(attr, pre_value, written)
+            for attr, (pre_value, written) in self._entries.items()
+        }
+        self._group.run_state = self._group.run_state.clear_bypass_claims()
+        return restored
+
+    def _release_value(self, attr: str, pre_value: Any, written: Any) -> Any:
+        """Resolve one attribute the bypass is letting go of.
+
+        The bypass value still standing means nobody touched it, so it goes back
+        to its anchor. Anything else was set after our write and is more recent
+        than the bypass instruction — it stays. A user who happened to pick the
+        bypass value exactly is indistinguishable here and gets reset.
+        """
+        live = getattr(self._target_state, attr, None)
+        return pre_value if _attr_values_match(live, written) else live
+
+
+class BaseScheduleHandler(ABC):
+    """Shared logic for main schedule and bypass layers.
 
     Drives the slot processing pipeline (on_slot_change) with pure climate
-    resolution and bypass delta tracking.
+    resolution and bypass claim tracking.
 
     Derived classes:
-    - ScheduleHandler: subscribes to the basis schedule/calendar entity.
-    - ScheduleBypassHandler: subscribes to the bypass entity.
+    - MainScheduleHandler: subscribes to the main schedule/calendar entity.
+    - BypassScheduleHandler: subscribes to the bypass entity.
     """
 
     def __init__(self, group: ClimateGroupHelper) -> None:
         self._group = group
         self._hass = group.hass
-        self._bypass_was_active: bool = False
+        self.slot_resolver = SlotResolver(group)
 
     @property
     def state_manager(self) -> ScheduleStateManager:
@@ -77,7 +207,7 @@ class ScheduleBaseHandler(ABC):
     @property
     @abstractmethod
     def schedule_entity_id(self) -> str | None:
-        """Return the active basis schedule entity ID."""
+        """Return the active main schedule entity ID."""
 
     @property
     @abstractmethod
@@ -86,17 +216,40 @@ class ScheduleBaseHandler(ABC):
 
     @property
     def active_layer(self) -> str:
-        """Return the currently active schedule layer ('basis' | 'bypass' | 'fallback' | 'none')."""
+        """Return the currently active schedule layer ('main' | 'bypass' | 'fallback' | 'none')."""
         bypass_eid = self.bypass_entity_id
         if bypass_eid and (bypass_state := self._hass.states.get(bypass_eid)) and bypass_state.state == "on":
             return "bypass"
         schedule_eid = self.schedule_entity_id
-        if schedule_eid and (basis_state := self._hass.states.get(schedule_eid)):
-            if basis_state.state == "on":
-                return "basis"
-            if basis_state.state == "off" and self._group.schedule_handler.fallback_payload:
+        if schedule_eid and (main_state := self._hass.states.get(schedule_eid)):
+            if main_state.state == "on":
+                return "main"
+            if main_state.state == "off" and self._group.schedule_handler.fallback_payload:
                 return "fallback"
         return "none"
+
+    @property
+    def active_climate_payload(self) -> dict[str, Any]:
+        """Return the climate attributes the active layer actually carries.
+
+        `active_layer` names a layer from the entity's state alone. A slot that
+        is "on" but carries meta-keys only defines no target, so the physical
+        cold-start seed must still run for it. An empty dict means "no climate
+        target active".
+        """
+        layer = self.active_layer
+        if layer == "none":
+            return {}
+        if layer == "fallback":
+            raw = dict(self._group.schedule_handler.fallback_payload)
+        else:
+            entity_id = self.bypass_entity_id if layer == "bypass" else self.schedule_entity_id
+            state = self._hass.states.get(entity_id) if entity_id else None
+            if state is None:
+                return {}
+            raw = self.parse_entity_state(state)
+        climate, _ = split_payload(raw)
+        return climate
 
     def parse_entity_state(self, state: Any) -> dict[str, Any]:
         """Extract a slot data dict from a schedule or calendar entity."""
@@ -106,108 +259,52 @@ class ScheduleBaseHandler(ABC):
         """Filter a climate payload, dropping invalid values with a warning."""
         return validate_climate_payload(entity_id, payload, context="Schedule slot")
 
-    async def on_slot_change(self) -> None:
-        """Read both entity states, process meta-keys, update target_state, sync members.
+    async def _read_slots(self) -> SlotContext:
+        """Read both entity states, process meta-keys, validate — pure data, no policy."""
+        main_state = self._hass.states.get(self.schedule_entity_id) if self.schedule_entity_id else None
+        bypass_state = self._hass.states.get(self.bypass_entity_id) if self.bypass_entity_id else None
 
-        Single parameterless entry point for all slot changes. Resolves basis,
-        bypass, and fallback payloads into a single write, managing the bypass
-        delta for pre-value restoration.
-        """
-        async with self.slot_transition_lock:
-            basis_state = self._hass.states.get(self.schedule_entity_id) if self.schedule_entity_id else None
-            bypass_state = self._hass.states.get(self.bypass_entity_id) if self.bypass_entity_id else None
-
-            if self.schedule_entity_id and basis_state:
-                if basis_state.state == "on":
-                    basis_data = self.parse_entity_state(basis_state)
-                elif basis_state.state == "off" and (fallback_payload := self._group.schedule_handler.fallback_payload):
-                    basis_data = dict(fallback_payload)
-                else:
-                    basis_data = {}
+        if self.schedule_entity_id and main_state:
+            if main_state.state == "on":
+                main_data = self.parse_entity_state(main_state)
+            elif main_state.state == "off" and (fallback_payload := self._group.schedule_handler.fallback_payload):
+                main_data = dict(fallback_payload)
             else:
-                basis_data = {}
+                main_data = {}
+        else:
+            main_data = {}
 
-            bypass_data = self.parse_entity_state(bypass_state) if (bypass_state and bypass_state.state == "on") else {}
-            bypass_active = bypass_state is not None and bypass_state.state == "on"
+        bypass_data = self.parse_entity_state(bypass_state) if (bypass_state and bypass_state.state == "on") else {}
+        bypass_on = bypass_state is not None and bypass_state.state == "on"
 
-            _LOGGER.debug(
-                "[%s] Slot change: basis=%s, bypass=%s (bypass_active=%s)",
-                self._group.entity_id, list(basis_data.keys()) or "off",
-                list(bypass_data.keys()) or "off", bypass_active
-            )
+        _LOGGER.debug(
+            "[%s] Slot change: main=%s, bypass=%s (bypass_on=%s)",
+            self._group.entity_id, list(main_data.keys()) or "off",
+            list(bypass_data.keys()) or "off", bypass_on
+        )
 
-            result: MetaProcessResult = await self._group.slot_meta_processor.process(basis_data, bypass_data)
+        result: MetaProcessResult = await self._group.slot_meta_processor.process(main_data, bypass_data)
 
-            basis_payload = self._validate_climate_payload(self._group.entity_id, result.climate_payload)
-            bypass_payload = self._validate_climate_payload(self._group.entity_id, result.climate_bypass_payload)
+        main_payload = self._validate_climate_payload(self._group.entity_id, result.climate_payload)
+        bypass_payload = self._validate_climate_payload(self._group.entity_id, result.climate_bypass_payload)
 
-            # Check if bypass delta is present from restore
-            was_active = self._bypass_was_active or bool(self._group.run_state.bypass_delta)
+        # An entity that is on but carries nothing is not a bypass someone
+        # configured — see MetaProcessResult.bypass_has_content.
+        bypass_active = bypass_on and result.bypass_has_content
 
-            # Handle bypass delta lifecycle
-            if bypass_active:
-                if not was_active:
-                    # Off -> On transition: capture pre_value from target_state for each bypass attribute.
-                    # A pre_value of None is an anchor like any other — it says the
-                    # group did not have this attribute set. Skipping it leaves an
-                    # attribute the bypass introduced in target_state for good,
-                    # because the restore below only ever sees what is in the delta.
-                    delta_dict = {}
-                    for attr, val in bypass_payload.items():
-                        delta_dict[attr] = (getattr(self.target_state, attr, None), val)
-                    self._group.run_state = self._group.run_state.set_bypass_delta(delta_dict)
-                    self._bypass_was_active = True
-                else:
-                    # Stays on: update bypass_value in delta if bypass payload changed, preserving pre_value
-                    current_delta = dict(self._group.run_state.bypass_delta)
-                    updated = False
-                    for attr, val in bypass_payload.items():
-                        if attr in current_delta:
-                            pre_val, old_byp = current_delta[attr]
-                            if not _attr_values_match(old_byp, val):
-                                current_delta[attr] = (pre_val, val)
-                                updated = True
-                        else:
-                            current_delta[attr] = (getattr(self.target_state, attr, None), val)
-                            updated = True
-                    if updated:
-                        self._group.run_state = self._group.run_state.set_bypass_delta(current_delta)
-                    self._bypass_was_active = True
+        return SlotContext(main_payload, bypass_payload, bypass_active)
 
-                resolved = {**basis_payload, **bypass_payload}
-                if resolved:
-                    self.state_manager.update(**resolved)
-                if not self._group.run_state.temporary_state_active and resolved:
-                    await self.call_handler.call_immediate(resolved)
+    def _update_state(self, record: dict[str, Any]) -> None:
+        if record:
+            self.state_manager.update(**record)
 
-            else:
-                # Bypass is off
-                if was_active:
-                    # On -> Off transition: restore pre-values from bypass_delta
-                    delta = self._group.run_state.bypass_delta
-                    delta_update = {
-                        attr: pre_val
-                        for attr, (pre_val, byp_val) in delta.items()
-                        if _attr_values_match(getattr(self.target_state, attr, None), byp_val)
-                    }
-                    final = {**delta_update, **basis_payload}
-                    self._group.run_state = self._group.run_state.clear_bypass_delta()
-                    self._bypass_was_active = False
-
-                    if final:
-                        self.state_manager.update(**final)
-                    if not self._group.run_state.temporary_state_active and final:
-                        await self.call_handler.call_immediate(final)
-                else:
-                    self._bypass_was_active = False
-                    if basis_payload:
-                        self.state_manager.update(**basis_payload)
-                    if not self._group.run_state.temporary_state_active and basis_payload:
-                        await self.call_handler.call_immediate(basis_payload)
+    async def _call_members(self, command: dict[str, Any] | SyncTarget | None) -> None:
+        if command is not None and not self._group.run_state.temporary_state_active:
+            await self.call_handler.call_immediate(command)
 
 
-class ScheduleHandler(ScheduleBaseHandler):
-    """Manages the basis schedule entity: listener lifecycle and dynamic entity switching."""
+class MainScheduleHandler(BaseScheduleHandler):
+    """Manages the main schedule entity: listener lifecycle and dynamic entity switching."""
 
     def __init__(self, group: ClimateGroupHelper) -> None:
         self._schedule_entity = group.config.get(CONF_SCHEDULE_ENTITY) if group.advanced_mode else None
@@ -219,7 +316,7 @@ class ScheduleHandler(ScheduleBaseHandler):
         super().__init__(group)
         self._unsub_listener: Callable[[], None] | None = None
         _LOGGER.debug(
-            "[%s] Schedule basis handler initialized: basis='%s' (fallback_payload=%s)",
+            "[%s] Schedule main handler initialized: main='%s' (fallback_payload=%s)",
             group.log_id, self._schedule_entity,
             list(self.fallback_payload.keys()) or "(none)",
         )
@@ -238,13 +335,28 @@ class ScheduleHandler(ScheduleBaseHandler):
 
     @property
     def schedule_entity_id(self) -> str | None:
-        """Return the active basis schedule entity ID."""
+        """Return the active main schedule entity ID."""
         return self._schedule_entity
 
     @property
     def bypass_entity_id(self) -> str | None:
-        """Delegate to ScheduleBypassHandler — single source of truth."""
+        """Delegate to BypassScheduleHandler — single source of truth."""
         return self._group.schedule_bypass_handler.bypass_entity_id
+
+    async def on_slot_change(self) -> None:
+        """Read both layers, merge into target_state, send if no bypass is active.
+
+        The main handler never sees a bypass end — that is only ever observed
+        by the bypass handler's own event (§ BypassScheduleHandler). A run here
+        during an active bypass records the main in the background and sends
+        nothing; the bypass layer owns the members until it lets go.
+        """
+        async with self.slot_transition_lock:
+            ctx = await self._read_slots()
+            record = self.slot_resolver.record(ctx)
+            self._update_state(record)
+            if not ctx.bypass_active:
+                await self._call_members(ctx.main_payload)
 
     async def async_setup(self) -> None:
         """Subscribe to the schedule entity."""
@@ -294,6 +406,7 @@ class ScheduleHandler(ScheduleBaseHandler):
         """
         self._unsubscribe()
         is_reset = not new_entity_id
+        old_entity_id = self._schedule_entity
         self._schedule_entity = new_entity_id or self._group.config.get(CONF_SCHEDULE_ENTITY)
 
         if is_reset:
@@ -306,7 +419,7 @@ class ScheduleHandler(ScheduleBaseHandler):
             _LOGGER.debug(
                 "[%s] Switching schedule entity: '%s' → '%s'",
                 self._group.entity_id,
-                self._schedule_entity,
+                old_entity_id,
                 new_entity_id,
             )
 
@@ -348,12 +461,12 @@ class ScheduleHandler(ScheduleBaseHandler):
             await self.on_slot_change()
 
 
-class ScheduleBypassHandler(ScheduleBaseHandler):
+class BypassScheduleHandler(BaseScheduleHandler):
     """Manages the bypass entity lifecycle (e.g. a vacation calendar).
 
-    The bypass layer sits above the basis schedule but below blocking sources.
+    The bypass layer sits above the main schedule but below blocking sources.
     It has no timer — on_slot_change() is called directly on every state change.
-    ScheduleHandler.async_setup() must run first so the basis entity is already
+    MainScheduleHandler.async_setup() must run first so the main entity is already
     subscribed when the startup check fires here.
     """
 
@@ -368,13 +481,53 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
 
     @property
     def schedule_entity_id(self) -> str | None:
-        """Delegate to ScheduleHandler — single source of truth."""
+        """Delegate to MainScheduleHandler — single source of truth."""
         return self._group.schedule_handler.schedule_entity_id
 
     @property
     def bypass_entity_id(self) -> str | None:
         """Return the active bypass entity ID."""
         return self._bypass_entity
+
+    async def on_slot_change(self, was_active: bool = False) -> None:
+        """Read both layers and decide what a bypass-triggered run means.
+
+        `was_active` is never remembered — it is what the caller just observed
+        (the bypass entity's own `old_state`, or `update_bypass_entity` reading
+        the state before it switches). That is the only honest way to tell a
+        bypass end apart from "no bypass ran": the claims alone cannot carry a
+        meta-key-only bypass, which never fills them.
+
+        Held claims are the fallback signal for an end this layer never saw —
+        an entity returning via `unavailable` (that edge is dropped), or a
+        runtime entity switch. They were still holding attributes on the
+        members, and only a full re-sync takes those back off.
+        """
+        async with self.slot_transition_lock:
+            ctx = await self._read_slots()
+            if ctx.bypass_active:
+                record = self.slot_resolver.record(ctx)
+                self._update_state(record)
+                await self._call_members(record)
+            elif was_active:
+                await self._release_bypass(ctx)
+            else:
+                had_claims = bool(self._group.run_state.schedule_bypass_claims)
+                self._update_state(self.slot_resolver.record(ctx))
+                await self._call_members(SYNC_TARGET if had_claims else ctx.main_payload)
+
+    async def _release_bypass(self, ctx: SlotContext) -> None:
+        """Bypass end: release claims, record the main, full re-sync.
+
+        Lives here deliberately, not on the base: only this layer ever
+        observes an end, and the "only the bypass calls this" contract is
+        meant to hold structurally, not by comment. Uses the shared base
+        primitives `_update_state`/`_call_members`. `SYNC_TARGET` picks up
+        both the restores and whatever the main accrued in one pass, rather
+        than assuming either is still this run's payload.
+        """
+        self._update_state({**self.slot_resolver.release(), **ctx.main_payload})
+        await self._call_members(SYNC_TARGET)
 
     def restore_bypass_entity(self, entity_id: str) -> None:
         """Restore active bypass entity from persisted state.
@@ -409,8 +562,11 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
         def handle_state_change(event: Any) -> None:
             if not is_available(event.data.get("new_state")):
                 return
+            old_state = event.data.get("old_state")
+            was_active = old_state is not None and old_state.state == STATE_ON
             self._hass.async_create_background_task(
-                self.on_slot_change(), name="climate_group_schedule_bypass_slot_change"
+                self.on_slot_change(was_active=was_active),
+                name="climate_group_schedule_bypass_slot_change",
             )
 
         self._unsub_listener = async_track_state_change_event(
@@ -426,12 +582,22 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
         """Switch the active bypass entity at runtime (service: set_schedule_bypass_entity).
 
         Passing None reverts to the configured default. If no default is configured,
-        the bypass layer is cleared entirely — on_slot_change() still runs once so an
-        active bypass payload/delta is unwound instead of leaving the group stuck on
-        the last bypass state.
+        the bypass layer is cleared entirely.
+
+        `apply=False` only suppresses the generic re-apply — it does not skip a
+        bypass-end transition. Switching away from an entity that was `on` is
+        observed here (the old entity's own state, read before we switch) and
+        is a bypass end regardless of `apply`; otherwise a claim-free (e.g.
+        meta-key-only) bypass ending via this path would never release, and a
+        value the main accrued underneath it would be stranded.
         """
+        was_active = bool(
+            self._bypass_entity and (state := self._hass.states.get(self._bypass_entity)) and state.state == STATE_ON
+        )
+
         self._unsubscribe()
         is_reset = not new_entity_id
+        old_entity_id = self._bypass_entity
         self._bypass_entity = new_entity_id or self._group.config.get(CONF_SCHEDULE_BYPASS_ENTITY)
 
         if is_reset:
@@ -444,11 +610,11 @@ class ScheduleBypassHandler(ScheduleBaseHandler):
             _LOGGER.debug(
                 "[%s] Switching bypass entity: '%s' → '%s'",
                 self._group.entity_id,
-                self._bypass_entity,
+                old_entity_id,
                 new_entity_id,
             )
 
         if self._bypass_entity:
             self._subscribe()
-        if apply:
-            await self.on_slot_change()
+        if apply or was_active:
+            await self.on_slot_change(was_active=was_active)

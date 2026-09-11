@@ -12,8 +12,8 @@ from homeassistant.exceptions import ServiceValidationError
 from .const import PRESET_META_KEYS
 from .meta_processor import SOURCE_PRESET
 from .payload import (
-    extract_climate_payload,
     parse_fallback_payload,
+    split_payload,
     validate_climate_payload,
 )
 from .service_call import SYNC_TARGET, SyncTarget
@@ -187,7 +187,7 @@ class PresetManager:
         # decides whether a typo-only definition is dropped, and a preset that
         # slipped through would be selectable, apply nothing, and never exit.
         meta_data = self._group.slot_meta_processor.validate_values(
-            meta_candidates, context=context, warn_unknown=False
+            meta_candidates, context=context
         )
         return climate_data, meta_data if isinstance(meta_data, dict) else {}
 
@@ -218,10 +218,10 @@ class PresetManager:
                 self._group.log_id,
                 preset_name,
             )
-            payload = {k: v for k, v in payload.items() if k not in (ATTR_PRESET_MODE, "preset")}
+            payload = {key: value for key, value in payload.items() if key not in (ATTR_PRESET_MODE, "preset")}
 
         valid = validate_climate_payload(self._group.log_id, payload, context=context)
-        climate_data = extract_climate_payload(valid)
+        climate_data, _ = split_payload(valid)
 
         # `validate_climate_payload` only warns about attributes it *knows* but
         # whose value is unusable — a misspelled name it has never heard of

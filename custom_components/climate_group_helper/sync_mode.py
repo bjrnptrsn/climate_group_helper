@@ -25,7 +25,7 @@ from .state import ClimateState, FilterState, is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
-    from .state import FollowStateManager, SyncModeStateManager, TargetState
+    from .state import AdoptStateManager, SyncModeStateManager, TargetState
     from .service_call import SyncCallHandler
 
 _TRUSTED_CONTEXT_IDS = frozenset(
@@ -68,7 +68,7 @@ class SyncModeHandler:
 
     Sync Modes:
     - DISABLED: No enforcement, passive aggregation only
-    - FOLLOW_ONLY: Adopts member changes like MIRROR, but never pushes them on.
+    - ADOPT_ONLY: Adopts member changes like MIRROR, but never pushes them on.
       An incoming OFF is adopted only once no member is running any more.
     - LOCK: Reverts member deviations to group target
     - MIRROR: Adopts member changes and propagates to all members
@@ -113,9 +113,9 @@ class SyncModeHandler:
         return self._group.sync_mode_state_manager
 
     @property
-    def follow_state_manager(self) -> FollowStateManager:
-        """Return the state manager for follow_only operations."""
-        return self._group.follow_state_manager
+    def adopt_state_manager(self) -> AdoptStateManager:
+        """Return the state manager for adopt_only operations."""
+        return self._group.adopt_state_manager
 
     @property
     def call_handler(self) -> SyncCallHandler:
@@ -234,15 +234,40 @@ class SyncModeHandler:
             _LOGGER.debug("[%s] Ignoring '%s' echo", self._group.entity_id, echo_context_id)
             return
 
+        # filter_state is a property reading config_overrides on every access —
+        # resolve once and reuse it for both adoption branches below.
+        filter_dict = self.filter_state.to_dict()
+
         # Deep Origin Analysis: Did we cause this change?
         if own_echo:
             if origin_event is None:
                 return
             accepted = self._filter_echo_changes(origin_event, change_dict, change_entity_id)
+            # The Mirror/Lock split (`sync_attributes`) applies to adopted side
+            # effects too: an attribute the user excluded from mirroring must not
+            # slip into target_state through an echo. Without this, MIRROR_LOCK
+            # propagated an unlisted attribute a device changed alongside our
+            # command instead of reverting it.
+            if accepted and self.sync_mode in (
+                SyncMode.MIRROR,
+                SyncMode.MIRROR_LOCK,
+                SyncMode.ADOPT_ONLY,
+            ):
+                accepted = {
+                    key: value for key, value in accepted.items() if filter_dict.get(key)
+                }
             if accepted:
                 _LOGGER.debug("[%s] Adopting side effects: %s", self._group.entity_id, accepted)
                 accepted = self._reverse_offset_temperatures(change_entity_id, accepted)
-                self.state_manager.update(entity_id=change_entity_id, **accepted)
+                # Same manager choice as the fresh-event branch below: an adopted
+                # side effect is an adoption like any other, so ADOPT_ONLY's own
+                # guards (boost, unconditional Last Man Standing) must cover it.
+                manager = (
+                    self.adopt_state_manager
+                    if self.sync_mode == SyncMode.ADOPT_ONLY
+                    else self.state_manager
+                )
+                manager.update(entity_id=change_entity_id, **accepted)
             return
 
         # --- Fresh Event (external change) ---
@@ -251,9 +276,15 @@ class SyncModeHandler:
         if self.sync_mode == SyncMode.DISABLED:
             return
 
-        # Filter out setpoint values when HVAC is OFF (meaningless frost protection values)
+        # Filter out setpoint values when HVAC is OFF (meaningless frost protection
+        # values). The change itself may be the transition to OFF, with the device
+        # reporting its frost setpoint in the same write — the target is still on
+        # then, so the check must not rely on it.
         is_switching_on = "hvac_mode" in change_dict and change_dict["hvac_mode"] != HVACMode.OFF
-        if self.target_state.hvac_mode == HVACMode.OFF and not is_switching_on:
+        if (
+            self.target_state.hvac_mode == HVACMode.OFF
+            or change_dict.get("hvac_mode") == HVACMode.OFF
+        ) and not is_switching_on:
             setpoint_attrs = {"temperature", "target_temp_low", "target_temp_high", "humidity"}
             change_dict = {key: value for key, value in change_dict.items() if key not in setpoint_attrs}
             if not change_dict:
@@ -276,28 +307,23 @@ class SyncModeHandler:
         # entity_ids before wrapping), so this alone is authoritative.
         is_covered = self._group.member_template_manager.is_covered_state(new_state)
 
-        # filter_state is a property reading config_overrides on every access —
-        # resolve once instead of per attribute in the comprehensions below.
-        filter_dict = self.filter_state.to_dict()
-
-        # FOLLOW_ONLY adopts like MIRROR and skips the enforcement at the end, so
+        # ADOPT_ONLY adopts like MIRROR and skips the enforcement at the end, so
         # it shares every guard above. What its own state manager adds is the
         # Last-Man-Standing threshold for an incoming OFF. It also leaves a
         # running boost alone: that manager refuses to adopt during one, and
         # without a push nothing would carry an adopted target to the members.
         if (
-            self.sync_mode in (SyncMode.MIRROR, SyncMode.MIRROR_LOCK, SyncMode.FOLLOW_ONLY)
+            self.sync_mode in (SyncMode.MIRROR, SyncMode.MIRROR_LOCK, SyncMode.ADOPT_ONLY)
             and not is_reconnect
             and not is_covered
         ):
             if filtered := {key: value for key, value in change_dict.items() if filter_dict.get(key)}:
                 filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
-                if self.sync_mode == SyncMode.FOLLOW_ONLY:
-                    self.follow_state_manager.update(entity_id=change_entity_id, **filtered)
+                if self.sync_mode == SyncMode.ADOPT_ONLY:
+                    self.adopt_state_manager.update(entity_id=change_entity_id, **filtered)
                 else:
                     was_boost = self._group.run_state.boost_temperature is not None
-                    self.state_manager.update(entity_id=change_entity_id, **filtered)
-                    if was_boost:
+                    if self.state_manager.update(entity_id=change_entity_id, **filtered) and was_boost:
                         self._group.boost_override_manager.abort(push=True)
                 _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
 
@@ -327,16 +353,15 @@ class SyncModeHandler:
                 if filtered := {key: value for key, value in change_dict.items() if filter_dict.get(key)}:
                     filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
                     was_boost = self._group.run_state.boost_temperature is not None
-                    self.state_manager.update(entity_id=change_entity_id, **filtered)
-                    if was_boost:
+                    if self.state_manager.update(entity_id=change_entity_id, **filtered) and was_boost:
                         self._group.boost_override_manager.abort(push=True)
                     _LOGGER.debug("[%s] Master entity change adopted: %s", self._group.entity_id, filtered)
             # Non-master changes are enforced (reverted) via call_debounced below
 
-        # FOLLOW_ONLY is the adoption without the push: the target follows the
+        # ADOPT_ONLY is the adoption without the push: the target adopts the
         # members, it never drives them. The enforcement below is not staggered
         # by sync mode, so without this return the mode would send commands.
-        if self.sync_mode == SyncMode.FOLLOW_ONLY:
+        if self.sync_mode == SyncMode.ADOPT_ONLY:
             return
 
         # Enforce target state on all members (skip during temporary state: blocking mode or boost)

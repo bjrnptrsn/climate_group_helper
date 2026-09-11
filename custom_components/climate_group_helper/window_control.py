@@ -314,7 +314,7 @@ class WindowControlHandler:
 
         # Calculate mode and delay
         mode = WINDOW_OPEN if self._zone_open or self._room_open else WINDOW_CLOSE
-        delay = next((d for d in (delay_room_open, delay_zone_open, delay_zone_close) if d is not None), 0)
+        delay = next((delay for delay in (delay_room_open, delay_zone_open, delay_zone_close) if delay is not None), 0)
 
         _LOGGER.debug("[%s] Window control: mode=%s, delay=%.1fs (room_open=%s, zone_open=%s)",
             self._group.entity_id, mode, delay, self._room_open, self._zone_open)

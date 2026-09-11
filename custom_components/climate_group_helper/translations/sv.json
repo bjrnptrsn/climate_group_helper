@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respektera medlemmars AV-status (Synkronisering)"
             },
             "data_description": {
-              "sync_mode": "Vad man ska göra när en medlem ändras utanför gruppen. Disabled: ignorera. Follow: överta ändringar utan att föra dem vidare. Mirror: spegla ändringar. Lock: återställ ändringar. Mirror/Lock: spegla valda, återställ ovalda. Master/Lock: spegla master, återställ övriga.",
+              "sync_mode": "Vad man ska göra när en medlem ändras utanför gruppen. Disabled: ignorera. Mirror: spegla ändringar. Lock: återställ ändringar. Mirror/Lock: spegla valda, återställ ovalda. Master/Lock: spegla master, återställ övriga. Endast överta: överta ändringar utan att föra dem vidare.",
               "sync_attributes": "Definierar vilka attribut synkroniseringsläget verkar på. Hanteringen av valda och ovalda attribut (Mirror, Revert eller Ignore) beror på det valda läget.",
               "ignore_off_members_sync": "Manuellt avstängda medlemmar lämnas ifred. Deras tillstånd varken speglas eller återställs. Obs: direkta gruppkommandon når alltid alla medlemmar."
             }
@@ -152,7 +152,8 @@
               "presence_away_temperature": "Frånvaro-temperatur",
               "presence_away_preset": "Frånvaro-förinställning",
               "presence_away_delay": "Frånvarofördröjning (sekunder)",
-              "presence_return_delay": "Återkomstfördröjning (sekunder)"
+              "presence_return_delay": "Återkomstfördröjning (sekunder)",
+              "ignore_off_members_presence": "Respektera medlemmens avstängda läge (närvaro)"
             },
             "data_description": {
               "presence_mode": "Aktivera eller inaktivera automatiskt frånvaroläge när frånvaro detekteras.",
@@ -163,24 +164,25 @@
               "presence_away_temperature": "Fast måltemperatur vid frånvaro.",
               "presence_away_preset": "Förinställning vid frånvaro (t.ex. 'eco', 'away').",
               "presence_away_delay": "Väntetid efter frånvarorapport innan frånvaroläge aktiveras.",
-              "presence_return_delay": "Väntetid efter närvароrapport innan tidigare tillstånd återställs."
+              "presence_return_delay": "Väntetid efter närvароrapport innan tidigare tillstånd återställs.",
+              "ignore_off_members_presence": "Lämnar avstängda medlemmar i fred — vid bortgång, vid hemkomst eller båda. Gäller inte när bortaåtgärden är ”Stäng av”, eftersom gruppen då stängde av medlemmarna själv."
             }
           },
           "schedule_section": {
             "name": "Schema-automatisering",
             "description": "Länka en schema- eller kalenderenhet för att automatisera klimatinställningar. Slot-data kan inkludera klimatattribut (temperature, hvac_mode) och meta-nycklar (turn_off, sync_mode, sync_attributes) för att justera gruppens beteende per slot.",
             "data": {
-              "schedule_entity": "Grundläggande schema-/kalenderentitet",
-              "schedule_fallback_payload": "Reservtillstånd vid inaktivt grundschema/kalender (YAML)",
+              "schedule_entity": "Huvudschema-/kalenderentitet",
+              "schedule_fallback_payload": "Reservtillstånd vid inaktivt huvudschema/kalender (YAML)",
               "schedule_bypass_entity": "Bypass-schema-/kalenderentitet",
               "retain_service_changes_schedule": "Behåll ändringar gjorda via tjänst (Schema)",
               "ignore_off_members_schedule": "Respektera medlemmars AV-status (Schema)"
             },
             "data_description": {
               "schedule_entity": "Välj en schedule.*- eller calendar.*-enhet. För schemaenheter läses slot-data från slot-attributen. För kalenderenheter läses slot-data som YAML från händelsens beskrivelsfält. Stödda nycklar: klimatattribut och meta-nycklar.",
-              "schedule_fallback_payload": "Träder in för grundschemat utanför dess aktiva tidsblock, så du slipper heltäckande 24/7-scheman. Bypass-lagret fungerar som vanligt och åsidosätter det medan det är aktivt. Samma YAML-format som ovan (t.ex. temperature: 17, hvac_mode: heat).",
-              "schedule_bypass_entity": "Valfritt prioritetslager (t.ex. en semesterkalender). När aktivt ersätter dess slot-data basschemat. Slot-data läses på samma sätt: attribut för schedule.*-, YAML-beskrivning för calendar.*-enheter.",
-              "retain_service_changes_schedule": "Behåller grundschema, bypass och reservtillstånd som ändrats via tjänsten efter en omstart. Annars återställs de till de konfigurerade standardvärdena.",
+              "schedule_fallback_payload": "Träder in för huvudschemat utanför dess aktiva tidsblock, så du slipper heltäckande 24/7-scheman. Bypass-lagret fungerar som vanligt och åsidosätter det medan det är aktivt. Samma YAML-format som ovan (t.ex. temperature: 17, hvac_mode: heat).",
+              "schedule_bypass_entity": "Valfritt prioritetslager (t.ex. en semesterkalender). När aktivt ersätter dess slot-data huvudschemat. Slot-data läses på samma sätt: attribut för schedule.*-, YAML-beskrivning för calendar.*-enheter.",
+              "retain_service_changes_schedule": "Behåller huvudschema, bypass och reservtillstånd som ändrats via tjänsten efter en omstart. Annars återställs de till de konfigurerade standardvärdena.",
               "ignore_off_members_schedule": "Schemat kommer INTE att slå på medlemmar som för närvarande är AVSTÄNGDA."
             }
           },
@@ -344,6 +346,7 @@
               "retry_attempts": "Återförsök",
               "retry_delay": "Återförsöksfördröjning (sekunder)",
               "force_retry": "Tvinga nytt försök",
+              "member_command_delay": "Fördröjning mellan medlemskommandon (sekunder)",
               "grace_period": "Optimistisk UI-övergångsperiod (sekunder)",
               "expose_smart_sensors": "Visa smarta sensorer",
               "expose_member_entities": "Visa medlemslista",
@@ -354,6 +357,7 @@
               "retry_attempts": "Hur många gånger ett kommando ska skickas om en enhet inte svarar. Sätt till 0 för att inaktivera.",
               "retry_delay": "Paus mellan återförsök. Att ge enheter en stund att återhämta sig kan förbättra tillförlitligheten.",
               "force_retry": "Skickar alltid kommandon till alla medlemmar igen, även om de redan rapporterar måltillståndet.",
+              "member_command_delay": "Paus mellan kommandon till enskilda medlemmar. Hjälper när styrning av flera enheter samtidigt överbelastar nätverket eller bryggan (t.ex. IR-blastrar, vissa Zigbee-koordinatorer). Sätt till 0 för att inaktivera.",
               "grace_period": "Hur länge gruppen visar det skickade värdet innan den byter till medlemsgenomsnittet. Förhindrar UI-flimmer när långsamma enheter (Cloud-bryggor, Zigbee) ekar tillbaka sitt gamla tillstånd. Ange 0 för att inaktivera.",
               "expose_smart_sensors": "Skapar extra sensorenheter för gruppens temperatur och luftfuktighet (användbart för grafer).",
               "expose_member_entities": "Skapar ett attribut som listar alla medlemsenhets-ID:n.",
@@ -369,6 +373,7 @@
     },
     "error": {
       "no_entities": "Minst en klimatenhet måste finnas kvar i gruppen.",
+      "master_not_in_members": "Huvudentiteten måste vara en medlem i gruppen.",
       "master_refresh_notice": "Master-enhet tillagd. Nya alternativ tillgängliga.",
       "master_options_notice": "Nytt alternativ för master-enhet",
       "isolation_all_selected": "Minst en medlem måste förbli utanför isoleringen.",
@@ -457,11 +462,11 @@
     "sync_mode": {
       "options": {
         "disabled": "Inaktiverat – Ingen automatisk synkronisering mellan medlemmar",
-        "follow_only": "Follow – Manuella ändringar på en enhet uppdaterar gruppen, men förs inte vidare till de andra",
         "mirror": "Mirror – Manuella ändringar på en enhet uppdaterar alla medlemmar",
         "lock": "Lock – Manuella ändringar återställs till gruppläget",
         "mirror_lock": "Mirror/Lock – Valda attribut speglas, andra återställs strikt",
-        "master_lock": "Master/Lock – Endast master-enheten kan ändra gruppens mål"
+        "master_lock": "Master/Lock – Endast master-enheten kan ändra gruppens mål",
+        "adopt_only": "Endast överta – Gruppen övertar manuella ändringar från en enhet utan att föra dem vidare till de andra"
       }
     },
     "sync_attributes": {
@@ -542,6 +547,14 @@
         "away_offset": "Frånvaro-förskjutning",
         "away_temperature": "Frånvaro-temperatur",
         "away_preset": "Frånvaro-förinställning"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Inaktiverat – Avstängda medlemmar slås på",
+        "away": "Vid bortgång",
+        "home": "Vid hemkomst",
+        "away_home": "Vid bortgång och hemkomst"
       }
     },
     "range_template_deadband_action": {
@@ -657,7 +670,7 @@
     },
     "set_schedule_fallback_payload": {
       "name": "Ställ in reservnyttolast för schema",
-      "description": "Ställer in eller rensar en reservnyttolast som tillämpas när grundschemat är inaktivt. Åsidosätter den konfigurerade reservnyttolasten.",
+      "description": "Ställer in eller rensar en reservnyttolast som tillämpas när huvudschemat är inaktivt. Åsidosätter den konfigurerade reservnyttolasten.",
       "fields": {
         "fallback_payload": {
           "name": "Reservnyttolast",

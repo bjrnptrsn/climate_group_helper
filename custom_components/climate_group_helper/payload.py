@@ -176,11 +176,13 @@ def validate_climate_payload(
     return valid
 
 
-def extract_climate_payload(data: dict[str, Any]) -> dict[str, Any]:
-    """Extract climate attributes from a payload dict."""
-    return {k: v for k, v in data.items() if k in ATTR_SERVICE_MAP}
-
-
-def extract_meta_candidates(data: dict[str, Any]) -> dict[str, Any]:
-    """Extract non-climate candidates from a payload dict."""
-    return {k: v for k, v in data.items() if k not in ATTR_SERVICE_MAP}
+def split_payload(data: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Split a payload into climate attributes and meta-keys."""
+    climate_data = {}
+    meta_data = {}
+    for key, value in data.items():
+        if key in ATTR_SERVICE_MAP:
+            climate_data[key] = value
+        else:
+            meta_data[key] = value
+    return climate_data, meta_data

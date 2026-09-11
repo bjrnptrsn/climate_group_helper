@@ -62,6 +62,22 @@ def is_available(state: State | str | None) -> bool:
     return available_state(state) is not None
 
 
+def other_active_members(group: ClimateGroupHelper, entity_id: str | None) -> list[str]:
+    """Members other than `entity_id` that are still running.
+
+    Isolated members are excluded — they don't participate in group state —
+    as are unavailable ones: an offline device must not keep the group from
+    going off.
+    """
+    return [
+        entity for entity in group.climate_entity_ids
+        if entity != entity_id
+        and entity not in group.run_state.isolated_members
+        and (state := available_state(group.aggregator.read_member_state(entity)))
+        and state.state != HVACMode.OFF
+    ]
+
+
 @dataclass(frozen=True)
 class RunState:
     """Immutable operational status for the climate group.
@@ -83,7 +99,7 @@ class RunState:
     blocking_sources: frozenset[str] = field(default_factory=frozenset)
     boost_temperature: float | None = None
     boost_until: datetime | None = None
-    bypass_delta: MappingProxyType[str, tuple[Any, Any]] = field(default_factory=lambda: MappingProxyType({}))
+    schedule_bypass_claims: MappingProxyType[str, tuple[Any, Any]] = field(default_factory=lambda: MappingProxyType({}))
     config_overrides: MappingProxyType[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     group_offset: float = 0.0
     isolated_members: frozenset[str] = field(default_factory=frozenset)
@@ -115,13 +131,13 @@ class RunState:
             new_overrides.pop(key, None)
         return replace(self, config_overrides=MappingProxyType(new_overrides))
 
-    def set_bypass_delta(self, delta: dict[str, tuple[Any, Any]]) -> RunState:
-        """Return a new RunState with updated bypass delta."""
-        return replace(self, bypass_delta=MappingProxyType(dict(delta)))
+    def set_bypass_claims(self, claims: dict[str, tuple[Any, Any]]) -> RunState:
+        """Return a new RunState with updated schedule bypass claims."""
+        return replace(self, schedule_bypass_claims=MappingProxyType(dict(claims)))
 
-    def clear_bypass_delta(self) -> RunState:
-        """Return a new RunState with cleared bypass delta."""
-        return replace(self, bypass_delta=MappingProxyType({}))
+    def clear_bypass_claims(self) -> RunState:
+        """Return a new RunState with cleared schedule bypass claims."""
+        return replace(self, schedule_bypass_claims=MappingProxyType({}))
 
 
 @dataclass(frozen=True)
@@ -147,7 +163,7 @@ class ClimateState:
         call site looks the same from here, so log what was discarded.
         """
         valid_fields = {f.name for f in fields(self)}
-        filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_fields}
+        filtered_kwargs = {key: value for key, value in kwargs.items() if key in valid_fields}
         if _LOGGER.isEnabledFor(logging.DEBUG) and (dropped := set(kwargs) - valid_fields):
             _LOGGER.debug("%s.update() ignored unknown keys: %s", type(self).__name__, sorted(dropped))
         return replace(self, **filtered_kwargs)
@@ -156,8 +172,8 @@ class ClimateState:
         """Convert state to dictionary. Excludes None values."""
         full = asdict(self)
         if attributes is None:
-            return {k: v for k, v in full.items() if v is not None}
-        return {k: v for k, v in full.items() if k in attributes and v is not None}
+            return {key: value for key, value in full.items() if value is not None}
+        return {key: value for key, value in full.items() if key in attributes and value is not None}
 
     def __repr__(self) -> str:
         """Only show attributes that are present."""
@@ -440,21 +456,6 @@ class BaseStateManager:
             return True
         return False
 
-    def _other_active_members(self, entity_id: str | None) -> list[str]:
-        """Members other than `entity_id` that are still running.
-
-        Isolated members are excluded — they don't participate in group state —
-        as are unavailable ones: an offline device must not keep the group from
-        going off.
-        """
-        return [
-            entity for entity in self._group.climate_entity_ids
-            if entity != entity_id
-            and entity not in self._group.run_state.isolated_members
-            and (state := available_state(self._group.aggregator.read_member_state(entity)))
-            and state.state != HVACMode.OFF
-        ]
-
     def _check_partial_sync(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
         """Check Partial Sync / Last Man Standing logic.
 
@@ -466,8 +467,8 @@ class BaseStateManager:
         if kwargs.get(ATTR_HVAC_MODE) != HVACMode.OFF:
             return True
 
-        if other_active_members := self._other_active_members(entity_id):
-            _LOGGER.debug("[%s] Blocking sync_mode OFF update due to partial sync (Active members: %s)", self._group.entity_id, other_active_members)
+        if active_members := other_active_members(self._group, entity_id):
+            _LOGGER.debug("[%s] Blocking sync_mode OFF update due to partial sync (Active members: %s)", self._group.entity_id, active_members)
             return False
 
         _LOGGER.debug("[%s] Allowing sync_mode OFF update (Last Man Standing logic)", self._group.entity_id)
@@ -528,8 +529,8 @@ class SyncModeStateManager(BaseStateManager):
         return True
 
 
-class FollowStateManager(SyncModeStateManager):
-    """State Manager for the follow_only sync mode.
+class AdoptStateManager(SyncModeStateManager):
+    """State Manager for the adopt_only sync mode.
 
     Adoption is identical to MIRROR — the mode differs only in not pushing the
     result at the members, which is decided in `resync()`, not here. So every
@@ -538,18 +539,18 @@ class FollowStateManager(SyncModeStateManager):
     built around.
 
     Only two things are its own:
-    - `SOURCE`, so `last_source` tells an adopted change from a followed one.
+    - `SOURCE`, so `last_source` tells this adoption from the mirroring one.
     - The boost filter. MIRROR aborts a running boost when it adopts and then
       pushes the new target; without a push the boost would keep the members on
       its own setpoint while the target silently moved underneath it.
     """
 
-    SOURCE = "follow_only"
+    SOURCE = "adopt_only"
 
     def _filter_update(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
         """Apply the sync-mode filters, plus a boost guard."""
         if self._group.run_state.boost_temperature is not None:
-            _LOGGER.debug("[%s] FollowState update blocked (boost active)", self._group.entity_id)
+            _LOGGER.debug("[%s] AdoptState update blocked (boost active)", self._group.entity_id)
             return False
 
         return super()._filter_update(entity_id, kwargs)
@@ -570,10 +571,10 @@ class FollowStateManager(SyncModeStateManager):
         if kwargs.get(ATTR_HVAC_MODE) != HVACMode.OFF:
             return True
 
-        if other_active_members := self._other_active_members(entity_id):
+        if active_members := other_active_members(self._group, entity_id):
             _LOGGER.debug(
-                "[%s] Blocking follow_only OFF update — still active: %s",
-                self._group.entity_id, other_active_members,
+                "[%s] Blocking adopt_only OFF update — still active: %s",
+                self._group.entity_id, active_members,
             )
             return False
 

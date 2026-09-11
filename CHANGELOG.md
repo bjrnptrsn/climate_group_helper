@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.10.0 - 2026-09-11
+
+### 🌟 New Features
+
+*   **Respect Member Off State (Presence)**: A new setting keeps devices you switched off yourself from being turned back on when everyone leaves, when you return, or both.
+
+*   **Member Command Delay**: The reintroduced setting adds a pause between commands to each individual device instead of sending them all at once, helping when simultaneous control overloads an IR blaster or Zigbee bridge.
+
+### 🐛 Bug Fixes
+
+*   **Group Presets Now Selectable as Presence Away Preset**: Presets you defined for the group itself now show up in the Presence Control away-preset dropdown, instead of only your devices' own presets.
+
+*   **Window Control Now Wins After a Reload**: With a window already open, saving the group settings or restarting Home Assistant could turn the heaters back on and leave them on — the window setting is now applied before anything is sent to the devices.
+
+### 🔧 Changes
+
+*   **Sync Mode "Follow" Renamed to "Adopt Only"**: The name now says what the mode does — the group only adopts the change from the device, and nothing is sent to the other devices.
+
+*   **Master Entity Limited to Group Members**: Selecting a Master Entity now offers only existing members of the group, requiring a device to be added to the group before it can be designated as the master.
+
+> ⚠️ **If you may want to go back to 1.9.0, switch away from "Adopt Only" first.** A group left on this mode will not load on the older version. Every other group is unaffected.
+
 ## 1.9.0 - 2026-09-05
 
 ### 🎂 Happy 1 Year Anniversary, Climate Group Helper!

@@ -36,7 +36,7 @@ set_schedule_bypass_entity:
 
 set_schedule_fallback_payload:
   name: Set Schedule Fallback Payload
-  description: Sets or clears a runtime fallback payload applied when the basis schedule is off. Overrides the configured fallback payload.
+  description: Sets or clears a runtime fallback payload applied when the main schedule is off. Overrides the configured fallback payload.
   target:
     entity:
       integration: climate_group_helper

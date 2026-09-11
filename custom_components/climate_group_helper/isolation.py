@@ -508,7 +508,7 @@ class MemberIsolationHandler:
         # calls below must not reach them either: a full target-state restore
         # (e.g. heat 21°) would physically undo the other rule's protection on
         # an OFF device that isolated_members still marks as protected.
-        release_entities = [eid for eid in self._isolation_entity_ids if eid not in still_claimed]
+        release_entities = [entity_id for entity_id in self._isolation_entity_ids if entity_id not in still_claimed]
 
         # Restore the pre-action preset FIRST — always, even when globally blocked.
         # Last-Call-Wins: the authoritative target_state values are sent afterwards

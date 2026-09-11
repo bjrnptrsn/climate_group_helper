@@ -28,6 +28,7 @@ from .const import (
     CONF_HUMIDITY_UPDATE_TARGETS,
     CONF_HUMIDITY_USE_MASTER,
     CONF_HVAC_MODE_STRATEGY,
+    CONF_IGNORE_OFF_MEMBERS_PRESENCE,
     CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
     CONF_IGNORE_OFF_MEMBERS_SYNC,
     CONF_IGNORE_OFF_MEMBERS_TEMPERATURE,
@@ -41,6 +42,7 @@ from .const import (
     CONF_ISOLATION_TRIGGER_HVAC_MODES,
     CONF_ISOLATION_TRIGGER,
     CONF_MASTER_ENTITY,
+    CONF_MEMBER_COMMAND_DELAY,
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
@@ -127,6 +129,7 @@ VALID_CONFIG_KEYS = {
     CONF_RETRY_DELAY,
     CONF_FORCE_RETRY,
     CONF_GRACE_PERIOD,
+    CONF_MEMBER_COMMAND_DELAY,
     # Sync mode options
     CONF_SYNC_MODE,
     CONF_SYNC_ATTRS,
@@ -156,6 +159,7 @@ VALID_CONFIG_KEYS = {
     CONF_PRESENCE_AWAY_PRESET,
     CONF_PRESENCE_AWAY_DELAY,
     CONF_PRESENCE_RETURN_DELAY,
+    CONF_IGNORE_OFF_MEMBERS_PRESENCE,
     # Schedule options
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_BYPASS_ENTITY,
@@ -224,7 +228,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old config entries to the current version.
 
-    Four stages: a Soft Reset to v12 for everything older, then v12→v13, v13→v14, and v14→v15.
+    Five stages: a Soft Reset to v12 for everything older, then v12→v13, v13→v14,
+    v14→v15, and v15→v16.
 
     The Soft Reset combines all historical transformations (v7–v12) into a single pass:
         - Combine data+options (covers pre-v7 entries)
@@ -245,6 +250,9 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     v14→v15 re-applies the VALID_CONFIG_KEYS whitelist to drop all retired keys
     (e.g. staggered_call_delay, resync_interval, override_duration, persist_changes).
+
+    v15→v16 renames the SyncMode value "follow_only" → "adopt_only". A value, not a
+    key, so the whitelist stage cannot catch it.
     """
     current_options = dict(entry.options)
 
@@ -328,7 +336,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("[%s] Migrating config entry from version %s to 13", entry.title, entry.version)
 
         # Rename persist_active_schedule → retain_service_changes_schedule. The flag
-        # now covers every schedule change made via service (base entity, bypass
+        # now covers every schedule change made via service (main entity, bypass
         # entity, fallback payload), not just the active schedule entity.
         new_options = dict(current_options)
         if "persist_active_schedule" in new_options:
@@ -368,6 +376,21 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=15)
         _LOGGER.info("[%s] Migration to v15 complete.", entry.title)
+
+        current_options = new_options
+
+    if entry.version < 16:
+        _LOGGER.info("[%s] Migrating config entry from version %s to 16", entry.title, entry.version)
+
+        # SyncMode "follow_only" was renamed to "adopt_only". The value is not a
+        # key, so the whitelist stage above never sees it — left in place, the
+        # entry would fail to load with a ValueError on the enum lookup.
+        new_options = dict(current_options)
+        if new_options.get(CONF_SYNC_MODE) == "follow_only":
+            new_options[CONF_SYNC_MODE] = "adopt_only"
+
+        hass.config_entries.async_update_entry(entry, data={}, options=new_options, version=16)
+        _LOGGER.info("[%s] Migration to v16 complete.", entry.title)
 
     return True
 

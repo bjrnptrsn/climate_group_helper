@@ -22,7 +22,7 @@ Praxisnahe Szenarien, nach Komplexität geordnet. Jedes Beispiel beschreibt die 
   - [14. Zeitplan mit temporären lokalen Überschreibungen](#14-zeitplan-mit-temporären-lokalen-überschreibungen)
   - [15. Saisonale Abschaltung per Zeitplan](#15-saisonale-abschaltung-per-zeitplan)
   - [16. Automatikfunktionen für einen Zeitblock pausieren](#16-automatikfunktionen-für-einen-zeitblock-pausieren)
-  - [17. Kalender-Bypass über einem Basis-Zeitplan](#17-kalender-bypass-über-einem-basis-zeitplan)
+  - [17. Kalender-Bypass über einem Haupt-Zeitplan](#17-kalender-bypass-über-einem-haupt-zeitplan)
   - [18. Nachtabsenkung bei inaktivem Zeitplan](#18-nachtabsenkung-bei-inaktivem-zeitplan)
 - [Edge Cases](#edge-cases) — gemischte Hardware, mehrere Einschränkungen, Grenzfälle aus echten Support-Anfragen
   - [19. Gemischt Heizkörper + Klimaanlage, ein Gerät pro Modus](#19-gemischt-heizkörper--klimaanlage-ein-gerät-pro-modus)
@@ -33,6 +33,7 @@ Praxisnahe Szenarien, nach Komplexität geordnet. Jedes Beispiel beschreibt die 
   - [24. Mitbekommen, wenn ein Gerät Befehle verschluckt](#24-mitbekommen-wenn-ein-gerät-befehle-verschluckt)
   - [25. Heizen/Kühlen für Thermostate mit nur einem Sollwert](#25-heizenkühlen-für-thermostate-mit-nur-einem-sollwert)
   - [26. Entfeuchten, während der Raum auf Temperatur ist](#26-entfeuchten-während-der-raum-auf-temperatur-ist)
+  - [27. IR-gesteuerte Klimaanlagen, die die Bridge überlasten](#27-ir-gesteuerte-klimaanlagen-die-die-bridge-überlasten)
 
 ---
 
@@ -163,7 +164,9 @@ Spart automatisch Energie basierend auf Anwesenheit, ohne eine separate Automati
 
 **Ergebnis:** Sobald *alle* Trigger-Entitäten für 5 Minuten "abwesend" melden, schaltet die Heizung aus. Sobald jemand zurückkehrt, wird nach einer 1-minütigen Bestätigungsverzögerung wiederhergestellt.
 
-> **Variante:** Setze **Abwesenheits-Aktion: Abwesenheits-Offset** mit **Abwesenheits-Offset: -3.0** statt komplett auszuschalten — nützlich, wenn der Raum nicht vollständig auskühlen soll (z. B. ein Raum mit Pflanzen oder Haustieren).
+> **Variante:** Setze **Abwesenheits-Aktion: Abwesenheits-Offset** mit **Abwesenheits-Offset: -3.0** statt komplett auszuschalten — nützlich, wenn der Raum nicht vollständig auskühlen soll (z. B. ein Raum mit Pflanzen oder Haustieren). Bei dieser Aktion sorgt **Aus-Zustand der Mitglieder respektieren (Anwesenheit)** zusätzlich dafür, dass ein selbst ausgeschalteter Heizkörper bei der Rückkehr nicht wieder angeht.
+
+> **Variante — Gruppen-Preset als Abwesenheits-Aktion:** Wenn du Gruppen-Presets definiert hast (Beispiel 8), kannst du auch **Abwesenheits-Aktion: Abwesenheits-Preset** wählen und eines deiner Gruppen-Presets (z. B. `eco`) aktivieren lassen, sobald niemand zu Hause ist.
 
 ---
 
@@ -483,11 +486,11 @@ Zwei Details sind wichtig:
 
 ---
 
-### 17. Kalender-Bypass über einem Basis-Zeitplan
+### 17. Kalender-Bypass über einem Haupt-Zeitplan
 
-Eine wöchentliche `schedule.*`-Entität steuert bereits das alltägliche Heizen. Zusätzlich soll ein gemeinsamer Haushalts-`calendar.*` (z. B. ein Google-Kalender, dem jeder Ereignisse hinzufügen kann) das vorübergehend überschreiben können — ein Gast über Nacht, ein Homeoffice-Tag, eine Feier — ohne den Basis-Zeitplan überhaupt anzufassen.
+Eine wöchentliche `schedule.*`-Entität steuert bereits das alltägliche Heizen. Zusätzlich soll ein gemeinsamer Haushalts-`calendar.*` (z. B. ein Google-Kalender, dem jeder Ereignisse hinzufügen kann) das vorübergehend überschreiben können — ein Gast über Nacht, ein Homeoffice-Tag, eine Feier — ohne den Haupt-Zeitplan überhaupt anzufassen.
 
-**Entitäten:** `climate.living_room_trv`, `schedule.house_weekly` (Basis), `calendar.household_overrides` (Bypass)
+**Entitäten:** `climate.living_room_trv`, `schedule.house_weekly` (Haupt), `calendar.household_overrides` (Bypass)
 
 | Einstellung | Wert |
 |---|---|
@@ -495,7 +498,7 @@ Eine wöchentliche `schedule.*`-Entität steuert bereits das alltägliche Heizen
 | Zeitplan-Entität | `schedule.house_weekly` |
 | Bypass-Entität | `calendar.household_overrides` |
 
-**Basis-Zeitplan-Zeitblock (unverändert):**
+**Haupt-Zeitplan-Zeitblock (unverändert):**
 ```yaml
 hvac_mode: heat
 temperature: 19.5
@@ -507,7 +510,7 @@ hvac_mode: heat
 temperature: 22.0
 ```
 
-**Ergebnis:** Außerhalb des Kalender-Ereignisses folgt `climate.living_room_trv` dem Basis-Zeitplan (19,5 °C). Während das "Gästezimmer"-Ereignis aktiv ist, gewinnen dessen 22,0 °C — der Basis-Zeitplan läuft im Hintergrund weiter und wird automatisch wiederhergestellt, sobald das Ereignis endet, ohne dass der Wochenplan überhaupt angefasst werden muss.
+**Ergebnis:** Außerhalb des Kalender-Ereignisses folgt `climate.living_room_trv` dem Haupt-Zeitplan (19,5 °C). Während das "Gästezimmer"-Ereignis aktiv ist, gewinnen dessen 22,0 °C — der Haupt-Zeitplan läuft im Hintergrund weiter und wird automatisch wiederhergestellt, sobald das Ereignis endet, ohne dass der Wochenplan überhaupt angefasst werden muss.
 
 > **Tipp — ungültiges YAML bricht immer im ungünstigsten Moment:** Das Beschreibungsfeld eines Kalender-Ereignisses darf *ausschließlich* gültiges YAML enthalten (siehe [LIESMICH § Verwendung einer Kalender-Entität](LIESMICH.md#verwendung-einer-kalender-entität)) — ein verirrtes Wort, ein fehlender Doppelpunkt oder eine falsche Einrückung führt dazu, dass CGH das Ereignis komplett und stillschweigend überspringt, und du bemerkst es erst, wenn der Zeitblock hätte starten sollen und nichts passiert ist. Tippe das YAML nicht jedes Mal freihändig in ein neues Ereignis: Behalte ein bekanntermaßen funktionierendes Ereignis als Vorlage und **kopiere oder dupliziere es** für jede neue Überschreibung (die meisten Kalender-Oberflächen unterstützen das Duplizieren eines Ereignisses), und ändere dann nur Zeiten und Werte — so vermeidest du, jedes Mal von Grund auf einen neuen Syntaxfehler einzuführen. Bist du dir bei einem neuen Block unsicher, füge ihn vor dem Speichern in einen lokalen Editor mit YAML-Syntaxprüfung ein (z. B. VS Code).
 
@@ -720,11 +723,26 @@ Ein Feuchtigkeitswert ist Voraussetzung: entweder ein Sensor wie oben oder ein M
 
 ---
 
+### 27. IR-gesteuerte Klimaanlagen, die die Bridge überlasten
+
+Drei IR-gesteuerte Klimaanlagen, alle über denselben IR-Blaster angesteuert. Wird die Gruppe eingeschaltet, gehen alle drei Befehle im selben Moment raus, was den Blaster gelegentlich überfordert und einen der Befehle verschluckt.
+
+**Entitäten:** `climate.schlafzimmer_ac`, `climate.buero_ac`, `climate.gaestezimmer_ac` (alle über einen IR-Blaster)
+
+| Einstellung | Wert |
+|---|---|
+| Mitglieder | `climate.schlafzimmer_ac`, `climate.buero_ac`, `climate.gaestezimmer_ac` |
+| Verzögerung zwischen Mitglieder-Befehlen | 0,3 s |
+
+**Ergebnis:** Statt dass alle drei Befehle gleichzeitig feuern, erhält jedes Mitglied seinen Befehl etwa 0,3 Sekunden nach dem vorherigen — der Blaster bekommt so Zeit, jedes Signal sauber zu senden. Dieselbe Option hilft auch bei Zigbee-Koordinatoren, die Schwierigkeiten haben, wenn mehrere Geräte im selben Moment angesprochen werden.
+
+---
+
 ## Tipps
 
 - **Einfach anfangen:** Zuerst die grundlegende Gruppierung zum Laufen bringen (nur Mitglieder, keine weiteren Einstellungen), dann Funktionen nach und nach hinzufügen.
 - **Erweiterte Funktionen:** In der Gruppenkonfiguration aktivieren, um alles jenseits der Basic-Stufe freizuschalten — jedes Beispiel nach dem Basic-Abschnitt benötigt sie.
-- **Sync-Modus:** Nutze `Lock`, wenn die Gruppe die alleinige Quelle der Wahrheit sein soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen werden sollen; nutze `Mirror/Lock`, wenn nur einige Attribute synchronisiert werden sollen (Beispiel 22).
+- **Sync-Modus:** Nutze `Lock`, wenn die Gruppe die alleinige Quelle der Wahrheit sein soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen und an alle gespiegelt werden sollen; nutze `Adopt Only` (bzw. *Nur übernehmen*), wenn Änderungen an einem Mitglied das Gruppenziel anpassen sollen, ohne die anderen Geräte anzusteuern; nutze `Mirror/Lock`, wenn nur einige Attribute synchronisiert werden sollen (Beispiel 22).
 - **Sperr-Priorität:** Hauptschalter > Fenstersteuerung > Anwesenheitssteuerung — sind mehrere gleichzeitig aktiv, wird nur die Aktion der höchstrangigen an Mitglieder gesendet.
 - **Zeitplan + Boost:** Boost rangiert über dem Zeitplan. Zeitplan-Zeitblock-Änderungen laufen während eines Boosts weiterhin im Hintergrund.
 - **Kalibrierung:** Nutze CGHs eigene Kalibrierung nur, wenn du nicht bereits Better Thermostat oder Versatile Thermostat verwendest — die haben ihre eigene (Beispiel 13).

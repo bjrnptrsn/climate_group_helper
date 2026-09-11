@@ -1,4 +1,5 @@
 """Status and analytics aggregation for ClimateGroupHelper extra_state_attributes."""
+
 from __future__ import annotations
 
 from dataclasses import fields
@@ -31,7 +32,7 @@ from .const import (
     ATTR_ACTIVE_SCHEDULE_SLOT_TITLE,
     ATTR_ASSUMED_STATE,
     ATTR_BLOCKING_SOURCES,
-    ATTR_BYPASS_DELTA,
+    ATTR_SCHEDULE_BYPASS_CLAIMS,
     ATTR_CONFIG_OVERRIDES,
     ATTR_CURRENT_HVAC_MODES,
     ATTR_EFFECTIVE_SYNC_ATTRIBUTES,
@@ -44,6 +45,7 @@ from .const import (
     ATTR_LAST_CHANGED,
     ATTR_LAST_ENTITY,
     ATTR_LAST_SOURCE,
+    ATTR_MASTER_ENTITY_ID,
     ATTR_MASTER_FALLBACK_ACTIVE,
     ATTR_MEMBER_DIVERGENCE,
     ATTR_MEMBER_ENTITIES,
@@ -93,10 +95,10 @@ def _compute_member_divergence(group: ClimateGroupHelper) -> dict[str, dict[str,
 
     # 1. HVAC Mode (via display_mode so template-covered members report heat_cool)
     hvac_modes: dict[str, str] = {}
-    for s in states:
-        mode = group.member_template_manager.display_mode(s)
+    for state in states:
+        mode = group.member_template_manager.display_mode(state)
         if mode is not None:
-            hvac_modes[s.entity_id] = mode
+            hvac_modes[state.entity_id] = mode
     if len(hvac_modes) >= 2 and len(set(hvac_modes.values())) > 1:
         divergence[ATTR_HVAC_MODE] = hvac_modes
 
@@ -106,15 +108,15 @@ def _compute_member_divergence(group: ClimateGroupHelper) -> dict[str, dict[str,
     for attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
         raw_map: dict[str, Any] = {}
         cmp_vals: list[float] = []
-        for s in states:
-            val = s.attributes.get(attr)
+        for state in states:
+            val = state.attributes.get(attr)
             if val is not None:
                 try:
                     fval = float(val)
                 except (ValueError, TypeError):
                     continue
-                raw_map[s.entity_id] = val
-                offset = temp_offset_map.get(s.entity_id, 0.0) if temp_offset_correction else 0.0
+                raw_map[state.entity_id] = val
+                offset = temp_offset_map.get(state.entity_id, 0.0) if temp_offset_correction else 0.0
                 cmp_vals.append(fval - offset)
 
         if len(cmp_vals) >= 2 and (max(cmp_vals) - min(cmp_vals)) > FLOAT_TOLERANCE:
@@ -123,14 +125,14 @@ def _compute_member_divergence(group: ClimateGroupHelper) -> dict[str, dict[str,
     # 3. Humidity (always raw float comparison)
     raw_humidity: dict[str, Any] = {}
     cmp_humidity: list[float] = []
-    for s in states:
-        val = s.attributes.get(ATTR_HUMIDITY)
+    for state in states:
+        val = state.attributes.get(ATTR_HUMIDITY)
         if val is not None:
             try:
                 fval = float(val)
             except (ValueError, TypeError):
                 continue
-            raw_humidity[s.entity_id] = val
+            raw_humidity[state.entity_id] = val
             cmp_humidity.append(fval)
 
     if len(cmp_humidity) >= 2 and (max(cmp_humidity) - min(cmp_humidity)) > FLOAT_TOLERANCE:
@@ -139,10 +141,10 @@ def _compute_member_divergence(group: ClimateGroupHelper) -> dict[str, dict[str,
     # 4. Discrete string attributes (fan_mode, swing_mode, swing_horizontal_mode, preset_mode)
     for attr in (ATTR_FAN_MODE, ATTR_SWING_MODE, ATTR_SWING_HORIZONTAL_MODE, ATTR_PRESET_MODE):
         discrete_map: dict[str, Any] = {}
-        for s in states:
-            val = s.attributes.get(attr)
+        for state in states:
+            val = state.attributes.get(attr)
             if val is not None:
-                discrete_map[s.entity_id] = val
+                discrete_map[state.entity_id] = val
         if len(discrete_map) >= 2 and len(set(discrete_map.values())) > 1:
             divergence[attr] = discrete_map
 
@@ -161,7 +163,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     if run_state.active_virtual_preset:
         attrs[ATTR_ACTIVE_VIRTUAL_PRESET] = run_state.active_virtual_preset
     if runtime_presets := group.preset_manager.persisted_runtime_presets:
-        attrs[ATTR_RUNTIME_GROUP_PRESETS] = {k: dict(v) for k, v in runtime_presets.items()}
+        attrs[ATTR_RUNTIME_GROUP_PRESETS] = {key: dict(value) for key, value in runtime_presets.items()}
     attrs[ATTR_CURRENT_HVAC_MODES] = group._current_hvac_modes
     attrs[ATTR_GROUP_OFFSET] = run_state.group_offset
     attrs[ATTR_MEMBER_DIVERGENCE] = _compute_member_divergence(group)
@@ -171,6 +173,8 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
 
     if group.advanced_mode and group.offset_entity_id:
         attrs[ATTR_OFFSET_ENTITY_ID] = group.offset_entity_id
+    if group._master_entity_id:
+        attrs[ATTR_MASTER_ENTITY_ID] = group._master_entity_id
 
     # --- Source information ---
     if target.last_source:
@@ -185,8 +189,8 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # member list, not from live states, and an all-members-unavailable group is
     # exactly the situation where a dashboard needs to show "0 of N active".
     attrs[ATTR_ACTIVE_MEMBER_COUNT] = sum(
-        1 for s in (group.aggregator.states or ())
-        if is_available(s) and s.state != HVACMode.OFF
+        1 for state in (group.aggregator.states or ())
+        if is_available(state) and state.state != HVACMode.OFF
     )
     attrs[ATTR_TOTAL_MEMBER_COUNT] = len(group.climate_entity_ids)
 
@@ -201,9 +205,9 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     if "presence" in run_state.blocking_sources:
         sensors: list[str] = group.config.get(CONF_PRESENCE_SENSOR, [])
         if any(
-            (s := group.hass.states.get(sid)) is not None
-            and not is_available(s)
-            for sid in sensors
+            (state := group.hass.states.get(sensor_id)) is not None
+            and not is_available(state)
+            for sensor_id in sensors
         ):
             attrs[ATTR_PRESENCE_FALLBACK] = True
 
@@ -254,7 +258,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # Effective sync config (resolves schedule overrides at call-time)
     attrs[ATTR_EFFECTIVE_SYNC_MODE] = group.sync_mode_handler.sync_mode
     attrs[ATTR_EFFECTIVE_SYNC_ATTRIBUTES] = [
-        k for k, v in group.sync_mode_handler.filter_state.to_dict().items() if v
+        key for key, value in group.sync_mode_handler.filter_state.to_dict().items() if value
     ]
 
     # Schedule entities
@@ -275,8 +279,8 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     if run_state.boost_until is not None:
         attrs[ATTR_BOOST_UNTIL] = run_state.boost_until.isoformat()
 
-    # Persisted bypass delta (for restore)
-    if run_state.bypass_delta:
-        attrs[ATTR_BYPASS_DELTA] = {k: list(v) for k, v in run_state.bypass_delta.items()}
+    # Persisted schedule bypass claims (for restore)
+    if run_state.schedule_bypass_claims:
+        attrs[ATTR_SCHEDULE_BYPASS_CLAIMS] = {key: list(value) for key, value in run_state.schedule_bypass_claims.items()}
 
     return attrs

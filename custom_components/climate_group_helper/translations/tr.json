@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Üyenin Kapalı Durumuna Saygı Göster (Senkronizasyon)"
             },
             "data_description": {
-              "sync_mode": "Bir üye grup dışından değiştirildiğinde ne yapılacağı. Devre dışı: yoksay. Takip: değişiklikleri aktarmadan benimse. Yansıt: değişiklikleri yansıt. Kilitle: değişiklikleri geri al. Yansıt/Kilitle: seçilen öznitelikleri yansıt, diğerlerini geri al. Master/Kilitle: ana varlığı yansıt, diğerlerini geri al.",
+              "sync_mode": "Bir üye grup dışından değiştirildiğinde ne yapılacağı. Devre dışı: yoksay. Yansıt: değişiklikleri yansıt. Kilitle: değişiklikleri geri al. Yansıt/Kilitle: seçilen öznitelikleri yansıt, diğerlerini geri al. Master/Kilitle: ana varlığı yansıt, diğerlerini geri al. Yalnızca benimse: değişiklikleri aktarmadan benimse.",
               "sync_attributes": "Senkronizasyon Modunun hangi özniteliklerde etkili olduğunu tanımlar. Seçilen ve seçilmeyen özniteliklerin işlenmesi (Yansıtma, Geri Alma veya Yoksayma) seçilen moda bağlıdır.",
               "ignore_off_members_sync": "Manuel olarak kapatılan üyeler kendi haline bırakılır. Durumları ne yansıtılır ne de geri alınır. Not: doğrudan grup komutları bu ayardan bağımsız olarak her zaman tüm üyelere ulaşır."
             }
@@ -152,7 +152,8 @@
               "presence_away_temperature": "Uzakta Sıcaklığı",
               "presence_away_preset": "Uzakta Ön Ayarı",
               "presence_away_delay": "Uzakta Gecikmesi (saniye)",
-              "presence_return_delay": "Dönüş Gecikmesi (saniye)"
+              "presence_return_delay": "Dönüş Gecikmesi (saniye)",
+              "ignore_off_members_presence": "Üyenin kapalı durumuna uy (mevcudiyet)"
             },
             "data_description": {
               "presence_mode": "Yokluk algılandığında otomatik uzakta-yedek eylemini etkinleştirin veya devre dışı bırakın.",
@@ -163,24 +164,25 @@
               "presence_away_temperature": "Uzaktayken ayarlanacak sabit sıcaklık.",
               "presence_away_preset": "Uzaktayken etkinleştirilecek ön ayar modu.",
               "presence_away_delay": "Sensör yokluğu bildirdikten sonra uzakta modunu etkinleştirmeden önce beklenecek süre.",
-              "presence_return_delay": "Sensör varlığı bildirdikten sonra geri yüklemeden önce beklenecek süre."
+              "presence_return_delay": "Sensör varlığı bildirdikten sonra geri yüklemeden önce beklenecek süre.",
+              "ignore_off_members_presence": "Kapalı üyeleri rahat bırakır — ayrılırken, dönerken veya her ikisinde. Yokluk eylemi \"Kapat\" olduğunda geçerli değildir, çünkü üyeleri grubun kendisi kapatmıştır."
             }
           },
           "schedule_section": {
             "name": "Program Otomasyonu",
             "description": "İklim ayarlarını otomatikleştirmek için bir program veya takvim varlığı bağlayın. Zaman aralığı verileri, grup davranışını zaman aralığı bazında ayarlamak için iklim özniteliklerini (temperature, hvac_mode) ve meta anahtarları (turn_off, sync_mode, sync_attributes) içerebilir.",
             "data": {
-              "schedule_entity": "Temel Program / Takvim Varlığı",
-              "schedule_fallback_payload": "Etkin Olmayan Temel Program / Takvim için Yedek Durum (YAML)",
+              "schedule_entity": "Ana Program / Takvim Varlığı",
+              "schedule_fallback_payload": "Etkin Olmayan Ana Program / Takvim için Yedek Durum (YAML)",
               "schedule_bypass_entity": "Bypass Program / Takvim Varlığı",
               "retain_service_changes_schedule": "Hizmet Aracılığıyla Yapılan Değişiklikleri Koru (Program)",
               "ignore_off_members_schedule": "Üyenin Kapalı Durumuna Saygı Göster (Program)"
             },
             "data_description": {
               "schedule_entity": "Bir schedule.* veya calendar.* varlığı seçin. Program varlıkları için zaman aralığı verileri, aralığın özniteliklerinden okunur. Takvim varlıkları için zaman aralığı verileri, etkinliğin description alanından YAML olarak okunur. Desteklenen anahtarlar: iklim öznitelikleri ve meta anahtarlar.",
-              "schedule_fallback_payload": "Temel programın etkin blokları dışında onun yerine geçer, böylece kesintisiz 24/7 programlara gerek kalmaz. Baypas katmanı her zamanki gibi çalışmaya devam eder ve etkinken bunu geçersiz kılar. Yukarıdakiyle aynı YAML biçimi (ör. temperature: 17, hvac_mode: heat).",
+              "schedule_fallback_payload": "Ana programın etkin blokları dışında onun yerine geçer, böylece kesintisiz 24/7 programlara gerek kalmaz. Baypas katmanı her zamanki gibi çalışmaya devam eder ve etkinken bunu geçersiz kılar. Yukarıdakiyle aynı YAML biçimi (ör. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "İsteğe bağlı daha yüksek öncelikli katman (örn. bir tatil takvimi). Etkin olduğunda, zaman aralığı verileri ana programı geçersiz kılar. Zaman aralığı verileri aynı şekilde okunur: schedule.* varlıkları için öznitelikler, calendar.* varlıkları için YAML açıklaması.",
-              "retain_service_changes_schedule": "Hizmet aracılığıyla değiştirilen temel programı, baypası ve yedek durumu yeniden başlatmadan sonra korur. Aksi takdirde yapılandırılmış varsayılanlara sıfırlanır.",
+              "retain_service_changes_schedule": "Hizmet aracılığıyla değiştirilen ana programı, baypası ve yedek durumu yeniden başlatmadan sonra korur. Aksi takdirde yapılandırılmış varsayılanlara sıfırlanır.",
               "ignore_off_members_schedule": "Program, şu anda kapalı olan üyeleri AÇMAZ."
             }
           },
@@ -344,6 +346,7 @@
               "retry_attempts": "Yeniden Deneme Sayısı",
               "retry_delay": "Yeniden Deneme Gecikmesi (saniye)",
               "force_retry": "Yeniden Denemeyi Zorla",
+              "member_command_delay": "Üye komutları arası gecikme (saniye)",
               "grace_period": "İyimser Arayüz Tolerans Süresi (saniye)",
               "expose_smart_sensors": "Akıllı Sensörleri Göster",
               "expose_member_entities": "Üye Listesini Göster",
@@ -354,6 +357,7 @@
               "retry_attempts": "Bir cihaz yanıt vermezse bir komutun kaç kez yeniden gönderileceği. Devre dışı bırakmak için 0 olarak ayarlayın.",
               "retry_delay": "Yeniden deneme girişimleri arasındaki duraklama. Cihazlara toparlanmaları için bir an vermek güvenilirliği artırabilir.",
               "force_retry": "Hedef durumu zaten bildiriyor olsalar bile komutları her zaman tüm üyelere yeniden gönder.",
+              "member_command_delay": "Her bir üyeye gönderilen komutlar arasındaki bekleme süresi. Birden fazla cihazı aynı anda kontrol etmenin ağınızı veya köprünüzü aşırı yüklediği durumlarda faydalıdır (örn. IR vericiler, bazı Zigbee koordinatörleri). Devre dışı bırakmak için 0 yapın.",
               "grace_period": "Grubun, üye ortalamasına geçmeden önce komut verilen değeri ne kadar süreyle göstereceği. Yavaş cihazlar (bulut köprüleri, Zigbee) eski durumlarını geri yansıttığında arayüz titremesini önler. Devre dışı bırakmak için 0 olarak ayarlayın.",
               "expose_smart_sensors": "Grubun sıcaklığı ve nemi için ekstra sensör varlıkları oluşturur (grafikler için kullanışlıdır).",
               "expose_member_entities": "Tüm üye varlık kimliklerini listeleyen bir öznitelik oluşturur.",
@@ -369,6 +373,7 @@
     },
     "error": {
       "no_entities": "Grupta en az bir iklim cihazı kalmalıdır.",
+      "master_not_in_members": "Ana varlık grubun bir üyesi olmalıdır.",
       "master_refresh_notice": "Ana Varlık eklendi. Yeni seçenekler kullanılabilir.",
       "master_options_notice": "Yeni Ana Varlık seçeneği",
       "isolation_all_selected": "En az bir üye izolasyon dışında kalmalıdır.",
@@ -457,11 +462,11 @@
     "sync_mode": {
       "options": {
         "disabled": "Devre Dışı – Üyeler arasında otomatik senkronizasyon yok",
-        "follow_only": "Takip – Bir cihazdaki manuel değişiklikler grubu günceller, ancak diğerlerine aktarılmaz",
         "mirror": "Yansıt – Bir cihazdaki manuel değişiklikler tüm üyeleri günceller",
         "lock": "Kilitle – Manuel değişiklikleri grup durumuna uyacak şekilde geri alır",
         "mirror_lock": "Yansıt/Kilitle – Seçilen öznitelikler yansıtılır, diğerleri sıkı bir şekilde kilitlenir",
-        "master_lock": "Master/Kilitle – Yalnızca ana varlık grup hedefini değiştirebilir"
+        "master_lock": "Master/Kilitle – Yalnızca ana varlık grup hedefini değiştirebilir",
+        "adopt_only": "Yalnızca benimse – Grup, bir cihazdaki manuel değişiklikleri diğerlerine aktarmadan benimser"
       }
     },
     "sync_attributes": {
@@ -542,6 +547,14 @@
         "away_offset": "Uzakta Ofseti",
         "away_temperature": "Uzakta Sıcaklığı",
         "away_preset": "Uzakta Ön Ayarı"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Devre dışı – Kapalı üyeler açılır",
+        "away": "Ayrılırken",
+        "home": "Dönerken",
+        "away_home": "Ayrılırken ve dönerken"
       }
     },
     "range_template_deadband_action": {
@@ -657,7 +670,7 @@
     },
     "set_schedule_fallback_payload": {
       "name": "Program Yedek Yükünü Ayarla",
-      "description": "Temel program kapalıyken uygulanan yedek yükü ayarlar veya temizler. Yapılandırılmış yedek yükü geçersiz kılar.",
+      "description": "Ana program kapalıyken uygulanan yedek yükü ayarlar veya temizler. Yapılandırılmış yedek yükü geçersiz kılar.",
       "fields": {
         "fallback_payload": {
           "name": "Yedek Yük",

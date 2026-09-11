@@ -39,7 +39,7 @@ from .const import (
     ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY,
     ATTR_ACTIVE_SCHEDULE_ENTITY,
     ATTR_ACTIVE_VIRTUAL_PRESET,
-    ATTR_BYPASS_DELTA,
+    ATTR_SCHEDULE_BYPASS_CLAIMS,
     ATTR_GROUP_OFFSET,
     ATTR_ISOLATED_MEMBERS,
     ATTR_LAST_ACTIVE_HVAC_MODE,
@@ -92,7 +92,7 @@ def strip_self_reference(group: ClimateGroupHelper) -> None:
             group.entity_id,
         )
         group.climate_entity_ids = [
-            eid for eid in group.climate_entity_ids if eid != group.entity_id
+            entity_id for entity_id in group.climate_entity_ids if entity_id != group.entity_id
         ]
 
 
@@ -105,18 +105,18 @@ def filter_cgh_entities(
     """Remove own CGH entities from a list and log a warning for each one found."""
     registry = er.async_get(hass)
     valid_entities: list[str] = []
-    for eid in entity_ids:
-        entry = registry.async_get(eid)
+    for entity_id in entity_ids:
+        entry = registry.async_get(entity_id)
         if entry and entry.platform == DOMAIN:
             _LOGGER.warning(
                 "[%s] Loop protection: '%s' is a CGH entity and cannot be used as "
                 "external %s input — ignoring. Remove it in the integration options.",
                 group_entity_id,
-                eid,
+                entity_id,
                 label,
             )
         else:
-            valid_entities.append(eid)
+            valid_entities.append(entity_id)
     return valid_entities
 
 
@@ -177,21 +177,21 @@ def warn_missing_entities(
         CONF_TEMP_UPDATE_TARGETS,
         CONF_HUMIDITY_UPDATE_TARGETS,
     ):
-        for eid in config.get(key, []):
-            checks.append((key, eid))
+        for entity_id in config.get(key, []):
+            checks.append((key, entity_id))
     # Isolation entities and sensors are nested inside CONF_ISOLATION_RULES
     for rule in config.get(CONF_ISOLATION_RULES, []):
         if sensor := rule.get(CONF_ISOLATION_SENSOR):
             checks.append((CONF_ISOLATION_SENSOR, sensor))
-        for eid in rule.get(CONF_ISOLATION_ENTITIES, []):
-            checks.append((CONF_ISOLATION_ENTITIES, eid))
-    for key, eid in checks:
-        if hass.states.get(eid) is None and registry.async_get(eid) is None:
+        for entity_id in rule.get(CONF_ISOLATION_ENTITIES, []):
+            checks.append((CONF_ISOLATION_ENTITIES, entity_id))
+    for key, entity_id in checks:
+        if hass.states.get(entity_id) is None and registry.async_get(entity_id) is None:
             _LOGGER.warning(
                 "[%s] Configured entity '%s' (option '%s') does not exist — "
                 "it may have been deleted. Update the integration options.",
                 group_entity_id,
-                eid,
+                entity_id,
                 key,
             )
 
@@ -199,7 +199,7 @@ def warn_missing_entities(
 def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
     """Restore state from last known state."""
     last_attrs = last_state.attributes
-    valid_hvac_modes = {m.value for m in HVACMode}
+    valid_hvac_modes = {mode.value for mode in HVACMode}
 
     # Restore group offset first to ensure it's available for TargetState restoration.
     # Clamped like every other write (see `clean_offset`): this path decides the
@@ -221,8 +221,8 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
     else:
         # We filter for ClimateState fields to ensure we only store relevant climate attributes
         restored_data: dict[str, Any] = {}
-        for field in fields(ClimateState):
-            key = field.name
+        for f in fields(ClimateState):
+            key = f.name
             if key == "hvac_mode":
                 if last_state.state in valid_hvac_modes:
                     restored_data[key] = last_state.state
@@ -274,7 +274,7 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
     if ATTR_TARGET_HUMIDITY_STEP in last_attrs:
         group._attr_target_humidity_step = last_attrs.get(ATTR_TARGET_HUMIDITY_STEP)
 
-    # Restore schedule changes made via service (base entity, bypass entity,
+    # Restore schedule changes made via service (main entity, bypass entity,
     # fallback payload). All three are governed by the same flag — without it
     # the group falls back to its configured defaults after a restart.
     if group.config.get(CONF_RETAIN_SERVICE_CHANGES_SCHEDULE):
@@ -339,9 +339,9 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
         and isinstance(restored_runtime_presets, dict)
     ):
         normalized_presets = {
-            name: normalize_yaml_bool_modes(p)
-            for name, p in restored_runtime_presets.items()
-            if isinstance(p, dict)
+            preset_name: normalize_yaml_bool_modes(preset)
+            for preset_name, preset in restored_runtime_presets.items()
+            if isinstance(preset, dict)
         }
         group.preset_manager.restore_runtime_presets(normalized_presets)
         _LOGGER.debug(
@@ -373,17 +373,17 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
                     preset_mode=None
                 )
 
-    # Restore bypass delta
-    if (saved_delta := last_attrs.get(ATTR_BYPASS_DELTA)) and isinstance(
-        saved_delta, dict
+    # Restore schedule bypass claims
+    if (saved_claims := last_attrs.get(ATTR_SCHEDULE_BYPASS_CLAIMS)) and isinstance(
+        saved_claims, dict
     ):
-        delta_map = {}
-        for k, v in saved_delta.items():
-            if isinstance(v, (list, tuple)) and len(v) == 2:
-                delta_map[k] = (v[0], v[1])
-        if delta_map:
-            group.run_state = group.run_state.set_bypass_delta(delta_map)
-            _LOGGER.debug("[%s] Restored bypass delta: %s", group.entity_id, delta_map)
+        claim_map = {}
+        for key, value in saved_claims.items():
+            if isinstance(value, (list, tuple)) and len(value) == 2:
+                claim_map[key] = (value[0], value[1])
+        if claim_map:
+            group.run_state = group.run_state.set_bypass_claims(claim_map)
+            _LOGGER.debug("[%s] Restored schedule bypass claims: %s", group.entity_id, claim_map)
 
     # Restore isolated members (with defensive full-isolation invariant check).
     # Only entities still covered by a currently instantiated

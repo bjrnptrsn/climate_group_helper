@@ -137,25 +137,11 @@ class BaseOverrideManager:
     def _any_member_not_off(self) -> bool:
         """Return True if any reachable, non-isolated member has an HVAC mode other than OFF."""
         return any(
-            (st := available_state(self._group.aggregator.read_member_state(eid)))
-            and st.state != HVACMode.OFF
-            for eid in self._group.climate_entity_ids
-            if eid not in self._group.run_state.isolated_members
+            (member_state := available_state(self._group.aggregator.read_member_state(entity_id)))
+            and member_state.state != HVACMode.OFF
+            for entity_id in self._group.climate_entity_ids
+            if entity_id not in self._group.run_state.isolated_members
         )
-
-    def _inject_wake_mode(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """Add the target hvac_mode to a payload that lacks one.
-
-        Used only on the cascade path (_resolve_remaining_blocks): the released
-        higher-priority block may have left members OFF, and a bare setpoint or
-        preset payload won't wake them. No-op when the payload already carries
-        an hvac_mode or the target itself is OFF.
-        """
-        if "hvac_mode" not in payload:
-            target_hvac = self._group.shared_target_state.hvac_mode
-            if target_hvac != HVACMode.OFF:
-                return {**payload, "hvac_mode": target_hvac}
-        return payload
 
     async def _resolve_remaining_blocks(self) -> None:
         """Re-assert the remaining active block with the highest priority."""
@@ -163,9 +149,9 @@ class BaseOverrideManager:
         if "switch" in sources:
             await self._group.switch_override_manager.enforce_override()
         elif "window" in sources:
-            await self._group.window_override_manager.enforce_override(wake_members=True)
+            await self._group.window_override_manager.enforce_override()
         elif "presence" in sources:
-            await self._group.presence_override_manager.enforce_override(wake_members=True)
+            await self._group.presence_override_manager.enforce_override()
 
 
 class BoostOverrideManager(BaseOverrideManager):
@@ -198,6 +184,12 @@ class BoostOverrideManager(BaseOverrideManager):
         payload: dict[str, Any] = {"temperature": temperature}
         if self._group.shared_target_state.hvac_mode == HVACMode.OFF:
             fallback_mode = self._group.run_state.last_active_hvac_mode or HVACMode.HEAT
+            # heat_cool and auto cannot carry a single setpoint — the wake-up
+            # filter drops it, leaving an active-looking boost that never reaches
+            # the devices. Fall back to heat, the same default used when no
+            # last-active mode is known.
+            if fallback_mode in (HVACMode.HEAT_COOL, HVACMode.AUTO):
+                fallback_mode = HVACMode.HEAT
             payload["hvac_mode"] = fallback_mode
 
         await self.call_handler.call_immediate(payload)
@@ -308,10 +300,12 @@ class SwitchOverrideManager(BaseOverrideManager):
         # Cancel our own pending debounced enforce call — it carries a stale payload
         # that must not land after the restore or the cascade re-assert.
         await self.enforce_call_handler.async_cancel_all()
-        if not self._group.run_state.blocking_sources:
-            await self.call_handler.call_immediate()
-        else:
+        await self.call_handler.call_immediate()
+        if self._group.run_state.blocking_sources:
             await self._resolve_remaining_blocks()
+        # Isolation last: SwitchCallHandler bypasses isolated_members by design,
+        # so the restore push reaches every member either way. Re-isolating
+        # afterwards is what puts the protected ones back to OFF.
         await reevaluate_all(self._group)
 
     async def enforce_override(self) -> None:
@@ -367,17 +361,16 @@ class WindowOverrideManager(BaseOverrideManager):
         await self.call_handler.call_immediate(payload)
 
     async def restore(self) -> None:
-        """Remove 'window' from blocking_sources; restore members if no other block."""
+        """Remove 'window' from blocking_sources, restore members, re-assert any remaining block."""
         self._unblock()
         # Cancel our own pending debounced enforce call — it carries a stale payload
         # that must not land after the restore or the cascade re-assert.
         await self.call_handler.async_cancel_all()
-        if not self._group.run_state.blocking_sources:
-            await self.call_handler.call_immediate()
-        else:
+        await self.call_handler.call_immediate()
+        if self._group.run_state.blocking_sources:
             await self._resolve_remaining_blocks()
 
-    async def enforce_override(self, wake_members: bool = False) -> None:
+    async def enforce_override(self) -> None:
         """Push the active window override state to deviating members.
 
         Only runs when 'window' is in blocking_sources — SwitchOverrideManager
@@ -390,12 +383,7 @@ class WindowOverrideManager(BaseOverrideManager):
         if "switch" in self._group.run_state.blocking_sources:
             return
         _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
-
-        payload = self._active_data()
-        if wake_members:
-            payload = self._inject_wake_mode(payload)
-
-        await self.call_handler.call_debounced(payload)
+        await self.call_handler.call_debounced(self._active_data())
 
 
 class PresenceOverrideManager(BaseOverrideManager):
@@ -460,12 +448,11 @@ class PresenceOverrideManager(BaseOverrideManager):
         # Cancel our own pending debounced enforce call — it carries a stale payload
         # that must not land after the restore or the cascade re-assert.
         await self.call_handler.async_cancel_all()
-        if not self._group.run_state.blocking_sources:
-            await self.call_handler.call_immediate()
-        else:
+        await self.call_handler.call_immediate()
+        if self._group.run_state.blocking_sources:
             await self._resolve_remaining_blocks()
 
-    async def enforce_override(self, wake_members: bool = False) -> None:
+    async def enforce_override(self) -> None:
         """Push the away payload to deviating members while 'presence' is active."""
         if "presence" not in self._group.run_state.blocking_sources:
             return
@@ -473,9 +460,4 @@ class PresenceOverrideManager(BaseOverrideManager):
         if {"switch", "window"} & self._group.run_state.blocking_sources:
             return
         _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
-
-        payload = self._active_data()
-        if wake_members:
-            payload = self._inject_wake_mode(payload)
-
-        await self.call_handler.call_debounced(payload)
+        await self.call_handler.call_debounced(self._active_data())

@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respektuj stan WYŁ członków (Synchronizacja)"
             },
             "data_description": {
-              "sync_mode": "Co zrobić, gdy członek zmieni się poza grupą. Disabled: ignoruj. Follow: przejmij zmiany bez przenoszenia ich dalej. Mirror: lustrzane odbicie. Lock: cofnij zmiany. Mirror/Lock: lustrzane wybrane, cofnij niewybrane. Master/Lock: lustrzane master, cofnij inne.",
+              "sync_mode": "Co zrobić, gdy członek zmieni się poza grupą. Disabled: ignoruj. Mirror: lustrzane odbicie. Lock: cofnij zmiany. Mirror/Lock: lustrzane wybrane, cofnij niewybrane. Master/Lock: lustrzane master, cofnij inne. Tylko przejmij: przejmij zmiany bez przenoszenia ich dalej.",
               "sync_attributes": "Definiuje, na które atrybuty wpływa tryb synchronizacji. Obsługa wybranych i niewybranych atrybutów (Mirror, Revert lub Ignore) zależy od wybranego trybu.",
               "ignore_off_members_sync": "Ręcznie wyłączeni członkowie są pozostawiani w spokoju. Ich stan nie jest ani odzwierciedlany, ani cofany. Uwaga: bezpośrednie polecenia grupowe zawsze docierają do wszystkich."
             }
@@ -152,7 +152,8 @@
               "presence_away_temperature": "Temperatura nieobecności",
               "presence_away_preset": "Preset nieobecności",
               "presence_away_delay": "Opóźnienie nieobecności (sekundy)",
-              "presence_return_delay": "Opóźnienie powrotu (sekundy)"
+              "presence_return_delay": "Opóźnienie powrotu (sekundy)",
+              "ignore_off_members_presence": "Respektuj wyłączony stan członków (obecność)"
             },
             "data_description": {
               "presence_mode": "Włącz lub wyłącz automatyczne przechodzenie w tryb nieobecności po wykryciu braku osób.",
@@ -163,24 +164,25 @@
               "presence_away_temperature": "Stała temperatura docelowa przy nieobecności.",
               "presence_away_preset": "Preset przy nieobecności (np. 'eco', 'away').",
               "presence_away_delay": "Czas oczekiwania po wykryciu nieobecności przed aktywacją trybu nieobecności.",
-              "presence_return_delay": "Czas oczekiwania po wykryciu obecności przed przywróceniem poprzedniego stanu."
+              "presence_return_delay": "Czas oczekiwania po wykryciu obecności przed przywróceniem poprzedniego stanu.",
+              "ignore_off_members_presence": "Pozostawia wyłączonych członków w spokoju — przy wyjściu, przy powrocie lub w obu przypadkach. Nie dotyczy sytuacji, gdy akcja nieobecności to „Wyłącz”, ponieważ wtedy grupa sama wyłączyła członków."
             }
           },
           "schedule_section": {
             "name": "Automatyzacja harmonogramu",
             "description": "Połącz encję harmonogramu lub kalendarza, aby zautomatyzować ustawienia klimatyczne. Dane slotu mogą zawierać atrybuty klimatyczne (temperature, hvac_mode) i meta-klucze (turn_off, sync_mode, sync_attributes) w celu dostosowania zachowania grupy w każdym slocie.",
             "data": {
-              "schedule_entity": "Podstawowa encja harmonogramu/kalendarza",
-              "schedule_fallback_payload": "Stan zapasowy przy nieaktywnym harmonogramie podstawowym/kalendarzu (YAML)",
+              "schedule_entity": "Główna encja harmonogramu/kalendarza",
+              "schedule_fallback_payload": "Stan zapasowy przy nieaktywnym harmonogramie głównym/kalendarzu (YAML)",
               "schedule_bypass_entity": "Encja harmonogramu/kalendarza obejścia",
               "retain_service_changes_schedule": "Zachowaj zmiany wprowadzone przez usługę (Harmonogram)",
               "ignore_off_members_schedule": "Respektuj stan WYŁ członków (Harmonogram)"
             },
             "data_description": {
               "schedule_entity": "Wybierz encję schedule.* lub calendar.*. Dla encji harmonogramu dane slotu są odczytywane z atrybutów slotu. Dla encji kalendarza dane slotu są odczytywane jako YAML z pola opisu zdarzenia. Obsługiwane klucze: atrybuty klimatyczne i meta-klucze.",
-              "schedule_fallback_payload": "Zastępuje harmonogram podstawowy poza jego aktywnymi blokami, więc nie potrzebujesz ciągłych harmonogramów 24/7. Warstwa obejścia działa bez zmian i zastępuje go, gdy jest aktywna. Ten sam format YAML co powyżej (np. temperature: 17, hvac_mode: heat).",
-              "schedule_bypass_entity": "Opcjonalna warstwa priorytetowa (np. kalendarz wakacyjny). Gdy aktywna, jej dane slotu zastępują podstawowy harmonogram. Dane slotu są odczytywane tak samo: atrybuty dla encji schedule.*, opis YAML dla encji calendar.*.",
-              "retain_service_changes_schedule": "Zachowuje harmonogram podstawowy, obejście i stan zapasowy zmienione przez usługę po restarcie. W przeciwnym razie wracają do skonfigurowanych wartości domyślnych.",
+              "schedule_fallback_payload": "Zastępuje harmonogram główny poza jego aktywnymi blokami, więc nie potrzebujesz ciągłych harmonogramów 24/7. Warstwa obejścia działa bez zmian i zastępuje go, gdy jest aktywna. Ten sam format YAML co powyżej (np. temperature: 17, hvac_mode: heat).",
+              "schedule_bypass_entity": "Opcjonalna warstwa priorytetowa (np. kalendarz wakacyjny). Gdy aktywna, jej dane slotu zastępują główny harmonogram. Dane slotu są odczytywane tak samo: atrybuty dla encji schedule.*, opis YAML dla encji calendar.*.",
+              "retain_service_changes_schedule": "Zachowuje harmonogram główny, obejście i stan zapasowy zmienione przez usługę po restarcie. W przeciwnym razie wracają do skonfigurowanych wartości domyślnych.",
               "ignore_off_members_schedule": "Harmonogram NIE włączy członków, którzy są obecnie WYŁĄCZENI."
             }
           },
@@ -344,6 +346,7 @@
               "retry_attempts": "Próby Ponowienia",
               "retry_delay": "Opóźnienie Ponowienia (sekundy)",
               "force_retry": "Wymuś ponowną próbę",
+              "member_command_delay": "Opóźnienie między poleceniami do członków (sekundy)",
               "grace_period": "Optymistyczny okres przejścia UI (sekundy)",
               "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
               "expose_member_entities": "Pokaż Listę Członków",
@@ -354,6 +357,7 @@
               "retry_attempts": "Ile razy ponownie wysłać polecenie, jeśli urządzenie nie odpowiada. Ustaw na 0, aby wyłączyć.",
               "retry_delay": "Pauza między próbami. Danie urządzeniom chwili na odzyskanie sprawności może poprawić niezawodność.",
               "force_retry": "Zawsze ponawia wysyłanie poleceń do wszystkich członków, nawet jeśli już raportują stan docelowy.",
+              "member_command_delay": "Przerwa między poleceniami wysyłanymi do poszczególnych członków. Przydatne, gdy jednoczesne sterowanie wieloma urządzeniami przeciąża sieć lub bramkę (np. nadajniki IR, niektóre koordynatory Zigbee). Ustaw 0, aby wyłączyć.",
               "grace_period": "Jak długo grupa wyświetla wysłaną wartość przed przełączeniem na średnią członków. Zapobiega migotaniu UI, gdy wolne urządzenia (mosty Cloud, Zigbee) odsyłają swój stary stan. Ustaw na 0, aby wyłączyć.",
               "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
               "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
@@ -369,6 +373,7 @@
     },
     "error": {
       "no_entities": "Co najmniej jedno urządzenie klimatyczne musi pozostać w grupie.",
+      "master_not_in_members": "Jednostka nadrzędna musi być członkiem grupy.",
       "master_refresh_notice": "Dodano encję nadrzędną (Master). Dostępne nowe opcje.",
       "master_options_notice": "Nowa opcja encji nadrzędnej",
       "isolation_all_selected": "Co najmniej jeden członek musi pozostać poza izolacją.",
@@ -457,11 +462,11 @@
     "sync_mode": {
       "options": {
         "disabled": "Dezaktywowano – Brak automatycznej synchronizacji między członkami",
-        "follow_only": "Follow – Ręczne zmiany na urządzeniu aktualizują grupę, ale nie są przenoszone na pozostałych",
         "mirror": "Mirror – Ręczne zmiany na jednym urządzeniu są przenoszone na wszystkich członków",
         "lock": "Lock – Ręczne zmiany są cofane do stanu grupy",
         "mirror_lock": "Mirror/Lock – Wybrane atrybuty są kopiowane, inne są ściśle przywracane",
-        "master_lock": "Master/Lock – Tylko urządzenie nadrzędne może zmieniać cel grupy"
+        "master_lock": "Master/Lock – Tylko urządzenie nadrzędne może zmieniać cel grupy",
+        "adopt_only": "Tylko przejmij – Grupa przejmuje ręczne zmiany z urządzenia, nie przekazując ich pozostałym"
       }
     },
     "sync_attributes": {
@@ -542,6 +547,14 @@
         "away_offset": "Przesunięcie nieobecności",
         "away_temperature": "Temperatura nieobecności",
         "away_preset": "Preset nieobecności"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Wyłączone – Wyłączeni członkowie są włączani",
+        "away": "Przy wyjściu",
+        "home": "Przy powrocie",
+        "away_home": "Przy wyjściu i powrocie"
       }
     },
     "range_template_deadband_action": {
@@ -657,7 +670,7 @@
     },
     "set_schedule_fallback_payload": {
       "name": "Ustaw ładunek zapasowy harmonogramu",
-      "description": "Ustawia lub czyści ładunek zapasowy stosowany, gdy harmonogram podstawowy jest wyłączony. Zastępuje skonfigurowany ładunek zapasowy.",
+      "description": "Ustawia lub czyści ładunek zapasowy stosowany, gdy harmonogram główny jest wyłączony. Zastępuje skonfigurowany ładunek zapasowy.",
       "fields": {
         "fallback_payload": {
           "name": "Ładunek zapasowy",

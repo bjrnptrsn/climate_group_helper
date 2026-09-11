@@ -1,6 +1,7 @@
 """Calibration handler for Climate Group Helper."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable
@@ -189,13 +190,16 @@ class CalibrationHandler:
         if event_entity_id:
             if domain == "temperature":
                 if mode == CalibrationMode.OFFSET:
-                    # Sensor trigger → all targets; member trigger → only its mapped target
+                    # Sensor trigger → all targets; member trigger → only its mapped target.
+                    # Restricted to `entity_ids` (already the temperature-domain targets) —
+                    # `_target_member_map` also holds humidity targets on the same device,
+                    # which must never receive a temperature-computed OFFSET value.
                     if event_entity_id not in self._group.temp_sensor_entity_ids:
                         if event_entity_id not in self._target_member_map.values():
                             return
                         entity_ids = [
-                            target for target, member in self._target_member_map.items()
-                            if member == event_entity_id
+                            target for target in entity_ids
+                            if self._target_member_map.get(target) == event_entity_id
                         ]
                 elif event_entity_id not in self._group.temp_sensor_entity_ids:
                     return
@@ -301,24 +305,46 @@ class CalibrationHandler:
 
     async def _flush(self) -> None:
         """Write queued calibration values to number entities."""
+        # A slot may have started after the value was queued: the bypass suspends
+        # writes for its whole duration, so a flush firing inside it drops the
+        # queued value. The slot-end cleanup withdraws the override before its
+        # catch-up force_sync, so that path is unaffected.
+        if self.bypassed:
+            self._pending.clear()
+            return
         pending = list(self._pending.items())
         self._pending.clear()
+        member_command_delay = self._group.member_command_delay
 
+        # Resolved up front so the delay below counts actual writes, not raw
+        # queue entries — a member that went OFF/unavailable during the
+        # debouncer cooldown must not consume a gap between two real writes.
+        writes = []
         for entity_id, value in pending:
-            # Re-checked here, not just at queue time: the member may have gone
-            # OFF or unavailable during the debouncer cooldown.
             if reason := self._skip_reason(entity_id):
                 _LOGGER.debug(
                     "[%s] Dropping queued calibration for %s — member is %s",
                     self._group.entity_id, entity_id, reason,
                 )
                 continue
+            writes.append((entity_id, value))
 
-            _LOGGER.debug("[%s] Writing calibration %s → %s", self._group.entity_id, entity_id, value)
-            try:
-                await self._hass.services.async_call(
-                    NUMBER_DOMAIN, "set_value",
-                    {ATTR_ENTITY_ID: entity_id, "value": value},
-                )
-            except Exception:
-                _LOGGER.exception("[%s] Failed to write calibration to %s", self._group.entity_id, entity_id)
+        # Lock shared with the climate call handlers — a calibration write to a
+        # device's number entity must not land in the gap between two staggered
+        # climate calls to that same device, or vice versa. Held across the
+        # whole batch, not per write: released between writes, a climate batch
+        # already waiting would slip into the sub-ms handoff right after a
+        # write — effectively simultaneous on the same radio path.
+        async with self._group.member_command_scope():
+            for index, (entity_id, value) in enumerate(writes):
+                _LOGGER.debug("[%s] Writing calibration %s → %s", self._group.entity_id, entity_id, value)
+                try:
+                    if index > 0 and member_command_delay:
+                        await asyncio.sleep(member_command_delay)
+
+                    await self._hass.services.async_call(
+                        NUMBER_DOMAIN, "set_value",
+                        {ATTR_ENTITY_ID: entity_id, "value": value},
+                    )
+                except Exception:
+                    _LOGGER.exception("[%s] Failed to write calibration to %s", self._group.entity_id, entity_id)

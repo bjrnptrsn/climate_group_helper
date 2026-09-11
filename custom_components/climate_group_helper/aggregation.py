@@ -285,7 +285,7 @@ class Aggregator:
         all_modes = set(modes) | {HVACMode.OFF}
 
         # Return modes sorted in the order of the HVACMode enum
-        return [m for m in HVACMode if m in all_modes]
+        return [mode for mode in HVACMode if mode in all_modes]
 
     def _determine_hvac_mode(self, current_hvac_modes: list[str]) -> HVACMode | None:
         """Determine the group's HVAC mode based on member modes and strategy."""
@@ -425,9 +425,9 @@ class Aggregator:
 
         if offset_correction:
             values = [
-                val - self._group._temp_offset_map.get(s.entity_id, 0.0)
-                for s in states
-                if (val := s.attributes.get(attr)) is not None
+                val - self._group._temp_offset_map.get(state.entity_id, 0.0)
+                for state in states
+                if (val := state.attributes.get(attr)) is not None
             ]
             return avg_calc(values) if values else None
 
@@ -447,8 +447,8 @@ class Aggregator:
         """
         temp_states = (
             [
-                s for s in self.states
-                if self._group.member_template_manager.display_mode(s) != HVACMode.OFF
+                state for state in self.states
+                if self._group.member_template_manager.display_mode(state) != HVACMode.OFF
             ]
             if self._group._ignore_off_members_temperature
             else self.states
@@ -623,7 +623,7 @@ class Aggregator:
         # setpoint. Keyed on configuration, not the current value: a sensor that
         # is merely unavailable must not make the control come and go.
         has_humidity_source = bool(self._group.humidity_sensor_entity_ids) or any(
-            ATTR_CURRENT_HUMIDITY in s.attributes for s in self.capability_states
+            ATTR_CURRENT_HUMIDITY in state.attributes for state in self.capability_states
         )
         if range_template is not None and range_template.humidity_enabled and has_humidity_source:
             features |= ClimateEntityFeature.TARGET_HUMIDITY
@@ -675,17 +675,14 @@ class Aggregator:
             self._group.climate_entity_ids, skip_isolated=False
         )
 
-        # One-time startup trigger once all members are ready: slot apply +
-        # calibration force-sync. startup_time itself is armed in
-        # async_added_to_hass() (independent of readiness) — this flag only guards
-        # the once-semantics of the two.
+        # One-time calibration force-sync once all members are ready. startup_time
+        # itself is armed in async_added_to_hass() (independent of readiness) — this
+        # flag only guards its once-semantics. The startup schedule slot lives in
+        # async_added_to_hass, after the blocking handlers are subscribed: it must
+        # not be applied from here, while a window/presence block is still arming.
         if all_members_ready and not self._group._startup_initialized:
             self._group._startup_initialized = True
             if self._group.advanced_mode:
-                self._group.hass.async_create_background_task(
-                    self._group.schedule_handler.on_slot_change(),
-                    name="climate_group_startup_slot"
-                )
                 self._group.calibration_handler.update("temperature", force_sync=True)
                 self._group.calibration_handler.update("humidity", force_sync=True)
             _LOGGER.debug("[%s] All members ready the first time.", self._group.entity_id)
@@ -826,7 +823,14 @@ class Aggregator:
 
         # Cold Start: Populate target store from current group state if empty and all members are ready.
         # Must stay after current_group_state is built — it seeds from that object (K4).
-        if self._group.shared_target_state == TargetState() and all_members_ready:
+        # Only when no schedule slot defines a target: an active slot owns the target,
+        # so the physical fallback must not fill in a bound the slot deliberately
+        # leaves open. A slot that carries meta-keys only defines none and still seeds.
+        if (
+            self._group.shared_target_state == TargetState()
+            and all_members_ready
+            and not self._group.schedule_handler.active_climate_payload
+        ):
             initial_data = self._group.current_group_state.to_dict()
             if initial_data:
                 self._group.shared_target_state = self._group.shared_target_state.update(**initial_data)

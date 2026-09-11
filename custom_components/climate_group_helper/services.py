@@ -47,6 +47,7 @@ from .const import (
     CONF_ISOLATION_SENSOR,
     CONF_ISOLATION_TRIGGER,
     CONF_MASTER_ENTITY,
+    CONF_MEMBER_COMMAND_DELAY,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_PRESENCE_ACTION,
     CONF_PRESENCE_MODE,
@@ -225,6 +226,7 @@ async def async_apply_config(
         CONF_RETRY_DELAY: float,
         CONF_GRACE_PERIOD: float,
         CONF_DEBOUNCE_DELAY: float,
+        CONF_MEMBER_COMMAND_DELAY: float,
     }
     for key, caster in numeric_keys.items():
         if key not in filtered:
@@ -305,7 +307,7 @@ async def async_apply_config(
     # without a usable fallback, so a stored null aborts the next reload far from
     # the call that caused it: CONF_ENTITIES is subscripted outright, the two
     # range-template lists go through `set(...)`, and the remaining four are
-    # iterated as `for eid in config.get(key, [])` — which hands back the stored
+    # iterated as `for entity_id in config.get(key, [])` — which hands back the stored
     # None rather than the fallback.
     for key, expected in (
         (CONF_MEMBER_TEMP_OFFSETS, dict),
@@ -357,7 +359,7 @@ async def async_apply_config(
             drop.add(CONF_ISOLATION_SENSOR)
         if drop:
             filtered[CONF_ISOLATION_RULES] = [
-                {k: v for k, v in rule.items() if k not in drop}
+                {key: value for key, value in rule.items() if key not in drop}
                 for rule in rules
                 # MEMBER_OFF reads an empty watchlist as "watch every member",
                 # so stripping a targeted rule would widen it instead of

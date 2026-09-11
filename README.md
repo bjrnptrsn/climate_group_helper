@@ -17,7 +17,7 @@
 <p align="center">
   🔗 <b>Group devices</b> into one virtual controller.<br>
   🌡️ <b>Fix inaccurate sensors</b> with external calibration.<br>
-  🔄 <b>React to manual changes</b> on members with Follow, Mirror, Lock or Master sync modes.<br>
+  🔄 <b>React to manual changes</b> on members with Mirror, Lock, Master or Adopt Only sync modes.<br>
   🪟 <b>Detect open windows</b> to pause heating automatically.<br>
   👤 <b>Automate presence</b> using away offsets and temperatures.<br>
   📅 <b>Schedule automation</b> via Schedule and Calendar entities.<br>
@@ -148,14 +148,14 @@ Controls what happens when a member device is changed directly (e.g. via its own
   | Sync Mode | Attribute selected | Attribute not selected |
   |---|---|---|
   | **Disabled** | Ignore | Ignore |
-  | **Follow** | Adopt ² | Ignore |
   | **Mirror** | Mirror ¹ | Ignore |
   | **Lock** | Revert ¹ | Ignore |
   | **Mirror/Lock** | Mirror ¹ | Revert ¹ |
   | **Master/Lock** | Master: Mirror · Non-master: Revert ¹ | Ignore |
+  | **Adopt Only** | Adopt ² | Ignore |
 
   - *¹ With **Respect Member Off State (Sync)** enabled: members that are manually turned `off` are left alone and their `off` is neither mirrored nor reverted.*
-  - *² **Follow** updates the group's own settings to match the changed device, but never passes the change on to the other members. A device turned `off` takes the whole group `off` only once no other member is still running — regardless of the **Respect Member Off State (Sync)** option.*
+  - *² **Adopt Only** updates the group's own settings to match the changed device, but never passes the change on to the other members. A device turned `off` takes the whole group `off` only once no other member is still running — regardless of the **Respect Member Off State (Sync)** option.*
 
 * **Sync Attributes**
 
@@ -163,11 +163,11 @@ Controls what happens when a member device is changed directly (e.g. via its own
 
   | Mode | Role of **Sync Attributes** |
   |---|---|
-  | **Follow** | **selected** attributes are adopted into the group's settings, **unselected** attributes are ignored. Nothing is sent to the other members. |
   | **Mirror** | **selected** attributes are mirrored, **unselected** attributes are ignored. |
   | **Lock** | **selected** attributes are reverted, **unselected** attributes are ignored. |
   | **Mirror/Lock** | **selected** attributes are mirrored, **unselected** attributes are reverted. |
   | **Master/Lock** | **selected** attributes are mirrored from the **Master Entity**, **unselected** attributes are ignored. Changes from non-master devices are always reverted. |
+  | **Adopt Only** | **selected** attributes are adopted into the group's settings, **unselected** attributes are ignored. Nothing is sent to the other members. |
 
 *  **Respect Member Off State (Sync):** When a member is manually turned `off`, the group neither mirrors that `off` to others nor forces it back on — the member is simply left alone. The one exception: if it is the *last* active member, the group accepts the `off` and its own target switches to `off` as well.
 
@@ -194,6 +194,8 @@ Manage climate settings based on room presence. Select one or more triggers (bin
 
 When presence returns, the group restores all members to the current target state. Priority order: the **Main Switch** always wins over **Window Control**, which in turn always wins over **Presence Control**.
 
+*   **Respect Member Off State (Presence):** Devices you switched off yourself are left alone — when everyone leaves, when you return, or both, whichever you pick. This does not apply when the away action is **Turn Off**: there the group switched the devices off itself, so it turns them all back on when you return.
+
 ### Schedule Automation
 
 Integrate native HA `schedule` or `calendar` helpers to automate your climate settings per time slot. You can set temperature and HVAC mode directly in the schedule's data, and the group intelligently handles transitions: if a schedule change occurs while **Window Control** is active (e.g. heating is paused), the new target is applied immediately once everything is closed.
@@ -201,10 +203,10 @@ Integrate native HA `schedule` or `calendar` helpers to automate your climate se
 Schedules can be switched on the fly via service (e.g. for "Vacation" or "Guest" modes). Calling the service without an entity resets to the configured default and re-applies the current slot.
 
 *   **Calendar support:** `calendar.*` entities work the same as `schedule.*` entities. Slot data is read from each event's **Description** field using the same `key: value` YAML format as schedule Additional data. See [Schedule Configuration & Meta-Keys](#schedule-configuration--meta-keys) for details.
-*   **Bypass Layer:** A second `schedule.*` or `calendar.*` entity can act as a **priority layer** on top of your base schedule. When a bypass slot is active, its attributes override the base slot (bypass wins on conflicts).
-*   **Inactive Schedule Fallback:** An optional state (e.g. night setback or turning off) that stands in for the base schedule outside its active slots — no need for gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active.
+*   **Bypass Layer:** A second `schedule.*` or `calendar.*` entity can act as a **priority layer** on top of your main schedule. When a bypass slot is active, its attributes override the main slot (bypass wins on conflicts).
+*   **Inactive Schedule Fallback:** An optional state (e.g. night setback or turning off) that stands in for the main schedule outside its active slots — no need for gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active.
 *   **Manual Overrides:** Manual adjustments simply hold until the next scheduled slot begins, which then takes over again. No timer to configure.
-*   **Retain Changes Made via Service (Schedule):** Ensures that the base schedule, bypass entity and fallback state — when changed via service — survive a Home Assistant restart. If disabled, the group always reverts to its configured defaults after a restart.
+*   **Retain Changes Made via Service (Schedule):** Ensures that the main schedule, bypass entity and fallback state — when changed via service — survive a Home Assistant restart. If disabled, the group always reverts to its configured defaults after a restart.
 *   **Respect Member Off State (Schedule):** Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on.
 
 > **Note — turning off outside active slots:** to shut the group down in the inactive period, set `hvac_mode: off` in the fallback. Do **not** use the `turn_off` meta-key here — it is a one-shot trigger for the Main Switch block that stays active until a slot explicitly releases it with `turn_off: false`, so a `turn_off: true` fallback would keep the next heating slot blocked.
@@ -293,7 +295,7 @@ The group normally runs in Lock mode. During this slot, `sync_mode: disabled` le
 
 #### Inactive Schedule Fallback
 
-Configure an optional fallback state in YAML under the group's **Schedule Automation** settings (**Fallback State for Inactive Base Schedule / Calendar (YAML)**). This state applies whenever the schedule is off or no calendar event is active, without requiring gapless 24/7 schedules. It uses the same format as a slot.
+Configure an optional fallback state in YAML under the group's **Schedule Automation** settings (**Fallback State for Inactive Main Schedule / Calendar (YAML)**). This state applies whenever the schedule is off or no calendar event is active, without requiring gapless 24/7 schedules. It uses the same format as a slot.
 
 **Example (Inactive Schedule Fallback — e.g. night setback):**
 ```yaml
@@ -417,6 +419,7 @@ When everything agrees, it is empty. Two details make it trustworthy:
 *   **`blocking_sources`** — present whenever something is holding the group back, listing what: `window`, `presence`, `switch`. While one of these is listed, commands don't reach the devices. Absent when nothing blocks.
 *   **`isolated_members`** — devices an isolation rule currently excludes. They keep their own state and are left out of the group's readings.
 *   **`oob_members`** — devices that could not follow the last target because it lies outside their own temperature range.
+*   **`master_entity_id`** — which device is currently set as the group's Master Entity. Present only when one is configured.
 *   **`master_fallback_active`** — the configured master entity is unavailable and the group is aggregating without it.
 
 ### What the group intends, and where it came from
@@ -497,8 +500,8 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 
 | Option | Description |
 |--------|-------------|
-| **Sync Mode** | What to do when a member is changed outside the group. **Disabled**: ignore everything. **Follow**: update the group to match the changed device, without touching the others. **Mirror**: mirror changes. **Lock**: revert changes. **Mirror/Lock**: mirror selected attributes, revert unselected attributes. **Master/Lock** *(requires Master Entity)*: mirror changes from the **Master Entity** only, revert changes from non-master entities. |
-| **Sync Attributes** | Which attributes the mode acts on. In **Follow**: only selected attributes are adopted into the group, unselected = no action. In **Mirror**: only selected attributes are mirrored, unselected = no action. In **Lock**: only selected attributes are reverted, unselected = no action. In **Mirror/Lock**: selected attributes are mirrored, unselected attributes are reverted. In **Master/Lock**: only the Master Entity's attributes are mirrored, unselected = no action. |
+| **Sync Mode** | What to do when a member is changed outside the group. **Disabled**: ignore everything. **Mirror**: mirror changes. **Lock**: revert changes. **Mirror/Lock**: mirror selected attributes, revert unselected attributes. **Master/Lock** *(requires Master Entity)*: mirror changes from the **Master Entity** only, revert changes from non-master entities. **Adopt Only**: update the group to match the changed device, without touching the others. |
+| **Sync Attributes** | Which attributes the mode acts on. In **Mirror**: only selected attributes are mirrored, unselected = no action. In **Lock**: only selected attributes are reverted, unselected = no action. In **Mirror/Lock**: selected attributes are mirrored, unselected attributes are reverted. In **Master/Lock**: only the Master Entity's attributes are mirrored, unselected = no action. In **Adopt Only**: only selected attributes are adopted into the group, unselected = no action. |
 | **Respect Member Off State (Sync)** | Members that are manually turned `off` are left alone. Their `off` state is neither mirrored to others nor reverted back to the group target. Exception: if it is the last active member, the group itself switches to `off` (Last Man Standing). Direct group commands always reach all members regardless of this setting. |
 
 ### Window Control
@@ -526,16 +529,17 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 | **Away Preset** | *(Away Preset action)* Preset mode to activate when away. |
 | **Away Delay** | Wait time (seconds) after sensor reports absence before activating away mode. |
 | **Return Delay** | Wait time (seconds) after sensor reports presence before restoring. |
+| **Respect Member Off State (Presence)** | Leaves devices that are switched off alone — **Disabled** (default), **When going away**, **When returning**, or **When going away and returning**. Does not apply when the away action is **Turn Off**, since the group switched the devices off itself. Unlike the sync and schedule versions of this option, it also applies when *every* device is off. |
 
 ### Schedule Automation
 
 | Option | Description |
 |--------|-------------|
 | **Schedule Entity** | A Home Assistant `schedule.*` or `calendar.*` entity to control the group. |
-| **Fallback State for Inactive Base Schedule / Calendar (YAML)** | *(Optional)* State that stands in for the base schedule outside its active slots (e.g. night setback or complete turn off). The bypass layer overrides it while active. |
-| **Bypass Entity** | *(Optional)* A second `schedule.*` or `calendar.*` entity acting as a priority layer. When a bypass slot is active, it overrides the base schedule. |
+| **Fallback State for Inactive Main Schedule / Calendar (YAML)** | *(Optional)* State that stands in for the main schedule outside its active slots (e.g. night setback or complete turn off). The bypass layer overrides it while active. |
+| **Bypass Entity** | *(Optional)* A second `schedule.*` or `calendar.*` entity acting as a priority layer. When a bypass slot is active, it overrides the main schedule. |
 | **Respect Member Off State (Schedule)** | Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on. Direct group commands always reach all members regardless of this setting. |
-| **Retain Changes Made via Service (Schedule)** | Keep the base schedule, bypass entity and fallback state across restarts when changed via service. Without this, the group always reverts to its configured defaults on restart. |
+| **Retain Changes Made via Service (Schedule)** | Keep the main schedule, bypass entity and fallback state across restarts when changed via service. Without this, the group always reverts to its configured defaults on restart. |
 
 ### Group Presets
 
@@ -579,12 +583,18 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 
 ### Advanced Settings
 
+If commanding the whole group at once overloads your network or bridge — a
+known issue with IR blasters and some Zigbee coordinators when several
+devices are addressed in the same instant — set a **Member Command Delay** to
+pace the commands out instead of sending them all together.
+
 | Option | Description |
 |--------|-------------|
 | **Debounce Delay** | Wait before sending commands. Higher values prevent 'rapid-fire' commands when sliding controls, but feel slower (default: 0.3s). |
-| **Force Retry** | Always send commands to all members, even if they already report the target state. Useful for IR-based AC units or other devices that may not reliably update their state after receiving a command. |
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
+| **Force Retry** | Always send commands to all members, even if they already report the target state. Useful for IR-based AC units or other devices that may not reliably update their state after receiving a command. |
+| **Member Command Delay** | Pause between commands to each individual member instead of sending them all at once. Helps when controlling several devices at the same time overloads your network or bridge — a common issue with IR blasters and some Zigbee coordinators (default: 0s, disabled). |
 | **UI Grace Period** | Duration (seconds) for which the group shows the commanded value right after a UI action, before slow member devices report their state back. Prevents visual flicker in the dashboard (default: 3.0s). Applies to all attributes: HVAC mode, temperature, humidity, fan/preset/swing modes. |
 | **Expose Smart Sensors** | When enabled, creates separate temperature and humidity sensor entities reflecting the group's current aggregated state (useful for history graphs and dashboards). |
 | **Expose Member List** | When enabled, adds the `entity_id` attribute with the list of member entity IDs, so Home Assistant's More-Info dialog shows the native member breakdown (also enables `expand()` templates). |
@@ -693,7 +703,7 @@ data:
 
 ### `climate_group_helper.set_schedule_bypass_entity`
 
-Dynamically change the active bypass schedule entity for a group at runtime. The bypass schedule acts as a priority layer that overrides the base schedule. While a bypass is active, the group keeps tracking the base schedule in the background; when the bypass ends, the currently valid base state is restored (attributes only the bypass changed fall back to their pre-bypass values). With **Retain Changes Made via Service (Schedule)** enabled, the entity you set here survives a restart.
+Dynamically change the active bypass schedule entity for a group at runtime. The bypass schedule acts as a priority layer that overrides the main schedule. While a bypass is active, the group keeps tracking the main schedule in the background; when the bypass ends, the currently valid main state is restored (attributes only the bypass changed fall back to their pre-bypass values). With **Retain Changes Made via Service (Schedule)** enabled, the entity you set here survives a restart.
 
 **Service Fields:**
 

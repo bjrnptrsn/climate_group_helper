@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respektiere 'Aus'-Status der Mitglieder (Sync)"
             },
             "data_description": {
-              "sync_mode": "Was geschieht, wenn ein Mitglied außerhalb der Gruppe geändert wird. Disabled: Ignorieren. Follow: Änderungen übernehmen, ohne sie weiterzugeben. Mirror: Änderungen spiegeln. Lock: Änderungen zurücksetzen. Mirror/Lock: Ausgewählte spiegeln, nicht ausgewählte zurücksetzen. Master/Lock: Master spiegeln, andere zurücksetzen.",
+              "sync_mode": "Was geschieht, wenn ein Mitglied außerhalb der Gruppe geändert wird. Disabled: Ignorieren. Mirror: Änderungen spiegeln. Lock: Änderungen zurücksetzen. Mirror/Lock: Ausgewählte spiegeln, nicht ausgewählte zurücksetzen. Master/Lock: Master spiegeln, andere zurücksetzen. Nur übernehmen: Änderungen übernehmen, ohne sie weiterzugeben.",
               "sync_attributes": "Legt fest, auf welche Attribute der Sync-Modus wirkt. Die Behandlung ausgewählter und nicht ausgewählter Attribute (Mirror, Revert oder Ignore) hängt vom gewählten Modus ab.",
               "ignore_off_members_sync": "Manuell ausgeschaltete Mitglieder werden ignoriert. Ihr Zustand wird weder gespiegelt noch zurückgesetzt. Hinweis: Direkte Gruppenbefehle erreichen immer alle Mitglieder."
             }
@@ -152,7 +152,8 @@
               "presence_away_temperature": "Abwesenheits-Temperatur",
               "presence_away_preset": "Abwesenheits-Preset",
               "presence_away_delay": "Abwesenheits-Verzögerung (Sekunden)",
-              "presence_return_delay": "Rückkehr-Verzögerung (Sekunden)"
+              "presence_return_delay": "Rückkehr-Verzögerung (Sekunden)",
+              "ignore_off_members_presence": "Aus-Zustand der Mitglieder respektieren (Anwesenheit)"
             },
             "data_description": {
               "presence_mode": "Aktiviert oder deaktiviert den automatischen Abwesenheits-Fallback bei unbelegtem Raum.",
@@ -163,24 +164,25 @@
               "presence_away_temperature": "Feste Zieltemperatur bei Abwesenheit.",
               "presence_away_preset": "Preset bei Abwesenheit (z.B. 'eco', 'away').",
               "presence_away_delay": "Wartezeit nach Abwesenheitsmeldung, bevor der Abwesenheits-Modus aktiviert wird.",
-              "presence_return_delay": "Wartezeit nach Anwesenheitsmeldung, bevor der vorherige Zustand wiederhergestellt wird."
+              "presence_return_delay": "Wartezeit nach Anwesenheitsmeldung, bevor der vorherige Zustand wiederhergestellt wird.",
+              "ignore_off_members_presence": "Lässt ausgeschaltete Mitglieder in Ruhe — beim Verlassen, bei der Rückkehr oder in beiden Fällen. Gilt nicht, wenn die Abwesenheits-Aktion „Ausschalten“ ist, denn dann hat die Gruppe die Mitglieder selbst ausgeschaltet."
             }
           },
           "schedule_section": {
             "name": "Zeitplan-Automatisierung",
             "description": "Verknüpfe eine Zeitplan- oder Kalender-Entität, um Klimaeinstellungen zu automatisieren. Slot-Daten können Klima-Attribute (temperature, hvac_mode) und Meta-Keys (turn_off, sync_mode, sync_attributes) enthalten, um das Gruppenverhalten pro Slot anzupassen.",
             "data": {
-              "schedule_entity": "Basis-Zeitplan / Kalenderentität",
-              "schedule_fallback_payload": "Fallback-Zustand bei inaktivem Basis-Zeitplan / Kalender (YAML)",
+              "schedule_entity": "Haupt-Zeitplan / Kalenderentität",
+              "schedule_fallback_payload": "Fallback-Zustand bei inaktivem Haupt-Zeitplan / Kalender (YAML)",
               "schedule_bypass_entity": "Bypass-Zeitplan / Kalenderentität",
               "retain_service_changes_schedule": "Per Dienst geänderte Werte beibehalten (Zeitplan)",
               "ignore_off_members_schedule": "Respektiere 'Aus'-Status der Mitglieder (Zeitplan)"
             },
             "data_description": {
               "schedule_entity": "Wähle eine schedule.*- oder calendar.*-Entität. Bei Zeitplan-Entitäten werden die Slot-Daten aus den Slot-Attributen gelesen. Bei Kalender-Entitäten werden die Slot-Daten als YAML aus dem Beschreibungsfeld des Ereignisses gelesen. Unterstützte Schlüssel: Klima-Attribute und Meta-Keys.",
-              "schedule_fallback_payload": "Springt außerhalb der aktiven Zeitblöcke für den Basis-Zeitplan ein, sodass keine lückenlosen 24/7-Zeitpläne nötig sind. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist. Gleiches YAML-Format wie oben (z. B. temperature: 17, hvac_mode: heat).",
-              "schedule_bypass_entity": "Optionale Prioritätsebene (z.B. ein Urlaubskalender). Wenn aktiv, überschreiben ihre Slot-Daten den Basisplan. Slot-Daten werden gleich gelesen: Attribute für schedule.*-, YAML-Beschreibung für calendar.*-Entitäten.",
-              "retain_service_changes_schedule": "Behält per Dienst geänderten Basis-Zeitplan, Bypass und Fallback-Zustand nach einem Neustart bei. Andernfalls wird auf die konfigurierten Standardwerte zurückgesetzt.",
+              "schedule_fallback_payload": "Springt außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan ein, sodass keine lückenlosen 24/7-Zeitpläne nötig sind. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist. Gleiches YAML-Format wie oben (z. B. temperature: 17, hvac_mode: heat).",
+              "schedule_bypass_entity": "Optionale Prioritätsebene (z.B. ein Urlaubskalender). Wenn aktiv, überschreiben ihre Slot-Daten den Hauptplan. Slot-Daten werden gleich gelesen: Attribute für schedule.*-, YAML-Beschreibung für calendar.*-Entitäten.",
+              "retain_service_changes_schedule": "Behält per Dienst geänderten Haupt-Zeitplan, Bypass und Fallback-Zustand nach einem Neustart bei. Andernfalls wird auf die konfigurierten Standardwerte zurückgesetzt.",
               "ignore_off_members_schedule": "Der Zeitplan schaltet keine Mitglieder ein, die aktuell ausgeschaltet sind."
             }
           },
@@ -344,6 +346,7 @@
               "retry_attempts": "Wiederholungsversuche",
               "retry_delay": "Wiederholungsverzögerung (Sekunden)",
               "force_retry": "Wiederholung erzwingen",
+              "member_command_delay": "Verzögerung zwischen Mitglieder-Befehlen (Sekunden)",
               "grace_period": "Optimistische UI-Übergangszeit (Sekunden)",
               "expose_smart_sensors": "Smarte Sensoren bereitstellen",
               "expose_member_entities": "Mitgliederliste bereitstellen",
@@ -354,6 +357,7 @@
               "retry_attempts": "Wie oft Befehle erneut gesendet werden, falls ein Gerät nicht antwortet. Auf 0 setzen zum Deaktivieren.",
               "retry_delay": "Pause zwischen Wiederholungsversuchen. Gibt Geräten einen Moment zur Erholung.",
               "force_retry": "Sendet Befehle immer an alle Mitglieder, auch wenn diese den Zielzustand bereits melden.",
+              "member_command_delay": "Pause zwischen Befehlen an einzelne Mitglieder. Hilft, wenn das gleichzeitige Ansteuern mehrerer Geräte dein Netzwerk oder deine Bridge überlastet (z. B. IR-Blaster, manche Zigbee-Koordinatoren). 0 zum Deaktivieren.",
               "grace_period": "Wie lange die Gruppe den gesendeten Wert anzeigt, bevor sie zum Mitgliederdurchschnitt wechselt. Verhindert UI-Flackern, wenn langsame Geräte (Cloud-Bridges, Zigbee) ihren alten Zustand zurückmelden. Auf 0 setzen zum Deaktivieren.",
               "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
               "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
@@ -369,6 +373,7 @@
     },
     "error": {
       "no_entities": "Mindestens ein Klimagerät muss in der Gruppe verbleiben.",
+      "master_not_in_members": "Die Master-Entität muss ein Gruppenmitglied sein.",
       "master_refresh_notice": "Master-Entität hinzugefügt. Neue Optionen verfügbar.",
       "master_options_notice": "Neue Master-Entitäts-Option",
       "isolation_all_selected": "Mindestens ein Mitglied muss außerhalb der Isolierung bleiben.",
@@ -457,11 +462,11 @@
     "sync_mode": {
       "options": {
         "disabled": "Deaktiviert – Keine automatische Synchronisierung zwischen Mitgliedern",
-        "follow_only": "Follow – Manuelle Änderungen an einem Gerät aktualisieren die Gruppe, werden aber nicht weitergegeben",
         "mirror": "Mirror – Manuelle Änderungen an einem Gerät werden auf alle Mitglieder übertragen",
         "lock": "Lock – Manuelle Änderungen werden auf den Gruppenstand zurückgesetzt",
         "mirror_lock": "Mirror/Lock – Gewählte Attribute werden übernommen, alle anderen streng erzwungen",
-        "master_lock": "Master/Lock – Nur das Master-Gerät kann den Sollwert der Gruppe ändern"
+        "master_lock": "Master/Lock – Nur das Master-Gerät kann den Sollwert der Gruppe ändern",
+        "adopt_only": "Nur übernehmen – Die Gruppe übernimmt manuelle Änderungen eines Geräts, ohne sie an die anderen weiterzugeben"
       }
     },
     "sync_attributes": {
@@ -542,6 +547,14 @@
         "away_offset": "Abwesenheits-Versatz",
         "away_temperature": "Abwesenheits-Temperatur",
         "away_preset": "Abwesenheits-Preset"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Deaktiviert – Ausgeschaltete Mitglieder werden eingeschaltet",
+        "away": "Beim Verlassen",
+        "home": "Bei der Rückkehr",
+        "away_home": "Beim Verlassen und bei der Rückkehr"
       }
     },
     "range_template_deadband_action": {
@@ -657,7 +670,7 @@
     },
     "set_schedule_fallback_payload": {
       "name": "Zeitplan-Fallback-Payload setzen",
-      "description": "Setzt oder löscht einen Fallback-Payload, der angewendet wird, wenn der Basis-Zeitplan inaktiv ist. Überschreibt den konfigurierten Fallback-Payload.",
+      "description": "Setzt oder löscht einen Fallback-Payload, der angewendet wird, wenn der Haupt-Zeitplan inaktiv ist. Überschreibt den konfigurierten Fallback-Payload.",
       "fields": {
         "fallback_payload": {
           "name": "Fallback-Payload",

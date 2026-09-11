@@ -22,7 +22,7 @@ Real-world scenarios, ordered by complexity. Each example describes the situatio
   - [14. Schedule with Temporary Local Overrides](#14-schedule-with-temporary-local-overrides)
   - [15. Seasonal Shutdown via Schedule](#15-seasonal-shutdown-via-schedule)
   - [16. Pausing Automatic Features for One Slot](#16-pausing-automatic-features-for-one-slot)
-  - [17. Calendar Bypass on Top of a Base Schedule](#17-calendar-bypass-on-top-of-a-base-schedule)
+  - [17. Calendar Bypass on Top of a Main Schedule](#17-calendar-bypass-on-top-of-a-main-schedule)
   - [18. Night Setback when the Schedule is Inactive](#18-night-setback-when-the-schedule-is-inactive)
 - [Edge Cases](#edge-cases) — mixed hardware, multiple constraints, edge cases from real support issues
   - [19. Mixed Radiator + AC, One Device per Mode](#19-mixed-radiator--ac-one-device-per-mode)
@@ -33,6 +33,7 @@ Real-world scenarios, ordered by complexity. Each example describes the situatio
   - [24. Notice When a Device Swallows Commands](#24-notice-when-a-device-swallows-commands)
   - [25. Heat/Cool for Thermostats That Only Have One Setpoint](#25-heatcool-for-thermostats-that-only-have-one-setpoint)
   - [26. Dehumidify While the Room Sits at Temperature](#26-dehumidify-while-the-room-sits-at-temperature)
+  - [27. IR-Controlled Air Conditioners That Overload the Bridge](#27-ir-controlled-air-conditioners-that-overload-the-bridge)
 
 ---
 
@@ -163,7 +164,9 @@ Save energy automatically based on presence, without writing a separate automati
 
 **Result:** Once *all* trigger entities report "away" for 5 minutes, heating turns off. As soon as anyone returns, it restores after a 1-minute confirmation delay.
 
-> **Variant:** Set **Away Action: Away Offset** with **Away Offset: -3.0** instead of turning off completely — useful if the room shouldn't go fully cold (e.g. a room with plants or pets).
+> **Variant:** Set **Away Action: Away Offset** with **Away Offset: -3.0** instead of turning off completely — useful if the room shouldn't go fully cold (e.g. a room with plants or pets). With this action, **Respect Member Off State (Presence)** additionally keeps a radiator you switched off yourself from being turned on again when you get home.
+
+> **Variant — Group Preset as Away Action:** If you have defined group presets (Example 8), you can also set **Away Action: Away Preset** and choose one of your group presets (e.g. `eco`) to activate whenever nobody is home.
 
 ---
 
@@ -480,11 +483,11 @@ Two details worth knowing:
 
 ---
 
-### 17. Calendar Bypass on Top of a Base Schedule
+### 17. Calendar Bypass on Top of a Main Schedule
 
-A weekly `schedule.*` entity already drives day-to-day heating. On top of that, a shared household `calendar.*` (e.g. a Google Calendar everyone can add events to) should be able to temporarily override it — a guest staying over, a day working from home, a party — without touching the base schedule at all.
+A weekly `schedule.*` entity already drives day-to-day heating. On top of that, a shared household `calendar.*` (e.g. a Google Calendar everyone can add events to) should be able to temporarily override it — a guest staying over, a day working from home, a party — without touching the main schedule at all.
 
-**Entities:** `climate.living_room_trv`, `schedule.house_weekly` (base), `calendar.household_overrides` (bypass)
+**Entities:** `climate.living_room_trv`, `schedule.house_weekly` (main), `calendar.household_overrides` (bypass)
 
 | Setting | Value |
 |---|---|
@@ -492,7 +495,7 @@ A weekly `schedule.*` entity already drives day-to-day heating. On top of that, 
 | Schedule Entity | `schedule.house_weekly` |
 | Bypass Entity | `calendar.household_overrides` |
 
-**Base schedule slot (unchanged):**
+**Main schedule slot (unchanged):**
 ```yaml
 hvac_mode: heat
 temperature: 19.5
@@ -504,7 +507,7 @@ hvac_mode: heat
 temperature: 22.0
 ```
 
-**Result:** Outside the calendar event, `climate.living_room_trv` follows the base schedule (19.5 °C). While the "Guest Room" event is active, its 22.0 °C wins — the base schedule keeps running in the background and is restored automatically the moment the event ends, no need to touch the weekly schedule at all.
+**Result:** Outside the calendar event, `climate.living_room_trv` follows the main schedule (19.5 °C). While the "Guest Room" event is active, its 22.0 °C wins — the main schedule keeps running in the background and is restored automatically the moment the event ends, no need to touch the weekly schedule at all.
 
 > **Tip — invalid YAML only breaks at the worst moment:** a calendar event's Description field must contain *only* valid YAML (see [README § Using a Calendar Entity](README.md#using-a-calendar-entity)) — a stray word, a missing colon, or wrong indentation makes CGH skip the event entirely, silently, and you'll only notice when the slot was supposed to start and nothing happened. Don't type the YAML freehand into each new event: keep one known-good event as a template and **copy or duplicate it** for every new override (most calendar UIs support duplicating an event), then only edit the times and the values — this avoids reintroducing a syntax error from scratch each time. If you're unsure about a new block, paste it into a local editor with YAML syntax checking (e.g. VS Code) before saving the event.
 
@@ -717,11 +720,26 @@ A humidity reading is required: either a sensor as above, or a member that repor
 
 ---
 
+### 27. IR-Controlled Air Conditioners That Overload the Bridge
+
+Three IR-controlled AC units, all commanded through the same IR blaster. Turning the group on sends all three commands in the same instant, which occasionally overwhelms the blaster and drops one of them.
+
+**Entities:** `climate.bedroom_ac`, `climate.office_ac`, `climate.guest_room_ac` (all via one IR blaster)
+
+| Setting | Value |
+|---|---|
+| Members | `climate.bedroom_ac`, `climate.office_ac`, `climate.guest_room_ac` |
+| Member Command Delay | 0.3 s |
+
+**Result:** Instead of three commands firing together, each member gets its command roughly 0.3 seconds after the previous one, giving the blaster time to send each signal cleanly. The same option helps with Zigbee coordinators that struggle when several devices are addressed in the same instant.
+
+---
+
 ## Tips
 
 - **Start simple:** get basic grouping working first (just Members, no other settings), then layer on features one at a time.
 - **Advanced Mode:** toggle it on in the group's configuration to unlock everything beyond Basic-tier settings — every example past the Basic section needs it.
-- **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted; use `Mirror/Lock` when only some attributes should sync (Example 22).
+- **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted and mirrored to peers; use `Adopt Only` if member changes should update the group target without touching other devices; use `Mirror/Lock` when only some attributes should sync (Example 22).
 - **Blocking priority:** Main Switch > Window Control > Presence Control — if several are active at once, only the highest-ranked one's action is sent to members.
 - **Schedule + Boost:** Boost outranks the schedule. Schedule slot changes still run in the background during a boost.
 - **Calibration:** only use CGH's own calibration if you're not already using Better Thermostat or Versatile Thermostat — they handle their own (Example 13).

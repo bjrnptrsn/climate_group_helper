@@ -1,12 +1,13 @@
 """This platform allows several climate devices to be grouped into one climate device."""
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from dataclasses import replace
 import asyncio
 import logging
 import time
 from statistics import mean, median
-from typing import Any, Awaitable, Callable
+from typing import Any, AsyncIterator, Awaitable, Callable
 
 from homeassistant.components.climate import (
     ATTR_FAN_MODE,
@@ -53,6 +54,7 @@ from .const import (
     CONF_ISOLATION_RULES_COUNT,
     CONF_ISOLATION_SLOT,
     CONF_MASTER_ENTITY,
+    CONF_MEMBER_COMMAND_DELAY,
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
@@ -106,7 +108,7 @@ from .presence import PresenceHandler, PresenceOverrideManager
 from .member_template import MemberTemplateManager
 from .preset import PresetManager
 from .reset import async_reset_group
-from .schedule import ScheduleHandler, ScheduleBypassHandler
+from .schedule import MainScheduleHandler, BypassScheduleHandler
 from .services import async_apply_config, async_boost, async_register_services
 from .service_call import (
     ClimateCallHandler,
@@ -125,7 +127,7 @@ from .state import (
     RunState,
     TargetState,
     ClimateStateManager,
-    FollowStateManager,
+    AdoptStateManager,
     ScheduleStateManager,
     SyncModeStateManager,
     WindowControlStateManager,
@@ -224,6 +226,12 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.debounce_delay = config.get(CONF_DEBOUNCE_DELAY, DEFAULT_DEBOUNCE_DELAY)
         self.retry_attempts = int(config.get(CONF_RETRY_ATTEMPTS, 0))
         self.retry_delay = config.get(CONF_RETRY_DELAY, 2.5)
+        self.member_command_delay = config.get(CONF_MEMBER_COMMAND_DELAY, 0.0)
+        # Shared across ClimateCallHandler-family instances and CalibrationHandler:
+        # a calibration number and its climate member sit on the same physical
+        # device (matched via device_id, see calibration.py), so both paths must
+        # hold the same radio-path lock while a delay is being enforced.
+        self.member_command_lock = asyncio.Lock()
         self.temp_sensor_entity_ids = _get_adv(CONF_TEMP_SENSORS, [])
         self.temp_update_target_entity_ids = _get_adv(CONF_TEMP_UPDATE_TARGETS, [])
         self.humidity_sensor_entity_ids = _get_adv(CONF_HUMIDITY_SENSORS, [])
@@ -268,7 +276,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # State managers
         self.climate_state_manager = ClimateStateManager(self)
-        self.follow_state_manager = FollowStateManager(self)
+        self.adopt_state_manager = AdoptStateManager(self)
         self.schedule_state_manager = ScheduleStateManager(self)
         self.sync_mode_state_manager = SyncModeStateManager(self)
         self.window_control_state_manager = WindowControlStateManager(self)
@@ -325,8 +333,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.presence_handler = PresenceHandler(self)
         self.presence_override_manager = PresenceOverrideManager(self)
         self.slot_transition_lock = asyncio.Lock()
-        self.schedule_handler = ScheduleHandler(self)
-        self.schedule_bypass_handler = ScheduleBypassHandler(self)
+        self.schedule_handler = MainScheduleHandler(self)
+        self.schedule_bypass_handler = BypassScheduleHandler(self)
         self.switch_override_manager = SwitchOverrideManager(self)
         self.sync_mode_handler = SyncModeHandler(self)
         self.preset_manager = PresetManager(self)
@@ -398,6 +406,22 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         untraceable. All init-phase logging goes through this property.
         """
         return self.entity_id or str(self.config.get(CONF_NAME, DOMAIN))
+
+    @asynccontextmanager
+    async def member_command_scope(self) -> AsyncIterator[None]:
+        """Hold the shared radio-path lock while member_command_delay is active.
+
+        No-op when the delay is 0 — the default path takes no lock at all.
+        Used by both `service_call.py` (climate calls) and `calibration.py`
+        (number writes): a calibration target and its climate member sit on
+        the same physical device (matched via device_id), so pacing one path
+        must not let the other slip into the gap between two paced calls.
+        """
+        if not self.member_command_delay:
+            yield
+            return
+        async with self.member_command_lock:
+            yield
 
     @property
     def preset_mode(self) -> str | None:
@@ -487,6 +511,14 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             # Setup member isolation handlers (subscribe to isolation sensor events)
             for handler in self.member_isolation_handlers:
                 await handler.async_setup()
+
+            # Apply the active schedule slot now that every blocking handler is
+            # subscribed. The Cold-Start-Init update above runs the aggregation
+            # before them, so a slot pushed from there would reach members a
+            # window/presence block already owns — with no later event to correct
+            # them. Here the blocks are established and `_call_members` suppresses
+            # the push while `temporary_state_active`.
+            await self.schedule_handler.on_slot_change()
 
         # Update state again to reflect any blocking source activated above.
         self.async_defer_or_update_ha_state()

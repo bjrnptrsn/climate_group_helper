@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respekter medlemmers Off-tilstand (Synk)"
             },
             "data_description": {
-              "sync_mode": "Hvad skal man gøre, når et medlem ændres uden for gruppen. Disabled: ignorer. Follow: overtag ændringer uden at videregive dem. Mirror: spejl ændringer. Lock: fortryd ændringer. Mirror/Lock: spejl valgte, fortryd ikke-valgte. Master/Lock: spejl master, fortryd andre.",
+              "sync_mode": "Hvad skal man gøre, når et medlem ændres uden for gruppen. Disabled: ignorer. Mirror: spejl ændringer. Lock: fortryd ændringer. Mirror/Lock: spejl valgte, fortryd ikke-valgte. Master/Lock: spejl master, fortryd andre. Kun overtag: overtag ændringer uden at videregive dem.",
               "sync_attributes": "Definerer, hvilke attributter Sync-tilstanden virker på. Håndteringen af valgte og ikke-valgte attributter (Mirror, Revert eller Ignore) afhænger af den valgte tilstand.",
               "ignore_off_members_sync": "Manuelt slukkede medlemmer lades være. Deres tilstand bliver hverken spejlet eller fortrudt. Bemærk: direkte gruppekommandoer når altid alle medlemmer."
             }
@@ -152,7 +152,8 @@
               "presence_away_temperature": "Fraværs-temperatur",
               "presence_away_preset": "Fraværs-forudindstilling",
               "presence_away_delay": "Fraværsforsinkelse (sekunder)",
-              "presence_return_delay": "Returforsinkelse (sekunder)"
+              "presence_return_delay": "Returforsinkelse (sekunder)",
+              "ignore_off_members_presence": "Respekter medlems slukket-tilstand (tilstedeværelse)"
             },
             "data_description": {
               "presence_mode": "Aktiver eller deaktiver automatisk fraværs-fallback, når fravær detekteres.",
@@ -163,24 +164,25 @@
               "presence_away_temperature": "Fast måltemperatur ved fravær.",
               "presence_away_preset": "Forudindstilling ved fravær (f.eks. 'eco', 'away').",
               "presence_away_delay": "Ventetid efter fraværsmelding, før fraværstilstand aktiveres.",
-              "presence_return_delay": "Ventetid efter tilstedeværelsesmelding, før tidligere tilstand gendannes."
+              "presence_return_delay": "Ventetid efter tilstedeværelsesmelding, før tidligere tilstand gendannes.",
+              "ignore_off_members_presence": "Lader slukkede medlemmer være i fred — ved bortgang, ved hjemkomst eller begge dele. Gælder ikke, når borte-handlingen er \"Sluk\", da gruppen selv slukkede medlemmerne."
             }
           },
           "schedule_section": {
             "name": "Automatisering af tidsplan",
             "description": "Link en tidsplan- eller kalenderenhed for at automatisere klimaindstillinger. Slot-data kan inkludere klimaattributter (temperature, hvac_mode) og meta-nøgler (turn_off, sync_mode, sync_attributes) for at justere gruppens adfærd pr. slot.",
             "data": {
-              "schedule_entity": "Basis tidsplan-/kalenderenhed",
-              "schedule_fallback_payload": "Fallback-tilstand ved inaktiv basisplan/kalender (YAML)",
+              "schedule_entity": "Hovedtidsplan-/kalenderenhed",
+              "schedule_fallback_payload": "Fallback-tilstand ved inaktiv hovedplan/kalender (YAML)",
               "schedule_bypass_entity": "Bypass tidsplan-/kalenderenhed",
               "retain_service_changes_schedule": "Behold ændringer foretaget via tjeneste (Tidsplan)",
               "ignore_off_members_schedule": "Respekter medlemmers Off-tilstand (Tidsplan)"
             },
             "data_description": {
               "schedule_entity": "Vælg en schedule.*- eller calendar.*-enhed. For tidsplanenheder læses slot-data fra slot-attributterne. For kalenderenheder læses slot-data som YAML fra begivenhedens beskrivelsesfelt. Understøttede nøgler: klimaattributter og meta-nøgler.",
-              "schedule_fallback_payload": "Træder i stedet for basisplanen uden for dens aktive tidsrum, så du ikke behøver sammenhængende 24/7-planer. Bypass-laget fungerer som hidtil og tilsidesætter den, mens det er aktivt. Samme YAML-format som ovenfor (f.eks. temperature: 17, hvac_mode: heat).",
-              "schedule_bypass_entity": "Valgfrit prioritetslag (f.eks. en feriekalender). Når aktivt, tilsidesætter dens slot-data grundplanen. Slot-data læses på samme måde: attributter for schedule.*-, YAML-beskrivelse for calendar.*-enheder.",
-              "retain_service_changes_schedule": "Behold ændringer af basisplan, bypass og fallback-tilstand foretaget via tjenesten efter en genstart. Ellers nulstilles de til de konfigurerede standardværdier.",
+              "schedule_fallback_payload": "Træder i stedet for hovedplanen uden for dens aktive tidsrum, så du ikke behøver sammenhængende 24/7-planer. Bypass-laget fungerer som hidtil og tilsidesætter den, mens det er aktivt. Samme YAML-format som ovenfor (f.eks. temperature: 17, hvac_mode: heat).",
+              "schedule_bypass_entity": "Valgfrit prioritetslag (f.eks. en feriekalender). Når aktivt, tilsidesætter dens slot-data hovedplanen. Slot-data læses på samme måde: attributter for schedule.*-, YAML-beskrivelse for calendar.*-enheder.",
+              "retain_service_changes_schedule": "Behold ændringer af hovedplan, bypass og fallback-tilstand foretaget via tjenesten efter en genstart. Ellers nulstilles de til de konfigurerede standardværdier.",
               "ignore_off_members_schedule": "Tidsplanen vil IKKE tænde for medlemmer, der aktuelt er slukket."
             }
           },
@@ -344,6 +346,7 @@
               "retry_attempts": "Genforsøg Forsøg",
               "retry_delay": "Genforsøg Forsinkelse (sekunder)",
               "force_retry": "Tving gentagelse",
+              "member_command_delay": "Forsinkelse mellem medlemskommandoer (sekunder)",
               "grace_period": "Optimistisk UI-overgangsperiode (sekunder)",
               "expose_smart_sensors": "Udstil smarte sensorer",
               "expose_member_entities": "Udstil medlemsliste",
@@ -354,6 +357,7 @@
               "retry_attempts": "Hvor mange gange en kommando skal gensendes, hvis en enhed ikke svarer. Sæt til 0 for at deaktivere.",
               "retry_delay": "Pause mellem genforsøg. At give enheder et øjeblik til at komme sig kan forbedre pålideligheden.",
               "force_retry": "Sender altid kommandoer til alle medlemmer igen, selv hvis de allerede rapporterer måltilstanden.",
+              "member_command_delay": "Pause mellem kommandoer til de enkelte medlemmer. Hjælper, når styring af flere enheder samtidig overbelaster dit netværk eller din bridge (f.eks. IR-blastere, visse Zigbee-koordinatorer). Sæt til 0 for at deaktivere.",
               "grace_period": "Hvor længe gruppen viser den befalede værdi, inden den skifter til medlemsgennemsnittet. Forhindrer UI-flimmer, når langsomme enheder (Cloud-broer, Zigbee) ekko deres gamle tilstand. Sæt til 0 for at deaktivere.",
               "expose_smart_sensors": "Opretter ekstra sensorenheder for gruppens temperatur og fugtighed (nyttigt til grafer).",
               "expose_member_entities": "Opretter en attribut, der viser alle medlemsenheds-id'er.",
@@ -369,6 +373,7 @@
     },
     "error": {
       "no_entities": "Mindst én klimaenhed skal forblive i gruppen.",
+      "master_not_in_members": "Master-enheden skal være et medlem af gruppen.",
       "master_refresh_notice": "Master-enhed tilføjet. Nye muligheder tilgængelige.",
       "master_options_notice": "Ny Master-enhed mulighed",
       "isolation_all_selected": "Mindst ét medlem skal forblive uden for isolation.",
@@ -457,11 +462,11 @@
     "sync_mode": {
       "options": {
         "disabled": "Deaktiveret – Ingen automatisk synkronisering mellem medlemmer",
-        "follow_only": "Follow – Manuelle ændringer på en enhed opdaterer gruppen, men videregives ikke til de andre",
         "mirror": "Mirror – Manuelle ændringer på én enhed opdaterer alle medlemmer",
         "lock": "Lock – Manuelle ændringer tilbageføres til gruppetilstanden",
         "mirror_lock": "Mirror/Lock – Valgte attributter spejles, andre er strengt låst",
-        "master_lock": "Master/Lock – Kun master-enheden kan ændre gruppens mål"
+        "master_lock": "Master/Lock – Kun master-enheden kan ændre gruppens mål",
+        "adopt_only": "Kun overtag – Gruppen overtager manuelle ændringer fra en enhed uden at give dem videre til de andre"
       }
     },
     "sync_attributes": {
@@ -542,6 +547,14 @@
         "away_offset": "Fraværs-forskydning",
         "away_temperature": "Fraværs-temperatur",
         "away_preset": "Fraværs-forudindstilling"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Deaktiveret – Slukkede medlemmer tændes",
+        "away": "Ved bortgang",
+        "home": "Ved hjemkomst",
+        "away_home": "Ved bortgang og hjemkomst"
       }
     },
     "range_template_deadband_action": {
@@ -657,7 +670,7 @@
     },
     "set_schedule_fallback_payload": {
       "name": "Indstil fallback-payload for tidsplan",
-      "description": "Indstiller eller rydder en fallback-payload, der anvendes, når basisplanen er inaktiv. Tilsidesætter den konfigurerede fallback-payload.",
+      "description": "Indstiller eller rydder en fallback-payload, der anvendes, når hovedplanen er inaktiv. Tilsidesætter den konfigurerede fallback-payload.",
       "fields": {
         "fallback_payload": {
           "name": "Fallback-payload",

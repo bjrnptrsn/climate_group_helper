@@ -227,9 +227,11 @@ class MemberTemplateManager:
 
         low, high = self.resolve_range()
         if low is None or high is None:
-            expected_mode: str | None = state.state
+            # No band known yet: no command is due. `expected_mode=None` lets the
+            # proxy read as heat_cool for an available member while keeping a
+            # physically off member off — RangeTemplateState.state excludes OFF.
             expected_temp = state.attributes.get(ATTR_TEMPERATURE)
-            return RangeTemplateState(state, None, None, expected_mode, expected_temp)
+            return RangeTemplateState(state, None, None, None, expected_temp)
 
         current_temp = self._read_current_temp(state)
         supported_modes = state.attributes.get(ATTR_HVAC_MODES)
@@ -478,9 +480,9 @@ class MemberTemplateManager:
             return []
 
         template.entity_ids = frozenset(
-            eid for eid in self._group.climate_entity_ids
-            if (s := available_state(self._group.hass.states.get(eid)))
-            and HVACMode.HEAT_COOL not in s.attributes.get(ATTR_HVAC_MODES, [])
+            entity_id for entity_id in self._group.climate_entity_ids
+            if (state := available_state(self._group.hass.states.get(entity_id)))
+            and HVACMode.HEAT_COOL not in state.attributes.get(ATTR_HVAC_MODES, [])
         )
         self.initialize_last_modes()
         return list(template.entity_ids)
@@ -492,6 +494,14 @@ class MemberTemplateManager:
         (e.g. a member becomes available after being unavailable at startup).
         setdefault-style: skips entities that already have an entry, so it
         never overwrites a value the TemplateCallHandler has since set.
+
+        Only HEAT/COOL are seeded, matching the only values the regular write
+        site (_process_range_template) ever stores — a device that reboots
+        mid deadband-action (e.g. physically still `dry`) must not have that
+        transient mode seeded as its "last active" one: the humidity-recovery
+        branch in expected_mode_for() reads this value back verbatim once the
+        action ends, so a seeded `dry` would recover into `dry` again and the
+        device stays stuck until current_temperature next leaves the band.
         """
         template = self._range_template
         if template is None:
@@ -500,7 +510,7 @@ class MemberTemplateManager:
             if entity_id in template.last_physical_mode:
                 continue
             real_state = self._group.hass.states.get(entity_id)
-            if is_available(real_state):
+            if is_available(real_state) and real_state.state in (HVACMode.HEAT, HVACMode.COOL):
                 template.last_physical_mode[entity_id] = real_state.state
 
     # ------------------------------------------------------------------

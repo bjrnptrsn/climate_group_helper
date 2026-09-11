@@ -55,7 +55,7 @@ from .const import (
     SyncMode,
 )
 from .number import async_push_group_offset, clean_offset
-from .payload import extract_climate_payload, extract_meta_candidates
+from .payload import split_payload
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -151,12 +151,19 @@ class MetaProcessResult:
     """Return value of SlotMetaProcessor.process().
 
     Attributes:
-        climate_payload:        Basis-slot attributes that map to climate service calls.
+        climate_payload:        Main-slot attributes that map to climate service calls.
         climate_bypass_payload: Bypass-slot attributes (empty when no bypass is active).
+        bypass_has_content:     Whether the bypass slot carries anything at all —
+                                climate attributes or valid meta-keys. A slot that
+                                carries neither is not a bypass anyone configured;
+                                it is a calendar event that lost its payload, and
+                                it must not silence the main layer for its whole
+                                duration. The event title alone does not count.
     """
 
     climate_payload: dict[str, Any]
     climate_bypass_payload: dict[str, Any]
+    bypass_has_content: bool = False
 
 
 class MetaKeyOwnership:
@@ -172,8 +179,8 @@ class MetaKeyOwnership:
     every reader (the handler `bypassed` properties, `SyncModeHandler.sync_mode`,
     …) is unaffected.
 
-    Basis and bypass slots count as one schedule source: they are merged before
-    this is reached (`combined = {**basis, **bypass}`).
+    Main and bypass slots count as one schedule source: their meta-keys are
+    merged (bypass wins) before this is reached.
     """
 
     def __init__(self) -> None:
@@ -225,7 +232,7 @@ class MetaKeyOwnership:
 class SlotMetaProcessor:
     """Owns the full lifecycle of schedule meta-keys: apply, track, and clean up.
 
-    ScheduleHandler delegates all meta-key concerns here and only receives the
+    MainScheduleHandler delegates all meta-key concerns here and only receives the
     cleaned climate_payload in return — it has no knowledge of individual key
     semantics or the transition state between slots.
 
@@ -296,7 +303,7 @@ class SlotMetaProcessor:
         # dropping it here would leave `previous` at None the next time round, the
         # equality check could not fire again, and the very next re-process would
         # pull the user's value back to the slot's.
-        if previous is not None and previous == value and self._is_user_takeover(key, value):
+        if previous is not None and previous == value and self._live_value_diverges(key, value):
             _LOGGER.debug(
                 "[%s] Meta-Key apply: %s=%s skipped — ownership held by user",
                 self._group.entity_id, key, value,
@@ -307,8 +314,13 @@ class SlotMetaProcessor:
         self._group.run_state = self._group.run_state.set_config_override(key, value)
         await self._apply(key, value)
 
-    def _is_user_takeover(self, key: str, value: Any) -> bool:
+    def _live_value_diverges(self, key: str, value: Any) -> bool:
         """Return True if the live value diverges from what this key asked for.
+
+        One ingredient of the takeover detection in `_apply_effective`, gated on
+        a repeated claim (`previous == value`). It is not the definition of a
+        takeover: the handover and `_cleanup()` recognise one by the override's
+        *absence*, not by a value comparison — see those call sites.
 
         Only `group_offset` has a value the user can move independently (the
         slider). Every other key drives handler behaviour that nothing else
@@ -335,11 +347,14 @@ class SlotMetaProcessor:
             winner = self._ownership.effective(key)
             if winner is None:  # unreachable, guarded by is_claimed above
                 continue
-            # Same takeover guard as _apply_effective's direct-claim path: the
-            # outgoing source's exit must not let the inheriting source's value
-            # pull a user-moved group_offset back to the slot's — a handover is
-            # not a fresh instruction and deserves no more precedence than one.
-            if self._is_user_takeover(key, winner[1]):
+            # A genuine user takeover is recognised by the override being gone:
+            # the slider clears the config_overrides entry directly
+            # (OffsetNumber.async_set_native_value), bypassing the registry. A
+            # plain handover still carries the departing source's override, so
+            # the winner's value must take over. Comparing the live value against
+            # the winner instead would read every differing handover as a
+            # takeover and strand the key at the value the source just released.
+            if key == META_KEY_GROUP_OFFSET and key not in self._group.run_state.config_overrides:
                 _LOGGER.debug(
                     "[%s] Meta-Key handover: %s=%s skipped — ownership held by user",
                     self._group.entity_id, key, winner[1],
@@ -354,20 +369,23 @@ class SlotMetaProcessor:
         if orphaned:
             await self._cleanup(orphaned)
 
-    async def process(self, basis_data: dict[str, Any], bypass_data: dict[str, Any]) -> MetaProcessResult:
-        """Process basis and bypass slots: merge meta-keys, keep climate payloads separate.
+    async def process(self, main_data: dict[str, Any], bypass_data: dict[str, Any]) -> MetaProcessResult:
+        """Process main and bypass slots: merge meta-keys, keep climate payloads separate.
 
-        Called by ScheduleBaseHandler on every slot or bypass transition.
-        bypass_data keys overwrite basis_data keys for meta-processing (last writer wins).
+        Called by BaseScheduleHandler on every slot or bypass transition.
+        bypass_data keys overwrite main_data keys for meta-processing (last writer wins).
         """
-        # 1. Split: climate attributes remain separate for the caller
-        basis_climate = extract_climate_payload(basis_data)
-        bypass_climate = extract_climate_payload(bypass_data)
+        main_climate, main_meta = split_payload(main_data)
+        bypass_climate, bypass_meta = split_payload(bypass_data)
+        # Whether the bypass slot carries any usable content: climate attributes
+        # or valid meta-keys. `message` (the event title) is ignored because a
+        # calendar event always carries it — a slot with only a title is not a
+        # bypass anyone configured and must not silence the main. Validated
+        # with an empty context so no warnings fire here: the slot path below
+        # reports the same keys already.
+        bypass_has_content = bool(bypass_climate or self.validate_values(bypass_meta))
 
-        # Combined view for meta-key processing (bypass wins)
-        combined = {**basis_data, **bypass_data}
-
-        meta_candidates = extract_meta_candidates(combined)
+        meta_candidates = {**main_meta, **bypass_meta}
 
         slot_message = meta_candidates.pop("message", None)
         prev_slot_title = self._group.run_state.active_slot_title
@@ -411,36 +429,34 @@ class SlotMetaProcessor:
 
         # Identify valid meta-keys; warn on unknown ones (typo guard).
         # Values are normalised here so every downstream reader sees one shape.
-        slot_values = self.validate_values(
-            meta_candidates, context="Schedule slot", warn_unknown=True
-        )
+        final_meta = self.validate_values(meta_candidates, context="Schedule slot")
 
         had_claims = bool(self._ownership.keys_for(SOURCE_SCHEDULE))
-        await self.apply_source(SOURCE_SCHEDULE, slot_values)
+        await self.apply_source(SOURCE_SCHEDULE, final_meta)
 
         # Trigger a state update so that changes to config_overrides or other
         # RunState fields are immediately visible in HA attributes.
-        if had_claims or slot_values or slot_message != prev_slot_title:
+        if had_claims or final_meta or slot_message != prev_slot_title:
             self._group.async_defer_or_update_ha_state()
 
         return MetaProcessResult(
-            climate_payload=basis_climate,
+            climate_payload=main_climate,
             climate_bypass_payload=bypass_climate,
+            bypass_has_content=bypass_has_content,
         )
 
-    def validate_values(
-        self, candidates: dict[str, Any], *, context: str, warn_unknown: bool
-    ) -> dict[str, Any]:
+    def validate_values(self, candidates: dict[str, Any], *, context: str = "") -> dict[str, Any]:
         """Filter a mapping down to valid meta-keys with canonical values.
 
         Shared by both sources so a preset and a slot accept exactly the same
         keys and values — a definition can be moved between them unchanged.
 
-        `warn_unknown` separates the two callers: a schedule slot carries only
-        meta-keys, so anything unrecognised there is a typo worth reporting. A
-        preset payload is mostly climate attributes, which the caller has already
-        split off — what arrives here is pre-filtered, and warning again would
-        duplicate the message the preset path emits itself.
+        `context` names the payload's origin for the unknown-key warning. An
+        empty context suppresses it — the bypass-content check runs beside the
+        slot validation and would otherwise report the same typo twice. The
+        value warnings in `_validate_meta_value` are independent of it and
+        always fire: a rejection there is the user's only signal that a value
+        was dropped.
         """
         valid: dict[str, Any] = {}
         for key, value in candidates.items():
@@ -451,7 +467,7 @@ class SlotMetaProcessor:
                 canonical = self._validate_meta_value(key, value)
                 if canonical is not None:
                     valid[key] = canonical
-            elif warn_unknown and key not in _HA_SYSTEM_ATTRS:
+            elif context and key not in _HA_SYSTEM_ATTRS:
                 _LOGGER.warning(
                     "[%s] %s contains unknown meta-key '%s' — ignored. Valid meta-keys: %s",
                     self._group.entity_id, context, key, sorted(META_STATE_KEYS)
@@ -509,7 +525,7 @@ class SlotMetaProcessor:
         if key == META_KEY_SYNC_ATTRS:
             if not (
                 isinstance(value, (list, tuple))
-                and all(isinstance(v, str) for v in value)
+                and all(isinstance(item, str) for item in value)
             ):
                 _LOGGER.warning(
                     "[%s] Invalid value for meta-key 'sync_attributes': %s (expected a list of attribute names) — ignored",
@@ -656,7 +672,7 @@ class SlotMetaProcessor:
             # guard reports one. The value guard cannot catch it: it only knows
             # the 1-4 range, not which of those slots actually carry a rule.
             if value != META_VALUE_ALL:
-                known = {h.slot for h in self._group.member_isolation_handlers}
+                known = {handler.slot for handler in self._group.member_isolation_handlers}
                 if unknown := sorted(set(value) - known):
                     _LOGGER.warning(
                         "[%s] Meta-Key 'isolation_bypass': no isolation rule in slot(s) %s — "

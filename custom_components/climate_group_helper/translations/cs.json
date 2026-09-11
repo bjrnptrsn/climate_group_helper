@@ -109,7 +109,7 @@
               "ignore_off_members_sync": "Respektovat stav Vypnuto členů (Synchronizace)"
             },
             "data_description": {
-              "sync_mode": "Co dělat, když se člen změní mimo skupinu. Disabled: ignorovat. Follow: převzít změny bez přenosu. Mirror: zrcadlit změny. Lock: vrátit změny. Mirror/Lock: zrcadlit vybrané, vrátit nevybrané. Master/Lock: zrcadlit master, vrátit ostatní.",
+              "sync_mode": "Co dělat, když se člen změní mimo skupinu. Disabled: ignorovat. Mirror: zrcadlit změny. Lock: vrátit změny. Mirror/Lock: zrcadlit vybrané, vrátit nevybrané. Master/Lock: zrcadlit master, vrátit ostatní. Pouze převzít: převzít změny bez přenosu.",
               "sync_attributes": "Definuje, na které atributy se režim synchronizace vztahuje. Zpracování vybraných a nevybraných atributů (Mirror, Revert nebo Ignore) závisí na zvoleném režimu.",
               "ignore_off_members_sync": "Ručně vypnutí členové jsou ponecháni na pokoji. Jejich stav se nezrcadlí ani nevrací. Poznámka: přímé skupinové příkazy vždy zasáhnou všechny členy."
             }
@@ -152,7 +152,8 @@
               "presence_away_temperature": "Teplota při nepřítomnosti",
               "presence_away_preset": "Předvolba při nepřítomnosti",
               "presence_away_delay": "Zpoždění nepřítomnosti (sekundy)",
-              "presence_return_delay": "Zpoždění návratu (sekundy)"
+              "presence_return_delay": "Zpoždění návratu (sekundy)",
+              "ignore_off_members_presence": "Respektovat vypnutý stav člena (přítomnost)"
             },
             "data_description": {
               "presence_mode": "Povolit nebo zakázat automatický přechod do režimu pryč při zjištění nepřítomnosti.",
@@ -163,24 +164,25 @@
               "presence_away_temperature": "Pevná cílová teplota při nepřítomnosti.",
               "presence_away_preset": "Předvolba při nepřítomnosti (např. 'eco', 'away').",
               "presence_away_delay": "Čekací doba po hlášení nepřítomnosti před aktivací režimu nepřítomnosti.",
-              "presence_return_delay": "Čekací doba po hlášení přítomnosti před obnovením předchozího stavu."
+              "presence_return_delay": "Čekací doba po hlášení přítomnosti před obnovením předchozího stavu.",
+              "ignore_off_members_presence": "Ponechá vypnuté členy na pokoji — při odchodu, při návratu nebo v obou případech. Neplatí, pokud je akce při nepřítomnosti nastavena na „Vypnout“, protože skupina členy vypnula sama."
             }
           },
           "schedule_section": {
             "name": "Automatizace plánu",
             "description": "Propojte entitu rozvrhu nebo kalendáře pro automatizaci nastavení klimatu. Data slotu mohou obsahovat klimatické atributy (temperature, hvac_mode) a meta-klíče (turn_off, sync_mode, sync_attributes) pro úpravu chování skupiny na slot.",
             "data": {
-              "schedule_entity": "Základní entita rozvrhu / kalendáře",
-              "schedule_fallback_payload": "Náhradní stav při neaktivním základním rozvrhu / kalendáři (YAML)",
+              "schedule_entity": "Hlavní entita rozvrhu / kalendáře",
+              "schedule_fallback_payload": "Náhradní stav při neaktivním hlavním rozvrhu / kalendáři (YAML)",
               "schedule_bypass_entity": "Obchozí entita rozvrhu / kalendáře",
               "retain_service_changes_schedule": "Zachovat změny provedené přes službu (Plánování)",
               "ignore_off_members_schedule": "Respektovat stav Vypnuto členů (Plánování)"
             },
             "data_description": {
               "schedule_entity": "Vyberte entitu schedule.* nebo calendar.*. U entit rozvrhu se data slotu čtou z atributů slotu. U entit kalendáře se data slotu čtou jako YAML z pole popisu události. Podporované klíče: klimatické atributy a meta-klíče.",
-              "schedule_fallback_payload": "Zastupuje základní rozvrh mimo jeho aktivní bloky, takže nepotřebujete souvislé rozvrhy 24/7. Vrstva bypass funguje beze změny a po dobu aktivity jej přepíše. Stejný formát YAML jako výše (např. temperature: 17, hvac_mode: heat).",
-              "schedule_bypass_entity": "Volitelná prioritní vrstva (např. kalendář dovolené). Pokud je aktivní, její data slotu přepíší základní plán. Data slotu se čtou stejně: atributy pro entity schedule.*, YAML popis pro entity calendar.*.",
-              "retain_service_changes_schedule": "Po restartu zachová základní rozvrh, bypass a náhradní stav změněné prostřednictvím služby. Jinak se vrátí na nakonfigurované výchozí hodnoty.",
+              "schedule_fallback_payload": "Zastupuje hlavní rozvrh mimo jeho aktivní bloky, takže nepotřebujete souvislé rozvrhy 24/7. Vrstva bypass funguje beze změny a po dobu aktivity jej přepíše. Stejný formát YAML jako výše (např. temperature: 17, hvac_mode: heat).",
+              "schedule_bypass_entity": "Volitelná prioritní vrstva (např. kalendář dovolené). Pokud je aktivní, její data slotu přepíší hlavní plán. Data slotu se čtou stejně: atributy pro entity schedule.*, YAML popis pro entity calendar.*.",
+              "retain_service_changes_schedule": "Po restartu zachová hlavní rozvrh, bypass a náhradní stav změněné prostřednictvím služby. Jinak se vrátí na nakonfigurované výchozí hodnoty.",
               "ignore_off_members_schedule": "Plánování NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ."
             }
           },
@@ -344,6 +346,7 @@
               "retry_attempts": "Pokusy o Opakování",
               "retry_delay": "Zpoždění Opakování (sekundy)",
               "force_retry": "Vynutit opakování",
+              "member_command_delay": "Zpoždění mezi příkazy členům (sekundy)",
               "grace_period": "Optimistická doba přechodu UI (sekundy)",
               "expose_smart_sensors": "Zvolte zda vytvořit senzorové entity",
               "expose_member_entities": "Zvolte zda zobrazit seznam členů",
@@ -354,6 +357,7 @@
               "retry_attempts": "Kolikrát znovu odeslat příkaz, pokud zařízení neodpovídá. Nastavte na 0 pro vypnutí.",
               "retry_delay": "Pauza mezi pokusy. Dát zařízením chvilku na zotavení může zlepšit spolehlivost.",
               "force_retry": "Vždy znovu odesílá příkazy všem členům, i když již hlásí cílový stav.",
+              "member_command_delay": "Pauza mezi příkazy jednotlivým členům. Pomáhá, když současné ovládání více zařízení přetíží síť nebo bránu (např. IR vysílače, některé Zigbee koordinátory). Nastavte na 0 pro vypnutí.",
               "grace_period": "Jak dlouho skupina zobrazuje zadanou hodnotu před přepnutím na průměr členů. Zabraňuje blikání UI, když pomalá zařízení (Cloud bridges, Zigbee) hlásí zpět svůj starý stav. Nastavte na 0 pro vypnutí.",
               "expose_smart_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
               "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
@@ -369,6 +373,7 @@
     },
     "error": {
       "no_entities": "Alespoň jedno klimatické zařízení musí ve skupině zůstat.",
+      "master_not_in_members": "Hlavní entita musí být členem skupiny.",
       "master_refresh_notice": "Hlavní entita (Master) přidána. Dostupné nové možnosti.",
       "master_options_notice": "Nová možnost Hlavní entity",
       "isolation_all_selected": "Alespoň jeden člen musí zůstat mimo izolaci.",
@@ -457,11 +462,11 @@
     "sync_mode": {
       "options": {
         "disabled": "Zakázáno – Žádná automatická synchronizace mezi členy",
-        "follow_only": "Follow – Manuální změny na zařízení aktualizují skupinu, ale nepřenesou se na ostatní",
         "mirror": "Mirror – Manuální změny na jednom zařízení se přenesou na všechny členy",
         "lock": "Lock – Manuální změny se vrátí na stav skupiny",
         "mirror_lock": "Mirror/Lock – Vybrané atributy jsou zrcadleny, ostatní jsou striktně uzamčeny",
-        "master_lock": "Master/Lock – Pouze hlavní zařízení může měnit cíl skupiny"
+        "master_lock": "Master/Lock – Pouze hlavní zařízení může měnit cíl skupiny",
+        "adopt_only": "Pouze převzít – Skupina převezme ruční změny ze zařízení, aniž by je předala ostatním"
       }
     },
     "sync_attributes": {
@@ -542,6 +547,14 @@
         "away_offset": "Posun při nepřítomnosti",
         "away_temperature": "Teplota při nepřítomnosti",
         "away_preset": "Předvolba při nepřítomnosti"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Vypnuto – Vypnutí členové se zapnou",
+        "away": "Při odchodu",
+        "home": "Při návratu",
+        "away_home": "Při odchodu i návratu"
       }
     },
     "range_template_deadband_action": {
@@ -657,7 +670,7 @@
     },
     "set_schedule_fallback_payload": {
       "name": "Nastavit náhradní payload plánu",
-      "description": "Nastaví nebo vymaže náhradní payload použitý, když je základní rozvrh vypnutý. Přepíše nakonfigurovaný náhradní payload.",
+      "description": "Nastaví nebo vymaže náhradní payload použitý, když je hlavní rozvrh vypnutý. Přepíše nakonfigurovaný náhradní payload.",
       "fields": {
         "fallback_payload": {
           "name": "Náhradní payload",
