@@ -47,7 +47,7 @@
               "hvac_mode_strategy": "Strategie zur Berechnung des Gruppenstatus aus den Mitgliedern (z.B. wenn eines 'heat' und ein anderes 'off' ist).",
               "feature_strategy": "Bestimmt, welche Funktionen (z.B. Preset-Modi, Lüfter-Modi) in der Gruppe verfügbar sind, wenn Mitglieder unterschiedliche Fähigkeiten haben.",
               "union_out_of_bounds_action": "Was mit Geräten geschieht, die die Zieltemperatur nicht erreichen können. Gilt nur wenn die Feature-Strategie auf Union gesetzt ist.",
-              "union_unsupported_hvac_action": "Was soll mit Mitgliedern geschehen, die den Ziel-HVAC-Modus der Gruppe technisch nicht unterstützen (z. B. Klimaanlage beim Heizen). Gilt nur, wenn die Funktionsstrategie auf Union gesetzt ist."
+              "union_unsupported_hvac_action": "Was soll mit Mitgliedern geschehen, die den Ziel-HVAC-Modus der Gruppe technisch nicht unterstützen (z.B. Klimaanlage beim Heizen). Gilt nur, wenn die Funktionsstrategie auf Union gesetzt ist."
             }
           },
           "temperature_section": {
@@ -160,7 +160,7 @@
               "presence_sensor": "Die Entität, die die Raumpräsenz meldet. Es können mehrere Sensoren ausgewählt werden (z.B. Bewegungsmelder und Smartphone). Der Status 'Ein' oder 'home' eines beliebigen Sensors wird als anwesend gewertet.",
               "presence_zone": "(Optional) Zonen auswählen, in denen Anwesenheit gewertet wird. Wenn definiert, gilt eine Person nur dann als 'anwesend', wenn sie sich in einer dieser Zonen befindet. Wenn leer, gilt die Person in jeder Zone als 'anwesend' (außer 'not_home').",
               "presence_action": "Was passiert, wenn der Raum unbelegt ist.",
-              "presence_away_offset": "Versatz zum aktuellen Zielwert bei Abwesenheit (z. B. -2° oder +2°). Änderungen am Zeitplan während der Abwesenheit werden automatisch berücksichtigt.",
+              "presence_away_offset": "Versatz zum aktuellen Zielwert bei Abwesenheit (z.B. -2° oder +2°). Änderungen am Zeitplan während der Abwesenheit werden automatisch berücksichtigt.",
               "presence_away_temperature": "Feste Zieltemperatur bei Abwesenheit.",
               "presence_away_preset": "Preset bei Abwesenheit (z.B. 'eco', 'away').",
               "presence_away_delay": "Wartezeit nach Abwesenheitsmeldung, bevor der Abwesenheits-Modus aktiviert wird.",
@@ -176,19 +176,21 @@
               "schedule_fallback_payload": "Fallback-Zustand bei inaktivem Haupt-Zeitplan / Kalender (YAML)",
               "schedule_bypass_entity": "Bypass-Zeitplan / Kalenderentität",
               "retain_service_changes_schedule": "Per Dienst geänderte Werte beibehalten (Zeitplan)",
-              "ignore_off_members_schedule": "Respektiere 'Aus'-Status der Mitglieder (Zeitplan)"
+              "ignore_off_members_schedule": "Respektiere 'Aus'-Status der Mitglieder (Zeitplan)",
+              "schedule_hold_duration": "Manuelle Haltezeit"
             },
             "data_description": {
               "schedule_entity": "Wähle eine schedule.*- oder calendar.*-Entität. Bei Zeitplan-Entitäten werden die Slot-Daten aus den Slot-Attributen gelesen. Bei Kalender-Entitäten werden die Slot-Daten als YAML aus dem Beschreibungsfeld des Ereignisses gelesen. Unterstützte Schlüssel: Klima-Attribute und Meta-Keys.",
-              "schedule_fallback_payload": "Springt außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan ein, sodass keine lückenlosen 24/7-Zeitpläne nötig sind. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist. Gleiches YAML-Format wie oben (z. B. temperature: 17, hvac_mode: heat).",
+              "schedule_fallback_payload": "Springt außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan ein, sodass keine lückenlosen 24/7-Zeitpläne nötig sind. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist. Gleiches YAML-Format wie oben (z.B. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optionale Prioritätsebene (z.B. ein Urlaubskalender). Wenn aktiv, überschreiben ihre Slot-Daten den Hauptplan. Slot-Daten werden gleich gelesen: Attribute für schedule.*-, YAML-Beschreibung für calendar.*-Entitäten.",
               "retain_service_changes_schedule": "Behält per Dienst geänderten Haupt-Zeitplan, Bypass und Fallback-Zustand nach einem Neustart bei. Andernfalls wird auf die konfigurierten Standardwerte zurückgesetzt.",
-              "ignore_off_members_schedule": "Der Zeitplan schaltet keine Mitglieder ein, die aktuell ausgeschaltet sind."
+              "ignore_off_members_schedule": "Der Zeitplan schaltet keine Mitglieder ein, die aktuell ausgeschaltet sind.",
+              "schedule_hold_duration": "Wie lange eine manuelle Änderung (z.B. Temperatur oder die Gruppe von Hand ein-/ausschalten) hält, bevor der Zeitplan mit dem dann aktuellen Zeitblock wieder übernimmt. 0 deaktiviert die Haltezeit."
             }
           },
           "presets_section": {
             "name": "Gruppen-Presets",
-            "description": "Definiere eigene benannte Presets für die Gruppe (z. B. eco, guest, ventilate). Die Auswahl eines Presets wendet seine Attribute auf alle Mitglieder gleichzeitig an. Ein Gruppen-Preset überschreibt ein gleichnamiges Preset eines Mitglieds.",
+            "description": "Definiere eigene benannte Presets für die Gruppe (z.B. eco, guest, ventilate). Die Auswahl eines Presets wendet seine Attribute auf alle Mitglieder gleichzeitig an. Ein Gruppen-Preset überschreibt ein gleichnamiges Preset eines Mitglieds.",
             "data": {
               "group_presets": "Gruppen-Presets (YAML)",
               "retain_service_changes_presets": "Per Dienst geänderte Werte beibehalten (Presets)"
@@ -357,7 +359,7 @@
               "retry_attempts": "Wie oft Befehle erneut gesendet werden, falls ein Gerät nicht antwortet. Auf 0 setzen zum Deaktivieren.",
               "retry_delay": "Pause zwischen Wiederholungsversuchen. Gibt Geräten einen Moment zur Erholung.",
               "force_retry": "Sendet Befehle immer an alle Mitglieder, auch wenn diese den Zielzustand bereits melden.",
-              "member_command_delay": "Pause zwischen Befehlen an einzelne Mitglieder. Hilft, wenn das gleichzeitige Ansteuern mehrerer Geräte dein Netzwerk oder deine Bridge überlastet (z. B. IR-Blaster, manche Zigbee-Koordinatoren). 0 zum Deaktivieren.",
+              "member_command_delay": "Pause zwischen Befehlen an einzelne Mitglieder. Hilft, wenn das gleichzeitige Ansteuern mehrerer Geräte dein Netzwerk oder deine Bridge überlastet (z.B. IR-Blaster, manche Zigbee-Koordinatoren). 0 zum Deaktivieren.",
               "grace_period": "Wie lange die Gruppe den gesendeten Wert anzeigt, bevor sie zum Mitgliederdurchschnitt wechselt. Verhindert UI-Flackern, wenn langsame Geräte (Cloud-Bridges, Zigbee) ihren alten Zustand zurückmelden. Auf 0 setzen zum Deaktivieren.",
               "expose_smart_sensors": "Erstellt zusätzliche Sensor-Entitäten für Temperatur und Feuchtigkeit der Gruppe (nützlich für Diagramme).",
               "expose_member_entities": "Erstellt ein Attribut, das alle Mitglieder-Entity-IDs auflistet.",
@@ -694,11 +696,11 @@
       "fields": {
         "temperature": {
           "name": "Temperatur",
-          "description": "Absolute Zieltemperatur während des Boosts (z. B. 24,0). Schließt temperature_offset aus."
+          "description": "Absolute Zieltemperatur während des Boosts (z.B. 24,0). Schließt temperature_offset aus."
         },
         "temperature_offset": {
           "name": "Temperatur-Offset",
-          "description": "Relativer Offset zur aktuellen Zieltemperatur (z. B. +3,0 oder -2,0). Schließt temperature aus."
+          "description": "Relativer Offset zur aktuellen Zieltemperatur (z.B. +3,0 oder -2,0). Schließt temperature aus."
         },
         "duration": {
           "name": "Dauer (Minuten)",

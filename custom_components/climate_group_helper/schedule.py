@@ -5,17 +5,20 @@ from __future__ import annotations
 import logging
 import asyncio
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.const import STATE_ON
 from homeassistant.core import callback
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_FALLBACK_PAYLOAD,
+    CONF_SCHEDULE_HOLD_DURATION,
     FLOAT_TOLERANCE,
 )
 from .state import is_available
@@ -200,6 +203,17 @@ class BaseScheduleHandler(ABC):
         return self._group.shared_target_state
 
     @property
+    def _hold_active(self) -> bool:
+        """True while a manual hold defers the main slot's climate payload.
+
+        While set, the main schedule must not write its climate payload into
+        `target_state` nor push it: the group's intended state is the manual
+        change, and an enforcing sync mode would otherwise pull the slot value
+        back onto the members.
+        """
+        return self._group.run_state.schedule_hold_until is not None
+
+    @property
     def slot_transition_lock(self) -> asyncio.Lock:
         """Return the shared group-level slot transition lock."""
         return self._group.slot_transition_lock
@@ -354,6 +368,13 @@ class MainScheduleHandler(BaseScheduleHandler):
         async with self.slot_transition_lock:
             ctx = await self._read_slots()
             record = self.slot_resolver.record(ctx)
+            # The hold defers only the climate payload: `_read_slots()` has
+            # already run the meta-keys and `record()` its claim bookkeeping.
+            if self._hold_active:
+                _LOGGER.debug(
+                    "[%s] Slot climate deferred — manual hold active", self._group.entity_id
+                )
+                return
             self._update_state(record)
             if not ctx.bypass_active:
                 await self._call_members(ctx.main_payload)
@@ -505,6 +526,12 @@ class BypassScheduleHandler(BaseScheduleHandler):
         """
         async with self.slot_transition_lock:
             ctx = await self._read_slots()
+            had_claims = bool(self._group.run_state.schedule_bypass_claims)
+            # Not every run of this listener is a bypass run: it also fires for
+            # attribute-only updates on an inactive entity. Those three are.
+            is_bypass_run = ctx.bypass_active or was_active or had_claims
+            if is_bypass_run:
+                self._group.schedule_hold_manager.clear()
             if ctx.bypass_active:
                 record = self.slot_resolver.record(ctx)
                 self._update_state(record)
@@ -512,8 +539,11 @@ class BypassScheduleHandler(BaseScheduleHandler):
             elif was_active:
                 await self._release_bypass(ctx)
             else:
-                had_claims = bool(self._group.run_state.schedule_bypass_claims)
-                self._update_state(self.slot_resolver.record(ctx))
+                # Carries the main slot, so the hold gates it here too.
+                record = self.slot_resolver.record(ctx)
+                if self._hold_active:
+                    return
+                self._update_state(record)
                 await self._call_members(SYNC_TARGET if had_claims else ctx.main_payload)
 
     async def _release_bypass(self, ctx: SlotContext) -> None:
@@ -618,3 +648,115 @@ class BypassScheduleHandler(BaseScheduleHandler):
             self._subscribe()
         if apply or was_active:
             await self.on_slot_change(was_active=was_active)
+
+
+class ScheduleHoldManager:
+    """Owns the manual schedule hold.
+
+    A manual change (user command, MIRROR/MASTER adoption, or ADOPT_ONLY
+    adoption) starts a timer for the configured duration; while it runs, the
+    main schedule's climate payload is deferred (`BaseScheduleHandler._hold_active`).
+    On expiry the then-current slot is applied.
+
+    Triggered from `BaseStateManager.update()` — the one place `target_state`
+    changes, with the resolved source — so blocked commands and retries never
+    start a hold. The absolute deadline lives in `run_state.schedule_hold_until`
+    and is exposed/persisted as a state attribute by `status.py`.
+    """
+
+    # `adopt_only` is a sync mode of its own source (AdoptStateManager.SOURCE),
+    # so its adoption is listed explicitly rather than falling under `sync_mode`.
+    TRIGGER_SOURCES = frozenset({"ui", "group", "sync_mode", "adopt_only"})
+
+    def __init__(self, group: ClimateGroupHelper) -> None:
+        self._group = group
+        self._hass = group.hass
+        self._timer: Any = None
+        self._duration = self._resolve_duration()
+        _LOGGER.debug(
+            "[%s] Schedule hold initialized: duration=%.0fs",
+            group.log_id, self._duration,
+        )
+
+    def _resolve_duration(self) -> float:
+        """Return the configured hold duration in seconds (0 = disabled)."""
+        if not self._group.advanced_mode:
+            return 0.0
+        try:
+            minutes = float(self._group.config.get(CONF_SCHEDULE_HOLD_DURATION, 0))
+        except (TypeError, ValueError):
+            return 0.0
+        return max(0.0, minutes) * 60.0
+
+    def on_target_state_write(self, source: str | None) -> None:
+        """Start or renew the hold when a manual source wrote `target_state`."""
+        if self._duration <= 0.0 or source not in self.TRIGGER_SOURCES:
+            return
+        deadline = dt_util.utcnow() + timedelta(seconds=self._duration)
+        self._group.run_state = replace(self._group.run_state, schedule_hold_until=deadline)
+        self._start_timer(self._duration, self._on_expired)
+        _LOGGER.debug(
+            "[%s] Schedule hold started/renewed until %s",
+            self._group.entity_id, dt_util.as_local(deadline),
+        )
+
+    def restore(self, raw: Any) -> None:
+        """Re-arm a persisted deadline; a past deadline is dropped.
+
+        Dropping (rather than expiring here) is deliberate: the caller runs
+        before the startup slot apply, which then applies the current slot.
+        """
+        deadline = dt_util.parse_datetime(raw) if isinstance(raw, str) else raw
+        if deadline is None or self._duration <= 0.0:
+            return
+        remaining = (deadline - dt_util.utcnow()).total_seconds()
+        if remaining <= 0:
+            return
+        self._group.run_state = replace(self._group.run_state, schedule_hold_until=deadline)
+        self._start_timer(remaining, self._on_expired)
+        _LOGGER.debug(
+            "[%s] Schedule hold restored until %s",
+            self._group.entity_id, dt_util.as_local(deadline),
+        )
+
+    def clear(self) -> None:
+        """Drop an active hold — a bypass run supersedes it."""
+        self._cancel_timer()
+        if self._group.run_state.schedule_hold_until is None:
+            return
+        self._group.run_state = replace(self._group.run_state, schedule_hold_until=None)
+        self._group.async_defer_or_update_ha_state()
+        _LOGGER.debug(
+            "[%s] Schedule hold cleared — bypass supersedes it", self._group.entity_id
+        )
+
+    def _start_timer(self, duration: float, on_expired: Any) -> None:
+        self._cancel_timer()
+
+        @callback
+        def _handle_timeout(_now: Any) -> None:
+            self._timer = None
+            self._hass.async_create_background_task(
+                on_expired(), name="climate_group_schedule_hold_expired"
+            )
+
+        self._timer = async_call_later(self._hass, duration, _handle_timeout)
+
+    def _cancel_timer(self) -> None:
+        if self._timer:
+            self._timer()
+            self._timer = None
+
+    async def _on_expired(self) -> None:
+        # A newer hold replaced this expiry before its task ran — the timer
+        # handle is the identity marker, same pattern as the boost.
+        if self._timer is not None:
+            return
+        if self._group.run_state.schedule_hold_until is None:
+            return
+        self._group.run_state = replace(self._group.run_state, schedule_hold_until=None)
+        self._group.async_defer_or_update_ha_state()
+        await self._group.schedule_handler.on_slot_change()
+
+    def async_teardown(self) -> None:
+        self._cancel_timer()

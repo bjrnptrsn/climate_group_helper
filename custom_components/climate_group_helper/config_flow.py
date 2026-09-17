@@ -98,6 +98,7 @@ from .const import (
     CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_FALLBACK_PAYLOAD,
     CONF_SCHEDULE_ENTITY,
+    CONF_SCHEDULE_HOLD_DURATION,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
     CONF_TEMP_CALIBRATION_MODE,
@@ -1286,6 +1287,18 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                             CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
                             default=config.get(CONF_IGNORE_OFF_MEMBERS_SCHEDULE, False),
                         ): selector.BooleanSelector(),
+                        vol.Optional(
+                            CONF_SCHEDULE_HOLD_DURATION,
+                            default=config.get(CONF_SCHEDULE_HOLD_DURATION, 0),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=0,
+                                max=480,
+                                step=5,
+                                unit_of_measurement="min",
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
                     }
                 ),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},

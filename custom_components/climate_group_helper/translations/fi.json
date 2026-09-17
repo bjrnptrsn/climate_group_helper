@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Varatila epäaktiiviselle pääaikataululle/kalenterille (YAML)",
               "schedule_bypass_entity": "Ohitusaikataulu-/kalenteriobjekti",
               "retain_service_changes_schedule": "Säilytä palvelun kautta tehdyt muutokset (aikataulu)",
-              "ignore_off_members_schedule": "Kunnioita jäsenen pois-tilaa (aikataulu)"
+              "ignore_off_members_schedule": "Kunnioita jäsenen pois-tilaa (aikataulu)",
+              "schedule_hold_duration": "Manuaalisen pidon kesto"
             },
             "data_description": {
               "schedule_entity": "Valitse schedule.* tai calendar.* -entiteetti. Aikatauluentiteeteillä aikavälin tiedot luetaan aikavälin attribuuteista. Kalenterientiteeteillä aikavälin tiedot luetaan tapahtuman description-kentästä YAML-muodossa. Tuetut avaimet: ilmastointiattribuutit ja meta-avaimet.",
               "schedule_fallback_payload": "Korvaa pääaikataulun sen aktiivisten jaksojen ulkopuolella, joten aukottomia 24/7-aikatauluja ei tarvita. Ohituskerros toimii ennallaan ja ohittaa sen ollessaan aktiivinen. Sama YAML-muoto kuin yllä (esim. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valinnainen korkeamman prioriteetin taso (esim. loma-kalenteri). Kun aktiivinen, sen aikavälin tiedot ohittavat pääaikataulun. Aikavälin tiedot luetaan samalla tavalla: attribuutit schedule.*-entiteeteille, YAML-kuvaus calendar.*-entiteeteille.",
               "retain_service_changes_schedule": "Säilyttää palvelun kautta muutetun pääaikataulun, ohituksen ja varatilan uudelleenkäynnistyksen jälkeen. Muuten ne palautuvat määritettyihin oletusarvoihin.",
-              "ignore_off_members_schedule": "Aikataulu EI kytke päälle jäseniä, jotka ovat tällä hetkellä pois päältä."
+              "ignore_off_members_schedule": "Aikataulu EI kytke päälle jäseniä, jotka ovat tällä hetkellä pois päältä.",
+              "schedule_hold_duration": "Kuinka pitkään manuaalinen muutos (esim. lämpötila tai ryhmän käsin päälle/pois kytkeminen) pidetään voimassa, ennen kuin aikataulu jatkaa silloin voimassa olevalla jaksolla. 0 poistaa pidon käytöstä."
             }
           },
           "presets_section": {

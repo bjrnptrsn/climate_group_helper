@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Náhradný stav pri neaktívnom hlavnom rozvrhu/kalendári (YAML)",
               "schedule_bypass_entity": "Obchádzková entita rozvrhu/kalendára",
               "retain_service_changes_schedule": "Zachovať zmeny vykonané cez službu (Plán)",
-              "ignore_off_members_schedule": "Rešpektovať stav Vypnuté u členov (Plán)"
+              "ignore_off_members_schedule": "Rešpektovať stav Vypnuté u členov (Plán)",
+              "schedule_hold_duration": "Doba manuálneho podržania"
             },
             "data_description": {
               "schedule_entity": "Vyberte entitu schedule.* alebo calendar.*. Pre entity rozvrhu sa dáta slotu čítajú z atribútov slotu. Pre entity kalendára sa dáta slotu čítajú ako YAML z poľa popisu udalosti. Podporované kľúče: klimatické atribúty a meta-kľúče.",
               "schedule_fallback_payload": "Zastupuje hlavný rozvrh mimo jeho aktívnych blokov, takže nepotrebujete súvislé rozvrhy 24/7. Vrstva bypass funguje bez zmeny a počas aktivity ho prepíše. Rovnaký formát YAML ako vyššie (napr. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Voliteľná prioritná vrstva (napr. kalendár dovolenky). Keď je aktívna, jej dáta slotu prepíšu hlavný plán. Dáta slotu sa čítajú rovnako: atribúty pre entity schedule.*, YAML popis pre entity calendar.*.",
               "retain_service_changes_schedule": "Po reštarte zachová hlavný rozvrh, bypass a náhradný stav zmenené prostredníctvom služby. Inak sa vrátia na nakonfigurované predvolené hodnoty.",
-              "ignore_off_members_schedule": "Plán NEZAPNE členov, ktorí sú momentálne VYPNUTÍ."
+              "ignore_off_members_schedule": "Plán NEZAPNE členov, ktorí sú momentálne VYPNUTÍ.",
+              "schedule_hold_duration": "Ako dlho manuálna zmena (napr. teplota alebo manuálne zapnutie/vypnutie skupiny) vydrží, kým rozvrh znova prevezme vtedy aktuálny časový úsek. 0 podržanie deaktivuje."
             }
           },
           "presets_section": {

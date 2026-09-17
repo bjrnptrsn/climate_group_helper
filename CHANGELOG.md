@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.11.0 - 2026-09-17
+
+### 🌟 New Features
+
+*   **Manual Hold for Schedule Automation**: A manual change now holds for a configurable duration before the schedule takes back over with the then-current slot, instead of the schedule always taking over at the next slot change.
+
+### 🐛 Bug Fixes
+
+*   **Closing a Window No Longer Briefly Turns On Heating While Main Switch Is Off**: Closing a window or returning home while the group's main switch is turned off no longer briefly turns on the heating before restoring the off state.
+
 ## 1.10.0 - 2026-09-11
 
 ### 🌟 New Features

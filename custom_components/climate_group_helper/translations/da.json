@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Fallback-tilstand ved inaktiv hovedplan/kalender (YAML)",
               "schedule_bypass_entity": "Bypass tidsplan-/kalenderenhed",
               "retain_service_changes_schedule": "Behold ændringer foretaget via tjeneste (Tidsplan)",
-              "ignore_off_members_schedule": "Respekter medlemmers Off-tilstand (Tidsplan)"
+              "ignore_off_members_schedule": "Respekter medlemmers Off-tilstand (Tidsplan)",
+              "schedule_hold_duration": "Manuel holdetid"
             },
             "data_description": {
               "schedule_entity": "Vælg en schedule.*- eller calendar.*-enhed. For tidsplanenheder læses slot-data fra slot-attributterne. For kalenderenheder læses slot-data som YAML fra begivenhedens beskrivelsesfelt. Understøttede nøgler: klimaattributter og meta-nøgler.",
               "schedule_fallback_payload": "Træder i stedet for hovedplanen uden for dens aktive tidsrum, så du ikke behøver sammenhængende 24/7-planer. Bypass-laget fungerer som hidtil og tilsidesætter den, mens det er aktivt. Samme YAML-format som ovenfor (f.eks. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valgfrit prioritetslag (f.eks. en feriekalender). Når aktivt, tilsidesætter dens slot-data hovedplanen. Slot-data læses på samme måde: attributter for schedule.*-, YAML-beskrivelse for calendar.*-enheder.",
               "retain_service_changes_schedule": "Behold ændringer af hovedplan, bypass og fallback-tilstand foretaget via tjenesten efter en genstart. Ellers nulstilles de til de konfigurerede standardværdier.",
-              "ignore_off_members_schedule": "Tidsplanen vil IKKE tænde for medlemmer, der aktuelt er slukket."
+              "ignore_off_members_schedule": "Tidsplanen vil IKKE tænde for medlemmer, der aktuelt er slukket.",
+              "schedule_hold_duration": "Hvor længe en manuel ændring (f.eks. temperatur eller manuel til/fra for gruppen) holder, inden tidsplanen genoptager med det da aktuelle tidsrum. 0 deaktiverer holdetiden."
             }
           },
           "presets_section": {

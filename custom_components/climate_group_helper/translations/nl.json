@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Terugvalstatus bij inactief hoofdschema/agenda (YAML)",
               "schedule_bypass_entity": "Bypass schema-/agenda-entiteit",
               "retain_service_changes_schedule": "Wijzigingen via de service behouden (Planning)",
-              "ignore_off_members_schedule": "Respecteer de UIT-status van leden (Planning)"
+              "ignore_off_members_schedule": "Respecteer de UIT-status van leden (Planning)",
+              "schedule_hold_duration": "Duur handmatige vasthoudperiode"
             },
             "data_description": {
               "schedule_entity": "Selecteer een schedule.*- of calendar.*-entiteit. Voor schema-entiteiten worden slot-gegevens gelezen uit de slot-attributen. Voor kalender-entiteiten worden slot-gegevens als YAML gelezen uit het beschrijvingsveld van de gebeurtenis. Ondersteunde sleutels: klimaatkenmerken en meta-sleutels.",
               "schedule_fallback_payload": "Neemt de plaats in van het hoofdschema buiten de actieve blokken, zodat sluitende 24/7-schema's niet nodig zijn. De bypass-laag werkt gewoon door en overschrijft het zolang die actief is. Zelfde YAML-formaat als hierboven (bijv. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optionele prioriteitslaag (bijv. een vakantiekalender). Wanneer actief overschrijven de slot-gegevens het hoofdschema. Slot-gegevens worden op dezelfde manier gelezen: attributen voor schedule.*-, YAML-beschrijving voor calendar.*-entiteiten.",
               "retain_service_changes_schedule": "Behoudt het hoofdschema, de bypass en de terugvalstatus die via de service zijn gewijzigd na een herstart. Anders worden ze hersteld naar de geconfigureerde standaardwaarden.",
-              "ignore_off_members_schedule": "De Planning zal GEEN leden inschakelen die momenteel UIT staan."
+              "ignore_off_members_schedule": "De Planning zal GEEN leden inschakelen die momenteel UIT staan.",
+              "schedule_hold_duration": "Hoe lang een handmatige wijziging (bijv. temperatuur, of de groep handmatig aan/uit zetten) vastgehouden wordt voordat het schema weer overneemt met het dan geldende tijdvak. 0 schakelt de vasthoudperiode uit."
             }
           },
           "presets_section": {

@@ -108,7 +108,7 @@ from .presence import PresenceHandler, PresenceOverrideManager
 from .member_template import MemberTemplateManager
 from .preset import PresetManager
 from .reset import async_reset_group
-from .schedule import MainScheduleHandler, BypassScheduleHandler
+from .schedule import MainScheduleHandler, BypassScheduleHandler, ScheduleHoldManager
 from .services import async_apply_config, async_boost, async_register_services
 from .service_call import (
     ClimateCallHandler,
@@ -335,6 +335,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.slot_transition_lock = asyncio.Lock()
         self.schedule_handler = MainScheduleHandler(self)
         self.schedule_bypass_handler = BypassScheduleHandler(self)
+        self.schedule_hold_manager = ScheduleHoldManager(self)
         self.switch_override_manager = SwitchOverrideManager(self)
         self.sync_mode_handler = SyncModeHandler(self)
         self.preset_manager = PresetManager(self)
@@ -576,6 +577,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             self.presence_handler.async_teardown()
             self.schedule_handler.async_teardown()
             self.schedule_bypass_handler.async_teardown()
+            self.schedule_hold_manager.async_teardown()
             self.window_control_handler.async_teardown()
 
         await super().async_will_remove_from_hass()

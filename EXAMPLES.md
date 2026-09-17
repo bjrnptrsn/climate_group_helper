@@ -108,6 +108,8 @@ temperature: 18.0
 
 **Result:** The schedule drives all rooms. A manual change is respected until the next slot begins, which then takes over again.
 
+> **Tip:** to keep a manual change for a set time instead — even across slot boundaries — set **Manual Hold Duration** in the schedule settings. When it runs out, the schedule resumes with whichever slot is current *then*.
+
 ---
 
 ### 4. Single Thermostat with Window Control

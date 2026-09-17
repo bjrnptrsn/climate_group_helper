@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Stato di riserva per programmazione principale/calendario inattivo (YAML)",
               "schedule_bypass_entity": "Entità pianificazione/calendario di bypass",
               "retain_service_changes_schedule": "Mantieni le modifiche effettuate tramite servizio (Pianificazione)",
-              "ignore_off_members_schedule": "Rispetta lo stato Off dei membri (Pianificazione)"
+              "ignore_off_members_schedule": "Rispetta lo stato Off dei membri (Pianificazione)",
+              "schedule_hold_duration": "Durata del mantenimento manuale"
             },
             "data_description": {
               "schedule_entity": "Seleziona un'entità schedule.* o calendar.*. Per le entità di programmazione, i dati dello slot vengono letti dagli attributi dello slot. Per le entità calendario, i dati dello slot vengono letti come YAML dal campo descrizione dell'evento. Chiavi supportate: attributi climatici e meta-chiavi.",
               "schedule_fallback_payload": "Sostituisce la programmazione principale al di fuori delle sue fasce attive, così non servono programmazioni continue 24/7. Il livello di bypass continua a funzionare normalmente e la sovrascrive mentre è attivo. Stesso formato YAML di sopra (es. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Livello di priorità opzionale (es. un calendario vacanze). Quando attivo, i suoi dati di slot sostituiscono il programma principale. I dati dello slot vengono letti allo stesso modo: attributi per entità schedule.*, descrizione YAML per entità calendar.*.",
               "retain_service_changes_schedule": "Mantiene la programmazione principale, il bypass e lo stato di riserva modificati tramite servizio dopo un riavvio. In caso contrario tornano ai valori predefiniti configurati.",
-              "ignore_off_members_schedule": "La Pianificazione NON accenderà i membri attualmente SPENTI."
+              "ignore_off_members_schedule": "La Pianificazione NON accenderà i membri attualmente SPENTI.",
+              "schedule_hold_duration": "Per quanto tempo una modifica manuale (ad es. temperatura, o accensione/spegnimento manuale del gruppo) viene mantenuta prima che la pianificazione riprenda con la fascia allora attiva. 0 disattiva il mantenimento."
             }
           },
           "presets_section": {

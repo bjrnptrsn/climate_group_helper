@@ -790,11 +790,15 @@ class SlotMetaProcessor:
                 presence_handler = self._group.presence_handler
                 self._group.run_state = self._group.run_state.clear_config_overrides({key})
                 if presence_handler.mode == PresenceMode.DISABLED or not presence_handler.sensors:
-                    _LOGGER.debug(
-                        "[%s] Meta-Key cleanup: %s absent, no presence control → releasing block",
-                        self._group.entity_id, key,
-                    )
-                    await self._group.presence_override_manager.restore()
+                    # Only if this key pinned a block. `restore()` pushes
+                    # target_state unconditionally, and a `disabled` key without
+                    # presence control never activated anything.
+                    if "presence" in self._group.run_state.blocking_sources:
+                        _LOGGER.debug(
+                            "[%s] Meta-Key cleanup: %s absent, no presence control → releasing block",
+                            self._group.entity_id, key,
+                        )
+                        await self._group.presence_override_manager.restore()
                 else:
                     _LOGGER.debug(
                         "[%s] Meta-Key cleanup: %s absent → re-evaluating presence sensors",

@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Estado de reserva para agenda principal/calendário inativo (YAML)",
               "schedule_bypass_entity": "Entidade de agenda/calendário de substituição",
               "retain_service_changes_schedule": "Manter alterações feitas via serviço (Agendamento)",
-              "ignore_off_members_schedule": "Respeitar estado Off dos membros (Agendamento)"
+              "ignore_off_members_schedule": "Respeitar estado Off dos membros (Agendamento)",
+              "schedule_hold_duration": "Duração da retenção manual"
             },
             "data_description": {
               "schedule_entity": "Selecione uma entidade schedule.* ou calendar.*. Para entidades de agendamento, os dados do slot são lidos dos atributos do slot. Para entidades de calendário, os dados do slot são lidos como YAML do campo de descrição do evento. Chaves suportadas: atributos climáticos e meta-keys.",
               "schedule_fallback_payload": "Substitui a agenda principal fora dos seus blocos ativos, dispensando agendas contínuas 24/7. A camada de derivação continua a funcionar normalmente e sobrepõe-se enquanto estiver ativa. Mesmo formato YAML acima (por ex. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Camada de prioridade opcional (ex. um calendário de férias). Quando ativa, os seus dados de slot substituem o agendamento principal. Os dados do slot são lidos da mesma forma: atributos para entidades schedule.*, descrição YAML para entidades calendar.*.",
               "retain_service_changes_schedule": "Mantém a agenda principal, a derivação e o estado de reserva alterados via serviço após um reinício. Caso contrário, revertem para os valores predefinidos configurados.",
-              "ignore_off_members_schedule": "O Agendamento NÃO ligará os membros que estão atualmente DESLIGADOS."
+              "ignore_off_members_schedule": "O Agendamento NÃO ligará os membros que estão atualmente DESLIGADOS.",
+              "schedule_hold_duration": "Por quanto tempo uma alteração manual (por exemplo, temperatura, ou ligar/desligar o grupo manualmente) é mantida antes de o horário retomar com o intervalo então em vigor. 0 desativa a retenção."
             }
           },
           "presets_section": {

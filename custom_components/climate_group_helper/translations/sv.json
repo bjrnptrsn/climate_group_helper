@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Reservtillstånd vid inaktivt huvudschema/kalender (YAML)",
               "schedule_bypass_entity": "Bypass-schema-/kalenderentitet",
               "retain_service_changes_schedule": "Behåll ändringar gjorda via tjänst (Schema)",
-              "ignore_off_members_schedule": "Respektera medlemmars AV-status (Schema)"
+              "ignore_off_members_schedule": "Respektera medlemmars AV-status (Schema)",
+              "schedule_hold_duration": "Manuell hålltid"
             },
             "data_description": {
               "schedule_entity": "Välj en schedule.*- eller calendar.*-enhet. För schemaenheter läses slot-data från slot-attributen. För kalenderenheter läses slot-data som YAML från händelsens beskrivelsfält. Stödda nycklar: klimatattribut och meta-nycklar.",
               "schedule_fallback_payload": "Träder in för huvudschemat utanför dess aktiva tidsblock, så du slipper heltäckande 24/7-scheman. Bypass-lagret fungerar som vanligt och åsidosätter det medan det är aktivt. Samma YAML-format som ovan (t.ex. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valfritt prioritetslager (t.ex. en semesterkalender). När aktivt ersätter dess slot-data huvudschemat. Slot-data läses på samma sätt: attribut för schedule.*-, YAML-beskrivning för calendar.*-enheter.",
               "retain_service_changes_schedule": "Behåller huvudschema, bypass och reservtillstånd som ändrats via tjänsten efter en omstart. Annars återställs de till de konfigurerade standardvärdena.",
-              "ignore_off_members_schedule": "Schemat kommer INTE att slå på medlemmar som för närvarande är AVSTÄNGDA."
+              "ignore_off_members_schedule": "Schemat kommer INTE att slå på medlemmar som för närvarande är AVSTÄNGDA.",
+              "schedule_hold_duration": "Hur länge en manuell ändring (t.ex. temperatur, eller att slå på/av gruppen manuellt) håller innan schemat återtar med det då gällande tidsintervallet. 0 inaktiverar hålltiden."
             }
           },
           "presets_section": {

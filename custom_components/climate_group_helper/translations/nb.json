@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Reservetilstand ved inaktiv hovedtidsplan/kalender (YAML)",
               "schedule_bypass_entity": "Omgåelses tidsplan-/kalenderenhet",
               "retain_service_changes_schedule": "Behold endringer gjort via tjeneste (Tidsplan)",
-              "ignore_off_members_schedule": "Respekter medlemmers AV-tilstand (Tidsplan)"
+              "ignore_off_members_schedule": "Respekter medlemmers AV-tilstand (Tidsplan)",
+              "schedule_hold_duration": "Manuell holdetid"
             },
             "data_description": {
               "schedule_entity": "Velg en schedule.*- eller calendar.*-enhet. For tidsplanenheter leses slot-data fra slot-attributtene. For kalenderenheter leses slot-data som YAML fra begivenhetens beskrivelsesfelt. Støttede nøkler: klimaattributter og meta-nøkler.",
               "schedule_fallback_payload": "Trer inn for hovedtidsplanen utenfor dens aktive tidsrom, så du slipper sammenhengende 24/7-tidsplaner. Bypass-laget fungerer som før og overstyrer den mens det er aktivt. Samme YAML-format som over (f.eks. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valgfritt prioritetslag (f.eks. en feriekalender). Når aktiv, overstyrer dens slot-data hovedplanen. Slot-data leses på samme måte: attributter for schedule.*-, YAML-beskrivelse for calendar.*-enheter.",
               "retain_service_changes_schedule": "Beholder hovedtidsplan, bypass og reservetilstand endret via tjenesten etter en omstart. Ellers tilbakestilles de til de konfigurerte standardverdiene.",
-              "ignore_off_members_schedule": "Tidsplanen vil IKKE slå på medlemmer som for tiden er AV."
+              "ignore_off_members_schedule": "Tidsplanen vil IKKE slå på medlemmer som for tiden er AV.",
+              "schedule_hold_duration": "Hvor lenge en manuell endring (f.eks. temperatur, eller å skru gruppen manuelt av/på) holdes fast før tidsplanen tar over igjen med det da gjeldende tidsrommet. 0 deaktiverer holdetiden."
             }
           },
           "presets_section": {

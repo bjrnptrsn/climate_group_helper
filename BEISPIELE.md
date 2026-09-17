@@ -108,6 +108,8 @@ temperature: 18.0
 
 **Ergebnis:** Der Zeitplan steuert alle Räume. Eine manuelle Änderung wird respektiert, bis der nächste Zeitblock beginnt und wieder übernimmt.
 
+> **Tipp:** Soll eine manuelle Änderung stattdessen für eine feste Zeit halten — auch über Zeitblock-Grenzen hinweg —, setze die **Manuelle Haltezeit** in den Zeitplan-Einstellungen. Läuft sie ab, übernimmt der Zeitplan mit dem dann aktuellen Zeitblock.
+
 ---
 
 ### 4. Einzelnes Thermostat mit Fenstersteuerung

@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Náhradní stav při neaktivním hlavním rozvrhu / kalendáři (YAML)",
               "schedule_bypass_entity": "Obchozí entita rozvrhu / kalendáře",
               "retain_service_changes_schedule": "Zachovat změny provedené přes službu (Plánování)",
-              "ignore_off_members_schedule": "Respektovat stav Vypnuto členů (Plánování)"
+              "ignore_off_members_schedule": "Respektovat stav Vypnuto členů (Plánování)",
+              "schedule_hold_duration": "Doba manuálního podržení"
             },
             "data_description": {
               "schedule_entity": "Vyberte entitu schedule.* nebo calendar.*. U entit rozvrhu se data slotu čtou z atributů slotu. U entit kalendáře se data slotu čtou jako YAML z pole popisu události. Podporované klíče: klimatické atributy a meta-klíče.",
               "schedule_fallback_payload": "Zastupuje hlavní rozvrh mimo jeho aktivní bloky, takže nepotřebujete souvislé rozvrhy 24/7. Vrstva bypass funguje beze změny a po dobu aktivity jej přepíše. Stejný formát YAML jako výše (např. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Volitelná prioritní vrstva (např. kalendář dovolené). Pokud je aktivní, její data slotu přepíší hlavní plán. Data slotu se čtou stejně: atributy pro entity schedule.*, YAML popis pro entity calendar.*.",
               "retain_service_changes_schedule": "Po restartu zachová hlavní rozvrh, bypass a náhradní stav změněné prostřednictvím služby. Jinak se vrátí na nakonfigurované výchozí hodnoty.",
-              "ignore_off_members_schedule": "Plánování NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ."
+              "ignore_off_members_schedule": "Plánování NEZAPNE členy, kteří jsou aktuálně VYPNUTÍ.",
+              "schedule_hold_duration": "Jak dlouho manuální změna (např. teplota nebo manuální zapnutí/vypnutí skupiny) vydrží, než se znovu uplatní tehdy aktuální časový úsek plánu. 0 podržení deaktivuje."
             }
           },
           "presets_section": {

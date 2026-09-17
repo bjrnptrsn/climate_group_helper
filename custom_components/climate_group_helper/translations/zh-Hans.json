@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "主日程/日历未激活时的后备状态 (YAML)",
               "schedule_bypass_entity": "旁路日程/日历实体",
               "retain_service_changes_schedule": "保留通过服务所做的更改（计划）",
-              "ignore_off_members_schedule": "尊重成员关闭状态（计划）"
+              "ignore_off_members_schedule": "尊重成员关闭状态（计划）",
+              "schedule_hold_duration": "手动保持时长"
             },
             "data_description": {
               "schedule_entity": "选择一个 schedule.* 或 calendar.* 实体。对于日程实体，时段数据从时段属性中读取。对于日历实体，时段数据从事件描述字段中以 YAML 格式读取。支持的键：气候属性和 meta-keys。",
               "schedule_fallback_payload": "在主日程的活动时段之外代替其生效，因此无需编排全天候无间隙的日程。旁路层照常工作，并在其激活期间覆盖该状态。YAML 格式与上方相同（例如 temperature: 17、hvac_mode: heat）。",
               "schedule_bypass_entity": "可选的高优先级层（例如假期日历）。当激活时，其时段数据将覆盖主日程。时段数据的读取方式相同：schedule.* 实体使用属性，calendar.* 实体使用 YAML 描述。",
               "retain_service_changes_schedule": "重启后保留通过服务更改的主日程、旁路和后备状态。否则将恢复为配置的默认值。",
-              "ignore_off_members_schedule": "计划不会打开当前处于关闭状态的成员。"
+              "ignore_off_members_schedule": "计划不会打开当前处于关闭状态的成员。",
+              "schedule_hold_duration": "手动更改(例如温度,或手动开关整组)保持多久后,时间表才会以当时生效的时段重新接管。0 表示禁用保持。"
             }
           },
           "presets_section": {

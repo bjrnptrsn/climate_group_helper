@@ -33,6 +33,7 @@ from .const import (
     ATTR_ASSUMED_STATE,
     ATTR_BLOCKING_SOURCES,
     ATTR_SCHEDULE_BYPASS_CLAIMS,
+    ATTR_SCHEDULE_HOLD_UNTIL,
     ATTR_CONFIG_OVERRIDES,
     ATTR_CURRENT_HVAC_MODES,
     ATTR_EFFECTIVE_SYNC_ATTRIBUTES,
@@ -278,6 +279,10 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         attrs[ATTR_BOOST_TEMPERATURE] = run_state.boost_temperature
     if run_state.boost_until is not None:
         attrs[ATTR_BOOST_UNTIL] = run_state.boost_until.isoformat()
+
+    # Manual schedule hold deadline (also the persistence vehicle across restarts)
+    if run_state.schedule_hold_until is not None:
+        attrs[ATTR_SCHEDULE_HOLD_UNTIL] = run_state.schedule_hold_until.isoformat()
 
     # Persisted schedule bypass claims (for restore)
     if run_state.schedule_bypass_claims:

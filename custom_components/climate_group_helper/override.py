@@ -366,7 +366,8 @@ class WindowOverrideManager(BaseOverrideManager):
         # Cancel our own pending debounced enforce call — it carries a stale payload
         # that must not land after the restore or the cascade re-assert.
         await self.call_handler.async_cancel_all()
-        await self.call_handler.call_immediate()
+        if "switch" not in self._group.run_state.blocking_sources:
+            await self.call_handler.call_immediate()
         if self._group.run_state.blocking_sources:
             await self._resolve_remaining_blocks()
 
@@ -448,7 +449,8 @@ class PresenceOverrideManager(BaseOverrideManager):
         # Cancel our own pending debounced enforce call — it carries a stale payload
         # that must not land after the restore or the cascade re-assert.
         await self.call_handler.async_cancel_all()
-        await self.call_handler.call_immediate()
+        if not {"switch", "window"} & self._group.run_state.blocking_sources:
+            await self.call_handler.call_immediate()
         if self._group.run_state.blocking_sources:
             await self._resolve_remaining_blocks()
 

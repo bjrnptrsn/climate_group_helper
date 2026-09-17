@@ -90,6 +90,8 @@ class RunState:
     - startup_time: monotonic timestamp of initialisation completion (only ever
       used as an interval, so it must not be affected by wall-clock jumps)
     - last_active_hvac_mode: cache of last mode other than OFF
+    - schedule_hold_until: absolute deadline of a manual schedule hold; while it
+      is set the main schedule's climate payload is not applied to the members
 
     Updates are performed via dataclasses.replace(), consistent with TargetState.
     """
@@ -99,6 +101,7 @@ class RunState:
     blocking_sources: frozenset[str] = field(default_factory=frozenset)
     boost_temperature: float | None = None
     boost_until: datetime | None = None
+    schedule_hold_until: datetime | None = None
     schedule_bypass_claims: MappingProxyType[str, tuple[Any, Any]] = field(default_factory=lambda: MappingProxyType({}))
     config_overrides: MappingProxyType[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     group_offset: float = 0.0
@@ -420,6 +423,11 @@ class BaseStateManager:
             self._group.member_template_manager.check_humidity(
                 self._group._attr_current_humidity, kwargs["humidity"]
             )
+
+        # A manual write (user command or MIRROR adoption) starts/renews the
+        # hold that defers the schedule's climate payload; the schedule's own
+        # writes and restores pass through the source filter.
+        self._group.schedule_hold_manager.on_target_state_write(kwargs["last_source"])
 
         return True
 

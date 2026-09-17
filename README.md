@@ -205,9 +205,9 @@ Schedules can be switched on the fly via service (e.g. for "Vacation" or "Guest"
 *   **Calendar support:** `calendar.*` entities work the same as `schedule.*` entities. Slot data is read from each event's **Description** field using the same `key: value` YAML format as schedule Additional data. See [Schedule Configuration & Meta-Keys](#schedule-configuration--meta-keys) for details.
 *   **Bypass Layer:** A second `schedule.*` or `calendar.*` entity can act as a **priority layer** on top of your main schedule. When a bypass slot is active, its attributes override the main slot (bypass wins on conflicts).
 *   **Inactive Schedule Fallback:** An optional state (e.g. night setback or turning off) that stands in for the main schedule outside its active slots — no need for gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active.
-*   **Manual Overrides:** Manual adjustments simply hold until the next scheduled slot begins, which then takes over again. No timer to configure.
 *   **Retain Changes Made via Service (Schedule):** Ensures that the main schedule, bypass entity and fallback state — when changed via service — survive a Home Assistant restart. If disabled, the group always reverts to its configured defaults after a restart.
 *   **Respect Member Off State (Schedule):** Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on.
+*   **Manual Hold:** A manual adjustment (temperature change, or switching the group on/off) holds for a configurable duration, after which the schedule resumes with the slot that is current *then*. A duration of `0` disables the hold — the schedule takes back over immediately.
 
 > **Note — turning off outside active slots:** to shut the group down in the inactive period, set `hvac_mode: off` in the fallback. Do **not** use the `turn_off` meta-key here — it is a one-shot trigger for the Main Switch block that stays active until a slot explicitly releases it with `turn_off: false`, so a `turn_off: true` fallback would keep the next heating slot blocked.
 
@@ -439,6 +439,7 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 *   **`active_schedule_slot_title`** — the title of the running calendar event, when a calendar drives the schedule.
 *   **`active_virtual_preset`** — the group preset in effect, if any.
 *   **`boost_temperature` / `boost_until`** — setpoint and end time of a running boost.
+*   **`schedule_hold_until`** — when a manual change stops holding and the schedule takes over again. Absent when nothing is holding.
 
 ## Configuration Options
 
@@ -540,6 +541,7 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 | **Bypass Entity** | *(Optional)* A second `schedule.*` or `calendar.*` entity acting as a priority layer. When a bypass slot is active, it overrides the main schedule. |
 | **Respect Member Off State (Schedule)** | Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on. Direct group commands always reach all members regardless of this setting. |
 | **Retain Changes Made via Service (Schedule)** | Keep the main schedule, bypass entity and fallback state across restarts when changed via service. Without this, the group always reverts to its configured defaults on restart. |
+| **Manual Hold Duration** | How long a manual adjustment (temperature, or switching the group on/off) holds before the schedule resumes with the then-current slot. `0` disables the hold. |
 
 ### Group Presets
 

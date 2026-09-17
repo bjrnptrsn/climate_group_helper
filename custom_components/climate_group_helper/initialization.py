@@ -40,6 +40,7 @@ from .const import (
     ATTR_ACTIVE_SCHEDULE_ENTITY,
     ATTR_ACTIVE_VIRTUAL_PRESET,
     ATTR_SCHEDULE_BYPASS_CLAIMS,
+    ATTR_SCHEDULE_HOLD_UNTIL,
     ATTR_GROUP_OFFSET,
     ATTR_ISOLATED_MEMBERS,
     ATTR_LAST_ACTIVE_HVAC_MODE,
@@ -372,6 +373,10 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
                 group.shared_target_state = group.shared_target_state.update(
                     preset_mode=None
                 )
+
+    # Restore the manual schedule hold deadline (absolute; a past one is dropped
+    # so the normal startup slot apply below/afterwards takes over).
+    group.schedule_hold_manager.restore(last_attrs.get(ATTR_SCHEDULE_HOLD_UNTIL))
 
     # Restore schedule bypass claims
     if (saved_claims := last_attrs.get(ATTR_SCHEDULE_BYPASS_CLAIMS)) and isinstance(

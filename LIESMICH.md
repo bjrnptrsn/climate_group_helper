@@ -205,9 +205,9 @@ Zeitpläne können per Dienst live umgeschaltet werden (z. B. für "Urlaub"- ode
 *   **Kalender-Unterstützung:** `calendar.*`-Entitäten funktionieren genauso wie `schedule.*`-Entitäten. Die Zeitblock-Daten werden aus dem **Beschreibungsfeld** jedes Ereignisses gelesen, im selben `key: value`-YAML-Format wie die zusätzlichen Zeitplan-Daten. Siehe [Zeitplan-Konfiguration & Meta-Keys](#zeitplan-konfiguration--meta-keys) für Details.
 *   **Bypass-Ebene:** Eine zweite `schedule.*`- oder `calendar.*`-Entität kann als **Prioritätsebene** über deinem Haupt-Zeitplan fungieren. Ist ein Bypass-Zeitblock aktiv, überschreiben dessen Attribute den Haupt-Zeitblock (Bypass gewinnt bei Konflikten).
 *   **Fallback bei inaktivem Zeitplan:** Ein optionaler Zustand (z. B. Nachtabsenkung oder Ausschalten), der außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan einspringt — lückenlose 24/7-Zeitpläne sind damit unnötig. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist.
-*   **Manuelle Überschreibungen:** Manuelle Anpassungen gelten einfach bis zum nächsten geplanten Zeitblock, der dann wieder übernimmt. Kein Timer zu konfigurieren.
 *   **Per Dienst geänderte Werte beibehalten (Zeitplan):** Stellt sicher, dass per Dienst geänderter Haupt-Zeitplan, Bypass-Entität und Fallback-Zustand einen Home-Assistant-Neustart überstehen. Wenn deaktiviert, kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück.
 *   **Respektiere Aus-Status der Mitglieder (Zeitplan):** Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet.
+*   **Manuelle Haltezeit:** Eine manuelle Anpassung (Temperaturänderung oder die Gruppe von Hand ein-/ausschalten) hält für eine konfigurierbare Dauer, danach übernimmt der Zeitplan wieder mit dem *dann* aktuellen Zeitblock. Eine Dauer von `0` deaktiviert die Haltezeit — der Zeitplan übernimmt sofort wieder.
 
 > **Hinweis — Ausschalten außerhalb aktiver Zeitblöcke:** Um die Gruppe in der inaktiven Phase abzuschalten, setze `hvac_mode: off` im Fallback. Verwende hier **nicht** den `turn_off`-Meta-Key — er ist ein einmaliger Auslöser für die Hauptschalter-Sperre, die aktiv bleibt, bis ein Zeitblock sie explizit mit `turn_off: false` freigibt. Ein `turn_off: true` im Fallback würde also den nächsten Heiz-Zeitblock blockiert lassen.
 
@@ -440,6 +440,7 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 *   **`active_schedule_slot_title`** — der Titel des laufenden Kalendereintrags, wenn ein Kalender den Zeitplan steuert.
 *   **`active_virtual_preset`** — das aktive Gruppen-Preset, falls eines gewählt ist.
 *   **`boost_temperature` / `boost_until`** — Sollwert und Endzeit eines laufenden Boosts.
+*   **`schedule_hold_until`** — wann eine manuelle Änderung aufhört zu halten und der Zeitplan wieder übernimmt. Fehlt, wenn nichts hält.
 
 ## Konfigurationsoptionen
 
@@ -541,6 +542,7 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 | **Bypass-Entität** | *(Optional)* Eine zweite `schedule.*`- oder `calendar.*`-Entität, die als Prioritätsebene fungiert. Ist ein Bypass-Zeitblock aktiv, überschreibt er den Haupt-Zeitplan. |
 | **Respektiere Aus-Status der Mitglieder (Zeitplan)** | Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet. Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
 | **Per Dienst geänderte Werte beibehalten (Zeitplan)** | Behält Haupt-Zeitplan, Bypass-Entität und Fallback-Zustand über Neustarts hinweg bei, wenn sie über einen Dienst geändert wurden. Ohne diese Option kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück. |
+| **Manuelle Haltezeit** | Wie lange eine manuelle Anpassung (Temperatur oder die Gruppe von Hand ein-/ausschalten) hält, bevor der Zeitplan mit dem dann aktuellen Zeitblock wieder übernimmt. `0` deaktiviert die Haltezeit. |
 
 ### Gruppen-Presets
 

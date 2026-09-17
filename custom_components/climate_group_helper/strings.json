@@ -176,14 +176,16 @@
               "schedule_fallback_payload": "Fallback State for Inactive Main Schedule / Calendar (YAML)",
               "schedule_bypass_entity": "Bypass Schedule / Calendar Entity",
               "retain_service_changes_schedule": "Retain Changes Made via Service (Schedule)",
-              "ignore_off_members_schedule": "Respect Member Off State (Schedule)"
+              "ignore_off_members_schedule": "Respect Member Off State (Schedule)",
+              "schedule_hold_duration": "Manual Hold Duration"
             },
             "data_description": {
               "schedule_entity": "Select a schedule.* or calendar.* entity. For schedule entities, slot data is read from the slot's attributes. For calendar entities, slot data is read from the event's description field as YAML. Supported keys: climate attributes and meta-keys.",
               "schedule_fallback_payload": "Stands in for the main schedule outside its active slots, so you don't need gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active. Same YAML format as above (e.g. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optional higher-priority layer (e.g. a vacation calendar). When active, its slot data overrides the main schedule. Slot data is read the same way: attributes for schedule.* entities, YAML description for calendar.* entities.",
               "retain_service_changes_schedule": "Keep main schedule, bypass and fallback state changes made via service after a restart. Otherwise they reset to the configured defaults.",
-              "ignore_off_members_schedule": "The Schedule will NOT turn on members that are currently Off."
+              "ignore_off_members_schedule": "The Schedule will NOT turn on members that are currently Off.",
+              "schedule_hold_duration": "How long a manual change (e.g. temperature, or switching the group on/off) holds before the schedule resumes with the then-current slot. 0 disables the hold."
             }
           },
           "presets_section": {
