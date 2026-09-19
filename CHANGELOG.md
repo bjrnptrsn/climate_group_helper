@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.11.1 - 2026-09-19
+
+### 🐛 Bug Fixes
+
+*   **Presence Control Clears the Away Preset on Return**: Coming home now removes the away preset again and restores the group's own preset state, instead of leaving the away preset in place.
+*   **Group Presets Can Be Switched Off Again**: A group preset you defined can now be deselected through the "None" entry in the preset list.
+
 ## 1.11.0 - 2026-09-17
 
 ### 🌟 New Features

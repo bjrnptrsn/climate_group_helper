@@ -66,6 +66,7 @@ from homeassistant.components.climate import (
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_HUMIDITY,
     DEFAULT_MIN_TEMP,
+    PRESET_NONE,
     ClimateEntityFeature,
     HVACAction,
     HVACMode,
@@ -591,19 +592,18 @@ class Aggregator:
         preset_modes = self._group.preset_manager.get_preset_modes(
             native_preset_modes if isinstance(native_preset_modes, list) else []
         )
-        # Physical aggregate only — a virtual preset name is never reported by a
-        # member and must not leak into `current_group_state`, which feeds the
-        # sync diffing. The virtual overlay lives in the `preset_mode` property.
-        #
-        # The grace-period value is read from `target_state`, which *does* carry
-        # the virtual name, so it is dropped here rather than overlaid: a UI
-        # command selecting a group preset would otherwise put that name into the
-        # physical aggregate for the length of the grace period. Native preset
-        # names still get the anti-flicker treatment.
+        # Physical aggregate only — the grace-period value comes from
+        # `target_state`, which carries the native expectation (a native name or
+        # `PRESET_NONE`) and never a virtual name (that lives in
+        # `run_state.active_virtual_preset` and is overlaid by the property).
         val = self._get_optimistic_value("preset_mode")
-        if val is not None and self._group.preset_manager.is_virtual(val):
-            val = None
         preset_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_PRESET_MODE)
+        # Normalize only where the group actually offers `PRESET_NONE`: a virtual
+        # preset adds it, a native one only if a member announces it. Otherwise the
+        # reported value would name a preset `preset_modes` does not contain, and
+        # HA Core rejects `set_preset_mode("none")` against that list.
+        if preset_mode is None and PRESET_NONE in preset_modes:
+            preset_mode = PRESET_NONE
 
         swing_modes = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_SWING_MODES)))
         val = self._get_optimistic_value("swing_mode")

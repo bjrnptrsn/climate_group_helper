@@ -6,7 +6,7 @@ from dataclasses import replace
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
@@ -408,33 +408,66 @@ class PresenceOverrideManager(BaseOverrideManager):
     def call_handler(self) -> PresenceCallHandler:  # type: ignore[override]
         return self._group.presence_call_handler
 
-    def _active_data(self) -> dict[str, Any]:
+    @property
+    def away_payload_switches_members_off(self) -> bool:
+        """Return True if the away payload itself sends the members OFF.
+
+        The respect-off guard reads an `off` member as the user's decision; when
+        the away payload switched it off, the group owns that state and must wake
+        it on return. Judged from the resolved payload, so it also covers a
+        virtual group preset carrying `hvac_mode: off`.
+        """
+        resolved = self._group.preset_manager.resolve_preset(self._active_data() or {})
+        return isinstance(resolved, dict) and resolved.get(ATTR_HVAC_MODE) == HVACMode.OFF
+
+    def _active_data(self) -> dict[str, Any] | None:
         """Compute the away payload against the current target_state at call time.
 
         AWAY_OFFSET is intentionally computed here (not at activate time) so that
         schedule changes during absence are reflected the next time enforce_override
         pushes the payload to a deviating member.
+
+        Returns `None` when the configured action cannot produce a payload — an
+        offset without a base temperature, or a missing temperature/preset value.
+        The callers then send nothing and warn; the group must not guess a
+        fallback like OFF for a setting the user did not choose.
         """
+        if self._action == PresenceAction.OFF:
+            return {"hvac_mode": HVACMode.OFF}
         if self._action == PresenceAction.AWAY_OFFSET:
             base = self._group.shared_target_state.temperature
+            if base is None:
+                return None
             group_offset = self._group.run_state.group_offset
-            if base is not None:
-                return {"temperature": round(base + group_offset + self._away_offset, 1)}
-            _LOGGER.warning(
-                "[%s] Presence AWAY_OFFSET: target temperature is None — falling back to OFF",
-                self._group.entity_id,
-            )
-            return {"hvac_mode": HVACMode.OFF}
+            return {"temperature": round(base + group_offset + self._away_offset, 1)}
         if self._action == PresenceAction.AWAY_TEMPERATURE and self._away_temperature is not None:
             return {"temperature": self._away_temperature}
         if self._action == PresenceAction.AWAY_PRESET and self._away_preset:
             return {"preset_mode": self._away_preset}
-        _LOGGER.warning(
-            "[%s] Presence action '%s' could not produce a valid payload — falling back to OFF",
-            self._group.entity_id,
-            self._action,
-        )
-        return {"hvac_mode": HVACMode.OFF}
+        return None
+
+    def _away_payload(self) -> dict[str, Any] | None:
+        """The payload for an outgoing away call, or None when nothing can be built.
+
+        A misconfiguration is reported here, at the send path; the respect-off
+        guard reads `_active_data()` per member and attribute and must not log it
+        each time.
+        """
+        payload = self._active_data()
+        if payload is not None:
+            return payload
+        if self._action == PresenceAction.AWAY_OFFSET:
+            _LOGGER.warning(
+                "[%s] Presence AWAY_OFFSET: target temperature is None — no away payload sent",
+                self._group.entity_id,
+            )
+        else:
+            _LOGGER.warning(
+                "[%s] Presence action '%s' produced no valid payload — no away payload sent",
+                self._group.entity_id,
+                self._action,
+            )
+        return None
 
     async def activate(self) -> None:
         self._group.boost_override_manager.abort(push=False)
@@ -442,7 +475,8 @@ class PresenceOverrideManager(BaseOverrideManager):
         # Window/switch already cover the members — don't send a conflicting command.
         if {"switch", "window"} & self._group.run_state.blocking_sources:
             return
-        await self.call_handler.call_immediate(self._active_data())
+        if (payload := self._away_payload()) is not None:
+            await self.call_handler.call_immediate(payload)
 
     async def restore(self) -> None:
         self._unblock()
@@ -462,4 +496,5 @@ class PresenceOverrideManager(BaseOverrideManager):
         if {"switch", "window"} & self._group.run_state.blocking_sources:
             return
         _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
-        await self.call_handler.call_debounced(self._active_data())
+        if (payload := self._away_payload()) is not None:
+            await self.call_handler.call_debounced(payload)

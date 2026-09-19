@@ -6,7 +6,11 @@ from dataclasses import replace
 import logging
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.climate import ATTR_PRESET_MODE, ATTR_PRESET_MODES
+from homeassistant.components.climate import (
+    ATTR_PRESET_MODE,
+    ATTR_PRESET_MODES,
+    PRESET_NONE,
+)
 from homeassistant.exceptions import ServiceValidationError
 
 from .const import PRESET_META_KEYS
@@ -398,9 +402,8 @@ class PresetManager:
             # The meta-key claims are not released here: the caller re-syncs them
             # for every touched definition, which also covers the paths this
             # method never reaches (a surviving config preset of the same name,
-            # a redefinition rather than a removal).
-            if self._group.shared_target_state.preset_mode == preset_name:
-                self._group.shared_target_state = self._group.shared_target_state.update(preset_mode=None)
+            # a redefinition rather than a removal). The target already carries
+            # the native expectation (`PRESET_NONE`), never the virtual name.
 
     def restore_runtime_presets(self, presets: dict[str, dict[str, Any]]) -> None:
         """Restore runtime presets from persisted state.
@@ -455,5 +458,14 @@ class PresetManager:
         return payload
 
     def get_preset_modes(self, native_modes: list[str]) -> list[str]:
-        """Return union of native member preset modes and configured group presets."""
-        return sorted(set(native_modes) | set(self.group_presets.keys()))
+        """Return union of native member preset modes and configured group presets.
+
+        A defined group preset adds `PRESET_NONE`: HA Core validates
+        `set_preset_mode` against this list, so without it a virtual preset could
+        be selected but never deselected. Native-only groups get no such entry —
+        a member that does not announce `none` cannot honour it anyway.
+        """
+        modes = set(native_modes) | set(self.group_presets.keys())
+        if self.group_presets:
+            modes.add(PRESET_NONE)
+        return sorted(modes)

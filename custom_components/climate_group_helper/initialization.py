@@ -18,6 +18,7 @@ from homeassistant.components.climate import (
     ATTR_MIN_HUMIDITY,
     ATTR_MIN_TEMP,
     ATTR_PRESET_MODES,
+    PRESET_NONE,
     ATTR_SWING_HORIZONTAL_MODES,
     ATTR_SWING_MODES,
     ATTR_TARGET_HUMIDITY_STEP,
@@ -197,6 +198,23 @@ def warn_missing_entities(
             )
 
 
+def _offers_preset_none(group: ClimateGroupHelper) -> bool:
+    """Return True if the group can actually select `PRESET_NONE`.
+
+    Virtual group presets add it (see `PresetManager.get_preset_modes`); a purely
+    native group only if a member announces it. Where it is not offered,
+    normalizing `target_state.preset_mode` to `PRESET_NONE` would name a preset
+    no device can accept.
+    """
+    if group.preset_manager.group_presets:
+        return True
+    return any(
+        (member_state := group.hass.states.get(entity_id)) is not None
+        and PRESET_NONE in (member_state.attributes.get(ATTR_PRESET_MODES) or [])
+        for entity_id in group.climate_entity_ids
+    )
+
+
 def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
     """Restore state from last known state."""
     last_attrs = last_state.attributes
@@ -351,6 +369,16 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
             list(normalized_presets.keys()),
         )
 
+    # Must run after `restore_runtime_presets()`: a runtime-only preset is only
+    # virtual from then on, and a legacy target may still carry its name.
+    restored_preset = group.shared_target_state.preset_mode
+    if (
+        restored_preset is None or group.preset_manager.is_virtual(restored_preset)
+    ) and _offers_preset_none(group):
+        group.shared_target_state = group.shared_target_state.update(
+            preset_mode=PRESET_NONE
+        )
+
     # Restore active virtual preset — unless it was removed or renamed in the
     # options while it was active. Warn rather than debug: the group silently
     # loses a preset the user did not switch off themselves.
@@ -369,9 +397,12 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
                 group.entity_id,
                 last_virtual,
             )
+            # A legacy persisted target carried the virtual name; replace it with
+            # the native expectation — `PRESET_NONE` where the group offers it,
+            # otherwise no preset (`None`), since no device could select "none".
             if group.shared_target_state.preset_mode == last_virtual:
                 group.shared_target_state = group.shared_target_state.update(
-                    preset_mode=None
+                    preset_mode=PRESET_NONE if _offers_preset_none(group) else None
                 )
 
     # Restore the manual schedule hold deadline (absolute; a past one is dropped

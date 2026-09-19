@@ -660,6 +660,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Forward the set_preset_mode to all climate in the climate group."""
         self.climate_state_manager.update(preset_mode=preset_mode)
+        # The displayed preset is group state, not a member echo.
+        self.async_defer_or_update_ha_state()
         await self.climate_call_handler.call_debounced(data={ATTR_PRESET_MODE: preset_mode})
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:

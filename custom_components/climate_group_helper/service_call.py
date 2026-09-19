@@ -19,6 +19,7 @@ from homeassistant.components.climate import (
     ATTR_TEMPERATURE,
     DEFAULT_MIN_TEMP,
     DOMAIN as CLIMATE_DOMAIN,
+    PRESET_NONE,
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
     HVACMode,
@@ -36,14 +37,12 @@ from .const import (
     CONF_IGNORE_OFF_MEMBERS_PRESENCE,
     CONF_IGNORE_OFF_MEMBERS_SYNC,
     CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
-    CONF_PRESENCE_ACTION,
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
     CONF_UNION_UNSUPPORTED_HVAC_ACTION,
     FLOAT_TOLERANCE,
     OVERRIDE_ENFORCE_DEBOUNCE_DELAY,
     RANGE_TEMPLATE_DEBOUNCE_DELAY,
     FeatureStrategy,
-    PresenceAction,
     PresenceOffRespect,
     SyncMode,
     UnionOutOfBoundsAction,
@@ -167,9 +166,21 @@ class BaseServiceCallHandler(ABC):
         if callback not in self._call_triggers:
             self._call_triggers.append(callback)
 
+    def _resolve_virtual_preset(self, data: dict[str, Any] | SyncTarget) -> dict[str, Any] | SyncTarget:
+        """Merge a virtual preset's payload and translate its name for the devices.
+
+        `resolve_preset()` keeps the virtual name (the state side tracks it in
+        `active_virtual_preset`); no device knows it, so the execution side
+        replaces it with the native expectation `PRESET_NONE`.
+        """
+        data = self._group.preset_manager.resolve_preset(data)
+        if isinstance(data, dict) and self._group.preset_manager.is_virtual(data.get(ATTR_PRESET_MODE)):
+            return {**data, ATTR_PRESET_MODE: PRESET_NONE}
+        return data
+
     async def call_immediate(self, data: dict[str, Any] | SyncTarget = SYNC_TARGET) -> None:
         """Execute a service call immediately without debouncing."""
-        data = self._group.preset_manager.resolve_preset(data)
+        data = self._resolve_virtual_preset(data)
         async with self._lock:
             await self._execute_calls(data)
 
@@ -201,7 +212,7 @@ class BaseServiceCallHandler(ABC):
         window/switch/boost override managers) clears the queue and cancels outright — those
         genuinely want nothing further sent.
         """
-        data = self._group.preset_manager.resolve_preset(data)
+        data = self._resolve_virtual_preset(data)
 
         if self._pending_queue and self._pending_queue[-1].matches(data):
             if data is not SYNC_TARGET:
@@ -670,9 +681,6 @@ class BaseServiceCallHandler(ABC):
             attr: The attribute to check capability for.
             value: Target value. Used for mode attributes only — ignored for float attributes.
         """
-        if attr == ATTR_PRESET_MODE and self._group.preset_manager.is_virtual(value):
-            return []
-
         entity_ids = []
         for entity_id in self._group.climate_entity_ids:
             if self._is_member_blocked(entity_id):
@@ -1660,9 +1668,10 @@ class PresenceCallHandler(BaseServiceCallHandler):
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
         """Leave a member the user switched off alone, per configured phase.
 
-        Does not apply with away action OFF: there the group switched the members
-        off itself, so an `off` state is its own command, not a user decision —
-        and the state alone cannot tell the two apart.
+        Does not apply when the away payload switches the members off itself
+        (`away_payload_switches_members_off`): then the group owns that `off` and
+        must wake it on return — the state alone cannot tell a user's off from
+        the group's.
 
         The phase comes from our *own* source rather than from
         `bool(blocking_sources)`: `restore()` unblocks first, so the away push and
@@ -1674,7 +1683,7 @@ class PresenceCallHandler(BaseServiceCallHandler):
         all-off group with no way back on; presence never does, so an all-off
         group is the user's own doing and stays off.
         """
-        if self._group.config.get(CONF_PRESENCE_ACTION, PresenceAction.OFF) == PresenceAction.OFF:
+        if self._group.presence_override_manager.away_payload_switches_members_off:
             return False
 
         mode = self._group.config.get(CONF_IGNORE_OFF_MEMBERS_PRESENCE, PresenceOffRespect.DISABLED)

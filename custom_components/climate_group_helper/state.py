@@ -10,7 +10,7 @@ from typing import Any, Self, TYPE_CHECKING
 
 from homeassistant.core import Event, State
 
-from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
+from homeassistant.components.climate import ATTR_HVAC_MODE, PRESET_NONE, HVACMode
 from .const import (
     FLOAT_TOLERANCE,
     CONF_IGNORE_OFF_MEMBERS_SYNC,
@@ -324,10 +324,11 @@ class BaseStateManager:
         reported as active either — the name and the setpoints have to stay in
         step.
 
-        A known virtual preset_mode overlays its payload onto kwargs and marks
-        the flag. The preset is exited (flag and preset_mode reset to None)
-        when a native preset_mode replaces it, or when kwargs touches one of
-        the attributes the active preset defines.
+        Display and execution are separate: the virtual name lives only in
+        `run_state.active_virtual_preset`; `target_state.preset_mode` carries the
+        native expectation (a native name or `PRESET_NONE`). The preset is exited
+        when a native preset replaces it, or when kwargs touches one of its
+        attributes.
         """
         # `kwargs` is always a dict here (update() passes **kwargs), so the
         # empty-payload pass-through in resolve_preset() cannot return None.
@@ -336,21 +337,21 @@ class BaseStateManager:
         is_virtual = self._group.preset_manager.is_virtual(preset_mode)
         was_active = self._group.run_state.active_virtual_preset
 
-        if was_active:
-            if is_virtual:
-                # Switching between virtual presets.
-                if was_active != preset_mode:
-                    self._group.run_state = replace(self._group.run_state, active_virtual_preset=preset_mode)
-            elif preset_mode is not None:
+        if is_virtual:
+            # Switching between virtual presets.
+            if was_active != preset_mode:
+                self._group.run_state = replace(self._group.run_state, active_virtual_preset=preset_mode)
+            # The target keeps the native expectation, not the virtual name.
+            kwargs["preset_mode"] = PRESET_NONE
+        elif was_active:
+            if preset_mode is not None:
                 # A native preset replaces the virtual one — it owns preset_mode now.
                 self._group.run_state = replace(self._group.run_state, active_virtual_preset=None)
             else:
                 active_payload = self._group.preset_manager.get_payload(was_active)
                 if active_payload and set(kwargs.keys()) & set(active_payload.keys()):
                     self._group.run_state = replace(self._group.run_state, active_virtual_preset=None)
-                    kwargs["preset_mode"] = None
-        elif is_virtual:
-            self._group.run_state = replace(self._group.run_state, active_virtual_preset=preset_mode)
+                    kwargs["preset_mode"] = PRESET_NONE
 
         # Re-selecting the preset that is already active counts as a fresh
         # instruction, not a repeat: the user asked for its values again, and a
