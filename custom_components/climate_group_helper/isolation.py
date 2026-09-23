@@ -692,6 +692,9 @@ class MemberIsolationHandler:
         # start an isolation — but a member we already hold is released anyway:
         # once it runs, "the member is off" no longer holds, and keeping the
         # claim would hide a heating device from sync and aggregation.
+        # A reconnect reporting OFF does isolate: it cannot be told apart from a
+        # user switch-off, and MEMBER_OFF exists to keep the group from turning
+        # such a device back on.
         if (
             not is_available(old_hvac_mode)
             and new_hvac_mode != HVACMode.OFF
@@ -815,6 +818,54 @@ async def reevaluate_all(group: ClimateGroupHelper) -> None:
     """Let every rule decide again whether it still applies."""
     for handler in group.member_isolation_handlers:
         await handler.reevaluate()
+
+
+class IsolationMetaTarget:
+    """Adapter exposing `isolation_bypass` as a meta-key target.
+
+    The rules are a list of handlers, not one — hence this wrapper.
+    """
+
+    def __init__(self, group: ClimateGroupHelper) -> None:
+        self._group = group
+
+    async def apply_meta(self, key: str, value: Any) -> None:  # noqa: ARG002
+        """Release the devices the suspended rules hold."""
+        _LOGGER.debug(
+            "[%s] Meta-Key apply: isolation_bypass=%s", self._group.entity_id, value
+        )
+        # A slot number without a rule behind it is a typo, and every sibling
+        # guard reports one. The value guard cannot catch it: it only knows the
+        # 1-4 range, not which of those slots actually carry a rule.
+        if value != META_VALUE_ALL:
+            known = {handler.slot for handler in self._group.member_isolation_handlers}
+            if unknown := sorted(set(value) - known):
+                _LOGGER.warning(
+                    "[%s] Meta-Key 'isolation_bypass': no isolation rule in slot(s) %s — "
+                    "those numbers have no effect",
+                    self._group.entity_id,
+                    ", ".join(str(slot) for slot in unknown),
+                )
+        # Both directions: a slot switching from [1] to [2] drops rule 1 out of
+        # the bypass while the key stays claimed, and _cleanup() — which would
+        # re-isolate it — only runs for a key nobody claims any more.
+        for handler in self._group.member_isolation_handlers:
+            if handler.bypassed:
+                await handler.release_bypassed()
+            else:
+                await handler.reevaluate()
+
+    async def clear_meta(self, key: str) -> None:
+        """Re-apply every rule whose trigger is still active."""
+        _LOGGER.debug(
+            "[%s] Meta-Key cleanup: isolation_bypass absent → re-evaluating isolation rules",
+            self._group.entity_id,
+        )
+        # Withdraw the key before re-evaluating: the handlers ask `bypassed` (and
+        # through it config_overrides) on every step.
+        self._group.run_state = self._group.run_state.clear_config_overrides({key})
+        for handler in self._group.member_isolation_handlers:
+            await handler.reevaluate()
 
 
 class IsolationCallHandler(BaseServiceCallHandler):

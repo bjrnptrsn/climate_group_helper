@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
 
+from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ENTITIES, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
@@ -196,7 +200,53 @@ VALID_CONFIG_KEYS = {
 # Track which platforms have been set up per entry
 SETUP_PLATFORMS = "setup_platforms"
 
+# Bundled Lovelace card: a prebuilt JS file shipped inside the integration.
+CARD_JS_URL_PATH = "/climate_group_helper/climate-group-helper-card.js"
+CARD_JS_FILE = Path(__file__).parent / "www" / "climate-group-helper-card.js"
+CARD_JS_URL = "card_js_url"
+
 _LOGGER = logging.getLogger(__name__)
+
+
+async def _async_register_card(hass: HomeAssistant) -> None:
+    """Serve the card bundle and load it in the frontend.
+
+    Skipped when the bundle is missing (dev checkout without a frontend build)
+    or the HTTP/frontend layer is not up (e.g. minimal test setups). The mtime
+    query busts the browser cache; a rebuild re-registers the URL.
+    """
+    if not CARD_JS_FILE.exists() or getattr(hass, "http", None) is None:
+        _LOGGER.debug("Card bundle/HTTP not available — card not registered")
+        return
+
+    url = f"{CARD_JS_URL_PATH}?v={int(os.path.getmtime(CARD_JS_FILE))}"
+    data = hass.data.setdefault(DOMAIN, {})
+    previous = data.get(CARD_JS_URL)
+    if previous == url:
+        return
+    # Claim before the first await: config entries set up concurrently, so the
+    # check alone would let several of them register the same card.
+    data[CARD_JS_URL] = url
+
+    try:
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(CARD_JS_URL_PATH, str(CARD_JS_FILE), False)]
+        )
+    except RuntimeError:
+        _LOGGER.debug("Card static path already registered")
+
+    if previous:
+        try:
+            remove_extra_js_url(hass, previous)
+        except KeyError:
+            pass
+    try:
+        add_extra_js_url(hass, url)
+    except KeyError:
+        # Frontend not set up yet — roll the claim back so a later entry retries.
+        data[CARD_JS_URL] = previous
+        return
+    _LOGGER.debug("Card registered: %s", url)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -209,6 +259,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault(entry.entry_id, {})
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS] = set()
+
+    # Register the bundled Lovelace card (once per build; no-op without a bundle).
+    await _async_register_card(hass)
 
     # Set up climate and sensor first — climate.async_setup_entry stores the group
     # reference in hass.data, which switch.async_setup_entry depends on.

@@ -24,6 +24,7 @@
   🎯 <b>Eigene Presets festlegen</b>, die die ganze Gruppe auf einmal einstellen.<br>
   🔥 <b>Temperatur boosten</b> für eine Weile, danach automatisch zurück.<br>
   🚧 <b>Einzelne Geräte isolieren</b>, solange eine Bedingung zutrifft.<br>
+  🧩 <b>Einen Heiz-/Kühlbereich ergänzen</b> für Einzel-Sollwert-Geräte mit der Bereichs-Vorlage.<br>
   ➕ <b>Die ganze Gruppe verschieben</b> mit einem einzigen Offset.
 </p>
 
@@ -83,6 +84,7 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 - [Verwaltungs-Entitäten (Schalter & Regler)](#verwaltungs-entitäten-schalter--regler)
   - [Hauptschalter](#hauptschalter)
   - [Gruppen-Offset](#gruppen-offset)
+- [Lovelace-Karte](#lovelace-karte)
 - [Was die Gruppe über sich selbst berichtet](#was-die-gruppe-über-sich-selbst-berichtet)
 - [Konfigurationsoptionen](#konfigurationsoptionen)
 - [Dienste](#dienste)
@@ -175,7 +177,7 @@ Steuert, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z. B. üb
 
 Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn Fenster oder Türen geöffnet werden, und stellt den vorherigen Zustand beim Schließen wieder her. Während Fenster geöffnet sind, werden manuelle Änderungen blockiert. Unterstützt Binärsensoren und Rollladen-/Fensterentitäten (Cover).
 
-*   **Raum- + Zonensensoren:** Unterstützt schnell reagierende Raumsensoren gegenüber langsam reagierenden Zonensensoren (z. B. für ganze Etagen). Der Raum wird als Teil der Zone verstanden: Sobald der Raumsensor "offen" meldet, muss die Zone ebenfalls als offen gelten.
+*   **Raum- + Zonensensoren:** Kombiniert einen schnell reagierenden Raumsensor mit einem langsam reagierenden Zonensensor (z. B. für eine ganze Etage). Der Raum ist Teil der Zone: Werden beide genutzt, **muss der Zonensensor den Raumsensor enthalten** (nimm den Raumsensor in die Zonen-Gruppe auf). Sonst gelten die eingestellten Verzögerungen nicht mehr.
 *   **Konfigurierbare Verzögerungen:** Lege eigene Reaktionszeiten für Öffnen und Schließen fest.
 *   **Fenster-Aktion:** Wähle zwischen vollständigem `aus` oder einem konfigurierbaren Temperatur-Sollwert.
 *   **Manuelle Änderungen übernehmen:** Optional passives Tracking erlauben:
@@ -271,7 +273,6 @@ Du kannst Attribute weglassen, die du nicht brauchst — verwende z. B. nur `hva
 | `presence_mode` | `disabled`, `away` | `presence_mode: disabled` | Pausiert die **Anwesenheitssteuerung** für die Dauer des Zeitblocks. `disabled` lässt die Heizung laufen, unabhängig davon, was die Sensoren melden (Gäste, Vorheizen); `away` erzwingt für den gesamten Zeitblock das Abwesenheitsverhalten, ebenfalls unabhängig von den Sensoren (Urlaub). |
 | `calibration_mode` | `disabled` | `calibration_mode: disabled` | Pausiert die **Kalibrierung** für die Dauer des Zeitblocks — es werden keine Kalibrierwerte an die Geräte geschrieben. Am Zeitblock-Ende wird der aktuelle Wert einmal geschrieben, damit die Geräte wieder aktuell sind. |
 | `isolation_bypass` | `all`, eine Regelnummer oder eine Liste davon | `isolation_bypass: 2` | Pausiert die genannten Regeln der **Mitglieder-Isolation** für die Dauer des Zeitblocks, sodass deren Geräte mitheizen. Die Regeln sind nach ihrer Position in den Einstellungen nummeriert (1–4); `all` pausiert alle Regeln. Ein Gerät, das von zwei Regeln erfasst wird, bleibt aus, solange die nicht pausierte Regel weiterhin greift. |
-| `presence` | `away` | `presence: away` | Abgelöst durch `presence_mode: away`, wird aber weiterhin akzeptiert; der Schlüssel entfällt in einer künftigen Version. Enthält ein Zeitblock beide, gewinnt `presence_mode`. |
 
 Die letzten vier Schlüssel **pausieren** eine Funktion, sie schalten nie eine ein.
 Eine in den Einstellungen ausgeschaltete Funktion hat nichts laufen, was ein
@@ -393,6 +394,28 @@ Eine dedizierte `number`-Entität erlaubt dir, eine globale Temperaturverschiebu
 *   **Automatisches Zurücksetzen:** Wird eine Temperatur direkt an der Gruppe gesetzt (über UI oder Dienst), wird der Offset automatisch auf `0` zurückgesetzt.
 *   **Persistenz:** Der Offset-Wert übersteht Home-Assistant-Neustarts.
 
+## Lovelace-Karte
+
+Die Integration bringt eine Lovelace-Karte für eine Klimagruppe mit. Füge sie
+wie jede andere Karte zu einem Dashboard hinzu und wähle die Entität deiner
+Gruppe — kein zusätzlicher Resource-Eintrag und kein separates Repository: Die
+Karte wird mit der Integration geladen und erscheint im Karten-Picker als
+**Climate Group Helper Card**.
+
+Sie steuert die Standard-Klimaeinstellungen — Modus, Temperatur, Luftfeuchte,
+Preset, Lüfter und Schwenk — und zeigt alles Climate-Group-Helper-Spezifische:
+welcher Blocker gerade aktiv ist (Fenster, Anwesenheit, Hauptschalter) und seit
+wann, die Mitglieder mit ihrem Zustand sowie isolierte oder außerhalb des
+Bereichs liegende Geräte. Boost- und Hold-Countdowns laufen live mit.
+
+Alles Climate-Group-Helper-Spezifische bleibt reine Anzeige: Für Hauptschalter,
+Offset oder einen Boost nutzt du die eigenen Schalter-/Regler-Entitäten und die
+Dienste, damit es genau einen Bedienweg gibt.
+
+Im Karten-Editor kannst du einen Titel setzen und wählen, ob der Status-Bereich
+überhaupt erscheint, welche Teile davon (Panel, Badges, Abweichungen) angezeigt
+werden und welche Feature-Kacheln angeboten werden.
+
 ## Was die Gruppe über sich selbst berichtet
 
 Über die üblichen Klimawerte hinaus veröffentlicht die Gruppe ihren eigenen Zustand als Attribute — was sie gerade beabsichtigt, warum sie handelt oder eben nicht, und wie ihre Geräte dastehen. Du findest sie im Dialog „Mehr Details" unter **Attribute**, kannst sie auf einem Dashboard anzeigen oder in einer Automatisierung abfragen.
@@ -418,6 +441,8 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 ### Warum die Gruppe nicht das tut, was du erwartest
 
 *   **`blocking_sources`** — vorhanden, sobald etwas die Gruppe zurückhält, samt Angabe wodurch: `window`, `presence`, `switch`. Solange dort etwas steht, erreichen Befehle die Geräte nicht. Blockiert nichts, fehlt das Attribut.
+*   **`blocking_reason`** — von allem, was dort steht, das, was gerade den Ausschlag gibt, und seit wann (`source` und `since`): Der Hauptschalter geht einem Fenster vor, ein Fenster der Anwesenheitssteuerung. Nach einem Neustart von Home Assistant zählt die Zeit ab dem Neustart. Blockiert nichts, fehlt das Attribut.
+*   **`main_switch_entity_id`** — der Hauptschalter der Gruppe, damit ein Dashboard oder eine Automation ihn findet, ohne seinen Namen raten zu müssen. Nur im erweiterten Modus.
 *   **`isolated_members`** — Geräte, die eine Isolationsregel gerade ausschließt. Sie behalten ihren eigenen Zustand und bleiben aus den Werten der Gruppe heraus.
 *   **`oob_members`** — Geräte, die dem letzten Ziel nicht folgen konnten, weil es außerhalb ihres eigenen Temperaturbereichs liegt.
 *   **`master_entity_id`** — welches Gerät gerade als Master-Entität der Gruppe festgelegt ist. Nur vorhanden, wenn eine konfiguriert ist.
@@ -434,7 +459,7 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 
 Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus voraus — ohne ihn gibt es diese Funktionen nicht und damit auch ihre Attribute nicht.
 
-*   **`enabled_features`** — welche Funktionen überhaupt konfiguriert sind (`window`, `presence`, `schedule`, `sync`, `isolation`), damit ein Dashboard „aus" von „nicht eingerichtet" unterscheiden kann.
+*   **`enabled_features`** — welche Funktionen überhaupt konfiguriert sind (`window`, `presence`, `schedule`, `sync`, `isolation`, `range_template`, `calibration`, `master`), damit ein Dashboard „aus" von „nicht eingerichtet" unterscheiden kann.
 *   **`effective_sync_mode` / `effective_sync_attributes`** — die Sync-Einstellungen, die *jetzt gerade* gelten, inklusive einer vorübergehenden Übersteuerung durch Zeitplan-Slot oder Preset — nicht zwingend das, was die Einstellungsseite zeigt.
 *   **`config_overrides`** — die Pausen-Schlüssel, die ein Slot oder Preset gerade anwendet.
 *   **`active_schedule_slot_title`** — der Titel des laufenden Kalendereintrags, wenn ein Kalender den Zeitplan steuert.
@@ -514,7 +539,7 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 | **Manuelle Änderungen übernehmen** | **Aus** (alle blockieren), **Alle** (passives Tracking für alle Mitglieder) oder **Nur Master** *(erfordert Master-Entität)*. |
 | **Fenster-Temperatur** | Zieltemperatur, die bei Aktion "Temperatur setzen" gesetzt wird. |
 | **Raumsensor** | (Optional) Binärsensor (Fenster/Tür) oder Cover-Entität für schnelle Reaktion. Cover gelten als "offen", solange sie nicht vollständig geschlossen sind. |
-| **Zonensensor** | (Optional) Binärsensor oder Cover-Entität für langsame Reaktion (z. B. Wohnung oder Etage). |
+| **Zonensensor** | (Optional) Binärsensor oder Cover-Entität für langsame Reaktion (z. B. Wohnung oder Etage). Muss den Raumsensor enthalten, wenn beide genutzt werden. |
 | **Raum-/Zonen-Verzögerung** | Zeit bis zum Ausschalten der Heizung (Standard: 15s / 5min). |
 | **Schließ-Verzögerung** | Zeit bis zur Wiederherstellung der Heizung nach dem Schließen der Fenster (Standard: 30s). |
 

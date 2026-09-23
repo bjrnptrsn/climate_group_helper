@@ -134,7 +134,7 @@
               "window_action": "Mitä tehdä, kun ikkuna avataan: sammuta kokonaan tai aseta tietty lämpötila (esim. jäätymissuoja).",
               "window_temperature": "Tavoitelämpötila, kun 'Lämpötila'-toiminto on valittu.",
               "room_sensor": "(Valinnainen) Binäärianturi huoneen omalle ikkunalle/ovelle.",
-              "zone_sensor": "(Valinnainen) Binäärianturi vyöhykkeen/kerroksen ikkunoille/oville. Vyöhykeanturin tulisi sisältää huoneanturi.",
+              "zone_sensor": "(Valinnainen) Binäärianturi vyöhykkeen/kerroksen ikkunoille/oville. Vyöhykeanturin täytyy sisältää huoneanturi.",
               "room_open_delay": "Odotusaika huoneen ikkunan avautumisen jälkeen ennen lämmityksen sammuttamista.",
               "zone_open_delay": "Odotusaika vyöhykkeen ikkunan avautumisen jälkeen ennen lämmityksen sammuttamista.",
               "close_delay": "Odotusaika kaikkien ikkunoiden sulkeutumisen jälkeen ennen lämmityksen palauttamista."

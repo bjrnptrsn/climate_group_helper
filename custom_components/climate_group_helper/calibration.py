@@ -122,6 +122,28 @@ class CalibrationHandler:
             == META_VALUE_DISABLED
         )
 
+    async def apply_meta(self, key: str, value: Any) -> None:
+        """Apply `calibration_mode`: nothing to pull through.
+
+        The target state is "do not write" — the early return in `update()` is the
+        whole effect. Only the cleanup has work to do.
+        """
+        _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
+
+    async def clear_meta(self, key: str) -> None:
+        """Clean up `calibration_mode`: catch up the values the slot suppressed.
+
+        `force_sync` writes regardless of the out-of-sync check (the startup /
+        heartbeat path). Withdraw the key first, or `update()` returns early.
+        """
+        _LOGGER.debug(
+            "[%s] Meta-Key cleanup: calibration_mode absent → catching up calibration values",
+            self._group.entity_id,
+        )
+        self._group.run_state = self._group.run_state.clear_config_overrides({key})
+        self.update("temperature", force_sync=True)
+        self.update("humidity", force_sync=True)
+
     @callback
     def _heartbeat(self, _now: Any) -> None:
         _LOGGER.debug("[%s] Calibration heartbeat triggered", self._group.entity_id)

@@ -1,6 +1,7 @@
 {
   "domain": "climate_group_helper",
   "name": "Climate Group Helper",
+  "after_dependencies": ["frontend", "http"],
   "codeowners": ["@bjrnptrsn"],
   "config_flow": true,
   "dependencies": [],
@@ -10,5 +11,5 @@
   "issue_tracker": "https://github.com/bjrnptrsn/climate_group_helper/issues",
   "quality_scale": "internal",
   "requirements": [],
-  "version": "1.11.1"
+  "version": "1.12.0"
 }

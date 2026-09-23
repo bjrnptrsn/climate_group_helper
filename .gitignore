@@ -50,3 +50,12 @@ htmlcov/
 
 # Fetched HA logs (scripts/fetch_logs.sh)
 logs/
+
+# Frontend (card source). The built bundle ships with the integration and is
+# force-added to `main` by the release process, like the sister project does.
+frontend/node_modules/
+frontend/dist/
+custom_components/climate_group_helper/www/climate-group-helper-card.js
+# The Python `lib/` rule above is unanchored and would also ignore the card's
+# own `frontend/src/lib/` — keep it tracked.
+!frontend/src/lib/

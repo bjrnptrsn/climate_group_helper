@@ -134,7 +134,7 @@
               "window_action": "Was passieren soll, wenn ein Fenster geöffnet wird: Komplett ausschalten oder eine bestimmte Temperatur setzen (z.B. Frostschutz).",
               "window_temperature": "Zieltemperatur, die gesetzt wird, wenn die Aktion 'Temperatur setzen' gewählt ist.",
               "room_sensor": "(Optional) Binärsensor für das Fenster/Tür im Raum.",
-              "zone_sensor": "(Optional) Binärsensor für Fenster/Türen in der Zone/Etage. Zonensensor sollte Raumsensor enthalten.",
+              "zone_sensor": "(Optional) Binärsensor für Fenster/Türen in der Zone/Etage. Zonensensor muss Raumsensor enthalten.",
               "room_open_delay": "Wartezeit nach Öffnen des Raumfensters, bevor die Heizung ausgeschaltet wird.",
               "zone_open_delay": "Wartezeit nach Öffnen des Zonenfensters, bevor die Heizung ausgeschaltet wird.",
               "close_delay": "Wartezeit nachdem alle Fenster geschlossen sind, bevor die Heizung wiederhergestellt wird."

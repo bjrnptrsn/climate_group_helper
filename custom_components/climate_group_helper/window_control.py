@@ -271,6 +271,23 @@ class WindowControlHandler:
             # Block already matches the sensors — only the bookkeeping is stale.
             self._control_state = mode
 
+    async def apply_meta(self, key: str, value: Any) -> None:  # noqa: ARG002
+        """Apply the `window_mode` meta-key (see `SlotMetaProcessor`)."""
+        _LOGGER.debug("[%s] Meta-Key apply: window_mode=disabled", self._group.entity_id)
+        await self.apply_bypass()
+
+    async def clear_meta(self, key: str) -> None:
+        """Clean up `window_mode`: re-evaluate against the sensors now.
+
+        Withdraw the key first — `reevaluate()` reads `bypassed` per step.
+        """
+        _LOGGER.debug(
+            "[%s] Meta-Key cleanup: window_mode absent → re-evaluating window sensors",
+            self._group.entity_id,
+        )
+        self._group.run_state = self._group.run_state.clear_config_overrides({key})
+        await self.reevaluate()
+
     def _window_control_logic(self) -> tuple[str, float] | None:
         """This method implements the core logic for window control.
 

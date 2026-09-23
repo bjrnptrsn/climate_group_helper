@@ -24,6 +24,7 @@
   🎯 <b>Define your own presets</b> that set the whole group at once.<br>
   🔥 <b>Boost the temperature</b> for a while, then fall back automatically.<br>
   🚧 <b>Isolate single devices</b> from the group while a condition holds.<br>
+  🧩 <b>Add a heat/cool range</b> to single-setpoint devices with the Member Template.<br>
   ➕ <b>Shift the whole group</b> up or down with a single offset.
 </p>
 
@@ -83,6 +84,7 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 - [Management Entities (Switch & Slider)](#management-entities-switch--slider)
   - [Main Switch](#main-switch)
   - [Group Offset](#group-offset)
+- [Lovelace Card](#lovelace-card)
 - [What the Group Reports About Itself](#what-the-group-reports-about-itself)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
@@ -175,7 +177,7 @@ Controls what happens when a member device is changed directly (e.g. via its own
 
 Automatically turn off heating or set a frost-protection temperature when windows or doors are opened, and restore the previous state when they close. While windows are open, manual changes are blocked. Supports binary sensors and cover entities.
 
-*   **Room + Zone Sensors:** Supports fast-reacting room sensors vs. slow-reacting zone sensors (e.g. for whole floors). The room is understood as part of the zone: whenever the room sensor reports open, the zone needs to count as open, too.
+*   **Room + Zone Sensors:** Combines a fast-reacting room sensor with a slow-reacting zone sensor (e.g. for a whole floor). The room is part of the zone: when you use both, the zone sensor **must include the room sensor** (add the room sensor to your zone group). Otherwise the configured delays no longer apply.
 *   **Configurable Delays:** Set custom reaction times for opening and closing.
 *   **Window Action:** Choose between full `off` or a configurable temperature setpoint.
 *   **Adopt Manual Changes:** Optionally allow passive tracking:
@@ -271,7 +273,6 @@ You can omit attributes you don't need — for example, use only `hvac_mode: off
 | `presence_mode` | `disabled`, `away` | `presence_mode: disabled` | Pauses **Presence Control** for the slot duration. `disabled` keeps the heating running regardless of what the sensors report (guests, pre-heating); `away` forces the away behaviour for the whole slot, again regardless of the sensors (holidays). |
 | `calibration_mode` | `disabled` | `calibration_mode: disabled` | Pauses **Calibration** for the slot duration — no calibration values are written to the devices. At the slot end the current value is written once, so the devices are up to date again. |
 | `isolation_bypass` | `all`, a rule number, or a list of them | `isolation_bypass: 2` | Pauses the named **Member Isolation** rules for the slot duration, so their devices heat along. Rules are numbered by their position in the settings (1–4); `all` pauses every rule. A device covered by two rules stays off as long as the rule you did not pause still applies. |
-| `presence` | `away` | `presence: away` | Superseded by `presence_mode: away` and still accepted; it will be removed in a future version. If a slot carries both, `presence_mode` wins. |
 
 The last four keys **pause** a feature; they never switch one on. A feature that is
 switched off in the settings has nothing running for a slot to take over, so
@@ -392,6 +393,27 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 *   **Auto-reset:** Setting a temperature directly on the group (via UI or service) resets the offset to `0` automatically.
 *   **Persistence:** The offset value survives Home Assistant restarts.
 
+## Lovelace Card
+
+The integration ships a Lovelace card for a climate group. Add it to a
+dashboard like any other card and pick your group's entity — no extra resource
+entry and no separate repository: the card loads with the integration and
+appears in the card picker as **Climate Group Helper Card**.
+
+It controls the standard climate settings — mode, temperature, humidity, preset,
+fan and swing — and shows everything Climate Group Helper-specific: which
+blocker is currently active (window, presence, main switch) and for how long,
+the group's members with their state, and any isolated or out-of-bounds devices.
+Boost and hold countdowns run live.
+
+Everything Climate Group Helper-specific stays display-only: to work the main
+switch, the offset or a boost, use the group's own switch/slider entities and
+the services, so there is exactly one place to operate them.
+
+The card editor lets you set a title and choose whether the status area shows at
+all, which of its parts (panel, badges, deviations) appear, and which feature
+tiles are offered.
+
 ## What the Group Reports About Itself
 
 Beyond the usual climate values, the group publishes its own state as attributes — what it currently intends, why it is or isn't acting, and where its devices stand. You can read them in the more-info dialog under **Attributes**, show them on a dashboard, or branch on them in an automation.
@@ -417,6 +439,8 @@ When everything agrees, it is empty. Two details make it trustworthy:
 ### Why the group isn't doing what you expect
 
 *   **`blocking_sources`** — present whenever something is holding the group back, listing what: `window`, `presence`, `switch`. While one of these is listed, commands don't reach the devices. Absent when nothing blocks.
+*   **`blocking_reason`** — of everything listed there, the one currently in charge, and since when (`source` and `since`): the Main Switch outranks a window, a window outranks Presence Control. After a Home Assistant restart the time counts from the restart. Absent when nothing blocks.
+*   **`main_switch_entity_id`** — the group's Main Switch, so a dashboard or automation can find it without guessing its name. Only in Advanced Mode.
 *   **`isolated_members`** — devices an isolation rule currently excludes. They keep their own state and are left out of the group's readings.
 *   **`oob_members`** — devices that could not follow the last target because it lies outside their own temperature range.
 *   **`master_entity_id`** — which device is currently set as the group's Master Entity. Present only when one is configured.
@@ -433,7 +457,7 @@ When everything agrees, it is empty. Two details make it trustworthy:
 
 Everything in this group except `enabled_features` requires Advanced Mode — without it those features don't exist, and neither do their attributes.
 
-*   **`enabled_features`** — which features are configured at all (`window`, `presence`, `schedule`, `sync`, `isolation`), so a dashboard can tell "off" from "not set up".
+*   **`enabled_features`** — which features are configured at all (`window`, `presence`, `schedule`, `sync`, `isolation`, `range_template`, `calibration`, `master`), so a dashboard can tell "off" from "not set up".
 *   **`effective_sync_mode` / `effective_sync_attributes`** — the sync settings in force *right now*, including a schedule slot's or preset's temporary override — not necessarily what the settings page shows.
 *   **`config_overrides`** — the pause keys a slot or preset currently applies.
 *   **`active_schedule_slot_title`** — the title of the running calendar event, when a calendar drives the schedule.
@@ -513,7 +537,7 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 | **Adopt Manual Changes** | **Off** (block all), **All** (passive tracking for all members), or **Master Only** *(requires Master Entity)*. |
 | **Window Temperature** | Target temperature to set when 'Set Temperature' action is selected. |
 | **Room Sensor** | (Optional) Binary sensor (window/door) or cover entity for fast reaction. Covers are treated as "open" unless they are fully closed. |
-| **Zone Sensor** | (Optional) Binary sensor or cover entity for slow reaction (e.g. apartment or floor). |
+| **Zone Sensor** | (Optional) Binary sensor or cover entity for slow reaction (e.g. apartment or floor). Must include the Room Sensor when both are used. |
 | **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
 | **Close Delay** | Time before restoring heating after windows close (default: 30s). |
 

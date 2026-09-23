@@ -266,7 +266,6 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # State variables
         self.shared_target_state = TargetState()
-        self.current_group_state = CurrentState()
         self.change_state: ChangeState | None = None
         self.master_state: State | None = None
         self.current_master_state = CurrentState()
@@ -288,6 +287,9 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Registered by ControlSwitch so external block changes (e.g. schedule
         # meta-key turn_off) are written to the switch entity's HA state.
         self.switch_state_callback: Callable[[], None] | None = None
+        # Filled by ControlSwitch on setup — lets cards reach the switch without
+        # guessing its entity_id.
+        self.main_switch_entity_id: str | None = None
         self.slot_meta_processor = SlotMetaProcessor(self)
         self.override_call_handler = OverrideCallHandler(self)
         self.presence_call_handler = PresenceCallHandler(self)
@@ -397,6 +399,17 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
     def advanced_mode(self) -> bool:
         """Return True if the group is in advanced mode."""
         return self._advanced_mode
+
+    @property
+    def has_member_offset(self) -> bool:
+        """Return True if at least one configured member offset is non-zero.
+
+        The offset map can be present with every value `0.0` (the options form
+        writes an entry per member). `CONF_MEMBER_OFFSET_CORRECTION` defaults to
+        True, so keying "offset is active" on the map alone would treat every
+        group as offset-corrected.
+        """
+        return any(offset != 0.0 for offset in self._temp_offset_map.values())
 
     @property
     def log_id(self) -> str:

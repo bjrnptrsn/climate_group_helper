@@ -911,8 +911,8 @@ class BaseServiceCallHandler(ABC):
         Uses "member_offset_applied" (not "injected") so that _process_group_offset
         can still add the global offset on top. Both offsets are additive.
         """
-        if not self._group._temp_offset_map:
-            return calls  # No-op when no offsets configured
+        if not self._group.has_member_offset:
+            return calls  # No-op when every configured offset is 0.0
 
         result = []
         temp_attrs = TEMP_TARGET_ATTRS

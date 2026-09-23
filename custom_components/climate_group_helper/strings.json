@@ -134,7 +134,7 @@
               "window_action": "What to do when window opens: Turn Off completely or set a specific Temperature (e.g. frost protection).",
               "window_temperature": "Target temperature to set when 'Temperature' action is selected.",
               "room_sensor": "(Optional) Binary sensor for the room's own window/door.",
-              "zone_sensor": "(Optional) Binary sensor for windows/doors in the zone/floor. Zone sensor should include room sensor.",
+              "zone_sensor": "(Optional) Binary sensor for windows/doors in the zone/floor. Zone sensor must include room sensor.",
               "room_open_delay": "Time to wait after room window opens before turning off heating.",
               "zone_open_delay": "Time to wait after zone window opens before turning off heating.",
               "close_delay": "Time to wait after all windows close before restoring heating."

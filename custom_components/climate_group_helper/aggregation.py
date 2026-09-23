@@ -25,8 +25,8 @@ K3  `resync()` runs BEFORE the HVAC mode calculation.
     reads it (AUTO strategy). Reversing the two makes the group settle on a mode
     computed from stale target state.
 
-K4  Cold Start runs AFTER `current_group_state` is built — it seeds
-    `shared_target_state` from exactly that object.
+K4  Cold Start runs AFTER the compute/apply blocks — it snapshots the group's
+    applied attributes and seeds `shared_target_state` from them.
 
 Additionally, the one-time startup trigger sets `_startup_initialized` before
 the early return, and the event cleanup at the end mirrors the one in that early
@@ -414,7 +414,7 @@ class Aggregator:
         path just as in the averaging path (same `member_offset_correction` flag).
         """
         offset_correction = (
-            bool(self._group._temp_offset_map)
+            self._group.has_member_offset
             and self._group._member_offset_correction
             and attr in TEMP_TARGET_ATTRS
         )
@@ -598,10 +598,10 @@ class Aggregator:
         # `run_state.active_virtual_preset` and is overlaid by the property).
         val = self._get_optimistic_value("preset_mode")
         preset_mode = val if val is not None else most_frequent_attribute(self.states, ATTR_PRESET_MODE)
-        # Normalize only where the group actually offers `PRESET_NONE`: a virtual
-        # preset adds it, a native one only if a member announces it. Otherwise the
-        # reported value would name a preset `preset_modes` does not contain, and
-        # HA Core rejects `set_preset_mode("none")` against that list.
+        # Normalize only where `preset_modes` carries `PRESET_NONE`: a virtual preset
+        # adds it, and so does a single member announcing it — the reset value is
+        # exempt from the feature strategy. Reporting it otherwise would name a
+        # preset the list does not contain, which HA Core rejects.
         if preset_mode is None and PRESET_NONE in preset_modes:
             preset_mode = PRESET_NONE
 
@@ -653,6 +653,39 @@ class Aggregator:
         self._group._attr_swing_horizontal_modes = result.swing_horizontal_modes
         self._group._attr_swing_horizontal_mode = result.swing_horizontal_mode
         self._group._attr_supported_features = result.supported_features
+
+    def _cold_start_seed(self, all_members_ready: bool) -> None:
+        """Seed an empty target from the members' current state (Cold Start).
+
+        Runs after the compute/apply blocks (K4). "Empty" ignores `preset_mode` and
+        the write metadata — the preset is a derived expectation, not content. An
+        active slot with a climate payload owns the target and suppresses the seed.
+        """
+        if not all_members_ready or self._group.schedule_handler.active_climate_payload:
+            return
+        target = self._group.shared_target_state
+        if target.update(
+            preset_mode=None, last_source=None, last_entity=None, last_timestamp=None
+        ) != TargetState():
+            return
+        snapshot = CurrentState(
+            hvac_mode=self._group._attr_hvac_mode,
+            temperature=self._group._attr_target_temperature,
+            target_temp_low=self._group._attr_target_temperature_low,
+            target_temp_high=self._group._attr_target_temperature_high,
+            humidity=self._group._attr_target_humidity,
+            preset_mode=self._group._attr_preset_mode,
+            fan_mode=self._group._attr_fan_mode,
+            swing_mode=self._group._attr_swing_mode,
+            swing_horizontal_mode=self._group._attr_swing_horizontal_mode,
+        )
+        if initial_data := snapshot.to_dict():
+            self._group.shared_target_state = target.update(**initial_data)
+            _LOGGER.debug(
+                "[%s] Initialized Persistent Target State from current values: %s",
+                self._group.entity_id,
+                self._group.shared_target_state,
+            )
 
     @callback
     def async_update_group_state(self) -> None:
@@ -808,33 +841,8 @@ class Aggregator:
 
         self._apply_modes(self._compute_modes())
 
-        # Populate current_group_state
-        self._group.current_group_state = CurrentState(
-            hvac_mode=self._group._attr_hvac_mode,
-            temperature=self._group._attr_target_temperature,
-            target_temp_low=self._group._attr_target_temperature_low,
-            target_temp_high=self._group._attr_target_temperature_high,
-            humidity=self._group._attr_target_humidity,
-            preset_mode=self._group._attr_preset_mode,
-            fan_mode=self._group._attr_fan_mode,
-            swing_mode=self._group._attr_swing_mode,
-            swing_horizontal_mode=self._group._attr_swing_horizontal_mode
-        )
-
-        # Cold Start: Populate target store from current group state if empty and all members are ready.
-        # Must stay after current_group_state is built — it seeds from that object (K4).
-        # Only when no schedule slot defines a target: an active slot owns the target,
-        # so the physical fallback must not fill in a bound the slot deliberately
-        # leaves open. A slot that carries meta-keys only defines none and still seeds.
-        if (
-            self._group.shared_target_state == TargetState()
-            and all_members_ready
-            and not self._group.schedule_handler.active_climate_payload
-        ):
-            initial_data = self._group.current_group_state.to_dict()
-            if initial_data:
-                self._group.shared_target_state = self._group.shared_target_state.update(**initial_data)
-                _LOGGER.debug("[%s] Initialized Persistent Target State from current values: %s", self._group.entity_id, self._group.shared_target_state)
+        # K4: Cold Start snapshots the applied attributes, so it runs last.
+        self._cold_start_seed(all_members_ready)
 
         # Clear instance-level event state after use — all three are persisted across
         # calls, so stale values would cause spurious resync() or calibration triggers.

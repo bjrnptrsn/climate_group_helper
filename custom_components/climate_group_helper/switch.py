@@ -78,6 +78,7 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         # SwitchOverrideManager pushes block changes (also external ones, e.g.
         # schedule meta-key turn_off) so is_on stays in sync in the HA state machine.
         self._group.switch_state_callback = self.async_write_ha_state
+        self._group.main_switch_entity_id = self.entity_id
 
         # Only an explicit "off" restores the block. A restored unavailable/unknown
         # state (unclean shutdown) carries no user intent — treating it as "off"
@@ -91,6 +92,7 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         """Deregister the state-push callback."""
         await super().async_will_remove_from_hass()
         self._group.switch_state_callback = None
+        self._group.main_switch_entity_id = None
 
     @property
     def is_on(self) -> bool:

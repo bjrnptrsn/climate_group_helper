@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 from datetime import timedelta
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
@@ -121,17 +122,27 @@ class BaseOverrideManager:
             _LOGGER.debug("[%s] %s timer cancelled", self._group.entity_id, self.OVERRIDE_NAME)
 
     def _block(self) -> None:
-        """Add OVERRIDE_NAME to blocking_sources."""
+        """Add OVERRIDE_NAME to blocking_sources, stamping when it began."""
+        run_state = self._group.run_state
+        since = dict(run_state.blocking_since)
+        # setdefault: a re-assert of an already-active block keeps the original
+        # start, so the reported duration does not reset.
+        since.setdefault(self.OVERRIDE_NAME, dt_util.utcnow())
         self._group.run_state = replace(
-            self._group.run_state,
-            blocking_sources=self._group.run_state.blocking_sources | {self.OVERRIDE_NAME},
+            run_state,
+            blocking_sources=run_state.blocking_sources | {self.OVERRIDE_NAME},
+            blocking_since=MappingProxyType(since),
         )
 
     def _unblock(self) -> None:
-        """Remove OVERRIDE_NAME from blocking_sources."""
+        """Remove OVERRIDE_NAME from blocking_sources and its timestamp."""
+        run_state = self._group.run_state
+        since = dict(run_state.blocking_since)
+        since.pop(self.OVERRIDE_NAME, None)
         self._group.run_state = replace(
-            self._group.run_state,
-            blocking_sources=self._group.run_state.blocking_sources - {self.OVERRIDE_NAME},
+            run_state,
+            blocking_sources=run_state.blocking_sources - {self.OVERRIDE_NAME},
+            blocking_since=MappingProxyType(since),
         )
 
     def _any_member_not_off(self) -> bool:

@@ -16,7 +16,6 @@ from .const import (
     CONF_PRESENCE_ZONE,
     DEFAULT_PRESENCE_AWAY_DELAY,
     DEFAULT_PRESENCE_RETURN_DELAY,
-    META_KEY_PRESENCE,
     META_KEY_PRESENCE_MODE,
     META_VALUE_AWAY,
     META_VALUE_DISABLED,
@@ -76,34 +75,15 @@ class PresenceHandler:
         Both values of the meta-key silence the sensors; they differ only in the
         state they pin the block to (see forces_away).
         """
-        return self._slot_override is not None
+        return META_KEY_PRESENCE_MODE in self._group.run_state.config_overrides
 
     @property
     def forces_away(self) -> bool:
-        """Return True while a slot pins the block to "away".
-
-        Covers the superseded `presence: away` key as well — both express the
-        same intent, and _go_restore() must not undercut either of them.
-        """
-        overrides = self._group.run_state.config_overrides
+        """Return True while a slot pins the block to "away"."""
         return (
-            overrides.get(META_KEY_PRESENCE_MODE) == META_VALUE_AWAY
-            or overrides.get(META_KEY_PRESENCE) == META_VALUE_AWAY
+            self._group.run_state.config_overrides.get(META_KEY_PRESENCE_MODE)
+            == META_VALUE_AWAY
         )
-
-    @property
-    def _slot_override(self) -> str | None:
-        """Return the active presence meta-key value, or None.
-
-        The superseded `presence: away` maps onto the same "away" value, so
-        every reader below sees one shape regardless of which key the slot used.
-        """
-        overrides = self._group.run_state.config_overrides
-        if (value := overrides.get(META_KEY_PRESENCE_MODE)) is not None:
-            return value
-        if overrides.get(META_KEY_PRESENCE) == META_VALUE_AWAY:
-            return META_VALUE_AWAY
-        return None
 
     @property
     def sensors(self) -> list[str]:
@@ -216,7 +196,7 @@ class PresenceHandler:
         presence_block_active = "presence" in self._group.run_state.blocking_sources
 
         # The block state (blocking_sources) is the source of truth, not only
-        # _away_active: the schedule meta-key `presence: away` activates the block
+        # _away_active: the schedule meta-key `presence_mode` activates the block
         # directly (bypassing this handler), so the away/restore transitions must
         # also react to blocks this handler did not start itself.
         if (
@@ -360,6 +340,34 @@ class PresenceHandler:
         else:
             # Block already matches the sensors — only the flag may be stale.
             self._away_active = not present
+
+    async def apply_meta(self, key: str, value: Any) -> None:
+        """Apply the `presence`/`presence_mode` meta-key (see `SlotMetaProcessor`)."""
+        _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
+        await self.apply_bypass(value)
+
+    async def clear_meta(self, key: str) -> None:
+        """Clean up a presence meta-key: hand the block back to the sensors.
+
+        Withdraw the expiring key first — both paths read `config_overrides`.
+        """
+        self._group.run_state = self._group.run_state.clear_config_overrides({key})
+        if self.mode == PresenceMode.DISABLED or not self.sensors:
+            # Only if this key pinned a block. `restore()` pushes target_state
+            # unconditionally, and a `disabled` key without presence control never
+            # activated anything.
+            if "presence" in self._group.run_state.blocking_sources:
+                _LOGGER.debug(
+                    "[%s] Meta-Key cleanup: %s absent, no presence control → releasing block",
+                    self._group.entity_id, key,
+                )
+                await self._group.presence_override_manager.restore()
+        else:
+            _LOGGER.debug(
+                "[%s] Meta-Key cleanup: %s absent → re-evaluating presence sensors",
+                self._group.entity_id, key,
+            )
+            await self.reevaluate()
 
     def _cancel_timer(self) -> None:
         if self._timer_cancel:

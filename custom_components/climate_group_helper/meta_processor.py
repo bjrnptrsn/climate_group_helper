@@ -14,7 +14,6 @@ Supported meta-keys:
         sync_mode      : SyncMode  — temporarily shadows the configured sync mode
         group_offset   : float     — temporarily overrides the group temperature offset
         sync_attributes: list[str] — temporarily shadows the synchronized attributes
-        presence       : "away"    — superseded by presence_mode, still tolerated
 
     Feature bypasses (also State-Keys) suspend a feature for the slot duration:
         window_mode     : "disabled"          — ignore the window sensors
@@ -26,16 +25,15 @@ Supported meta-keys:
     One-Shot triggers (applied once per slot activation, not stored in config_overrides):
         turn_off       : bool      — activates/deactivates the switch override (OFF-all block)
 
-All four bypasses follow the same three steps: silence the evaluation, pull the
-feature through to the named state once (the window may already be open when the
-slot starts), and re-evaluate against freshly read sensors when the slot ends.
-Calibration has no state to pull through, so it only catches up its writes.
+The concrete action of each bypass lives on its feature handler, as
+`apply_meta()`/`clear_meta()` (`MetaKeyTarget`); this module owns only the
+registry, validation and ordering, not the per-key semantics.
 """
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from .const import (
     META_KEY_CALIBRATION_MODE,
@@ -45,13 +43,11 @@ from .const import (
     META_KEY_SYNC_ATTRS,
     META_KEY_SYNC_MODE,
     META_KEY_TURN_OFF,
-    META_KEY_PRESENCE,
     META_KEY_WINDOW_MODE,
     META_STATE_KEYS,
     META_VALUE_ALL,
     META_VALUE_AWAY,
     META_VALUE_DISABLED,
-    PresenceMode,
     SyncMode,
 )
 from .number import async_push_group_offset, clean_offset
@@ -105,7 +101,6 @@ _CLEANUP_ORDER: list[str] = [
     META_KEY_SYNC_MODE,
     META_KEY_GROUP_OFFSET,
     META_KEY_ISOLATION_BYPASS,
-    META_KEY_PRESENCE,
     META_KEY_PRESENCE_MODE,
     META_KEY_WINDOW_MODE,
     META_KEY_CALIBRATION_MODE,
@@ -123,6 +118,22 @@ _PRECEDENCE: tuple[str, ...] = (SOURCE_PRESET, SOURCE_SCHEDULE)
 def _cleanup_position(key: str) -> int:
     """Sort key for _CLEANUP_ORDER; unlisted keys run last."""
     return _CLEANUP_ORDER.index(key) if key in _CLEANUP_ORDER else len(_CLEANUP_ORDER)
+
+
+# Shadow-only keys: `set_config_override()` (apply) and the collective
+# `clear_config_overrides()` (cleanup) are their entire effect.
+_SHADOW_ONLY_KEYS: frozenset[str] = frozenset({META_KEY_SYNC_MODE, META_KEY_SYNC_ATTRS})
+
+
+class MetaKeyTarget(Protocol):
+    """A feature handler owning the apply/cleanup actions of a meta-key.
+
+    Structural (no base class): each target already owns the state its key acts
+    on. `key` is passed because `PresenceHandler` serves two keys.
+    """
+
+    async def apply_meta(self, key: str, value: Any) -> None: ...
+    async def clear_meta(self, key: str) -> None: ...
 
 
 @dataclass
@@ -243,6 +254,9 @@ class SlotMetaProcessor:
         """Initialize with the owning ClimateGroupHelper."""
         self._group = group
         self._ownership = MetaKeyOwnership()
+        # Lazy: the adapter import cycles through state.py, and the handlers do
+        # not exist yet when this processor is built.
+        self._isolation_target: MetaKeyTarget | None = None
 
     @property
     def ownership(self) -> MetaKeyOwnership:
@@ -391,7 +405,7 @@ class SlotMetaProcessor:
         prev_slot_title = self._group.run_state.active_slot_title
         self._group.run_state = replace(self._group.run_state, active_slot_title=slot_message)
 
-        # turn_off is a one-shot trigger, not a stateful key — never enters _active_keys.
+        # turn_off is a one-shot trigger, not a stateful key — never enters the claim registry.
         # true → activate, false → restore, absent → no-op. Equal, interchangeable
         # with the UI switch (no ownership tracking): an already-active block is not
         # re-activated (activate() sends OFF unconditionally — re-triggering it on
@@ -415,17 +429,6 @@ class SlotMetaProcessor:
                     "[%s] Invalid value for meta-key 'turn_off': %s (expected true or false) — ignored",
                     self._group.entity_id, turn_off_value,
                 )
-
-        # presence_mode supersedes the legacy presence key. Both in one slot: the
-        # new key wins and the old one is dropped, so a user mid-migration gets one
-        # warning instead of two keys fighting over the same block.
-        if META_KEY_PRESENCE_MODE in meta_candidates and META_KEY_PRESENCE in meta_candidates:
-            _LOGGER.warning(
-                "[%s] Slot carries both 'presence_mode' and the superseded 'presence' — "
-                "'presence' ignored",
-                self._group.entity_id,
-            )
-            meta_candidates.pop(META_KEY_PRESENCE)
 
         # Identify valid meta-keys; warn on unknown ones (typo guard).
         # Values are normalised here so every downstream reader sees one shape.
@@ -485,15 +488,6 @@ class SlotMetaProcessor:
         Warnings are emitted here, so every rejection tells the user which value
         was unusable and what the key expects.
         """
-        if key == META_KEY_PRESENCE:
-            if value != META_VALUE_AWAY:
-                _LOGGER.warning(
-                    "[%s] Invalid value for meta-key 'presence': %s (expected 'away') — ignored",
-                    self._group.entity_id, value,
-                )
-                return None
-            return value
-
         if key == META_KEY_PRESENCE_MODE:
             if value not in (META_VALUE_DISABLED, META_VALUE_AWAY):
                 _LOGGER.warning(
@@ -603,91 +597,62 @@ class SlotMetaProcessor:
             return None
         return sorted(set(slots))
 
+    def _target_for(self, key: str) -> MetaKeyTarget | None:
+        """Resolve a meta-key to its handler, or `None` for a shadow-only key.
+
+        Call-time on purpose: this processor is built before the feature handlers.
+        """
+        if key in _SHADOW_ONLY_KEYS:
+            return None
+        if key == META_KEY_PRESENCE_MODE:
+            return self._group.presence_handler
+        if key == META_KEY_WINDOW_MODE:
+            return self._group.window_control_handler
+        if key == META_KEY_CALIBRATION_MODE:
+            return self._group.calibration_handler
+        if key == META_KEY_ISOLATION_BYPASS:
+            if self._isolation_target is None:
+                from .isolation import IsolationMetaTarget
+
+                self._isolation_target = IsolationMetaTarget(self._group)
+            return self._isolation_target
+        return None
+
     async def _apply(self, key: str, value: Any) -> None:
         """Execute the immediate action for a meta-key present in the current slot.
 
         config_overrides has already been updated by the caller before this method
-        is invoked, so manager calls can rely on the new value being visible in RunState.
-        Values arrive validated and normalised from `process()`, so every branch
-        uses its own unchecked.
+        is invoked, so manager calls can rely on the new value being visible in
+        RunState. Values arrive validated and normalised from `process()`, so each
+        target uses its own value unchecked.
         """
         if key == META_KEY_GROUP_OFFSET:
-            # Stored clamped: the takeover check compares it against
-            # run_state.group_offset, which always is.
-            offset_val = value
-
-            _LOGGER.debug("[%s] Meta-Key apply: group_offset=%s", self._group.entity_id, offset_val)
-            if self._group.offset_set_callback:
-                # offset_set_callback updates run_state.group_offset and refreshes the
-                # slider UI (OffsetNumber._set_offset). The claim in the ownership
-                # registry is what makes the release reset the offset to 0.0; if the
-                # user moves the slider manually, OffsetNumber.async_set_native_value
-                # clears the override, and the takeover check withdraws the claim on
-                # the next re-processing so the release becomes a deliberate no-op.
-                await self._group.offset_set_callback(offset_val)
-            else:
-                self._group.run_state = replace(self._group.run_state, group_offset=offset_val)
-
-            # The slider pushes the new offset to the members; the meta-key path must do
-            # the same. Otherwise a slot that only sets group_offset updates RunState and
-            # the UI while the devices keep their old setpoints until some unrelated sync
-            # happens to run — the state looks correct while the room stays wrong.
-            await async_push_group_offset(self._group)
-
-        elif key in (META_KEY_SYNC_MODE, META_KEY_SYNC_ATTRS, META_KEY_CALIBRATION_MODE):
-            # Pure config shadowing: was written during slot processing to config_overrides.
-            # The respective handlers read these overrides at call-time and
-            # fall back to the config baseline when the key is absent.
-            #
-            # calibration_mode belongs here despite being a bypass: its target
-            # state is "do not write", so there is nothing to pull through at the
-            # slot start (the early return in CalibrationHandler.update() is the
-            # entire effect). Only the slot end has work to do — see _cleanup().
+            await self._apply_group_offset(value)
+        elif (target := self._target_for(key)) is not None:
+            await target.apply_meta(key, value)
+        else:
+            # Shadow-only key: set_config_override() is the whole effect. Logged
+            # because this is the live system's only signal for these keys.
             _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
 
-        elif key in (META_KEY_PRESENCE, META_KEY_PRESENCE_MODE):
-            # Both values silence the sensor evaluation and differ only in the
-            # state the block is pinned to — apply_bypass() carries that split,
-            # including the idempotency guard against re-sending on every slot
-            # re-process.
-            _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
-            await self._group.presence_handler.apply_bypass(value)
+    async def _apply_group_offset(self, value: Any) -> None:
+        """Apply the `group_offset` meta-key: write the offset and push it."""
+        # Stored clamped: the takeover check compares it against
+        # run_state.group_offset, which always is.
+        _LOGGER.debug("[%s] Meta-Key apply: group_offset=%s", self._group.entity_id, value)
+        if self._group.offset_set_callback:
+            # offset_set_callback updates run_state.group_offset and refreshes the
+            # slider UI. The registry claim is what makes the release reset the
+            # offset; a manual slider move clears the override, so the takeover
+            # check withdraws the claim and the release becomes a no-op.
+            await self._group.offset_set_callback(value)
+        else:
+            self._group.run_state = replace(self._group.run_state, group_offset=value)
 
-        elif key == META_KEY_WINDOW_MODE:
-            # The handler's own guard makes this idempotent across slot
-            # re-processing: once the block is released there is nothing left to do.
-            _LOGGER.debug("[%s] Meta-Key apply: window_mode=disabled", self._group.entity_id)
-            await self._group.window_control_handler.apply_bypass()
-
-        elif key == META_KEY_ISOLATION_BYPASS:
-            # Release the devices the suspended rules hold. Each handler decides
-            # for itself whether it is bypassed (it reads config_overrides, which
-            # the caller has already written), and _deactivate_isolation() keeps
-            # devices a still-active foreign rule claims — so a device covered by
-            # both a bypassed and an active rule stays isolated.
-            _LOGGER.debug(
-                "[%s] Meta-Key apply: isolation_bypass=%s", self._group.entity_id, value
-            )
-            # A slot number without a rule behind it is a typo, and every sibling
-            # guard reports one. The value guard cannot catch it: it only knows
-            # the 1-4 range, not which of those slots actually carry a rule.
-            if value != META_VALUE_ALL:
-                known = {handler.slot for handler in self._group.member_isolation_handlers}
-                if unknown := sorted(set(value) - known):
-                    _LOGGER.warning(
-                        "[%s] Meta-Key 'isolation_bypass': no isolation rule in slot(s) %s — "
-                        "those numbers have no effect",
-                        self._group.entity_id,
-                        ", ".join(str(slot) for slot in unknown),
-                    )
-            # Both directions: a slot switching from [1] to [2] drops rule 1 out
-            # of the bypass while the key stays claimed, and _cleanup() — which
-            # would re-isolate it — only runs for a key nobody claims any more.
-            for handler in self._group.member_isolation_handlers:
-                if handler.bypassed:
-                    await handler.release_bypassed()
-                else:
-                    await handler.reevaluate()
+        # The slider pushes the new offset to the members; the meta-key path must
+        # do the same, or the devices keep their old setpoints while the state
+        # looks correct.
+        await async_push_group_offset(self._group)
 
     async def _cleanup(self, keys: set[str]) -> None:
         """Execute counter-actions for meta-keys no source claims any more.
@@ -698,112 +663,30 @@ class SlotMetaProcessor:
 
         for key in sorted(keys, key=_cleanup_position):
             if key == META_KEY_GROUP_OFFSET:
-                # Ownership guard: only reset while the override is still present.
-                # The slider clears it directly (OffsetNumber.async_set_native_value)
-                # rather than going through the registry, so a missing override means
-                # the user took the offset over — their value must not be overwritten.
-                if META_KEY_GROUP_OFFSET in self._group.run_state.config_overrides:
-                    _LOGGER.debug("[%s] Meta-Key cleanup: group_offset absent → reset to 0.0", self._group.entity_id)
-                    if self._group.offset_set_callback:
-                        await self._group.offset_set_callback(0.0)
-                    else:
-                        self._group.run_state = replace(self._group.run_state, group_offset=0.0)
-                    await async_push_group_offset(self._group)
-                else:
-                    _LOGGER.debug("[%s] Meta-Key cleanup: group_offset skipped — ownership transferred to user", self._group.entity_id)
-
-            elif key in (META_KEY_SYNC_MODE, META_KEY_SYNC_ATTRS):
-                # Pure shadowing — clear_config_overrides (below) is the entire cleanup.
-                _LOGGER.debug("[%s] Meta-Key cleanup: %s absent → config baseline restored", self._group.entity_id, key)
-
-            elif key == META_KEY_ISOLATION_BYPASS:
-                # Re-apply every rule whose trigger is still active. The handlers
-                # read their sensors fresh — _trigger_active carries the reading
-                # from before the slot, and the sensor kept running while the
-                # rule was suspended.
-                #
-                # Ordering: clear_config_overrides() runs at the end of this
-                # method, but the handlers ask `bypassed` (and through it
-                # config_overrides) on every step. Withdraw the key first, or
-                # every rule still counts as suspended and re-isolates nothing.
-                _LOGGER.debug(
-                    "[%s] Meta-Key cleanup: isolation_bypass absent → re-evaluating isolation rules",
-                    self._group.entity_id,
-                )
-                self._group.run_state = self._group.run_state.clear_config_overrides(
-                    {META_KEY_ISOLATION_BYPASS}
-                )
-                for handler in self._group.member_isolation_handlers:
-                    await handler.reevaluate()
-
-            elif key == META_KEY_WINDOW_MODE:
-                # Re-evaluate against the sensors as they are NOW: the window may
-                # have been opened during the slot (block goes on) or opened and
-                # closed again (block stays off). _control_state alone cannot tell
-                # these apart — it carries the value from the slot start.
-                #
-                # Ordering: clear_config_overrides() runs at the end of this
-                # method, but _execute_action() and everything downstream still
-                # sees the bypass until then. Withdraw it first.
-                _LOGGER.debug(
-                    "[%s] Meta-Key cleanup: window_mode absent → re-evaluating window sensors",
-                    self._group.entity_id,
-                )
-                self._group.run_state = self._group.run_state.clear_config_overrides(
-                    {META_KEY_WINDOW_MODE}
-                )
-                await self._group.window_control_handler.reevaluate()
-
-            elif key == META_KEY_CALIBRATION_MODE:
-                # The sensors kept reading throughout the bypass, so the devices
-                # still carry the calibration from the slot start. Nothing else
-                # catches this up: every other caller of update() is event-driven
-                # (a sensor or member change we did not see) and the heartbeat is
-                # off by default. force_sync writes regardless of the out-of-sync
-                # check — the same path startup and heartbeat use.
-                #
-                # Ordering: clear_config_overrides() runs at the end of this
-                # method, so the key is still set here and update() would return
-                # early. Withdraw it first, then write.
-                _LOGGER.debug(
-                    "[%s] Meta-Key cleanup: calibration_mode absent → catching up calibration values",
-                    self._group.entity_id,
-                )
-                self._group.run_state = self._group.run_state.clear_config_overrides(
-                    {META_KEY_CALIBRATION_MODE}
-                )
-                self._group.calibration_handler.update("temperature", force_sync=True)
-                self._group.calibration_handler.update("humidity", force_sync=True)
-
-            elif key in (META_KEY_PRESENCE, META_KEY_PRESENCE_MODE):
-                # Hand the block back to the sensors — without them nothing would
-                # ever release it, so the slot has to. `mode` is the CONFIGURED
-                # mode on purpose: the effective one would still show the bypass
-                # being withdrawn here.
-                #
-                # Withdraw the key before either path runs — both read
-                # config_overrides (the handler through `bypassed`, _go_restore()
-                # through `forces_away`) and would see the bypass they are meant
-                # to end; the clear_config_overrides() at the end of this method
-                # comes too late. Only the expiring key: a slot never carries
-                # both, so the other one is a preset's claim.
-                presence_handler = self._group.presence_handler
-                self._group.run_state = self._group.run_state.clear_config_overrides({key})
-                if presence_handler.mode == PresenceMode.DISABLED or not presence_handler.sensors:
-                    # Only if this key pinned a block. `restore()` pushes
-                    # target_state unconditionally, and a `disabled` key without
-                    # presence control never activated anything.
-                    if "presence" in self._group.run_state.blocking_sources:
-                        _LOGGER.debug(
-                            "[%s] Meta-Key cleanup: %s absent, no presence control → releasing block",
-                            self._group.entity_id, key,
-                        )
-                        await self._group.presence_override_manager.restore()
-                else:
-                    _LOGGER.debug(
-                        "[%s] Meta-Key cleanup: %s absent → re-evaluating presence sensors",
-                        self._group.entity_id, key,
-                    )
-                    await presence_handler.reevaluate()
+                await self._cleanup_group_offset()
+            elif (target := self._target_for(key)) is not None:
+                await target.clear_meta(key)
 
         self._group.run_state = self._group.run_state.clear_config_overrides(keys)
+
+    async def _cleanup_group_offset(self) -> None:
+        """Reset the group offset when no source claims it any more.
+
+        Guarded by the override's presence: the slider clears it directly, so a
+        missing override means the user took it over.
+        """
+        if META_KEY_GROUP_OFFSET not in self._group.run_state.config_overrides:
+            _LOGGER.debug(
+                "[%s] Meta-Key cleanup: group_offset skipped — ownership transferred to user",
+                self._group.entity_id,
+            )
+            return
+        _LOGGER.debug(
+            "[%s] Meta-Key cleanup: group_offset absent → reset to 0.0",
+            self._group.entity_id,
+        )
+        if self._group.offset_set_callback:
+            await self._group.offset_set_callback(0.0)
+        else:
+            self._group.run_state = replace(self._group.run_state, group_offset=0.0)
+        await async_push_group_offset(self._group)

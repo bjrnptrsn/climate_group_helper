@@ -372,11 +372,13 @@ ATTR_SCHEDULE_FALLBACK_PAYLOAD = "schedule_fallback_payload"
 ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE = "schedule_fallback_payload_active"
 ATTR_ASSUMED_STATE = "assumed_state"
 ATTR_BLOCKING_SOURCES = "blocking_sources"
+ATTR_BLOCKING_REASON = "blocking_reason"
 ATTR_SCHEDULE_BYPASS_CLAIMS = "schedule_bypass_claims"
 ATTR_CONFIG_OVERRIDES = "config_overrides"
 ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
 ATTR_GROUP_OFFSET = "group_offset"
 ATTR_OFFSET_ENTITY_ID = "offset_entity_id"
+ATTR_MAIN_SWITCH_ENTITY_ID = "main_switch_entity_id"
 ATTR_ISOLATED_MEMBERS = "isolated_members"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"
 ATTR_MASTER_ENTITY_ID = "master_entity_id"
@@ -428,7 +430,6 @@ META_KEY_TURN_OFF = "turn_off"  # no CONF_ mapping
 META_KEY_SYNC_MODE = CONF_SYNC_MODE  # == "sync_mode"
 META_KEY_GROUP_OFFSET = ATTR_GROUP_OFFSET  # RunState field, no CONF_ mapping
 META_KEY_SYNC_ATTRS = CONF_SYNC_ATTRS  # == "sync_attributes"
-META_KEY_PRESENCE = "presence"  # superseded by META_KEY_PRESENCE_MODE, still tolerated
 
 # Feature bypasses: pause a feature for the duration of the slot.
 # window_mode/presence_mode carry the same string as their config key, so a slot
@@ -455,7 +456,6 @@ META_STATE_KEYS: frozenset[str] = frozenset({
     META_KEY_SYNC_MODE,
     META_KEY_GROUP_OFFSET,
     META_KEY_SYNC_ATTRS,
-    META_KEY_PRESENCE,
     META_KEY_WINDOW_MODE,
     META_KEY_PRESENCE_MODE,
     META_KEY_CALIBRATION_MODE,
@@ -463,10 +463,9 @@ META_STATE_KEYS: frozenset[str] = frozenset({
 })
 
 # Meta-keys a group preset may carry, so a manually chosen "party" or "holiday"
-# brings its own suspensions along. Two are deliberately absent:
+# brings its own suspensions along. One is deliberately absent:
 #   turn_off — presets set climate targets; the master switch stays out of reach.
 #              It is also a one-shot trigger with no attribute to exit on.
-#   presence — superseded by presence_mode; a new definition should not adopt it.
 PRESET_META_KEYS: frozenset[str] = frozenset({
     META_KEY_SYNC_MODE,
     META_KEY_SYNC_ATTRS,

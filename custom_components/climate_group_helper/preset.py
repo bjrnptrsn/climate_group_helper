@@ -457,15 +457,31 @@ class PresetManager:
             return {**payload, **preset_payload}
         return payload
 
+    def offers_preset_none(self) -> bool:
+        """Return True if the group can offer `PRESET_NONE`.
+
+        A virtual group preset adds it (it must be deselectable); otherwise a
+        single member announcing `none` is enough. The reset value is exempt from
+        the feature strategy — the real names still follow it — and both the
+        offered list and the restored target ask this.
+        """
+        if self.group_presets:
+            return True
+        return any(
+            (state := self._group.hass.states.get(entity_id)) is not None
+            and PRESET_NONE in (state.attributes.get(ATTR_PRESET_MODES) or [])
+            for entity_id in self._group.climate_entity_ids
+        )
+
     def get_preset_modes(self, native_modes: list[str]) -> list[str]:
         """Return union of native member preset modes and configured group presets.
 
-        A defined group preset adds `PRESET_NONE`: HA Core validates
-        `set_preset_mode` against this list, so without it a virtual preset could
-        be selected but never deselected. Native-only groups get no such entry —
-        a member that does not announce `none` cannot honour it anyway.
+        `native_modes` arrives already reduced by the feature strategy and carries
+        the real names; `PRESET_NONE` is added per `offers_preset_none()` — HA Core
+        validates `set_preset_mode` against this list, so without it a virtual
+        preset could not be deselected.
         """
         modes = set(native_modes) | set(self.group_presets.keys())
-        if self.group_presets:
+        if self.offers_preset_none():
             modes.add(PRESET_NONE)
         return sorted(modes)

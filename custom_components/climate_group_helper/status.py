@@ -31,6 +31,7 @@ from .const import (
     ATTR_ACTIVE_SCHEDULE_ENTITY,
     ATTR_ACTIVE_SCHEDULE_SLOT_TITLE,
     ATTR_ASSUMED_STATE,
+    ATTR_BLOCKING_REASON,
     ATTR_BLOCKING_SOURCES,
     ATTR_SCHEDULE_BYPASS_CLAIMS,
     ATTR_SCHEDULE_HOLD_UNTIL,
@@ -42,6 +43,7 @@ from .const import (
     ATTR_GROUP_OFFSET,
     ATTR_OFFSET_ENTITY_ID,
     ATTR_ISOLATED_MEMBERS,
+    ATTR_MAIN_SWITCH_ENTITY_ID,
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_LAST_CHANGED,
     ATTR_LAST_ENTITY,
@@ -66,10 +68,28 @@ from .const import (
     SyncMode,
     WindowControlMode,
 )
-from .state import ClimateState, is_available
+from .state import ClimateState, RunState, is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
+
+
+# Highest-priority blocking source first — mirrors the group's blocking
+# hierarchy (switch > window > presence). The card renders the resolved reason
+# directly instead of re-deriving the priority from the raw array.
+_BLOCK_PRIORITY = ("switch", "window", "presence")
+
+
+def _blocking_reason(run_state: RunState) -> dict[str, Any] | None:
+    """Return the dominant active block (highest priority) and when it began."""
+    for source in _BLOCK_PRIORITY:
+        if source in run_state.blocking_sources:
+            reason: dict[str, Any] = {"source": source}
+            since = run_state.blocking_since.get(source)
+            if since is not None:
+                reason["since"] = since.isoformat()
+            return reason
+    return None
 
 
 def _compute_member_divergence(group: ClimateGroupHelper) -> dict[str, dict[str, Any]]:
@@ -92,7 +112,7 @@ def _compute_member_divergence(group: ClimateGroupHelper) -> dict[str, dict[str,
     temp_offset_map = group._temp_offset_map
     # Same condition as the display aggregation (`_resolve_master_or_avg`): the
     # check must run on whichever level the group actually shows.
-    temp_offset_correction = bool(temp_offset_map) and group._member_offset_correction
+    temp_offset_correction = group.has_member_offset and group._member_offset_correction
 
     # 1. HVAC Mode (via display_mode so template-covered members report heat_cool)
     hvac_modes: dict[str, str] = {}
@@ -176,6 +196,8 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         attrs[ATTR_OFFSET_ENTITY_ID] = group.offset_entity_id
     if group._master_entity_id:
         attrs[ATTR_MASTER_ENTITY_ID] = group._master_entity_id
+    if group.main_switch_entity_id:
+        attrs[ATTR_MAIN_SWITCH_ENTITY_ID] = group.main_switch_entity_id
 
     # --- Source information ---
     if target.last_source:
@@ -198,6 +220,9 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # --- Blocking sources ---
     if run_state.blocking_sources:
         attrs[ATTR_BLOCKING_SOURCES] = sorted(run_state.blocking_sources)
+        reason = _blocking_reason(run_state)
+        if reason is not None:
+            attrs[ATTR_BLOCKING_REASON] = reason
 
     # --- Fallback flags ---
     if run_state.master_fallback_active:
@@ -250,6 +275,14 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         for handler in group.member_isolation_handlers
     ):
         features.append("isolation")
+    if group.member_template_manager.range_template is not None:
+        features.append("range_template")
+    if group.advanced_mode and (
+        group.temp_update_target_entity_ids or group.humidity_update_target_entity_ids
+    ):
+        features.append("calibration")
+    if group._master_entity_id:
+        features.append("master")
     attrs[ATTR_ENABLED_FEATURES] = features
 
     # --- Advanced mode only ---

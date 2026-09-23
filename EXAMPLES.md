@@ -129,6 +129,8 @@ One thermostat, but heating should pause automatically while a window is open �
 
 > **Tip:** This works with a single member too — CGH isn't just for groups.
 
+> **Tip — a whole floor:** add a slow zone sensor (e.g. a group helper for all floor windows) with a longer delay next to the room sensor. Keep the room sensor inside that zone group — the zone must include the room, otherwise the delays no longer apply.
+
 ---
 
 ### 5. Window Control with a Cover (Roller Shutter)

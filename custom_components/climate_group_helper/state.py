@@ -84,6 +84,8 @@ class RunState:
 
     Centralises all factors that restrict controllability and runtime markers:
     - blocking_sources: set of active blocking reasons (e.g. "window", "switch")
+    - blocking_since: per-source activation timestamp (maintained with
+      blocking_sources in override.py); feeds the `blocking_reason` attribute
     - blocked: derived property — True if any blocking source is active
     - isolated_members: per-member isolation (e.g. curtain closed)
     - oob_members: members currently out-of-bounds (union strategy)
@@ -99,6 +101,7 @@ class RunState:
     active_slot_title: str | None = None
     active_virtual_preset: str | None = None
     blocking_sources: frozenset[str] = field(default_factory=frozenset)
+    blocking_since: MappingProxyType[str, datetime] = field(default_factory=lambda: MappingProxyType({}))
     boost_temperature: float | None = None
     boost_until: datetime | None = None
     schedule_hold_until: datetime | None = None

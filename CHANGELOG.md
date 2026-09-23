@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.12.0 - 2026-09-23
+
+### 🌟 New Features
+
+*   **Lovelace Card**: The integration now ships a dashboard card for a group — dial, control tiles and a live status area — that is added like any other card and needs no extra resource or separate repository; this is its first version, so feedback is welcome.
+
+### ⚠️ Breaking Changes
+
+*   **Schedule Key `presence: away` Removed**: Use `presence_mode: away` instead — schedules and calendar events still carrying `presence` no longer pin the away block and are reported as an unknown key.
+
 ## 1.11.1 - 2026-09-19
 
 ### 🐛 Bug Fixes

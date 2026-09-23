@@ -129,6 +129,8 @@ Ein Thermostat, aber die Heizung soll automatisch pausieren, während ein Fenste
 
 > **Tipp:** Das funktioniert auch mit einem einzelnen Mitglied — CGH ist nicht nur für Gruppen.
 
+> **Tipp — eine ganze Etage:** Ergänze neben dem Raumsensor einen langsam reagierenden Zonensensor (z. B. eine Gruppen-Helfer-Entität für alle Etagenfenster) mit längerer Verzögerung. Behalte den Raumsensor in dieser Zonengruppe — die Zone muss den Raum enthalten, sonst gelten die Verzögerungen nicht mehr.
+
 ---
 
 ### 5. Fenstersteuerung mit einem Rollladen (Cover)
