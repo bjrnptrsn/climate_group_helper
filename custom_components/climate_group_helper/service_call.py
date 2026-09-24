@@ -526,10 +526,11 @@ class BaseServiceCallHandler(ABC):
         """Complete a half-open group band per entity ("leave the rest as it is").
 
         Only reached when `target_state` carries just one bound. The missing
-        bound is taken from the member's own current state, or — for a
-        template-covered member, whose physical state has no range attributes at
-        all — from the template's cached band. A member for which the bound
-        stays unresolvable yields no call rather than an invalid one.
+        bound is taken from the member's own current state (for a covered
+        member, its template-rendered range), with the template's cached band as
+        the fallback. A covered member's kwargs are replaced by the range
+        translation anyway; a non-covered member for which the bound stays
+        unresolvable yields no call rather than an invalid one.
 
         The completed bound is marked `injected`: it is schema padding taken
         from the member, not a group target, and `target_state` carries None for
@@ -748,6 +749,9 @@ class BaseServiceCallHandler(ABC):
             # Float tolerance check
             if attr in (ATTR_TEMPERATURE, ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH, ATTR_HUMIDITY):
                 if within_tolerance(current_value, effective_target):
+                    continue
+            if attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
+                if self._group.member_template_manager.setpoint_in_reach(state, current_value, effective_target):
                     continue
 
             if current_value != effective_target:
@@ -1118,7 +1122,16 @@ class BaseServiceCallHandler(ABC):
                 )
 
                 if expected_mode is None:
-                    continue
+                    # No mode is due, but a member left running in heat/cool
+                    # regulates to its own setpoint — hold it on that mode's band
+                    # edge, or a moved band leaves it heating/cooling towards the
+                    # old one. A role-forbidden mode is left alone.
+                    edges = {HVACMode.HEAT: low_val + offset, HVACMode.COOL: high_val + offset}
+                    if state.state not in edges or not self._group.member_template_manager.mode_allowed(
+                        state.state, supported_modes, entity_id
+                    ):
+                        continue
+                    expected_mode, expected_temp = state.state, edges[state.state]
 
                 # Track the active heating/cooling mode for the fallback in
                 # _expected_mode_for() when current_temperature later goes missing.

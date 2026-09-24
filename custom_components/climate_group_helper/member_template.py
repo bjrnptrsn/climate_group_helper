@@ -32,8 +32,11 @@ from typing import Any, TYPE_CHECKING
 from homeassistant.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
     ATTR_HVAC_MODES,
+    ATTR_MAX_TEMP,
+    ATTR_MIN_TEMP,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
+    ATTR_TARGET_TEMP_STEP,
     HVACMode,
     ClimateEntityFeature,
 )
@@ -49,6 +52,7 @@ from .const import (
     DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION,
     DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY,
     DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
+    FLOAT_TOLERANCE,
     RangeTemplateDeadbandAction,
     RangeTemplateHumidityAction,
 )
@@ -142,10 +146,16 @@ class RangeTemplateState:
             hvac_modes.append(HVACMode.HEAT_COOL)
         attrs[ATTR_HVAC_MODES] = hvac_modes
 
+        # The bound the device actually regulates to is its physical setpoint —
+        # report that one as a native heat_cool device would, so a stale
+        # setpoint shows up in the ordinary diff. The other bound is the band's.
+        setpoint = attrs.pop(ATTR_TEMPERATURE, None)
         attrs[ATTR_TARGET_TEMP_LOW] = self._low
         attrs[ATTR_TARGET_TEMP_HIGH] = self._high
-        if ATTR_TEMPERATURE in attrs:
-            del attrs[ATTR_TEMPERATURE]
+        if setpoint is not None and self._real.state == HVACMode.HEAT:
+            attrs[ATTR_TARGET_TEMP_LOW] = setpoint
+        elif setpoint is not None and self._real.state == HVACMode.COOL:
+            attrs[ATTR_TARGET_TEMP_HIGH] = setpoint
 
         return MappingProxyType(attrs)
 
@@ -211,6 +221,33 @@ class MemberTemplateManager:
         which must keep seeing physical deviations (see RangeTemplateState.state).
         """
         return HVACMode.HEAT_COOL if self.is_covered_state(state) else state.state
+
+    @classmethod
+    def setpoint_in_reach(cls, state: State | RangeTemplateState, actual: Any, target: Any) -> bool:
+        """Return True if a covered member's `actual` setpoint is the closest to `target` it can take.
+
+        A device rounds the band edge it is sent to its own step and clamps it
+        to its limits, so it may never report the exact value — compared exactly,
+        the changeover (run on every covered member event) re-sends the same
+        command forever. Without a reported step only the clamp applies: an
+        assumed step would swallow a genuine half-degree band move.
+        """
+        if not cls.is_covered_state(state):
+            return False
+        attrs = state.attributes
+        try:
+            actual = float(actual)
+            reachable = float(target)
+            if attrs.get(ATTR_MIN_TEMP) is not None:
+                reachable = max(reachable, float(attrs[ATTR_MIN_TEMP]))
+            if attrs.get(ATTR_MAX_TEMP) is not None:
+                reachable = min(reachable, float(attrs[ATTR_MAX_TEMP]))
+            step = float(attrs.get(ATTR_TARGET_TEMP_STEP) or 0.0)
+        except (TypeError, ValueError):
+            return False
+        if step:
+            return abs(actual - reachable) <= step / 2
+        return abs(actual - reachable) < FLOAT_TOLERANCE
 
     # ------------------------------------------------------------------
     # Input gateway
@@ -284,7 +321,7 @@ class MemberTemplateManager:
             # contract honest for future ones instead of raising on attribute access.
             return None, None
         # None also for a device that cannot perform the action: it would reject
-        # the call, so sending nothing is the honest result. `_mode_allowed()`
+        # the call, so sending nothing is the honest result. `mode_allowed()`
         # does not catch this — it waves through everything but heat/cool.
         action = template.deadband_action
         deadband = (
@@ -298,23 +335,23 @@ class MemberTemplateManager:
             last_mode = template.last_physical_mode.get(entity_id)
             if (
                 last_mode in (HVACMode.HEAT, HVACMode.COOL)
-                and not self._mode_allowed(last_mode, supported_modes, entity_id)
+                and not self.mode_allowed(last_mode, supported_modes, entity_id)
             ):
                 return deadband, None
             return last_mode if last_mode is not None else deadband, None
 
         if current_temp < low:
-            if self._mode_allowed(HVACMode.HEAT, supported_modes, entity_id):
+            if self.mode_allowed(HVACMode.HEAT, supported_modes, entity_id):
                 return HVACMode.HEAT, low
         elif current_temp > high:
-            if self._mode_allowed(HVACMode.COOL, supported_modes, entity_id):
+            if self.mode_allowed(HVACMode.COOL, supported_modes, entity_id):
                 return HVACMode.COOL, high
         else:
             # Deadband branch (low <= current_temp <= high)
             if template.humidity_enabled and template.humidity_active:
                 hum_action = template.humidity_action
                 if (
-                    self._mode_allowed(hum_action, supported_modes, entity_id)
+                    self.mode_allowed(hum_action, supported_modes, entity_id)
                     and (supported_modes is None or hum_action in supported_modes)
                 ):
                     return hum_action, None
@@ -339,7 +376,7 @@ class MemberTemplateManager:
 
         return deadband, None
 
-    def _mode_allowed(
+    def mode_allowed(
         self, mode: str, supported_modes: list[str] | None, entity_id: str
     ) -> bool:
         """Physical capability AND role assignment — role only restricts, never extends.

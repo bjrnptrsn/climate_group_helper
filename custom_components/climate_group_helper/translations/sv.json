@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Återger automatiskt alla enkelpunktsmedlemmar (utan native värme/kyla) som virtuella enheter i intervallläge.",
-              "range_template_deadband_action": "Åtgärd som utförs när den aktuella temperaturen är inom målintervallet (deadband).",
+              "range_template_deadband_action": "Åtgärd som utförs när den aktuella temperaturen är inom målintervallet (deadband). 'Ingen' byter inte läge, men håller en enhet som fortsätter att värma eller kyla på motsvarande gräns.",
               "range_template_heat_entities": "Medlemmar som får värma. Ej listade medlemmar är obegränsade (fysisk kapacitet avgör). En roll kan bara begränsa, aldrig utöka en enhets kapacitet.",
               "range_template_cool_entities": "Medlemmar som får kyla. Ej listade medlemmar är obegränsade (fysisk kapacitet avgör). En roll kan bara begränsa, aldrig utöka en enhets kapacitet.",
               "range_template_humidity_enabled": "Växla till luftfuktighetsåtgärden inom måltemperaturintervallet om luftfuktigheten överstiger målet.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Schemaentitet",
-          "description": "Återställer den aktiva schemaentiteten till det konfigurerade standardschemat."
+          "description": "Återställer den aktiva schemaentiteten till det konfigurerade standardschemat och avslutar en manuell hålltid."
         },
         "bypass": {
           "name": "Bypass-entitet",

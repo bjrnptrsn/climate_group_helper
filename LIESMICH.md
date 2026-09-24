@@ -24,7 +24,7 @@
   🎯 <b>Eigene Presets festlegen</b>, die die ganze Gruppe auf einmal einstellen.<br>
   🔥 <b>Temperatur boosten</b> für eine Weile, danach automatisch zurück.<br>
   🚧 <b>Einzelne Geräte isolieren</b>, solange eine Bedingung zutrifft.<br>
-  🧩 <b>Einen Heiz-/Kühlbereich ergänzen</b> für Einzel-Sollwert-Geräte mit der Bereichs-Vorlage.<br>
+  🧩 <b>Einen Heiz-/Kühlbereich ergänzen</b> für Einzel-Sollwert-Geräte mit der Bereichsvorlage.<br>
   ➕ <b>Die ganze Gruppe verschieben</b> mit einem einzigen Offset.
 </p>
 
@@ -209,7 +209,7 @@ Zeitpläne können per Dienst live umgeschaltet werden (z. B. für "Urlaub"- ode
 *   **Fallback bei inaktivem Zeitplan:** Ein optionaler Zustand (z. B. Nachtabsenkung oder Ausschalten), der außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan einspringt — lückenlose 24/7-Zeitpläne sind damit unnötig. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist.
 *   **Per Dienst geänderte Werte beibehalten (Zeitplan):** Stellt sicher, dass per Dienst geänderter Haupt-Zeitplan, Bypass-Entität und Fallback-Zustand einen Home-Assistant-Neustart überstehen. Wenn deaktiviert, kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück.
 *   **Respektiere Aus-Status der Mitglieder (Zeitplan):** Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet.
-*   **Manuelle Haltezeit:** Eine manuelle Anpassung (Temperaturänderung oder die Gruppe von Hand ein-/ausschalten) hält für eine konfigurierbare Dauer, danach übernimmt der Zeitplan wieder mit dem *dann* aktuellen Zeitblock. Eine Dauer von `0` deaktiviert die Haltezeit — der Zeitplan übernimmt sofort wieder.
+*   **Manuelle Haltezeit:** Eine manuelle Anpassung (Temperaturänderung oder die Gruppe von Hand ein-/ausschalten) hält für eine konfigurierbare Dauer, danach übernimmt der Zeitplan wieder mit dem *dann* aktuellen Zeitblock. Eine Dauer von `0` deaktiviert die Haltezeit — der Zeitplan übernimmt sofort wieder. Setzt du den Zeitplan mit dem Reset-Dienst zurück, endet eine laufende Haltezeit vorzeitig.
 
 > **Hinweis — Ausschalten außerhalb aktiver Zeitblöcke:** Um die Gruppe in der inaktiven Phase abzuschalten, setze `hvac_mode: off` im Fallback. Verwende hier **nicht** den `turn_off`-Meta-Key — er ist ein einmaliger Auslöser für die Hauptschalter-Sperre, die aktiv bleibt, bis ein Zeitblock sie explizit mit `turn_off: false` freigibt. Ein `turn_off: true` im Fallback würde also den nächsten Heiz-Zeitblock blockiert lassen.
 
@@ -364,7 +364,7 @@ Du kannst **bis zu 4 unabhängige Isolationsregeln** pro Gruppe definieren, jede
 
 Eine **Mitglieder-Vorlage** umhüllt einzelne Gruppenmitglieder mit einem virtuellen Fähigkeitsprofil, das sich von dem unterscheidet, was ihre Home-Assistant-Integration nativ meldet. Aus Sicht der Gruppe — und aller darauf aufbauenden Funktionen (Sync-Modus, Zeitplan, Kalibrierung usw.) — sieht und verhält sich das umhüllte Mitglied wie ein Gerät mit einem anderen Funktionsumfang. Das physische Gerät selbst bleibt unberührt.
 
-#### Bereichs-Vorlage
+#### Bereichsvorlage
 
 Übersetzt ausgehende `heat_cool`-Bereichsbefehle in Einzel-Sollwert-Befehle für Mitglieder, deren HA-Integration nur ein einzelnes `temperature`-Attribut bereitstellt, obwohl das zugrunde liegende Gerät physisch automatischen Wechsel unterstützt. Die Gruppe stellt `target_temp_low` und `target_temp_high` bereit; jedes umhüllte Mitglied erhält basierend auf der aktuellen Raumtemperatur einen physischen Einzel-Sollwert-Befehl:
 
@@ -375,6 +375,7 @@ Eine **Mitglieder-Vorlage** umhüllt einzelne Gruppenmitglieder mit einem virtue
 *   **Totzonen-Aktion:** Was zu tun ist, wenn sich der Raum bereits innerhalb des Zielbandes befindet: **Keine** (Standard), **Ausschalten** oder **Nur Lüfter**.
 *   **Im Totband entfeuchten:** Wenn aktiviert, schaltet die Gruppe Geräte im Temperatur-Totband automatisch auf **Trocknen** (oder **Nur Lüfter**), wenn die aktuelle Luftfeuchtigkeit die Zielfeuchtigkeit überschreitet. Aktivierung erfolgt sofort; eine Schmitt-Trigger-Hysterese und eine konfigurierbare Deaktivierungsverzögerung verhindern schnelles Takten. Temperatur-Heizen und -Kühlen haben immer Vorrang, sobald der Raum das Totband verlässt. Ein Feuchtigkeitswert ist Voraussetzung — entweder von einem Mitglied, das ihn meldet, oder von einem der Gruppe hinzugefügten Feuchtigkeitssensor; ohne ihn bietet die Gruppe keine einstellbare Zielfeuchtigkeit an.
 *   **Automatische Mitgliedserkennung:** Alle Mitglieder, die `heat_cool` **nicht** nativ melden, werden automatisch erfasst — keine manuelle Auswahl nötig. Mitglieder mit nativer `heat_cool`-Unterstützung bleiben unverändert. Dies ermöglicht auch den `heat_cool`-Modus für Gruppen, die ausschließlich aus reinen Heiz- und Kühlgeräten bestehen, ganz ohne natives `heat_cool`-Gerät.
+*   **Erfasste Geräte folgen der Gruppe:** Ein von Hand geänderter Modus oder Sollwert an einem erfassten Gerät wird auf das zurückgesetzt, was der Bereich verlangt, unabhängig vom Sync-Modus — um ihn zu ändern, änderst du den Bereich der Gruppe.
 
 ## Verwaltungs-Entitäten (Schalter & Regler)
 
@@ -396,25 +397,19 @@ Eine dedizierte `number`-Entität erlaubt dir, eine globale Temperaturverschiebu
 
 ## Lovelace-Karte
 
-Die Integration bringt eine Lovelace-Karte für eine Klimagruppe mit. Füge sie
-wie jede andere Karte zu einem Dashboard hinzu und wähle die Entität deiner
-Gruppe — kein zusätzlicher Resource-Eintrag und kein separates Repository: Die
-Karte wird mit der Integration geladen und erscheint im Karten-Picker als
-**Climate Group Helper Card**.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate-Group-Helper-Karte neben ihrem Editor" width="700"/>
+</p>
 
-Sie steuert die Standard-Klimaeinstellungen — Modus, Temperatur, Luftfeuchte,
-Preset, Lüfter und Schwenk — und zeigt alles Climate-Group-Helper-Spezifische:
-welcher Blocker gerade aktiv ist (Fenster, Anwesenheit, Hauptschalter) und seit
-wann, die Mitglieder mit ihrem Zustand sowie isolierte oder außerhalb des
-Bereichs liegende Geräte. Boost- und Hold-Countdowns laufen live mit.
+Die Integration bringt eine eigene Dashboard-Karte mit. Füge sie wie jede andere
+Karte hinzu — sie erscheint im Karten-Picker als **Climate Group Helper Card**
+und braucht weder einen zusätzlichen Resource-Eintrag noch ein separates
+Repository.
 
-Alles Climate-Group-Helper-Spezifische bleibt reine Anzeige: Für Hauptschalter,
-Offset oder einen Boost nutzt du die eigenen Schalter-/Regler-Entitäten und die
-Dienste, damit es genau einen Bedienweg gibt.
-
-Im Karten-Editor kannst du einen Titel setzen und wählen, ob der Status-Bereich
-überhaupt erscheint, welche Teile davon (Panel, Badges, Abweichungen) angezeigt
-werden und welche Feature-Kacheln angeboten werden.
+*   **Steuert** die üblichen Klimaeinstellungen: Modus, Temperatur, Luftfeuchte, Preset, Lüfter und Schwenk.
+*   **Zeigt**, was Climate Group Helper gerade tut: den aktiven Blocker und seit wann, Boost- und Hold-Countdowns, die Mitglieder sowie isolierte oder außerhalb des Bereichs liegende Geräte. Das ist reine Anzeige — Hauptschalter, Offset und Boost bedienst du über die eigenen Entitäten der Gruppe und die Dienste.
+*   **Badges** leuchten, solange eine Funktion eingreift, und werden grau, solange ein Zeitblock oder ein Preset sie pausiert; der größere Mitglieder-Punkt ist das Master-Gerät.
+*   **Der Demo-Modus** füllt die Karte mit erfundenen Daten, damit du ohne Einrichtung siehst, was sie alles anzeigen kann.
 
 ## Was die Gruppe über sich selbst berichtet
 
@@ -602,8 +597,8 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Bereichs-Vorlage aktivieren** | Aktiviert automatische `heat_cool`-Bereichssteuerung für alle Mitglieder, die `heat_cool` nicht nativ melden. Keine manuelle Auswahl nötig — die Gruppe erkennt geeignete Mitglieder automatisch. |
-| **Totzonen-Aktion** | Was zu tun ist, wenn die Raumtemperatur bereits innerhalb des Zielbandes liegt (zwischen `target_temp_low` und `target_temp_high`). **Keine** (Standard — kein Befehl, das Gerät regelt sich selbst auf den bereits erhaltenen Sollwert), **Ausschalten** oder **Nur Lüfter**. |
+| **Bereichsvorlage aktivieren** | Aktiviert automatische `heat_cool`-Bereichssteuerung für alle Mitglieder, die `heat_cool` nicht nativ melden. Keine manuelle Auswahl nötig — die Gruppe erkennt geeignete Mitglieder automatisch. |
+| **Totzonen-Aktion** | Was zu tun ist, wenn die Raumtemperatur bereits innerhalb des Zielbandes liegt (zwischen unterem und oberem Sollwert). **Keine** (Standard — kein Moduswechsel; ein Gerät, das weiter heizt oder kühlt, wird auf dem passenden Sollwert gehalten: Heizen auf dem unteren, Kühlen auf dem oberen), **Ausschalten** oder **Nur Lüfter**. |
 | **Im Totband entfeuchten** | Schaltet im Temperatur-Totband automatisch auf Entfeuchtung oder Luftzirkulation um, wenn die Raumfeuchtigkeit die Zielfeuchtigkeit überschreitet. Setzt einen Feuchtigkeitswert von einem Mitglied oder einem Feuchtigkeitssensor voraus. |
 | **Feuchtigkeits-Aktion** | Physische Aktion bei Überschreitung des Feuchtigkeitsschwellwerts im Totband: **Trocknen** (Standard) oder **Nur Lüfter**. |
 | **Feuchtigkeits-Hysterese** | Symmetrisches Hystereseband um die Zielfeuchtigkeit zur Vermeidung schnellen Taktens (Standard: 3,0%). |
@@ -700,7 +695,7 @@ Setzt temporäre Überschreibungen und den Runtime-Zustand auf die konfigurierte
 | `everything` | Nein | Setzt alle folgenden Bereiche auf einmal zurück. Die einzelnen Felder werden dann ignoriert. |
 | `boost` | Nein | Bricht einen aktiven Boost ab und stellt den Zielzustand wieder her. |
 | `offset` | Nein | Setzt den globalen Temperatur-Offset der Gruppe auf 0.0 zurück. |
-| `schedule` | Nein | Setzt die aktive Zeitplan-Entität auf den konfigurierten Standardzeitplan zurück. |
+| `schedule` | Nein | Setzt die aktive Zeitplan-Entität auf den konfigurierten Standardzeitplan zurück und beendet eine manuelle Haltezeit, sodass der aktuelle Zeitblock sofort gilt. |
 | `bypass` | Nein | Setzt die aktive Bypass-Entität auf den konfigurierten Standard zurück und nimmt Bypass-Anpassungen zurück. |
 | `fallback` | Nein | Setzt den Fallback-Payload des Zeitplans auf den konfigurierten Standard zurück. |
 | `presets` | Nein | Löscht zur Laufzeit erstellte Voreinstellungen und stellt konfigurierte Voreinstellungen wieder her. |

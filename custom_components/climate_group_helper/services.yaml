@@ -163,7 +163,7 @@ reset:
       required: false
     schedule:
       name: Schedule Entity
-      description: Reverts the active schedule entity to the configured default schedule.
+      description: Reverts the active schedule entity to the configured default schedule and ends a manual hold.
       selector:
         boolean:
       default: false

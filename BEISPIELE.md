@@ -688,25 +688,25 @@ Zwei Fälle lösen bewusst *nicht* aus: ein isoliertes Gerät (es soll ja abweic
 
 ### 25. Heizen/Kühlen für Thermostate mit nur einem Sollwert
 
-Manche Thermostate (z.B. Honeywell Lyric T5) beherrschen physisch eine automatische Umschaltung, ihre Integration gibt aber nur eine einzelne Zieltemperatur nach außen — die Gruppe erbt das und kann nie einen Bereich anbieten. Die Bereichs-Vorlage erzeugt `heat_cool`, indem sie den physischen Modus jedes Geräts anhand von dessen eigener Ist-Temperatur gegen das vorgegebene Band umschaltet. (Basierend auf einem realen Setup mit Einzel-Sollwert-Thermostaten.)
+Manche Thermostate (z.B. Honeywell Lyric T5) beherrschen physisch eine automatische Umschaltung, ihre Integration gibt aber nur eine einzelne Zieltemperatur nach außen — die Gruppe erbt das und kann nie einen Bereich anbieten. Die Bereichsvorlage erzeugt `heat_cool`, indem sie den physischen Modus jedes Geräts anhand von dessen eigener Ist-Temperatur gegen das vorgegebene Band umschaltet. (Basierend auf einem realen Setup mit Einzel-Sollwert-Thermostaten.)
 
 **Entitäten:** `climate.lyric_wohnzimmer`, `climate.lyric_schlafzimmer` (beide heat/cool/off, nur ein Sollwert)
 
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.lyric_wohnzimmer`, `climate.lyric_schlafzimmer` |
-| Bereichs-Vorlage aktivieren | an |
+| Bereichsvorlage aktivieren | an |
 | Totzonen-Aktion | Nur Lüfter |
 
 **Ergebnis:** Die Gruppe bietet `heat_cool` mit unterem und oberem Sollwert an, obwohl kein Mitglied Bereichsunterstützung meldet. Unterhalb des Bandes bekommt ein Gerät `heat` mit dem unteren Sollwert, oberhalb `cool` mit dem oberen, innerhalb die Totzonen-Aktion. Die Mitglieder werden automatisch erkannt — wer `heat_cool` bereits nativ meldet, bleibt unangetastet.
 
-**Die Totzonen-Aktion "Keine"** sendet innerhalb des Bandes keinen Befehl und belässt jedes Gerät auf dem zuletzt erhaltenen Sollwert. Sinnvoll für Geräte, die sich selbst regeln; "Ausschalten" oder "Nur Lüfter" nutzen, wenn die Gruppe sie aktiv ruhigstellen soll.
+**Die Totzonen-Aktion "Keine"** schaltet innerhalb des Bandes keinen Modus um: Jedes Gerät regelt sich selbst, und eines, das weiter heizt oder kühlt, wird auf dem passenden Sollwert gehalten (Heizen auf dem unteren, Kühlen auf dem oberen) und folgt so einer Änderung des Bandes. Sinnvoll für Geräte, die sich selbst regeln; "Ausschalten" oder "Nur Lüfter" nutzen, wenn die Gruppe sie aktiv ruhigstellen soll.
 
 ---
 
 ### 26. Entfeuchten, während der Raum auf Temperatur ist
 
-Eine von der Bereichs-Vorlage erfasste Klimaanlage läuft innerhalb des Bandes auf Nur Lüfter — an schwülen Tagen bleibt der Raum dabei temperaturmäßig angenehm und trotzdem klamm. Die Gruppe kann stattdessen auf Trocknen umschalten, sobald die Feuchtigkeit über dem Zielwert liegt, ohne die Temperaturregelung aufzugeben.
+Eine von der Bereichsvorlage erfasste Klimaanlage läuft innerhalb des Bandes auf Nur Lüfter — an schwülen Tagen bleibt der Raum dabei temperaturmäßig angenehm und trotzdem klamm. Die Gruppe kann stattdessen auf Trocknen umschalten, sobald die Feuchtigkeit über dem Zielwert liegt, ohne die Temperaturregelung aufzugeben.
 
 **Entitäten:** `climate.schlafzimmer_ac` (heat/cool/dry/fan_only/off, ein Sollwert), `sensor.schlafzimmer_feuchtigkeit`
 
@@ -714,7 +714,7 @@ Eine von der Bereichs-Vorlage erfasste Klimaanlage läuft innerhalb des Bandes a
 |---|---|
 | Mitglieder | `climate.schlafzimmer_ac` |
 | Externe Feuchtigkeitssensoren | `sensor.schlafzimmer_feuchtigkeit` |
-| Bereichs-Vorlage aktivieren | an |
+| Bereichsvorlage aktivieren | an |
 | Totzonen-Aktion | Nur Lüfter |
 | Im Totband entfeuchten | an |
 | Feuchtigkeits-Aktion | Trocknen |

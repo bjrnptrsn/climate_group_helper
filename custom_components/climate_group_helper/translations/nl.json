@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Geeft automatisch alle leden met één instelpunt (zonder native verwarming/koeling) weer als virtuele apparaten in bereikmodus.",
-              "range_template_deadband_action": "Actie die wordt uitgevoerd wanneer de huidige temperatuur zich binnen het doelbereik (deadband) bevindt.",
+              "range_template_deadband_action": "Actie die wordt uitgevoerd wanneer de huidige temperatuur zich binnen het doelbereik (deadband) bevindt. 'Geen' schakelt geen modus om, maar houdt een apparaat dat blijft verwarmen of koelen op de bijbehorende grens.",
               "range_template_heat_entities": "Leden die mogen verwarmen. Niet-geliste leden zijn onbeperkt (fysieke mogelijkheid bepaalt). Een rol kan een mogelijkheid alleen beperken, nooit uitbreiden.",
               "range_template_cool_entities": "Leden die mogen koelen. Niet-geliste leden zijn onbeperkt (fysieke mogelijkheid bepaalt). Een rol kan een mogelijkheid alleen beperken, nooit uitbreiden.",
               "range_template_humidity_enabled": "Binnen het doeltemperatuurbereik overschakelen naar de vochtigheidsactie als de vochtigheid de doelwaarde overschrijdt.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Schema-entiteit",
-          "description": "Zet de actieve schema-entiteit terug naar het geconfigureerde standaardschema."
+          "description": "Zet de actieve schema-entiteit terug naar het geconfigureerde standaardschema en beëindigt een handmatige vasthoudperiode."
         },
         "bypass": {
           "name": "Bypass-entiteit",

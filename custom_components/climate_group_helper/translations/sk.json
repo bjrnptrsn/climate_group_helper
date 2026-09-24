@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Automaticky zobrazuje všetkých členov s jedným nastavením (bez natívneho kúrenia/chladenia) ako virtuálne zariadenia v režime rozsahu.",
-              "range_template_deadband_action": "Akcia, ktorá sa vykoná, keď je aktuálna teplota v rámci cieľového rozsahu (mŕtve pásmo).",
+              "range_template_deadband_action": "Akcia, ktorá sa vykoná, keď je aktuálna teplota v rámci cieľového rozsahu (mŕtve pásmo). 'Žiadna' neprepína režim, ale zariadenie, ktoré ďalej kúri alebo chladí, drží na zodpovedajúcej hranici.",
               "range_template_heat_entities": "Členovia, ktorí môžu vykurovať. Neuvedení členovia sú neobmedzení (rozhoduje fyzická schopnosť). Rola môže schopnosť len obmedziť, nikdy nie rozšíriť.",
               "range_template_cool_entities": "Členovia, ktorí môžu chladiť. Neuvedení členovia sú neobmedzení (rozhoduje fyzická schopnosť). Rola môže schopnosť len obmedziť, nikdy nie rozšíriť.",
               "range_template_humidity_enabled": "V cieľovom rozsahu teplôt prepne na akciu vlhkosti, ak vlhkosť prekročí cieľovú hodnotu.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Entita plánu",
-          "description": "Vráti aktívnu entitu plánu na nakonfigurovaný predvolený plán."
+          "description": "Vráti aktívnu entitu plánu na nakonfigurovaný predvolený plán a ukončí manuálne podržanie."
         },
         "bypass": {
           "name": "Entita bypassu",

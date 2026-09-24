@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Renderöi automaattisesti kaikki yhden asetusarvon jäsenet (ilman natiivia lämmitys/jäähdytys-tukea) virtuaalisiksi aluetilalaitteiksi.",
-              "range_template_deadband_action": "Toiminto, joka suoritetaan, kun nykyinen lämpötila on tavoitealueen sisällä (kuollut vyöhyke).",
+              "range_template_deadband_action": "Toiminto, joka suoritetaan, kun nykyinen lämpötila on tavoitealueen sisällä (kuollut vyöhyke). 'Ei mitään' ei vaihda tilaa, mutta pitää lämmittävän tai jäähdyttävän laitteen vastaavassa rajassa.",
               "range_template_heat_entities": "Jäsenet, jotka saavat lämmittää. Listaamattomat jäsenet ovat rajoittamattomia (fyysinen ominaisuus ratkaisee). Rooli voi vain rajoittaa, ei koskaan laajentaa laitteen ominaisuuksia.",
               "range_template_cool_entities": "Jäsenet, jotka saavat jäähdyttää. Listaamattomat jäsenet ovat rajoittamattomia (fyysinen ominaisuus ratkaisee). Rooli voi vain rajoittaa, ei koskaan laajentaa laitteen ominaisuuksia.",
               "range_template_humidity_enabled": "Kun lämpötila on tavoitealueella, vaihda kosteustoimintoon, jos kosteus ylittää tavoitteen.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Aikatauluentiteetti",
-          "description": "Palauttaa aktiivisen aikatauluentiteetin määritettyyn oletusaikatauluun."
+          "description": "Palauttaa aktiivisen aikatauluentiteetin määritettyyn oletusaikatauluun ja päättää manuaalisen pidon."
         },
         "bypass": {
           "name": "Ohitusentiteetti",

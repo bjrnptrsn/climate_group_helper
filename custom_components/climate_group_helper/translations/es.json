@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Representa automáticamente todos los miembros de punto de ajuste único (sin calor/frío nativo) como dispositivos virtuales en modo rango.",
-              "range_template_deadband_action": "Acción a realizar cuando la temperatura actual está dentro del rango objetivo (zona muerta).",
+              "range_template_deadband_action": "Acción a realizar cuando la temperatura actual está dentro del rango objetivo (zona muerta). 'Ninguna' no cambia el modo, pero mantiene un dispositivo que sigue calentando o enfriando en el límite correspondiente.",
               "range_template_heat_entities": "Miembros que pueden calentar. Los miembros no listados no tienen restricciones (decide la capacidad física). Un rol solo puede restringir, nunca ampliar las capacidades de un dispositivo.",
               "range_template_cool_entities": "Miembros que pueden enfriar. Los miembros no listados no tienen restricciones (decide la capacidad física). Un rol solo puede restringir, nunca ampliar las capacidades de un dispositivo.",
               "range_template_humidity_enabled": "Dentro del rango de temperatura objetivo, cambia a la acción de humedad si la humedad supera el objetivo.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Entidad de programación",
-          "description": "Revierte la entidad de programación activa al horario predeterminado configurado."
+          "description": "Revierte la entidad de programación activa al horario predeterminado configurado y finaliza una retención manual."
         },
         "bypass": {
           "name": "Entidad de bypass",

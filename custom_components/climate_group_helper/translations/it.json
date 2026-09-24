@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Visualizza automaticamente tutti i membri a setpoint singolo (senza caldo/freddo nativo) come dispositivi virtuali in modalità intervallo.",
-              "range_template_deadband_action": "Azione da eseguire quando la temperatura attuale è all'interno dell'intervallo target (zona morta).",
+              "range_template_deadband_action": "Azione da eseguire quando la temperatura attuale è all'interno dell'intervallo target (zona morta). 'Nessuna' non cambia modalità, ma mantiene un dispositivo che continua a riscaldare o raffreddare sul limite corrispondente.",
               "range_template_heat_entities": "Membri autorizzati a riscaldare. I membri non elencati non hanno restrizioni (decide la capacità fisica). Un ruolo può solo limitare, mai estendere le capacità di un dispositivo.",
               "range_template_cool_entities": "Membri autorizzati a raffreddare. I membri non elencati non hanno restrizioni (decide la capacità fisica). Un ruolo può solo limitare, mai estendere le capacità di un dispositivo.",
               "range_template_humidity_enabled": "All'interno dell'intervallo di temperatura target, passa all'azione di umidità se l'umidità supera il target.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Entità pianificazione",
-          "description": "Ripristina l'entità di pianificazione attiva alla pianificazione predefinita configurata."
+          "description": "Ripristina l'entità di pianificazione attiva alla pianificazione predefinita configurata e termina un mantenimento manuale."
         },
         "bypass": {
           "name": "Entità bypass",

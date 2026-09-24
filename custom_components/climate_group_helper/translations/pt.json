@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Renderiza automaticamente todos os membros de ponto de ajuste único (sem aquecimento/arrefecimento nativo) como dispositivos virtuais em modo de intervalo.",
-              "range_template_deadband_action": "Ação a executar quando a temperatura atual estiver dentro do intervalo alvo (zona morta).",
+              "range_template_deadband_action": "Ação a executar quando a temperatura atual estiver dentro do intervalo alvo (zona morta). 'Nenhuma' não muda o modo, mas mantém um dispositivo que continua a aquecer ou arrefecer no limite correspondente.",
               "range_template_heat_entities": "Membros autorizados a aquecer. Membros não listados não têm restrições (a capacidade física decide). Um papel só pode restringir, nunca ampliar as capacidades de um dispositivo.",
               "range_template_cool_entities": "Membros autorizados a arrefecer. Membros não listados não têm restrições (a capacidade física decide). Um papel só pode restringir, nunca ampliar as capacidades de um dispositivo.",
               "range_template_humidity_enabled": "Dentro da faixa de temperatura alvo, mude para a ação de humidade se a humidade exceder o valor alvo.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Entidade de agendamento",
-          "description": "Reverte a entidade de agendamento ativa para o agendamento predefinido configurado."
+          "description": "Reverte a entidade de agendamento ativa para o agendamento predefinido configurado e termina uma retenção manual."
         },
         "bypass": {
           "name": "Entidade de derivação",

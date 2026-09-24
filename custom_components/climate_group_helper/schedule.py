@@ -720,15 +720,13 @@ class ScheduleHoldManager:
         )
 
     def clear(self) -> None:
-        """Drop an active hold — a bypass run supersedes it."""
+        """Drop an active hold — a bypass run or a schedule reset supersedes it."""
         self._cancel_timer()
         if self._group.run_state.schedule_hold_until is None:
             return
         self._group.run_state = replace(self._group.run_state, schedule_hold_until=None)
         self._group.async_defer_or_update_ha_state()
-        _LOGGER.debug(
-            "[%s] Schedule hold cleared — bypass supersedes it", self._group.entity_id
-        )
+        _LOGGER.debug("[%s] Schedule hold cleared", self._group.entity_id)
 
     def _start_timer(self, duration: float, on_expired: Any) -> None:
         self._cancel_timer()

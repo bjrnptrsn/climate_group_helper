@@ -44,6 +44,16 @@ async def _async_reset_offset(group: ClimateGroupHelper) -> None:
     group.async_defer_or_update_ha_state()
 
 
+def _reset_schedule(group: ClimateGroupHelper) -> Awaitable[None] | None:
+    """Revert the schedule entity to the configured one and end a manual hold.
+
+    The hold belongs to this field: the reset re-applies the current slot, and a
+    running hold would defer exactly that re-apply until it expires.
+    """
+    group.schedule_hold_manager.clear()
+    return group.schedule_handler.update_schedule_entity(None, apply=False)
+
+
 async def async_reset_group(
     group: ClimateGroupHelper,
     everything: bool = False,
@@ -84,7 +94,7 @@ async def async_reset_group(
         (ATTR_RESET_BOOST, reset_boost, lambda: group.boost_override_manager.abort(push=False)),
         (ATTR_RESET_PRESETS, reset_presets, lambda: group.preset_manager.async_update_runtime_presets(None)),
         (ATTR_RESET_OFFSET, reset_offset, lambda: _async_reset_offset(group)),
-        (ATTR_RESET_SCHEDULE, reset_schedule, lambda: group.schedule_handler.update_schedule_entity(None, apply=False)),
+        (ATTR_RESET_SCHEDULE, reset_schedule, lambda: _reset_schedule(group)),
         (ATTR_RESET_BYPASS, reset_bypass, lambda: group.schedule_bypass_handler.update_bypass_entity(None, apply=False)),
         (ATTR_RESET_FALLBACK, reset_fallback, lambda: group.schedule_handler.update_fallback_payload(None, apply=False)),
     ]

@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Tüm tek ayar noktalı üyeleri (yerel ısıtma/soğutma desteği olmadan) otomatik olarak sanal aralık modu cihazları olarak oluşturur.",
-              "range_template_deadband_action": "Mevcut sıcaklık hedef aralığın içindeyken (ölü bant) gerçekleştirilecek eylem.",
+              "range_template_deadband_action": "Mevcut sıcaklık hedef aralığın içindeyken (ölü bant) gerçekleştirilecek eylem. 'Hiçbiri' modu değiştirmez, ancak ısıtmaya veya soğutmaya devam eden bir cihazı ilgili sınırda tutar.",
               "range_template_heat_entities": "Isıtmasına izin verilen üyeler. Listede olmayan üyeler sınırsızdır (fiziksel kapasite karar verir). Bir rol yalnızca kısıtlayabilir, bir cihazın yeteneklerini asla genişletemez.",
               "range_template_cool_entities": "Soğutmasına izin verilen üyeler. Listede olmayan üyeler sınırsızdır (fiziksel kapasite karar verir). Bir rol yalnızca kısıtlayabilir, bir cihazın yeteneklerini asla genişletemez.",
               "range_template_humidity_enabled": "Hedef sıcaklık aralığındayken nem hedef nemi aşarsa nem eylemine geçin.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Program Varlığı",
-          "description": "Etkin program varlığını yapılandırılan varsayılan programa döndürür."
+          "description": "Etkin program varlığını yapılandırılan varsayılan programa döndürür ve manuel tutmayı sonlandırır."
         },
         "bypass": {
           "name": "Bypass Varlığı",

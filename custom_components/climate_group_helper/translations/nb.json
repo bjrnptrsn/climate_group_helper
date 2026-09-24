@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Gjengir automatisk alle enkelt-settpunkt-medlemmer (uten native varme/kjøling) som virtuelle områdeenheter.",
-              "range_template_deadband_action": "Handling som utføres når gjeldende temperatur er innenfor målrekkevidde (deadband).",
+              "range_template_deadband_action": "Handling som utføres når gjeldende temperatur er innenfor målrekkevidde (deadband). 'Ingen' bytter ikke modus, men holder en enhet som fortsatt varmer eller kjøler, på den tilsvarende grensen.",
               "range_template_heat_entities": "Medlemmer som har lov til å varme. Ulistede medlemmer er ubegrensede (fysisk kapasitet avgjør). En rolle kan bare begrense, aldri utvide en enhets kapasitet.",
               "range_template_cool_entities": "Medlemmer som har lov til å kjøle. Ulistede medlemmer er ubegrensede (fysisk kapasitet avgjør). En rolle kan bare begrense, aldri utvide en enhets kapasitet.",
               "range_template_humidity_enabled": "Når innenfor måltemperaturområdet, bytt til fuktighetshandlingen hvis fuktigheten overstiger målfuktigheten.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Tidsplanentitet",
-          "description": "Tilbakestiller den aktive tidsplanentiteten til den konfigurerte standardplanen."
+          "description": "Tilbakestiller den aktive tidsplanentiteten til den konfigurerte standardplanen og avslutter en manuell holdetid."
         },
         "bypass": {
           "name": "Bypass-entitet",

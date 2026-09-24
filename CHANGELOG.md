@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.12.1 - 2026-09-24
+
+### ✨ Improvements
+
+*   **Card Badges Show What Is Going On**: The schedule and sync badges now light up while the group's target comes from them, a feature paused by a schedule slot or preset is shown greyed out, and the master device is marked in the member list instead of having its own badge.
+
+### 🐛 Bug Fixes
+
+*   **Home Assistant No Longer Hangs on Its Loading Screen**: The card no longer interferes with how Home Assistant registers its own interface, which could leave the frontend stuck while loading since 1.12.0.
+
+*   **Card Shows Presets and Modes Like Home Assistant**: Preset, fan and swing options and the deviation list now use Home Assistant's own names in your language instead of raw values such as "eco" or "none", and the demo mode no longer shows German names in every language.
+
+*   **Dial Shows the Heating Arc in Auto Mode**: For devices that can only heat (or only cool), the card's dial in auto mode now fills up to the setpoint like Home Assistant's own thermostat card instead of filling the whole ring.
+
+*   **Range Template Keeps Every Device on the Current Range**: A device that only heats (or only cools) now follows a changed range instead of keeping its old setpoint and working against the others, and a range set by the schedule now reaches these devices at all.
+
+*   **Resetting the Schedule Ends a Manual Hold**: Resetting the schedule now applies the current slot right away instead of waiting for a running manual hold to expire.
+
+### 🔧 Changes
+
+*   **Range Template Holds Device Setpoints**: A setpoint changed by hand on a device controlled through the Range Template is now set back to the group's range, as a changed mode already was.
+
 ## 1.12.0 - 2026-09-23
 
 ### 🌟 New Features

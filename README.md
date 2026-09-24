@@ -209,7 +209,7 @@ Schedules can be switched on the fly via service (e.g. for "Vacation" or "Guest"
 *   **Inactive Schedule Fallback:** An optional state (e.g. night setback or turning off) that stands in for the main schedule outside its active slots — no need for gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active.
 *   **Retain Changes Made via Service (Schedule):** Ensures that the main schedule, bypass entity and fallback state — when changed via service — survive a Home Assistant restart. If disabled, the group always reverts to its configured defaults after a restart.
 *   **Respect Member Off State (Schedule):** Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on.
-*   **Manual Hold:** A manual adjustment (temperature change, or switching the group on/off) holds for a configurable duration, after which the schedule resumes with the slot that is current *then*. A duration of `0` disables the hold — the schedule takes back over immediately.
+*   **Manual Hold:** A manual adjustment (temperature change, or switching the group on/off) holds for a configurable duration, after which the schedule resumes with the slot that is current *then*. A duration of `0` disables the hold — the schedule takes back over immediately. Resetting the schedule with the reset service ends a running hold early.
 
 > **Note — turning off outside active slots:** to shut the group down in the inactive period, set `hvac_mode: off` in the fallback. Do **not** use the `turn_off` meta-key here — it is a one-shot trigger for the Main Switch block that stays active until a slot explicitly releases it with `turn_off: false`, so a `turn_off: true` fallback would keep the next heating slot blocked.
 
@@ -374,6 +374,7 @@ Translates outgoing `heat_cool` range commands into single-setpoint commands for
 *   **Deadband Action:** What to do when the room is already within the target band: **None** (default), **Turn Off**, or **Fan Only**.
 *   **Dehumidify in Deadband:** When enabled, the group can automatically switch devices to **Dry** (or **Fan Only**) while inside the temperature deadband if current humidity exceeds the target humidity. Activation is immediate; a Schmitt-trigger hysteresis and a configurable deactivation delay prevent short cycling. Temperature heating and cooling always take priority when the room leaves the deadband. A humidity reading is required — either from a member that reports one or from a humidity sensor added to the group; without one, the group offers no target humidity to set.
 *   **Automatic member detection:** All members that do **not** natively advertise `heat_cool` are automatically covered — no manual selection needed. Members with native `heat_cool` support are left unchanged. This also enables `heat_cool` mode for groups consisting entirely of heat-only and cool-only devices, with no native `heat_cool` device required.
+*   **Covered devices follow the group:** A mode or setpoint changed by hand on a covered device is set back to what the range calls for, regardless of the Sync Mode — to change it, change the group's range.
 
 ## Management Entities (Switch & Slider)
 
@@ -395,24 +396,18 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 
 ## Lovelace Card
 
-The integration ships a Lovelace card for a climate group. Add it to a
-dashboard like any other card and pick your group's entity — no extra resource
-entry and no separate repository: the card loads with the integration and
-appears in the card picker as **Climate Group Helper Card**.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate Group Helper card next to its editor" width="700"/>
+</p>
 
-It controls the standard climate settings — mode, temperature, humidity, preset,
-fan and swing — and shows everything Climate Group Helper-specific: which
-blocker is currently active (window, presence, main switch) and for how long,
-the group's members with their state, and any isolated or out-of-bounds devices.
-Boost and hold countdowns run live.
+The integration ships its own dashboard card. Add it like any other card — it
+appears in the card picker as **Climate Group Helper Card** and needs no extra
+resource entry or separate repository.
 
-Everything Climate Group Helper-specific stays display-only: to work the main
-switch, the offset or a boost, use the group's own switch/slider entities and
-the services, so there is exactly one place to operate them.
-
-The card editor lets you set a title and choose whether the status area shows at
-all, which of its parts (panel, badges, deviations) appear, and which feature
-tiles are offered.
+*   **Controls** the usual climate settings: mode, temperature, humidity, preset, fan and swing.
+*   **Shows** what Climate Group Helper is doing: the active blocker and for how long, boost and hold countdowns, the members, and devices that are isolated or out of bounds. It only displays these — the main switch, the offset and a boost are operated through the group's own entities and services.
+*   **Badges** light up while a feature is acting and turn grey while a schedule slot or preset pauses it; the larger member dot is the master device.
+*   **Demo mode** fills the card with made-up data, so you can see everything it can show without setting anything up.
 
 ## What the Group Reports About Itself
 
@@ -601,7 +596,7 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 | Option | Description |
 |--------|-------------|
 | **Enable Range Template** | Enables automatic `heat_cool` range control for all members that do not natively advertise `heat_cool`. No manual selection needed — the group detects eligible members automatically. |
-| **Deadband Action** | What to do when the room temperature is already within the target band (between `target_temp_low` and `target_temp_high`). **None** (default — no command, device regulates itself to the setpoint it already received), **Turn Off**, or **Fan Only**. |
+| **Deadband Action** | What to do when the room temperature is already within the target band (between the low and the high setpoint). **None** (default — no mode change; a device that keeps heating or cooling is held on the matching setpoint: heating on the low one, cooling on the high one), **Turn Off**, or **Fan Only**. |
 | **Dehumidify in Deadband** | Automatically switch to dehumidification or fan circulation when inside the temperature deadband if room humidity exceeds the target humidity. Requires a humidity reading from a member or a humidity sensor. |
 | **Humidity Action** | Physical action when the humidity threshold is exceeded inside the deadband: **Dry** (default) or **Fan Only**. |
 | **Humidity Hysteresis** | Symmetrical hysteresis band around the target humidity to prevent rapid cycling (default: 3.0%). |
@@ -701,7 +696,7 @@ Resets temporary overrides and runtime state back to their configured defaults. 
 | `everything` | No | Resets all options below at once. The individual fields are then ignored. |
 | `boost` | No | Aborts an active boost override and restores the group target state. |
 | `offset` | No | Resets the global group temperature offset to 0.0. |
-| `schedule` | No | Reverts the active schedule entity to the configured default schedule. |
+| `schedule` | No | Reverts the active schedule entity to the configured default schedule and ends a manual hold, so the current slot applies right away. |
 | `bypass` | No | Reverts the active bypass entity to the configured default and unwinds bypass adjustments. |
 | `fallback` | No | Reverts the schedule fallback payload to the configured default. |
 | `presets` | No | Clears runtime group presets and restores configured presets. |

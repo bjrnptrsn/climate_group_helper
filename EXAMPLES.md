@@ -697,7 +697,7 @@ Several thermostats (e.g. Honeywell Lyric T5) physically support auto-changeover
 
 **Result:** The group offers `heat_cool` with a low/high band even though no member advertises range support. Below the band a device gets `heat` with the low setpoint, above it `cool` with the high one, and inside it the Deadband Action. Members are detected automatically — anything already advertising `heat_cool` natively is left alone.
 
-**Deadband Action "None"** sends no command inside the band, leaving each device on the setpoint it last received. Use it for devices that regulate themselves; use "Turn Off" or "Fan Only" when the group should actively idle them.
+**Deadband Action "None"** changes no mode inside the band: each device regulates itself, and one that keeps heating or cooling is held on the matching setpoint (heating on the low one, cooling on the high one), so it follows when you change the band. Use it for devices that regulate themselves; use "Turn Off" or "Fan Only" when the group should actively idle them.
 
 ---
 

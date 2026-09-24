@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "自动将所有单设定点成员（不支持原生制热/制冷）呈现为虚拟范围模式设备。",
-              "range_template_deadband_action": "当前温度在目标范围（死区）内时执行的动作。",
+              "range_template_deadband_action": "当前温度在目标范围（死区）内时执行的动作。'无' 不切换模式，但会将仍在制热或制冷的设备保持在相应边界上。",
               "range_template_heat_entities": "允许制热的成员。未列出的成员不受限制（由物理能力决定）。角色只能限制，绝不能扩展设备的能力。",
               "range_template_cool_entities": "允许制冷的成员。未列出的成员不受限制（由物理能力决定）。角色只能限制，绝不能扩展设备的能力。",
               "range_template_humidity_enabled": "在目标温度范围内，若当前湿度超过目标湿度，则切换至湿度动作。",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "计划实体",
-          "description": "将活动计划实体恢复为配置的默认计划。"
+          "description": "将活动计划实体恢复为配置的默认计划，并结束手动保持。"
         },
         "bypass": {
           "name": "旁路实体",

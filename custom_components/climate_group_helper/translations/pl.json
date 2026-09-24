@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Automatycznie renderuje wszystkich członków z jednym punktem nastawy (bez natywnego ogrzewania/chłodzenia) jako wirtualne urządzenia w trybie zakresu.",
-              "range_template_deadband_action": "Akcja wykonywana, gdy aktualna temperatura znajduje się wewnątrz zakresu docelowego (martwa strefa).",
+              "range_template_deadband_action": "Akcja wykonywana, gdy aktualna temperatura znajduje się wewnątrz zakresu docelowego (martwa strefa). 'Brak' nie zmienia trybu, ale utrzymuje urządzenie, które nadal grzeje lub chłodzi, na odpowiedniej granicy.",
               "range_template_heat_entities": "Członkowie, którzy mogą grzać. Niewymienieni członkowie nie mają ograniczeń (decyduje fizyczna zdolność). Rola może tylko ograniczać, nigdy nie rozszerzać możliwości urządzenia.",
               "range_template_cool_entities": "Członkowie, którzy mogą chłodzić. Niewymienieni członkowie nie mają ograniczeń (decyduje fizyczna zdolność). Rola może tylko ograniczać, nigdy nie rozszerzać możliwości urządzenia.",
               "range_template_humidity_enabled": "W docelowym zakresie temperatur przełącz na działanie wilgotności, jeśli wilgotność przekroczy wartość docelową.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Encja harmonogramu",
-          "description": "Przywraca aktywną encję harmonogramu do skonfigurowanego domyślnego harmonogramu."
+          "description": "Przywraca aktywną encję harmonogramu do skonfigurowanego domyślnego harmonogramu i kończy ręczne wstrzymanie."
         },
         "bypass": {
           "name": "Encja obejścia",

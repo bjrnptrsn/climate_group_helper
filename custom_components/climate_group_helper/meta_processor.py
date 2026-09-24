@@ -129,7 +129,7 @@ class MetaKeyTarget(Protocol):
     """A feature handler owning the apply/cleanup actions of a meta-key.
 
     Structural (no base class): each target already owns the state its key acts
-    on. `key` is passed because `PresenceHandler` serves two keys.
+    on. `key` is passed so every target shares one signature and can log it.
     """
 
     async def apply_meta(self, key: str, value: Any) -> None: ...

@@ -331,7 +331,7 @@
             },
             "data_description": {
               "range_template_enabled": "Stellt alle Einzelsollwert-Mitglieder (ohne natives Heizen/Kühlen) automatisch als virtuelle Bereichsgeräte dar.",
-              "range_template_deadband_action": "Aktion, die ausgeführt wird, wenn die aktuelle Temperatur innerhalb des Zielbereichs (Deadband) liegt.",
+              "range_template_deadband_action": "Aktion, die ausgeführt wird, wenn die aktuelle Temperatur innerhalb des Zielbereichs (Deadband) liegt. 'Keine' schaltet keinen Modus um, hält aber ein Gerät, das weiter heizt oder kühlt, auf dem passenden Grenzwert.",
               "range_template_heat_entities": "Mitglieder, die heizen dürfen. Nicht gelistete Mitglieder sind uneingeschränkt (die physische Fähigkeit entscheidet). Eine Rolle kann eine Fähigkeit nur einschränken, nie erweitern.",
               "range_template_cool_entities": "Mitglieder, die kühlen dürfen. Nicht gelistete Mitglieder sind uneingeschränkt (die physische Fähigkeit entscheidet). Eine Rolle kann eine Fähigkeit nur einschränken, nie erweitern.",
               "range_template_humidity_enabled": "Schaltet innerhalb des Ziel-Temperaturbereichs auf die Feuchtigkeits-Aktion um, wenn die Feuchtigkeit die Zielfeuchtigkeit überschreitet.",
@@ -744,7 +744,7 @@
         },
         "schedule": {
           "name": "Zeitplan-Entität",
-          "description": "Setzt die aktive Zeitplan-Entität auf den konfigurierten Standardzeitplan zurück."
+          "description": "Setzt die aktive Zeitplan-Entität auf den konfigurierten Standardzeitplan zurück und beendet eine manuelle Haltezeit."
         },
         "bypass": {
           "name": "Bypass-Entität",

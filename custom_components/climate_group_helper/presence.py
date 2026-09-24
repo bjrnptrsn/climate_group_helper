@@ -256,8 +256,8 @@ class PresenceHandler:
         if "presence" not in self._group.run_state.blocking_sources:
             return
         self._away_active = False
-        # Slot-Away has priority: do not restore against an active slot away,
-        # whichever of the two keys expresses it.
+        # Slot-Away has priority: do not restore while a slot or preset pins
+        # the block to away.
         if not self.forces_away:
             await self.override_manager.restore()
 
@@ -342,7 +342,7 @@ class PresenceHandler:
             self._away_active = not present
 
     async def apply_meta(self, key: str, value: Any) -> None:
-        """Apply the `presence`/`presence_mode` meta-key (see `SlotMetaProcessor`)."""
+        """Apply the `presence_mode` meta-key (see `SlotMetaProcessor`)."""
         _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
         await self.apply_bypass(value)
 
