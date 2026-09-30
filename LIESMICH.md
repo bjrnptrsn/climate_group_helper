@@ -67,6 +67,7 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 
 - [Kernkonzept](#kernkonzept-die-einheitliche-grundlage)
   - [Einfacher Modus](#einfacher-modus-kernfunktionen)
+- [So funktioniert es](SO_FUNKTIONIERT_ES.md)
 - [Erweiterte Funktionen](#power-user-erweiterte-funktionen)
   - [Master-Entität](#master-entität)
   - [Externe Sensoren](#externe-sensoren)
@@ -96,6 +97,9 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 ## Kernkonzept: Die einheitliche Grundlage
 
 Der Climate Group Helper bietet eine robuste "Single Source of Truth" für deine Klimageräte. Er erstellt eine einheitliche Verwaltungsschicht, die dafür sorgt, dass deine Geräte als ein zusammenhängendes System zusammenarbeiten und gleichzeitig präzise Raumzustände liefern.
+
+> [!TIP]
+> **Wie spielen die Funktionen zusammen?** [SO_FUNKTIONIERT_ES.md](SO_FUNKTIONIERT_ES.md) zeigt, wer entscheidet, was deine Geräte tun, was Vorrang hat, und warum die Gruppe manchmal etwas anderes anzeigt, als du eingestellt hast.
 
 ### Einfacher Modus (Kernfunktionen)
 
@@ -180,10 +184,10 @@ Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn
 *   **Raum- + Zonensensoren:** Kombiniert einen schnell reagierenden Raumsensor mit einem langsam reagierenden Zonensensor (z. B. für eine ganze Etage). Der Raum ist Teil der Zone: Werden beide genutzt, **muss der Zonensensor den Raumsensor enthalten** (nimm den Raumsensor in die Zonen-Gruppe auf). Sonst gelten die eingestellten Verzögerungen nicht mehr.
 *   **Konfigurierbare Verzögerungen:** Lege eigene Reaktionszeiten für Öffnen und Schließen fest.
 *   **Fenster-Aktion:** Wähle zwischen vollständigem `aus` oder einem konfigurierbaren Temperatur-Sollwert.
-*   **Manuelle Änderungen übernehmen:** Optional passives Tracking erlauben:
-    *   **Aus:** Alle manuellen Änderungen werden blockiert und verworfen.
-    *   **Alle:** Jede manuelle Änderung aktualisiert den Zielzustand. Wird angewendet, wenn die Fenster schließen.
-    *   **Nur Master:** *(Erfordert Master-Entität)* Nur Änderungen am Master aktualisieren den Zielzustand.
+*   **Manuelle Änderungen übernehmen:** Was mit Änderungen passiert, die bei offenem Fenster gemacht werden. Sie werden nie sofort angewendet — bis die Fenster schließen, gilt die Aktion bei offenem Fenster.
+    *   **Aus:** Änderungen werden verworfen.
+    *   **Alle:** Änderungen werden gemerkt und beim Schließen der Fenster angewendet. Änderungen direkt an einem Gerät werden nur gemerkt, wenn ein Sync-Modus aktiv ist, der sie übernimmt.
+    *   **Nur Master:** *(Erfordert Master-Entität)* Nur Änderungen am Master-Gerät werden gemerkt. Änderungen an der Gruppe selbst werden verworfen.
 
 ### Anwesenheitssteuerung
 
@@ -209,7 +213,7 @@ Zeitpläne können per Dienst live umgeschaltet werden (z. B. für "Urlaub"- ode
 *   **Fallback bei inaktivem Zeitplan:** Ein optionaler Zustand (z. B. Nachtabsenkung oder Ausschalten), der außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan einspringt — lückenlose 24/7-Zeitpläne sind damit unnötig. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist.
 *   **Per Dienst geänderte Werte beibehalten (Zeitplan):** Stellt sicher, dass per Dienst geänderter Haupt-Zeitplan, Bypass-Entität und Fallback-Zustand einen Home-Assistant-Neustart überstehen. Wenn deaktiviert, kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück.
 *   **Respektiere Aus-Status der Mitglieder (Zeitplan):** Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet.
-*   **Manuelle Haltezeit:** Eine manuelle Anpassung (Temperaturänderung oder die Gruppe von Hand ein-/ausschalten) hält für eine konfigurierbare Dauer, danach übernimmt der Zeitplan wieder mit dem *dann* aktuellen Zeitblock. Eine Dauer von `0` deaktiviert die Haltezeit — der Zeitplan übernimmt sofort wieder. Setzt du den Zeitplan mit dem Reset-Dienst zurück, endet eine laufende Haltezeit vorzeitig.
+*   **Manuelle Haltezeit:** Eine manuelle Anpassung (Temperaturänderung oder die Gruppe von Hand ein-/ausschalten) hält für eine konfigurierbare Dauer, danach übernimmt der Zeitplan wieder mit dem *dann* aktuellen Zeitblock. Eine Dauer von `0` deaktiviert die Haltezeit — deine Änderung bleibt dann bis zum Beginn des nächsten Zeitblocks bestehen. Setzt du den Zeitplan mit dem Reset-Dienst zurück, endet eine laufende Haltezeit vorzeitig.
 
 > **Hinweis — Ausschalten außerhalb aktiver Zeitblöcke:** Um die Gruppe in der inaktiven Phase abzuschalten, setze `hvac_mode: off` im Fallback. Verwende hier **nicht** den `turn_off`-Meta-Key — er ist ein einmaliger Auslöser für die Hauptschalter-Sperre, die aktiv bleibt, bis ein Zeitblock sie explizit mit `turn_off: false` freigibt. Ein `turn_off: true` im Fallback würde also den nächsten Heiz-Zeitblock blockiert lassen.
 
@@ -375,6 +379,7 @@ Eine **Mitglieder-Vorlage** umhüllt einzelne Gruppenmitglieder mit einem virtue
 *   **Totzonen-Aktion:** Was zu tun ist, wenn sich der Raum bereits innerhalb des Zielbandes befindet: **Keine** (Standard), **Ausschalten** oder **Nur Lüfter**.
 *   **Im Totband entfeuchten:** Wenn aktiviert, schaltet die Gruppe Geräte im Temperatur-Totband automatisch auf **Trocknen** (oder **Nur Lüfter**), wenn die aktuelle Luftfeuchtigkeit die Zielfeuchtigkeit überschreitet. Aktivierung erfolgt sofort; eine Schmitt-Trigger-Hysterese und eine konfigurierbare Deaktivierungsverzögerung verhindern schnelles Takten. Temperatur-Heizen und -Kühlen haben immer Vorrang, sobald der Raum das Totband verlässt. Ein Feuchtigkeitswert ist Voraussetzung — entweder von einem Mitglied, das ihn meldet, oder von einem der Gruppe hinzugefügten Feuchtigkeitssensor; ohne ihn bietet die Gruppe keine einstellbare Zielfeuchtigkeit an.
 *   **Automatische Mitgliedserkennung:** Alle Mitglieder, die `heat_cool` **nicht** nativ melden, werden automatisch erfasst — keine manuelle Auswahl nötig. Mitglieder mit nativer `heat_cool`-Unterstützung bleiben unverändert. Dies ermöglicht auch den `heat_cool`-Modus für Gruppen, die ausschließlich aus reinen Heiz- und Kühlgeräten bestehen, ganz ohne natives `heat_cool`-Gerät.
+*   **Bedingtes Heizen/Kühlen:** Optional bietet die Gruppe **Heizen/Kühlen** und die Bereichssteuerung nur an, solange mindestens ein erreichbares Mitglied heizen und eines kühlen kann — nützlich, wenn eine saisonale Klimaanlage offline ist.
 *   **Erfasste Geräte folgen der Gruppe:** Ein von Hand geänderter Modus oder Sollwert an einem erfassten Gerät wird auf das zurückgesetzt, was der Bereich verlangt, unabhängig vom Sync-Modus — um ihn zu ändern, änderst du den Bereich der Gruppe.
 
 ## Verwaltungs-Entitäten (Schalter & Regler)
@@ -406,9 +411,11 @@ Karte hinzu — sie erscheint im Karten-Picker als **Climate Group Helper Card**
 und braucht weder einen zusätzlichen Resource-Eintrag noch ein separates
 Repository.
 
-*   **Steuert** die üblichen Klimaeinstellungen: Modus, Temperatur, Luftfeuchte, Preset, Lüfter und Schwenk.
+*   **Steuert** die üblichen Klimaeinstellungen: Modus, Temperatur, Luftfeuchte, Preset, Lüfter und Schwenk. Im Karten-Editor lässt sich der ganze Regler ausblenden, oder nur seine −/+-Tasten bzw. der Umschalter Temperatur/Luftfeuchte.
 *   **Zeigt**, was Climate Group Helper gerade tut: den aktiven Blocker und seit wann, Boost- und Hold-Countdowns, die Mitglieder sowie isolierte oder außerhalb des Bereichs liegende Geräte. Das ist reine Anzeige — Hauptschalter, Offset und Boost bedienst du über die eigenen Entitäten der Gruppe und die Dienste.
-*   **Badges** leuchten, solange eine Funktion eingreift, und werden grau, solange ein Zeitblock oder ein Preset sie pausiert; der größere Mitglieder-Punkt ist das Master-Gerät.
+*   **Badges** stehen für je eine Funktion: Sie leuchten, solange sie eingreift, und werden grau, solange ein Zeitblock oder ein Preset sie pausiert.
+*   **Mitglieder-Punkte** stehen für je ein Gerät, daneben die Zahl der aktiven Mitglieder; ein Tipp darauf zeigt die vollständige Liste. Der größere Punkt ist das Master-Gerät.
+*   **Der Statusbereich** nennt, woher das Ziel der Gruppe kommt — beim Zeitplan auch die Ebene: Haupt-Zeitplan, Bypass oder Fallback — und zeigt einen aktiven Gruppen-Offset. Die Mitgliederliste ergänzt den eigenen Offset jedes Geräts und, solange die Geräte uneinig sind, ihre Einstellungen — hervorgehoben, wo sie von der Vorgabe der Gruppe abweichen; der Punkt eines solchen Geräts bekommt einen Warnring.
 *   **Der Demo-Modus** füllt die Karte mit erfundenen Daten, damit du ohne Einrichtung siehst, was sie alles anzeigen kann.
 
 ## Was die Gruppe über sich selbst berichtet
@@ -531,7 +538,7 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 | Option | Beschreibung |
 |--------|-------------|
 | **Fenster-Aktion** | **Ausschalten** (Standard) oder **Temperatur setzen**. Nützlich für Frostschutz. |
-| **Manuelle Änderungen übernehmen** | **Aus** (alle blockieren), **Alle** (passives Tracking für alle Mitglieder) oder **Nur Master** *(erfordert Master-Entität)*. |
+| **Manuelle Änderungen übernehmen** | Was mit Änderungen passiert, die bei offenem Fenster gemacht werden: **Aus** (verwerfen), **Alle** (merken und beim Schließen der Fenster anwenden) oder **Nur Master** *(erfordert Master-Entität)*. |
 | **Fenster-Temperatur** | Zieltemperatur, die bei Aktion "Temperatur setzen" gesetzt wird. |
 | **Raumsensor** | (Optional) Binärsensor (Fenster/Tür) oder Cover-Entität für schnelle Reaktion. Cover gelten als "offen", solange sie nicht vollständig geschlossen sind. |
 | **Zonensensor** | (Optional) Binärsensor oder Cover-Entität für langsame Reaktion (z. B. Wohnung oder Etage). Muss den Raumsensor enthalten, wenn beide genutzt werden. |
@@ -598,6 +605,7 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 | Option | Beschreibung |
 |--------|-------------|
 | **Bereichsvorlage aktivieren** | Aktiviert automatische `heat_cool`-Bereichssteuerung für alle Mitglieder, die `heat_cool` nicht nativ melden. Keine manuelle Auswahl nötig — die Gruppe erkennt geeignete Mitglieder automatisch. |
+| **Bedingtes Heizen/Kühlen** | Bietet Heizen/Kühlen und die Bereichssteuerung nur an, solange mindestens ein erreichbares Mitglied heizen und eines kühlen kann. |
 | **Totzonen-Aktion** | Was zu tun ist, wenn die Raumtemperatur bereits innerhalb des Zielbandes liegt (zwischen unterem und oberem Sollwert). **Keine** (Standard — kein Moduswechsel; ein Gerät, das weiter heizt oder kühlt, wird auf dem passenden Sollwert gehalten: Heizen auf dem unteren, Kühlen auf dem oberen), **Ausschalten** oder **Nur Lüfter**. |
 | **Im Totband entfeuchten** | Schaltet im Temperatur-Totband automatisch auf Entfeuchtung oder Luftzirkulation um, wenn die Raumfeuchtigkeit die Zielfeuchtigkeit überschreitet. Setzt einen Feuchtigkeitswert von einem Mitglied oder einem Feuchtigkeitssensor voraus. |
 | **Feuchtigkeits-Aktion** | Physische Aktion bei Überschreitung des Feuchtigkeitsschwellwerts im Totband: **Trocknen** (Standard) oder **Nur Lüfter**. |

@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Abilita il gruppo in base ai sensori. HVAC va su 'off' quando le finestre sono aperte.",
-              "window_adopt_manual_changes": "Consentire modifiche al setpoint mentre le finestre sono aperte.",
+              "window_adopt_manual_changes": "Conservare le modifiche fatte a finestre aperte e applicarle alla chiusura. Fino ad allora vale l'azione finestra aperta.",
               "window_action": "Cosa fare quando si apre una finestra: Spegnere completamente o impostare una temperatura specifica (es. antigelo).",
               "window_temperature": "Temperatura target quando è selezionata l'azione 'Imposta temperatura'.",
               "room_sensor": "(Opzionale) Sensore binario per la finestra/porta della stanza.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Azione nella zona morta",
               "range_template_heat_entities": "Dispositivi di riscaldamento",
               "range_template_cool_entities": "Dispositivi di raffreddamento",
+              "range_template_conditional": "Caldo/Freddo condizionale",
               "range_template_humidity_enabled": "Deumidifica in banda morta",
               "range_template_humidity_action": "Azione umidità",
               "range_template_humidity_hysteresis": "Isteresi umidità",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Azione da eseguire quando la temperatura attuale è all'interno dell'intervallo target (zona morta). 'Nessuna' non cambia modalità, ma mantiene un dispositivo che continua a riscaldare o raffreddare sul limite corrispondente.",
               "range_template_heat_entities": "Membri autorizzati a riscaldare. I membri non elencati non hanno restrizioni (decide la capacità fisica). Un ruolo può solo limitare, mai estendere le capacità di un dispositivo.",
               "range_template_cool_entities": "Membri autorizzati a raffreddare. I membri non elencati non hanno restrizioni (decide la capacità fisica). Un ruolo può solo limitare, mai estendere le capacità di un dispositivo.",
+              "range_template_conditional": "Offri Caldo/Freddo e l'intervallo di temperatura solo finché almeno un membro raggiungibile può riscaldare e uno può raffrescare.",
               "range_template_humidity_enabled": "All'interno dell'intervallo di temperatura target, passa all'azione di umidità se l'umidità supera il target.",
               "range_template_humidity_action": "Azione da eseguire quando l'umidità corrente supera l'umidità target nella banda morta.",
               "range_template_humidity_hysteresis": "Banda di isteresi del trigger di Schmitt attorno all'umidità target per prevenire cicli rapidi.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Disattivato – Blocca tutte le modifiche",
-        "all": "Tutte – Accetta tutte le modifiche manuali",
-        "master_only": "Solo principale – Accetta solo le modifiche dell'entità principale"
+        "off": "Disattivato – Scarta le modifiche",
+        "all": "Tutte – Conserva le modifiche fino alla chiusura delle finestre",
+        "master_only": "Solo principale – Conserva solo le modifiche del dispositivo principale"
       }
     },
     "window_action": {

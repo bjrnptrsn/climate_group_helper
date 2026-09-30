@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Habilitar grupo baseado em sensores. HVAC vai para 'off' quando janelas abertas.",
-              "window_adopt_manual_changes": "Permitir alterações do estado alvo enquanto as janelas estão abertas.",
+              "window_adopt_manual_changes": "Guardar as alterações feitas com as janelas abertas e aplicá-las quando forem fechadas. Até lá, aplica-se a ação ao abrir janela.",
               "window_action": "O que fazer ao abrir uma janela: Desligar completamente ou definir uma temperatura específica (ex: proteção contra gelo).",
               "window_temperature": "Temperatura alvo quando a ação 'Definir temperatura' é selecionada.",
               "room_sensor": "(Opcional) Sensor binário para a janela/porta do quarto.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Ação na zona morta",
               "range_template_heat_entities": "Dispositivos de aquecimento",
               "range_template_cool_entities": "Dispositivos de arrefecimento",
+              "range_template_conditional": "Aquecer/Arrefecer condicional",
               "range_template_humidity_enabled": "Desumidificar na banda morta",
               "range_template_humidity_action": "Ação de humidade",
               "range_template_humidity_hysteresis": "Histerese de humidade",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Ação a executar quando a temperatura atual estiver dentro do intervalo alvo (zona morta). 'Nenhuma' não muda o modo, mas mantém um dispositivo que continua a aquecer ou arrefecer no limite correspondente.",
               "range_template_heat_entities": "Membros autorizados a aquecer. Membros não listados não têm restrições (a capacidade física decide). Um papel só pode restringir, nunca ampliar as capacidades de um dispositivo.",
               "range_template_cool_entities": "Membros autorizados a arrefecer. Membros não listados não têm restrições (a capacidade física decide). Um papel só pode restringir, nunca ampliar as capacidades de um dispositivo.",
+              "range_template_conditional": "Oferecer Aquecer/Arrefecer e o intervalo de temperatura apenas enquanto pelo menos um membro acessível puder aquecer e um puder arrefecer.",
               "range_template_humidity_enabled": "Dentro da faixa de temperatura alvo, mude para a ação de humidade se a humidade exceder o valor alvo.",
               "range_template_humidity_action": "Ação a executar quando a humidade atual excede a humidade alvo na banda morta.",
               "range_template_humidity_hysteresis": "Banda de histerese do disparador Schmitt em torno da humidade alvo para evitar ciclos rápidos.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Desativado – Bloquear todas as alterações",
-        "all": "Todas – Aceitar todas as alterações manuais",
-        "master_only": "Apenas principal – Aceitar apenas alterações da entidade principal"
+        "off": "Desativado – Descartar alterações",
+        "all": "Todas – Guardar alterações até fechar as janelas",
+        "master_only": "Apenas principal – Guardar apenas alterações do dispositivo principal"
       }
     },
     "window_action": {

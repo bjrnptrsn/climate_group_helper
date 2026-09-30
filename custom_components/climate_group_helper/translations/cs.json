@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Povolit nebo zakázat skupinu podle senzorů oken. Pokud je aktivní, režim HVAC se nastaví na 'off', když jsou okna otevřená.",
-              "window_adopt_manual_changes": "Povolit změny cílového stavu, zatímco jsou okna otevřená.",
+              "window_adopt_manual_changes": "Změny provedené při otevřených oknech si zapamatovat a použít po jejich zavření. Do té doby platí akce při otevření okna.",
               "window_action": "Co dělat při otevření okna: Úplně vypnout nebo nastavit konkrétní teplotu (např. protimrazová ochrana).",
               "window_temperature": "Cílová teplota při výběru akce 'Nastavit teplotu'.",
               "room_sensor": "(Volitelně) Binární senzor pro okno/dveře v místnosti.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Akce v mrtvém pásmu",
               "range_template_heat_entities": "Zařízení pro vytápění",
               "range_template_cool_entities": "Zařízení pro chlazení",
+              "range_template_conditional": "Podmíněné Topení/Chlazení",
               "range_template_humidity_enabled": "Odvlhčovat v mrtvém pásmu",
               "range_template_humidity_action": "Akce vlhkosti",
               "range_template_humidity_hysteresis": "Hystereze vlhkosti",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Akce, která se provede, když je aktuální teplota uvnitř cílového rozsahu (mrtvé pásmo). 'Žádná' nepřepíná režim, ale zařízení, které dál topí nebo chladí, drží na odpovídající mezi.",
               "range_template_heat_entities": "Členové, kteří smějí topit. Neuvedení členové jsou neomezení (rozhoduje fyzická schopnost). Role může schopnost pouze omezit, nikdy rozšířit.",
               "range_template_cool_entities": "Členové, kteří smějí chladit. Neuvedení členové jsou neomezení (rozhoduje fyzická schopnost). Role může schopnost pouze omezit, nikdy rozšířit.",
+              "range_template_conditional": "Nabízet Topení/Chlazení a teplotní rozsah jen dokud alespoň jeden dostupný člen může topit a jeden chladit.",
               "range_template_humidity_enabled": "V cílovém teplotním rozsahu přepne na akci vlhkosti, pokud vlhkost překročí cílovou hodnotu.",
               "range_template_humidity_action": "Akce, která se provede, když aktuální vlhkost v mrtvém pásmu překročí cílovou vlhkost.",
               "range_template_humidity_hysteresis": "Hysterezní pásmo Schmittova klopného obvodu kolem cílové vlhkosti pro zabránění častému spínání.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Vypnuto – Blokovat všechny změny",
-        "all": "Vše – Přijmout všechny manuální změny",
-        "master_only": "Pouze hlavní – Přijmout pouze změny z hlavního zařízení"
+        "off": "Vypnuto – Zahodit změny",
+        "all": "Vše – Uchovat změny do zavření oken",
+        "master_only": "Pouze hlavní – Uchovat pouze změny na hlavním zařízení"
       }
     },
     "window_action": {

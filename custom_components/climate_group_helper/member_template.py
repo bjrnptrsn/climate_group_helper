@@ -74,6 +74,9 @@ class RangeTemplate:
     unavailable. `heat_entities`/`cool_entities` hold the explicit role
     assignment — members may be restricted to heating and/or cooling. A member
     in neither set is unrestricted ("auto": physical capability decides).
+    `conditional` gates the template's `heat_cool` contribution on both
+    capabilities being reachable; `heat_cool_offered` caches the per-cycle
+    verdict for `offers_range()`.
     """
 
     entity_ids: frozenset[str]
@@ -82,6 +85,8 @@ class RangeTemplate:
     high: float | None = None
     heat_entities: set[str] = field(default_factory=set)
     cool_entities: set[str] = field(default_factory=set)
+    conditional: bool = False
+    heat_cool_offered: bool = False
     last_physical_mode: dict[str, str] = field(default_factory=dict)
     humidity_enabled: bool = False
     humidity_action: str = DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION
@@ -173,6 +178,7 @@ class MemberTemplateManager:
         deadband_action: str | None,
         heat_entities: set[str] | None = None,
         cool_entities: set[str] | None = None,
+        conditional: bool = False,
         humidity_enabled: bool = False,
         humidity_action: str = DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION,
         humidity_hysteresis: float = DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS,
@@ -185,6 +191,7 @@ class MemberTemplateManager:
                 deadband_action=deadband_action,
                 heat_entities=heat_entities or set(),
                 cool_entities=cool_entities or set(),
+                conditional=conditional,
                 humidity_enabled=humidity_enabled,
                 humidity_action=humidity_action,
                 humidity_hysteresis=humidity_hysteresis,
@@ -516,13 +523,46 @@ class MemberTemplateManager:
         if template is None:
             return []
 
-        template.entity_ids = frozenset(
-            entity_id for entity_id in self._group.climate_entity_ids
-            if (state := available_state(self._group.hass.states.get(entity_id)))
-            and HVACMode.HEAT_COOL not in state.attributes.get(ATTR_HVAC_MODES, [])
-        )
+        covered: list[str] = []
+        heat_capable = False
+        cool_capable = False
+        for entity_id in self._group.climate_entity_ids:
+            state = available_state(self._group.hass.states.get(entity_id))
+            if state is None:
+                continue
+            modes = state.attributes.get(ATTR_HVAC_MODES)
+            if HVACMode.HEAT_COOL in (modes or []):
+                continue
+            covered.append(entity_id)
+            # Per-member capability is read from the real state (never the
+            # proxy): the proxy is only created under a running heat_cool target
+            # and would misreport reachability there.
+            if not heat_capable and self.mode_allowed(HVACMode.HEAT, modes, entity_id):
+                heat_capable = True
+            if not cool_capable and self.mode_allowed(HVACMode.COOL, modes, entity_id):
+                cool_capable = True
+
+        template.entity_ids = frozenset(covered)
+        template.heat_cool_offered = heat_capable and cool_capable
         self.initialize_last_modes()
         return list(template.entity_ids)
+
+    def offers_range(self) -> bool:
+        """Return True if the template should contribute `heat_cool` / `TARGET_TEMPERATURE_RANGE`.
+
+        Off by default (legacy behavior): any covered member suffices. With
+        `conditional`, at least one covered member must be allowed to
+        heat and at least one to cool — the verdict is cached by
+        `update_members()` so the mode enrichment and the feature flag read the
+        same per-cycle snapshot. Isolated members count: isolation says "do not
+        touch", not "cannot do" (same rule as `capability_states`).
+        """
+        template = self._range_template
+        if template is None or not template.entity_ids:
+            return False
+        if not template.conditional:
+            return True
+        return template.heat_cool_offered
 
     def initialize_last_modes(self) -> None:
         """Seed last_physical_mode for newly-covered members with no entry yet.

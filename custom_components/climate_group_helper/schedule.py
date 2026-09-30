@@ -274,15 +274,22 @@ class BaseScheduleHandler(ABC):
         return validate_climate_payload(entity_id, payload, context="Schedule slot")
 
     async def _read_slots(self) -> SlotContext:
-        """Read both entity states, process meta-keys, validate — pure data, no policy."""
+        """Read both entity states, process meta-keys, validate — no send policy.
+
+        Side effects are bookkeeping only: the meta-processor's claims and slot
+        title, and the display-only `active_schedule_layer`.
+        """
         main_state = self._hass.states.get(self.schedule_entity_id) if self.schedule_entity_id else None
         bypass_state = self._hass.states.get(self.bypass_entity_id) if self.bypass_entity_id else None
 
+        main_layer = "none"
         if self.schedule_entity_id and main_state:
             if main_state.state == "on":
                 main_data = self.parse_entity_state(main_state)
+                main_layer = "main"
             elif main_state.state == "off" and (fallback_payload := self._group.schedule_handler.fallback_payload):
                 main_data = dict(fallback_payload)
+                main_layer = "fallback"
             else:
                 main_data = {}
         else:
@@ -305,6 +312,13 @@ class BaseScheduleHandler(ABC):
         # An entity that is on but carries nothing is not a bypass someone
         # configured — see MetaProcessResult.bypass_has_content.
         bypass_active = bypass_on and result.bypass_has_content
+
+        # Display only: unlike `active_layer`, an empty bypass does not count.
+        # Nothing reads this back for schedule decisions.
+        layer = "bypass" if bypass_active else main_layer
+        if layer != self._group.run_state.active_schedule_layer:
+            self._group.run_state = replace(self._group.run_state, active_schedule_layer=layer)
+            self._group.async_defer_or_update_ha_state()
 
         return SlotContext(main_payload, bypass_payload, bypass_active)
 

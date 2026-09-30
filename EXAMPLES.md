@@ -34,6 +34,7 @@ Real-world scenarios, ordered by complexity. Each example describes the situatio
   - [25. Heat/Cool for Thermostats That Only Have One Setpoint](#25-heatcool-for-thermostats-that-only-have-one-setpoint)
   - [26. Dehumidify While the Room Sits at Temperature](#26-dehumidify-while-the-room-sits-at-temperature)
   - [27. IR-Controlled Air Conditioners That Overload the Bridge](#27-ir-controlled-air-conditioners-that-overload-the-bridge)
+  - [28. Union Group with a Shortened Mode List](#28-union-group-with-a-shortened-mode-list)
 
 ---
 
@@ -736,6 +737,42 @@ Three IR-controlled AC units, all commanded through the same IR blaster. Turning
 | Member Command Delay | 0.3 s |
 
 **Result:** Instead of three commands firing together, each member gets its command roughly 0.3 seconds after the previous one, giving the blaster time to send each signal cleanly. The same option helps with Zigbee coordinators that struggle when several devices are addressed in the same instant.
+
+---
+
+### 28. Union Group with a Shortened Mode List
+
+A room with two ACs — one that also heats, one that only cools. For the group to offer Heat at all, it needs **Union** — *Intersection* would keep only what both members can do and leave Heat out.
+
+Both units can also dry and run as fan only. Union offers every mode a member reports, so Dry and Fan Only would show up in the selection as well. The group is only meant to offer Off, Heat and Cool.
+
+**Entities:** `climate.living_ac` (heat/cool/dry/fan_only/off), `climate.bedroom_ac` (cool/dry/fan_only/off)
+
+| Setting | Value |
+|---|---|
+| Members | `climate.living_ac`, `climate.bedroom_ac` |
+| Feature Strategy | Union |
+| Unsupported HVAC Mode Action | Off |
+
+The group offers the modes its members report, so you shorten the list on the members. Home Assistant's own `customize` replaces the mode list an entity reports; the group's union then follows the shortened lists. Add it to `configuration.yaml` and restart Home Assistant:
+
+```yaml
+homeassistant:
+  customize:
+    climate.living_ac:
+      hvac_modes:
+        - "off"
+        - heat
+        - cool
+    climate.bedroom_ac:
+      hvac_modes:
+        - "off"
+        - cool
+```
+
+**Result:** The group offers Off, Heat and Cool only. While it heats, the cooling-only unit is switched off through the Unsupported HVAC Mode Action. The same approach shortens the Preset, Fan and Swing lists a group offers.
+
+Only modes the device really has belong in the list — the group treats it as the truth. The `customize` entry also changes the entity everywhere in Home Assistant, not only inside the group.
 
 ---
 

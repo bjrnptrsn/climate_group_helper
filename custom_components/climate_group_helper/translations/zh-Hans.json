@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "基于传感器启用组。窗口打开时 HVAC 设置为 'off'。",
-              "window_adopt_manual_changes": "允许在窗户打开时更改目标状态。",
+              "window_adopt_manual_changes": "保留窗户打开期间所做的更改，并在窗户关闭后应用。在此之前，执行开窗动作。",
               "window_action": "窗户打开时的动作：完全关闭或设置为特定温度（例如防冻保护）。",
               "window_temperature": "选择“设置温度”动作时的目标温度。",
               "room_sensor": "(可选) 房间窗户/门的二进制传感器。",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "死区动作",
               "range_template_heat_entities": "制热设备",
               "range_template_cool_entities": "制冷设备",
+              "range_template_conditional": "条件式制热/制冷",
               "range_template_humidity_enabled": "死区内除湿",
               "range_template_humidity_action": "湿度动作",
               "range_template_humidity_hysteresis": "湿度滞后",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "当前温度在目标范围（死区）内时执行的动作。'无' 不切换模式，但会将仍在制热或制冷的设备保持在相应边界上。",
               "range_template_heat_entities": "允许制热的成员。未列出的成员不受限制（由物理能力决定）。角色只能限制，绝不能扩展设备的能力。",
               "range_template_cool_entities": "允许制冷的成员。未列出的成员不受限制（由物理能力决定）。角色只能限制，绝不能扩展设备的能力。",
+              "range_template_conditional": "仅当至少一个可访问成员可以制热、且一个可以制冷时，才提供制热/制冷和温度范围。",
               "range_template_humidity_enabled": "在目标温度范围内，若当前湿度超过目标湿度，则切换至湿度动作。",
               "range_template_humidity_action": "死区内当前湿度超过目标湿度时执行的动作。",
               "range_template_humidity_hysteresis": "目标湿度周围的施密特触发滞后带，防止频繁启停。",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "关闭 – 阻止所有更改",
-        "all": "全部 – 接受所有手动更改",
-        "master_only": "仅主设备 – 仅接受主实体的更改"
+        "off": "关闭 – 丢弃更改",
+        "all": "全部 – 保留更改直到窗户关闭",
+        "master_only": "仅主设备 – 仅保留主设备上的更改"
       }
     },
     "window_action": {

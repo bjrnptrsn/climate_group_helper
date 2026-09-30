@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.13.0 - 2026-09-30
+
+### 🌟 New Features
+
+*   **Heat/Cool Only When Both Are Available**: New option (off by default) that offers Heat/Cool and the temperature range only while at least one reachable device can heat and one can cool, so a group whose cooling device is offline stops offering Heat/Cool until it returns.
+
+### ✨ Improvements
+
+*   **Card Shows the Offsets**: The card's status area now shows an active group offset, and the member list shows each device's own offset, so a device setpoint that differs from the group's is explained.
+
+*   **Card Names the Schedule Layer**: The status area now says whether the target comes from the main schedule, the bypass or the fallback, and a calendar entry's title moves to the line below.
+
+*   **Card Controls Can Be Hidden**: The card editor can now hide the whole dial, or just its −/+ buttons or the temperature/humidity switch.
+
+*   **Member List Shows Where Devices Disagree**: While the devices of a group disagree, the member list shows each device's own settings next to it and highlights those that differ from what the group has set, and the device's dot gets a warning ring.
+
 ## 1.12.1 - 2026-09-24
 
 ### ✨ Improvements

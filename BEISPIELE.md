@@ -34,6 +34,7 @@ Praxisnahe Szenarien, nach Komplexität geordnet. Jedes Beispiel beschreibt die 
   - [25. Heizen/Kühlen für Thermostate mit nur einem Sollwert](#25-heizenkühlen-für-thermostate-mit-nur-einem-sollwert)
   - [26. Entfeuchten, während der Raum auf Temperatur ist](#26-entfeuchten-während-der-raum-auf-temperatur-ist)
   - [27. IR-gesteuerte Klimaanlagen, die die Bridge überlasten](#27-ir-gesteuerte-klimaanlagen-die-die-bridge-überlasten)
+  - [28. Union-Gruppe mit gekürzter Modusliste](#28-union-gruppe-mit-gekürzter-modusliste)
 
 ---
 
@@ -739,6 +740,42 @@ Drei IR-gesteuerte Klimaanlagen, alle über denselben IR-Blaster angesteuert. Wi
 | Verzögerung zwischen Mitglieder-Befehlen | 0,3 s |
 
 **Ergebnis:** Statt dass alle drei Befehle gleichzeitig feuern, erhält jedes Mitglied seinen Befehl etwa 0,3 Sekunden nach dem vorherigen — der Blaster bekommt so Zeit, jedes Signal sauber zu senden. Dieselbe Option hilft auch bei Zigbee-Koordinatoren, die Schwierigkeiten haben, wenn mehrere Geräte im selben Moment angesprochen werden.
+
+---
+
+### 28. Union-Gruppe mit gekürzter Modusliste
+
+Ein Raum mit zwei Klimaanlagen — eine heizt zusätzlich, die andere kühlt nur. Damit die Gruppe Heizen überhaupt anbietet, braucht sie **Union** — mit *Intersection* bliebe nur, was beide Mitglieder können, und Heizen fiele weg.
+
+Beide Anlagen können außerdem trocknen und als reiner Lüfter laufen. Union bietet jeden Modus an, den ein Mitglied meldet, also stünden auch Trocknen und Nur Lüfter in der Auswahl. Die Gruppe soll nur Aus, Heizen und Kühlen anbieten.
+
+**Entitäten:** `climate.living_ac` (heat/cool/dry/fan_only/off), `climate.bedroom_ac` (cool/dry/fan_only/off)
+
+| Einstellung | Wert |
+|---|---|
+| Mitglieder | `climate.living_ac`, `climate.bedroom_ac` |
+| Feature-Strategie | Union |
+| Aktion bei nicht unterstütztem HVAC-Modus | Aus |
+
+Die Gruppe bietet die Modi an, die ihre Mitglieder melden — also kürzt du die Liste bei den Mitgliedern. Die Home-Assistant-eigene Option `customize` ersetzt die Modusliste, die eine Entität meldet; die Vereinigung der Gruppe folgt den gekürzten Listen. Eintrag in die `configuration.yaml` übernehmen und Home Assistant neu starten:
+
+```yaml
+homeassistant:
+  customize:
+    climate.living_ac:
+      hvac_modes:
+        - "off"
+        - heat
+        - cool
+    climate.bedroom_ac:
+      hvac_modes:
+        - "off"
+        - cool
+```
+
+**Ergebnis:** Die Gruppe bietet nur noch Aus, Heizen und Kühlen an. Beim Heizen schaltet die nur kühlende Anlage über die Aktion bei nicht unterstütztem HVAC-Modus ab. Auf dieselbe Weise lassen sich auch die Preset-, Lüfter- und Schwenklisten kürzen, die eine Gruppe anbietet.
+
+In die Liste gehören nur Modi, die das Gerät wirklich beherrscht — die Gruppe nimmt sie als gegeben. Der Eintrag ändert die Entität zudem überall in Home Assistant, nicht nur innerhalb der Gruppe.
 
 ---
 

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" width="800" height="320" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>Vom Zielzustand zum Gerät: Gruppen-Offset, Mitglieder-Offset, Gerätegrenzen</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="800" height="320" rx="16" fill="#f6f8fa" stroke="#d0d7de"/>
+
+  <g text-anchor="middle" fill="#1f2328">
+    <!-- 1 Zielzustand -->
+    <rect x="36" y="40" width="128" height="120" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+    <text x="100" y="72" font-size="15" font-weight="700">Zielzustand</text>
+    <text x="100" y="112" font-size="22" font-weight="700">21 °C</text>
+
+    <!-- 2 Gruppen-Offset -->
+    <rect x="186" y="40" width="128" height="120" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
+    <text x="250" y="72" font-size="15" font-weight="700">Gruppen-Offset</text>
+    <text x="250" y="100" font-size="14">+2 → 23 °C</text>
+    <text x="250" y="130" font-size="11" fill="#57606a">pausiert bei</text>
+    <text x="250" y="144" font-size="11" fill="#57606a">Sperren und Boost</text>
+
+    <!-- 3 Mitglieder-Offset -->
+    <rect x="336" y="40" width="128" height="120" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
+    <text x="400" y="66" font-size="15" font-weight="700">Mitglieder-</text>
+    <text x="400" y="84" font-size="15" font-weight="700">Offset</text>
+    <text x="400" y="112" font-size="14">Schlafzimmer −1</text>
+    <text x="400" y="132" font-size="14">→ 22 °C</text>
+
+    <!-- 4 Gerätegrenzen -->
+    <rect x="486" y="40" width="128" height="120" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
+    <text x="550" y="72" font-size="15" font-weight="700">Gerätegrenzen</text>
+    <text x="550" y="96" font-size="12" fill="#57606a">außerhalb des</text>
+    <text x="550" y="112" font-size="12" fill="#57606a">Bereichs: aus oder</text>
+    <text x="550" y="128" font-size="12" fill="#57606a">auf Grenzwert</text>
+    <text x="550" y="146" font-size="11" fill="#57606a">(nur Union)</text>
+
+    <!-- 5 Gerät -->
+    <rect x="636" y="40" width="128" height="120" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+    <text x="700" y="72" font-size="15" font-weight="700">Thermostat</text>
+    <text x="700" y="90" font-size="13" fill="#57606a">Schlafzimmer</text>
+    <text x="700" y="124" font-size="22" font-weight="700">22 °C</text>
+  </g>
+
+  <g stroke="#57606a" stroke-width="2" marker-end="url(#arrow)">
+    <line x1="164" y1="100" x2="182" y2="100"/>
+    <line x1="314" y1="100" x2="332" y2="100"/>
+    <line x1="464" y1="100" x2="482" y2="100"/>
+    <line x1="614" y1="100" x2="632" y2="100"/>
+  </g>
+
+  <g fill="#1f2328" font-size="13">
+    <text x="36" y="202" font-weight="600">Der Zielzustand selbst ändert sich unterwegs nie — jedes Gerät bekommt nur seinen Anteil davon.</text>
+    <text x="36" y="230" fill="#57606a">Außerdem unterwegs, wo eingerichtet: Die Mitglieder-Vorlage macht aus einem Heiz-/Kühlbereich</text>
+    <text x="36" y="248" fill="#57606a">Heizen oder Kühlen, „Min. Temperatur bei Aus“ macht aus „aus“ die niedrigste Temperatur des</text>
+    <text x="36" y="266" fill="#57606a">Geräts, und die Verzögerung zwischen Mitglieder-Befehlen verteilt die Befehle zeitlich.</text>
+  </g>
+</svg>

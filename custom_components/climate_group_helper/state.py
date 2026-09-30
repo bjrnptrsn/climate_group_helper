@@ -12,8 +12,8 @@ from homeassistant.core import Event, State
 
 from homeassistant.components.climate import ATTR_HVAC_MODE, PRESET_NONE, HVACMode
 from .const import (
-    FLOAT_TOLERANCE,
     CONF_IGNORE_OFF_MEMBERS_SYNC,
+    FLOAT_TOLERANCE,
     TRANSIENT_STATES,
     AdoptManualChanges,
 )
@@ -94,10 +94,13 @@ class RunState:
     - last_active_hvac_mode: cache of last mode other than OFF
     - schedule_hold_until: absolute deadline of a manual schedule hold; while it
       is set the main schedule's climate payload is not applied to the members
+    - active_schedule_layer: layer of the last slot read ("main" | "bypass" |
+      "fallback" | "none"); display only, None until the first slot read
 
     Updates are performed via dataclasses.replace(), consistent with TargetState.
     """
 
+    active_schedule_layer: str | None = None
     active_slot_title: str | None = None
     active_virtual_preset: str | None = None
     blocking_sources: frozenset[str] = field(default_factory=frozenset)
@@ -300,8 +303,7 @@ class BaseStateManager:
     - `_filter_update()`: Block or allow an update (return bool)
     
     Helpers (shared logic, used by hooks):
-    - `_check_blocking_mode()`: Check if blocking mode is active
-    - `_check_adopt_manual_changes()`: Check if passive tracking allows update
+    - `_is_blocked()`: Check if an active block holds the update back
     - `_check_partial_sync()`: Check Last Man Standing logic
     
     Derived classes should override SOURCE to set their identity.
@@ -443,30 +445,27 @@ class BaseStateManager:
         """
         return True
 
-    def _check_blocking_mode(self) -> bool:
-        """Return True if global blocking is active (e.g. window open)."""
-        if self._group.run_state.blocked:
-            _LOGGER.debug("[%s] TargetState update check (source=%s), blocking_mode=True", self._group.entity_id, self.SOURCE)
-            return True
-        return False
+    def _is_blocked(self, entity_id: str | None) -> bool:
+        """Return True if an active block holds this update back.
 
-    def _check_adopt_manual_changes(self, entity_id: str | None) -> bool:
-        """Check if updates should be allowed during blocking mode.
-
-        Returns:
-            True to allow update, False to block.
+        Adopt Manual Changes is a Window Control option: it can only let an
+        update through while the window is the sole block.
         """
+        sources = self._group.run_state.blocking_sources
+        if not sources:
+            return False
+        if sources != {"window"}:
+            _LOGGER.debug("[%s] TargetState update blocked by %s (source=%s)", self._group.entity_id, sorted(sources), self.SOURCE)
+            return True
         adopt = self._group._window_adopt_manual_changes
         if adopt == AdoptManualChanges.ALL:
-            _LOGGER.debug("[%s] Blocking mode active, adopting change (Passive Tracking, source=%s)", self._group.entity_id, self.SOURCE)
-            return True
-        if adopt == AdoptManualChanges.MASTER_ONLY:
-            if entity_id != self._group._master_entity_id:
-                _LOGGER.debug("[%s] Blocking mode: rejecting non-master change from %s (source=%s)", self._group.entity_id, entity_id, self.SOURCE)
-                return False
-            _LOGGER.debug("[%s] Blocking mode active, adopting master change (Passive Tracking, source=%s)", self._group.entity_id, self.SOURCE)
-            return True
-        return False
+            _LOGGER.debug("[%s] Window open, adopting change (Passive Tracking, source=%s)", self._group.entity_id, self.SOURCE)
+            return False
+        if adopt == AdoptManualChanges.MASTER_ONLY and entity_id == self._group._master_entity_id:
+            _LOGGER.debug("[%s] Window open, adopting master change (Passive Tracking, source=%s)", self._group.entity_id, self.SOURCE)
+            return False
+        _LOGGER.debug("[%s] TargetState update from %s blocked by open window (source=%s)", self._group.entity_id, entity_id, self.SOURCE)
+        return True
 
     def _check_partial_sync(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
         """Check Partial Sync / Last Man Standing logic.
@@ -502,13 +501,10 @@ class ClimateStateManager(BaseStateManager):
             _LOGGER.debug("[%s] TargetState update blocked: %s is isolated", self._group.entity_id, entity_id)
             return False
 
-        if self._check_blocking_mode():
-            if kwargs.get(ATTR_HVAC_MODE) == HVACMode.OFF:
-                _LOGGER.debug("[%s] Blocking mode active, allowing adopt off command", self._group.entity_id)
-                return True
-            if not self._check_adopt_manual_changes(entity_id):
-                return False
-        return True
+        if self._group.run_state.blocked and kwargs.get(ATTR_HVAC_MODE) == HVACMode.OFF:
+            _LOGGER.debug("[%s] Blocked by %s, allowing adopt off command", self._group.entity_id, sorted(self._group.run_state.blocking_sources))
+            return True
+        return not self._is_blocked(entity_id)
 
 
 class SyncModeStateManager(BaseStateManager):
@@ -530,9 +526,8 @@ class SyncModeStateManager(BaseStateManager):
             return False
 
         # 1. Blocking Mode Filter
-        if self._check_blocking_mode():
-            if not self._check_adopt_manual_changes(entity_id):
-                return False
+        if self._is_blocked(entity_id):
+            return False
 
         # 2. Partial Sync Filter (Last Man Standing)
         if not self._check_partial_sync(entity_id, kwargs):

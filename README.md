@@ -67,6 +67,7 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 
 - [Core Concept](#core-concept-the-unified-foundation)
   - [Simple Mode](#simple-mode-core-capabilities)
+- [How It Works](HOW_IT_WORKS.md)
 - [Advanced Features](#power-user-advanced-features)
   - [Master Entity](#master-entity)
   - [External Sensors](#external-sensors)
@@ -96,6 +97,9 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 ## Core Concept: The Unified Foundation
 
 The Climate Group Helper provides a robust "Single Source of Truth" for your climate devices. It creates a unified management layer that ensures your devices work together as one cohesive system while maintaining accurate room states.
+
+> [!TIP]
+> **How do the features fit together?** [HOW_IT_WORKS.md](HOW_IT_WORKS.md) shows who decides what your devices do, what takes priority, and why the group sometimes shows something different from what you set.
 
 ### Simple Mode (Core Capabilities)
 
@@ -180,10 +184,10 @@ Automatically turn off heating or set a frost-protection temperature when window
 *   **Room + Zone Sensors:** Combines a fast-reacting room sensor with a slow-reacting zone sensor (e.g. for a whole floor). The room is part of the zone: when you use both, the zone sensor **must include the room sensor** (add the room sensor to your zone group). Otherwise the configured delays no longer apply.
 *   **Configurable Delays:** Set custom reaction times for opening and closing.
 *   **Window Action:** Choose between full `off` or a configurable temperature setpoint.
-*   **Adopt Manual Changes:** Optionally allow passive tracking:
-    *   **Off:** All manual changes are blocked and discarded.
-    *   **All:** Any manual change updates the target state. Applied when windows close.
-    *   **Master Only:** *(Requires Master Entity)* Only changes on the Master update the target state.
+*   **Adopt Manual Changes:** What happens to changes made while windows are open. They are never applied right away — the Window Open Action stays in effect until the windows close.
+    *   **Off:** Changes are discarded.
+    *   **All:** Changes are kept and applied when the windows close. Changes made directly on a device are only kept if a Sync Mode that adopts them is enabled.
+    *   **Master Only:** *(Requires Master Entity)* Only changes on the master device are kept. Changes made on the group itself are discarded.
 
 ### Presence Control
 
@@ -209,7 +213,7 @@ Schedules can be switched on the fly via service (e.g. for "Vacation" or "Guest"
 *   **Inactive Schedule Fallback:** An optional state (e.g. night setback or turning off) that stands in for the main schedule outside its active slots — no need for gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active.
 *   **Retain Changes Made via Service (Schedule):** Ensures that the main schedule, bypass entity and fallback state — when changed via service — survive a Home Assistant restart. If disabled, the group always reverts to its configured defaults after a restart.
 *   **Respect Member Off State (Schedule):** Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on.
-*   **Manual Hold:** A manual adjustment (temperature change, or switching the group on/off) holds for a configurable duration, after which the schedule resumes with the slot that is current *then*. A duration of `0` disables the hold — the schedule takes back over immediately. Resetting the schedule with the reset service ends a running hold early.
+*   **Manual Hold:** A manual adjustment (temperature change, or switching the group on/off) holds for a configurable duration, after which the schedule resumes with the slot that is current *then*. A duration of `0` disables the hold — your change then stays until the next slot starts. Resetting the schedule with the reset service ends a running hold early.
 
 > **Note — turning off outside active slots:** to shut the group down in the inactive period, set `hvac_mode: off` in the fallback. Do **not** use the `turn_off` meta-key here — it is a one-shot trigger for the Main Switch block that stays active until a slot explicitly releases it with `turn_off: false`, so a `turn_off: true` fallback would keep the next heating slot blocked.
 
@@ -374,6 +378,7 @@ Translates outgoing `heat_cool` range commands into single-setpoint commands for
 *   **Deadband Action:** What to do when the room is already within the target band: **None** (default), **Turn Off**, or **Fan Only**.
 *   **Dehumidify in Deadband:** When enabled, the group can automatically switch devices to **Dry** (or **Fan Only**) while inside the temperature deadband if current humidity exceeds the target humidity. Activation is immediate; a Schmitt-trigger hysteresis and a configurable deactivation delay prevent short cycling. Temperature heating and cooling always take priority when the room leaves the deadband. A humidity reading is required — either from a member that reports one or from a humidity sensor added to the group; without one, the group offers no target humidity to set.
 *   **Automatic member detection:** All members that do **not** natively advertise `heat_cool` are automatically covered — no manual selection needed. Members with native `heat_cool` support are left unchanged. This also enables `heat_cool` mode for groups consisting entirely of heat-only and cool-only devices, with no native `heat_cool` device required.
+*   **Conditional Heat/Cool:** Optionally, the group offers **Heat/Cool** and the range control only while at least one reachable member can heat and one can cool — useful when a seasonal cooling device is offline.
 *   **Covered devices follow the group:** A mode or setpoint changed by hand on a covered device is set back to what the range calls for, regardless of the Sync Mode — to change it, change the group's range.
 
 ## Management Entities (Switch & Slider)
@@ -404,9 +409,11 @@ The integration ships its own dashboard card. Add it like any other card — it
 appears in the card picker as **Climate Group Helper Card** and needs no extra
 resource entry or separate repository.
 
-*   **Controls** the usual climate settings: mode, temperature, humidity, preset, fan and swing.
+*   **Controls** the usual climate settings: mode, temperature, humidity, preset, fan and swing. The card editor can hide the whole dial, or just its −/+ buttons or the temperature/humidity switch.
 *   **Shows** what Climate Group Helper is doing: the active blocker and for how long, boost and hold countdowns, the members, and devices that are isolated or out of bounds. It only displays these — the main switch, the offset and a boost are operated through the group's own entities and services.
-*   **Badges** light up while a feature is acting and turn grey while a schedule slot or preset pauses it; the larger member dot is the master device.
+*   **Badges** show one feature each: they light up while it is acting and turn grey while a schedule slot or preset pauses it.
+*   **Member dots** stand for one device each, next to the count of active members; tap them for the full list. The larger dot is the master device.
+*   **The status area** names where the group's target comes from — for the schedule also which layer: main schedule, bypass or fallback — and shows an active group offset. The member list adds each device's own offset and, while the devices disagree, their settings, highlighting those that differ from what the group has set; the dot of such a device gets a warning ring.
 *   **Demo mode** fills the card with made-up data, so you can see everything it can show without setting anything up.
 
 ## What the Group Reports About Itself
@@ -529,7 +536,7 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 | Option | Description |
 |--------|-------------|
 | **Window Action** | **Turn Off** (Default) or **Set Temperature**. Useful for frost protection. |
-| **Adopt Manual Changes** | **Off** (block all), **All** (passive tracking for all members), or **Master Only** *(requires Master Entity)*. |
+| **Adopt Manual Changes** | What happens to changes made while windows are open: **Off** (discard), **All** (keep and apply when windows close), or **Master Only** *(requires Master Entity)*. |
 | **Window Temperature** | Target temperature to set when 'Set Temperature' action is selected. |
 | **Room Sensor** | (Optional) Binary sensor (window/door) or cover entity for fast reaction. Covers are treated as "open" unless they are fully closed. |
 | **Zone Sensor** | (Optional) Binary sensor or cover entity for slow reaction (e.g. apartment or floor). Must include the Room Sensor when both are used. |
@@ -596,6 +603,7 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 | Option | Description |
 |--------|-------------|
 | **Enable Range Template** | Enables automatic `heat_cool` range control for all members that do not natively advertise `heat_cool`. No manual selection needed — the group detects eligible members automatically. |
+| **Conditional Heat/Cool** | Offer Heat/Cool and the temperature range only while at least one reachable member can heat and one can cool. |
 | **Deadband Action** | What to do when the room temperature is already within the target band (between the low and the high setpoint). **None** (default — no mode change; a device that keeps heating or cooling is held on the matching setpoint: heating on the low one, cooling on the high one), **Turn Off**, or **Fan Only**. |
 | **Dehumidify in Deadband** | Automatically switch to dehumidification or fan circulation when inside the temperature deadband if room humidity exceeds the target humidity. Requires a humidity reading from a member or a humidity sensor. |
 | **Humidity Action** | Physical action when the humidity threshold is exceeded inside the deadband: **Dry** (default) or **Fan Only**. |

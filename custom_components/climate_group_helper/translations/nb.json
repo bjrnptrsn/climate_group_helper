@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Aktiver gruppe basert på vindussensorer. HVAC settes til 'off' ved åpne vinduer.",
-              "window_adopt_manual_changes": "Tillat endringer av målverdi mens vinduer er åpne.",
+              "window_adopt_manual_changes": "Behold endringer gjort mens vinduer er åpne, og bruk dem når de lukkes. Inntil da gjelder handlingen ved åpent vindu.",
               "window_action": "Hva som skal skje når et vindu åpnes: Slå av helt eller sett en bestemt temperatur (f.eks. frostsikring).",
               "window_temperature": "Måltemperatur når 'Sett temperatur' er valgt.",
               "room_sensor": "(Valgfri) Binærsensor for rommets egen vindu/dør.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Deadband-handling",
               "range_template_heat_entities": "Varmeenheter",
               "range_template_cool_entities": "Kjøleenheter",
+              "range_template_conditional": "Betinget Varme/Kjøling",
               "range_template_humidity_enabled": "Avfukt i dødgang",
               "range_template_humidity_action": "Fuktighetshandling",
               "range_template_humidity_hysteresis": "Fuktighetshysterese",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Handling som utføres når gjeldende temperatur er innenfor målrekkevidde (deadband). 'Ingen' bytter ikke modus, men holder en enhet som fortsatt varmer eller kjøler, på den tilsvarende grensen.",
               "range_template_heat_entities": "Medlemmer som har lov til å varme. Ulistede medlemmer er ubegrensede (fysisk kapasitet avgjør). En rolle kan bare begrense, aldri utvide en enhets kapasitet.",
               "range_template_cool_entities": "Medlemmer som har lov til å kjøle. Ulistede medlemmer er ubegrensede (fysisk kapasitet avgjør). En rolle kan bare begrense, aldri utvide en enhets kapasitet.",
+              "range_template_conditional": "Tilby Varme/Kjøling og temperaturområdet så lenge minst ett tilgjengelig medlem kan varme og ett kan kjøle.",
               "range_template_humidity_enabled": "Når innenfor måltemperaturområdet, bytt til fuktighetshandlingen hvis fuktigheten overstiger målfuktigheten.",
               "range_template_humidity_action": "Handling som utføres når gjeldende fuktighet overstiger målfuktigheten i dødgangen.",
               "range_template_humidity_hysteresis": "Schmitt-utløser hysteresebånd rundt målfuktighet for å hindre rask veksling.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Av – Blokker alle endringer",
-        "all": "Alle – Godta alle manuelle endringer",
-        "master_only": "Kun hoved – Godta kun endringer fra hovedenheten"
+        "off": "Av – Forkast endringer",
+        "all": "Alle – Behold endringer til vinduene lukkes",
+        "master_only": "Kun hoved – Behold kun endringer på hovedenheten"
       }
     },
     "window_action": {

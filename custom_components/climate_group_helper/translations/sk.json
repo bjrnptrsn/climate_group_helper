@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Povoliť alebo zakázať skupinu podľa senzorov okien/dverí. Keď je aktívne, režim HVAC sa nastaví na 'off' pri otvorení okien a obnoví sa pri ich zatvorení.",
-              "window_adopt_manual_changes": "Povoliť zmeny cieľového stavu, kým sú okná otvorené.",
+              "window_adopt_manual_changes": "Zmeny vykonané pri otvorených oknách si zapamätať a použiť po ich zatvorení. Dovtedy platí akcia pri otvorení okna.",
               "window_action": "Čo urobiť pri otvorení okna: Úplne vypnúť alebo nastaviť konkrétnu teplotu (napr. ochrana pred mrazom).",
               "window_temperature": "Cieľová teplota pri výbere akcie 'Nastaviť teplotu'.",
               "room_sensor": "(Voliteľne) Binárny senzor pre okno/dvere v izbe.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Akcia v mŕtvom pásme",
               "range_template_heat_entities": "Vykurovacie zariadenia",
               "range_template_cool_entities": "Chladiace zariadenia",
+              "range_template_conditional": "Podmienené Vykurovanie/Chladenie",
               "range_template_humidity_enabled": "Odvlhčovať v pásme necitlivosti",
               "range_template_humidity_action": "Akcia vlhkosti",
               "range_template_humidity_hysteresis": "Hysterézia vlhkosti",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Akcia, ktorá sa vykoná, keď je aktuálna teplota v rámci cieľového rozsahu (mŕtve pásmo). 'Žiadna' neprepína režim, ale zariadenie, ktoré ďalej kúri alebo chladí, drží na zodpovedajúcej hranici.",
               "range_template_heat_entities": "Členovia, ktorí môžu vykurovať. Neuvedení členovia sú neobmedzení (rozhoduje fyzická schopnosť). Rola môže schopnosť len obmedziť, nikdy nie rozšíriť.",
               "range_template_cool_entities": "Členovia, ktorí môžu chladiť. Neuvedení členovia sú neobmedzení (rozhoduje fyzická schopnosť). Rola môže schopnosť len obmedziť, nikdy nie rozšíriť.",
+              "range_template_conditional": "Ponúkať Vykurovanie/Chladenie a teplotný rozsah len dovtedy, kým aspoň jeden dostupný člen môže vykurovať a jeden chladiť.",
               "range_template_humidity_enabled": "V cieľovom rozsahu teplôt prepne na akciu vlhkosti, ak vlhkosť prekročí cieľovú hodnotu.",
               "range_template_humidity_action": "Akcia, ktorá sa vykoná, keď aktuálna vlhkosť v pásme necitlivosti prekročí cieľovú vlhkosť.",
               "range_template_humidity_hysteresis": "Hysterézne pásmo Schmittovho klopného obvodu okolo cieľovej vlhkosti na zabránenie častému cyklovaniu.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Vypnuté – Blokovať všetky zmeny",
-        "all": "Všetky – Prijať všetky manuálne zmeny",
-        "master_only": "Iba hlavné – Prijať iba zmeny z hlavného zariadenia"
+        "off": "Vypnuté – Zahodiť zmeny",
+        "all": "Všetky – Uchovať zmeny do zatvorenia okien",
+        "master_only": "Iba hlavné – Uchovať iba zmeny na hlavnom zariadení"
       }
     },
     "window_action": {

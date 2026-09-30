@@ -10,9 +10,9 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, Callable, Final
 
 from homeassistant.components.climate import (
+    ATTR_HUMIDITY,
     ATTR_HVAC_MODE,
     ATTR_HVAC_MODES,
-    ATTR_HUMIDITY,
     ATTR_PRESET_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -29,19 +29,19 @@ from homeassistant.core import Context, State
 from homeassistant.helpers.debounce import Debouncer
 
 from .const import (
-    MODE_MODES_MAP,
-    TEMP_TARGET_ATTRS,
     ATTR_SERVICE_MAP,
     CONF_FEATURE_STRATEGY,
     CONF_FORCE_RETRY,
     CONF_IGNORE_OFF_MEMBERS_PRESENCE,
-    CONF_IGNORE_OFF_MEMBERS_SYNC,
     CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
+    CONF_IGNORE_OFF_MEMBERS_SYNC,
     CONF_UNION_OUT_OF_BOUNDS_ACTION,
     CONF_UNION_UNSUPPORTED_HVAC_ACTION,
     FLOAT_TOLERANCE,
+    MODE_MODES_MAP,
     OVERRIDE_ENFORCE_DEBOUNCE_DELAY,
     RANGE_TEMPLATE_DEBOUNCE_DELAY,
+    TEMP_TARGET_ATTRS,
     FeatureStrategy,
     PresenceOffRespect,
     SyncMode,
@@ -261,7 +261,11 @@ class BaseServiceCallHandler(ABC):
 
         # Check blocking BEFORE retry loop (state doesn't change between retries)
         if self._block_all_calls(data):
-            _LOGGER.debug("[%s] Calls suppressed (source=%s): Blocking mode active (e.g. Window open)", self._group.entity_id, context_id)
+            run_state = self._group.run_state
+            causes = sorted(run_state.blocking_sources)
+            if run_state.boost_temperature is not None:
+                causes.append("boost")
+            _LOGGER.debug("[%s] Calls suppressed (source=%s): blocked by %s", self._group.entity_id, context_id, causes)
             return
 
         # Trigger hook for calls — passes the payload so abort() can distinguish

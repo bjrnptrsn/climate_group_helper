@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" width="800" height="300" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>From the group target to a device: group offset, member offset, device limits</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="800" height="300" rx="16" fill="#f6f8fa" stroke="#d0d7de"/>
+
+  <g text-anchor="middle" fill="#1f2328">
+    <!-- 1 Target -->
+    <rect x="36" y="40" width="128" height="104" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+    <text x="100" y="72" font-size="15" font-weight="700">Group target</text>
+    <text x="100" y="104" font-size="22" font-weight="700">21 °C</text>
+
+    <!-- 2 Group Offset -->
+    <rect x="186" y="40" width="128" height="104" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
+    <text x="250" y="72" font-size="15" font-weight="700">Group Offset</text>
+    <text x="250" y="98" font-size="14">+2 → 23 °C</text>
+    <text x="250" y="120" font-size="11" fill="#57606a">paused during</text>
+    <text x="250" y="134" font-size="11" fill="#57606a">blocks and boost</text>
+
+    <!-- 3 Member Offset -->
+    <rect x="336" y="40" width="128" height="104" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
+    <text x="400" y="72" font-size="15" font-weight="700">Member Offset</text>
+    <text x="400" y="98" font-size="14">bedroom −1</text>
+    <text x="400" y="118" font-size="14">→ 22 °C</text>
+
+    <!-- 4 Device limits -->
+    <rect x="486" y="40" width="128" height="104" rx="10" fill="#ffffff" stroke="#8c959f" stroke-width="2"/>
+    <text x="550" y="72" font-size="15" font-weight="700">Device limits</text>
+    <text x="550" y="96" font-size="12" fill="#57606a">outside its range?</text>
+    <text x="550" y="114" font-size="12" fill="#57606a">off, or clamp</text>
+    <text x="550" y="132" font-size="11" fill="#57606a">(Union only)</text>
+
+    <!-- 5 Device -->
+    <rect x="636" y="40" width="128" height="104" rx="10" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+    <text x="700" y="72" font-size="15" font-weight="700">Bedroom TRV</text>
+    <text x="700" y="104" font-size="22" font-weight="700">22 °C</text>
+  </g>
+
+  <g stroke="#57606a" stroke-width="2" marker-end="url(#arrow)">
+    <line x1="164" y1="92" x2="182" y2="92"/>
+    <line x1="314" y1="92" x2="332" y2="92"/>
+    <line x1="464" y1="92" x2="482" y2="92"/>
+    <line x1="614" y1="92" x2="632" y2="92"/>
+  </g>
+
+  <g fill="#1f2328" font-size="13">
+    <text x="36" y="186" font-weight="600">The target itself is never changed on the way — every device just gets its own share of it.</text>
+    <text x="36" y="214" fill="#57606a">Also on the way, where configured: the Member Template turns a heat/cool range into heat or cool,</text>
+    <text x="36" y="232" fill="#57606a">Min Temp Off turns "off" into the device's lowest temperature, and the Member Command Delay</text>
+    <text x="36" y="250" fill="#57606a">paces the commands out.</text>
+  </g>
+</svg>

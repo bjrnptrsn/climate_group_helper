@@ -24,39 +24,41 @@ from homeassistant.const import (
 
 from .const import (
     ATTR_ACTIVE_MEMBER_COUNT,
-    ATTR_ACTIVE_VIRTUAL_PRESET,
-    ATTR_BOOST_TEMPERATURE,
-    ATTR_BOOST_UNTIL,
     ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY,
     ATTR_ACTIVE_SCHEDULE_ENTITY,
+    ATTR_ACTIVE_SCHEDULE_LAYER,
     ATTR_ACTIVE_SCHEDULE_SLOT_TITLE,
+    ATTR_ACTIVE_VIRTUAL_PRESET,
     ATTR_ASSUMED_STATE,
     ATTR_BLOCKING_REASON,
     ATTR_BLOCKING_SOURCES,
-    ATTR_SCHEDULE_BYPASS_CLAIMS,
-    ATTR_SCHEDULE_HOLD_UNTIL,
+    ATTR_BOOST_TEMPERATURE,
+    ATTR_BOOST_UNTIL,
     ATTR_CONFIG_OVERRIDES,
     ATTR_CURRENT_HVAC_MODES,
     ATTR_EFFECTIVE_SYNC_ATTRIBUTES,
     ATTR_EFFECTIVE_SYNC_MODE,
     ATTR_ENABLED_FEATURES,
     ATTR_GROUP_OFFSET,
-    ATTR_OFFSET_ENTITY_ID,
     ATTR_ISOLATED_MEMBERS,
-    ATTR_MAIN_SWITCH_ENTITY_ID,
     ATTR_LAST_ACTIVE_HVAC_MODE,
     ATTR_LAST_CHANGED,
     ATTR_LAST_ENTITY,
     ATTR_LAST_SOURCE,
+    ATTR_MAIN_SWITCH_ENTITY_ID,
     ATTR_MASTER_ENTITY_ID,
     ATTR_MASTER_FALLBACK_ACTIVE,
     ATTR_MEMBER_DIVERGENCE,
     ATTR_MEMBER_ENTITIES,
+    ATTR_MEMBER_OFFSETS,
+    ATTR_OFFSET_ENTITY_ID,
     ATTR_OOB_MEMBERS,
     ATTR_PRESENCE_FALLBACK,
     ATTR_RUNTIME_GROUP_PRESETS,
-    ATTR_SCHEDULE_FALLBACK_PAYLOAD,
+    ATTR_SCHEDULE_BYPASS_CLAIMS,
     ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE,
+    ATTR_SCHEDULE_FALLBACK_PAYLOAD,
+    ATTR_SCHEDULE_HOLD_UNTIL,
     ATTR_TARGET_STATE,
     ATTR_TOTAL_MEMBER_COUNT,
     CONF_PRESENCE_MODE,
@@ -188,6 +190,11 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     attrs[ATTR_CURRENT_HVAC_MODES] = group._current_hvac_modes
     attrs[ATTR_GROUP_OFFSET] = run_state.group_offset
     attrs[ATTR_MEMBER_DIVERGENCE] = _compute_member_divergence(group)
+    # The options form stores an entry per member, 0.0 included.
+    if group.has_member_offset:
+        attrs[ATTR_MEMBER_OFFSETS] = {
+            entity_id: offset for entity_id, offset in group._temp_offset_map.items() if offset != 0.0
+        }
     attrs[ATTR_TARGET_STATE] = target.to_dict(
         attributes=[f.name for f in fields(ClimateState)]
     )
@@ -300,6 +307,9 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         attrs[ATTR_ACTIVE_SCHEDULE_ENTITY] = group.schedule_handler.schedule_entity_id
         if group.schedule_handler.active_layer == "fallback":
             attrs[ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE] = True
+        # Gated on the entity: the startup slot read also runs without one.
+        if run_state.active_schedule_layer is not None:
+            attrs[ATTR_ACTIVE_SCHEDULE_LAYER] = run_state.active_schedule_layer
     if group.schedule_handler.fallback_payload:
         attrs[ATTR_SCHEDULE_FALLBACK_PAYLOAD] = dict(group.schedule_handler.fallback_payload)
     if group.schedule_bypass_handler.bypass_entity_id:

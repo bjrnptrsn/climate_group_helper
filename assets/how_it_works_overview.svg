@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>How Climate Group Helper works: the group's target, temporary rules, devices and display</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="800" height="560" rx="16" fill="#f6f8fa" stroke="#d0d7de"/>
+
+  <!-- Inputs -->
+  <g font-size="15" fill="#1f2328" text-anchor="middle">
+    <rect x="150" y="30" width="170" height="56" rx="10" fill="#ffffff" stroke="#8c959f"/>
+    <text x="235" y="55" font-weight="600">You &amp; automations</text>
+    <text x="235" y="74" font-size="12" fill="#57606a">dashboard, voice, scripts</text>
+
+    <rect x="340" y="30" width="170" height="56" rx="10" fill="#ffffff" stroke="#8c959f"/>
+    <text x="425" y="55" font-weight="600">Schedule</text>
+    <text x="425" y="74" font-size="12" fill="#57606a">main, bypass, fallback</text>
+
+    <rect x="530" y="30" width="170" height="56" rx="10" fill="#ffffff" stroke="#8c959f"/>
+    <text x="615" y="55" font-weight="600">Group presets</text>
+    <text x="615" y="74" font-size="12" fill="#57606a">your own named settings</text>
+  </g>
+  <g stroke="#57606a" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <line x1="235" y1="86" x2="235" y2="126"/>
+    <line x1="425" y1="86" x2="425" y2="126"/>
+    <line x1="615" y1="86" x2="615" y2="126"/>
+  </g>
+
+  <!-- Group target -->
+  <rect x="150" y="130" width="550" height="84" rx="12" fill="#ddf4ff" stroke="#0969da" stroke-width="2"/>
+  <g text-anchor="middle" fill="#1f2328">
+    <text x="425" y="162" font-size="19" font-weight="700">Group target</text>
+    <text x="425" y="184" font-size="14">What should be.</text>
+    <text x="425" y="202" font-size="13" fill="#57606a">Changes only on purpose — survives restarts.</text>
+  </g>
+
+  <line x1="425" y1="214" x2="425" y2="256" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Temporary rules -->
+  <rect x="150" y="260" width="550" height="84" rx="12" fill="#fff8c5" stroke="#bf8700" stroke-width="2"/>
+  <g text-anchor="middle" fill="#1f2328">
+    <text x="425" y="290" font-size="17" font-weight="700">Temporary rules</text>
+    <text x="425" y="311" font-size="14">Main Switch · open window · nobody home · boost</text>
+    <text x="425" y="331" font-size="13" fill="#57606a">Take over while active — afterwards the target applies again.</text>
+  </g>
+
+  <line x1="315" y1="344" x2="315" y2="386" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Devices -->
+  <rect x="150" y="390" width="330" height="70" rx="12" fill="#dafbe1" stroke="#1a7f37" stroke-width="2"/>
+  <g text-anchor="middle" fill="#1f2328">
+    <text x="315" y="420" font-size="17" font-weight="700">Devices</text>
+    <text x="315" y="442" font-size="13" fill="#57606a">thermostats, TRVs, air conditioners</text>
+  </g>
+
+  <line x1="480" y1="425" x2="526" y2="425" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Display -->
+  <rect x="530" y="390" width="170" height="70" rx="12" fill="#eaeef2" stroke="#6e7781" stroke-width="2"/>
+  <g text-anchor="middle" fill="#1f2328">
+    <text x="615" y="420" font-size="17" font-weight="700">Group display</text>
+    <text x="615" y="442" font-size="13" fill="#57606a">What is.</text>
+  </g>
+
+  <!-- Feedback loop: change on a device -->
+  <path d="M 230 460 L 230 500 L 90 500 L 90 172 L 146 172" stroke="#8250df" stroke-width="2" stroke-dasharray="6 5" fill="none" marker-end="url(#arrow)"/>
+  <g fill="#1f2328">
+    <text x="250" y="506" font-size="14" font-weight="600">Someone changes a device directly?</text>
+    <text x="250" y="526" font-size="13" fill="#57606a">The Sync Mode decides: adopt it into the target, set it back, or leave it alone.</text>
+  </g>
+</svg>

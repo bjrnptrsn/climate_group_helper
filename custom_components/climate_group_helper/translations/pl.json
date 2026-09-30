@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Włącz grupę na podstawie czujników. HVAC ustawia się na 'off', gdy okna są otwarte.",
-              "window_adopt_manual_changes": "Zezwól na zmiany stanu docelowego, gdy okna są otwarte.",
+              "window_adopt_manual_changes": "Zachowaj zmiany wprowadzone przy otwartych oknach i zastosuj je po ich zamknięciu. Do tego czasu obowiązuje akcja po otwarciu okna.",
               "window_action": "Co zrobić po otwarciu okna: Wyłącz całkowicie lub ustaw określoną temperaturę (np. ochronę przed mrozem).",
               "window_temperature": "Temperatura docelowa, gdy wybrana jest akcja 'Ustaw temperaturę'.",
               "room_sensor": "(Opcjonalnie) Czujnik binarny dla okna/drzwi w pokoju.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Akcja w martwej strefie",
               "range_template_heat_entities": "Urządzenia grzewcze",
               "range_template_cool_entities": "Urządzenia chłodzące",
+              "range_template_conditional": "Warunkowe Ogrzewanie/Chłodzenie",
               "range_template_humidity_enabled": "Osuszanie w strefie nieczułości",
               "range_template_humidity_action": "Działanie wilgotności",
               "range_template_humidity_hysteresis": "Histereza wilgotności",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Akcja wykonywana, gdy aktualna temperatura znajduje się wewnątrz zakresu docelowego (martwa strefa). 'Brak' nie zmienia trybu, ale utrzymuje urządzenie, które nadal grzeje lub chłodzi, na odpowiedniej granicy.",
               "range_template_heat_entities": "Członkowie, którzy mogą grzać. Niewymienieni członkowie nie mają ograniczeń (decyduje fizyczna zdolność). Rola może tylko ograniczać, nigdy nie rozszerzać możliwości urządzenia.",
               "range_template_cool_entities": "Członkowie, którzy mogą chłodzić. Niewymienieni członkowie nie mają ograniczeń (decyduje fizyczna zdolność). Rola może tylko ograniczać, nigdy nie rozszerzać możliwości urządzenia.",
+              "range_template_conditional": "Udostępniaj Ogrzewanie/Chłodzenie i zakres temperatur tylko dopóki co najmniej jeden osiągalny członek może grzać, a jeden chłodzić.",
               "range_template_humidity_enabled": "W docelowym zakresie temperatur przełącz na działanie wilgotności, jeśli wilgotność przekroczy wartość docelową.",
               "range_template_humidity_action": "Działanie wykonywane, gdy bieżąca wilgotność przekracza docelową w strefie nieczułości.",
               "range_template_humidity_hysteresis": "Pasmo histerezy przerzutnika Schmitta wokół wilgotności docelowej, aby zapobiec częstemu przełączaniu.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Wyłączone – Blokuj wszystkie zmiany",
-        "all": "Wszystkie – Akceptuj wszystkie ręczne zmiany",
-        "master_only": "Tylko główne – Akceptuj tylko zmiany z głównego urządzenia"
+        "off": "Wyłączone – Odrzucaj zmiany",
+        "all": "Wszystkie – Zachowaj zmiany do zamknięcia okien",
+        "master_only": "Tylko główne – Zachowaj tylko zmiany na głównym urządzeniu"
       }
     },
     "window_action": {

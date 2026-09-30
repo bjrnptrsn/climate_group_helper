@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Ota käyttöön tai poista käytöstä ilmastointiryhmä ikkuna-/oviantureiden perusteella. Kun käytössä, HVAC-tila asetetaan arvoon 'off', kun ikkuna avataan, ja palautetaan edelliseen tilaan, kun se suljetaan.",
-              "window_adopt_manual_changes": "Salli tavoitetilan muutokset ikkunoiden ollessa auki.",
+              "window_adopt_manual_changes": "Säilytä ikkunoiden ollessa auki tehdyt muutokset ja ota ne käyttöön, kun ikkunat suljetaan. Siihen asti käytetään ikkuna auki -toimintoa.",
               "window_action": "Mitä tehdä, kun ikkuna avataan: sammuta kokonaan tai aseta tietty lämpötila (esim. jäätymissuoja).",
               "window_temperature": "Tavoitelämpötila, kun 'Lämpötila'-toiminto on valittu.",
               "room_sensor": "(Valinnainen) Binäärianturi huoneen omalle ikkunalle/ovelle.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Kuolleen vyöhykkeen toiminto",
               "range_template_heat_entities": "Lämmityslaitteet",
               "range_template_cool_entities": "Jäähdytyslaitteet",
+              "range_template_conditional": "Ehdollinen Lämmitys/Jäähdytys",
               "range_template_humidity_enabled": "Kosteudenpoisto kuolleella alueella",
               "range_template_humidity_action": "Kosteustoiminto",
               "range_template_humidity_hysteresis": "Kosteushystereesi",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Toiminto, joka suoritetaan, kun nykyinen lämpötila on tavoitealueen sisällä (kuollut vyöhyke). 'Ei mitään' ei vaihda tilaa, mutta pitää lämmittävän tai jäähdyttävän laitteen vastaavassa rajassa.",
               "range_template_heat_entities": "Jäsenet, jotka saavat lämmittää. Listaamattomat jäsenet ovat rajoittamattomia (fyysinen ominaisuus ratkaisee). Rooli voi vain rajoittaa, ei koskaan laajentaa laitteen ominaisuuksia.",
               "range_template_cool_entities": "Jäsenet, jotka saavat jäähdyttää. Listaamattomat jäsenet ovat rajoittamattomia (fyysinen ominaisuus ratkaisee). Rooli voi vain rajoittaa, ei koskaan laajentaa laitteen ominaisuuksia.",
+              "range_template_conditional": "Tarjoa Lämmitys/Jäähdytys ja lämpötila-alue vain, kun vähintään yksi tavoitettavissa oleva jäsen voi lämmittää ja yksi jäähdyttää.",
               "range_template_humidity_enabled": "Kun lämpötila on tavoitealueella, vaihda kosteustoimintoon, jos kosteus ylittää tavoitteen.",
               "range_template_humidity_action": "Toiminto, joka suoritetaan, kun nykyinen kosteus ylittää tavoitekosteuden kuolleella alueella.",
               "range_template_humidity_hysteresis": "Schmitt-liipaisimen hystereesialue tavoitekosteuden ympärillä nopean syklauksen estämiseksi.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Pois – Estä kaikki muutokset",
-        "all": "Kaikki – Hyväksy kaikki manuaaliset muutokset",
-        "master_only": "Vain pääyksikkö – Hyväksy vain pääyksikkö"
+        "off": "Pois – Hylkää muutokset",
+        "all": "Kaikki – Säilytä muutokset ikkunoiden sulkemiseen asti",
+        "master_only": "Vain pääyksikkö – Säilytä vain pääyksikön muutokset"
       }
     },
     "window_action": {

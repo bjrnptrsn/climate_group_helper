@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Enable or disable climate group based on window/door sensors. When enabled, HVAC mode sets to 'off' when windows open and restores to the previous state when closed.",
-              "window_adopt_manual_changes": "Allow target state changes while windows are open.",
+              "window_adopt_manual_changes": "Keep changes made while windows are open and apply them once they close. Until then, the Window Open Action applies.",
               "window_action": "What to do when window opens: Turn Off completely or set a specific Temperature (e.g. frost protection).",
               "window_temperature": "Target temperature to set when 'Temperature' action is selected.",
               "room_sensor": "(Optional) Binary sensor for the room's own window/door.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Deadband Action",
               "range_template_heat_entities": "Heating Devices",
               "range_template_cool_entities": "Cooling Devices",
+              "range_template_conditional": "Conditional Heat/Cool",
               "range_template_humidity_enabled": "Dehumidify in Deadband",
               "range_template_humidity_action": "Humidity Action",
               "range_template_humidity_hysteresis": "Humidity Hysteresis",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Action to perform when the current temperature is inside the target range (deadband). 'None' changes no mode, but holds a device that keeps heating or cooling on the matching limit.",
               "range_template_heat_entities": "Members that are allowed to heat. Unlisted members are unrestricted (physical capability decides). A role can only restrict, never extend a device's capabilities.",
               "range_template_cool_entities": "Members that are allowed to cool. Unlisted members are unrestricted (physical capability decides). A role can only restrict, never extend a device's capabilities.",
+              "range_template_conditional": "Offer Heat/Cool and the temperature range only while at least one reachable member can heat and one can cool.",
               "range_template_humidity_enabled": "When inside the target temperature range, switch to the humidity action if current humidity exceeds the target humidity.",
               "range_template_humidity_action": "Action to perform when current humidity exceeds the target humidity while inside the deadband.",
               "range_template_humidity_hysteresis": "Schmitt-trigger hysteresis band around target humidity to prevent rapid cycling.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Off – Block all changes",
-        "all": "All – Accept all manual changes",
-        "master_only": "Master Only – Accept only the master entity"
+        "off": "Off – Discard changes",
+        "all": "All – Keep changes for when windows close",
+        "master_only": "Master Only – Keep only changes on the master device"
       }
     },
     "window_action": {

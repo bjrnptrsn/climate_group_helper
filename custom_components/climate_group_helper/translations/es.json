@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Habilitar/deshabilitar grupo según sensores de ventana. Si activo, HVAC se pone en 'off' al abrir ventanas.",
-              "window_adopt_manual_changes": "Permitir cambios del estado objetivo mientras las ventanas están abiertas.",
+              "window_adopt_manual_changes": "Conservar los cambios hechos con las ventanas abiertas y aplicarlos cuando se cierren. Hasta entonces se aplica la acción al abrir ventana.",
               "window_action": "Qué hacer al abrir una ventana: Apagar completamente o establecer una temperatura específica (ej. protección contra heladas).",
               "window_temperature": "Temperatura objetivo cuando se selecciona la acción 'Establecer temperatura'.",
               "room_sensor": "(Opcional) Sensor binario para la ventana/puerta de la habitación.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Acción en zona muerta",
               "range_template_heat_entities": "Dispositivos de calefacción",
               "range_template_cool_entities": "Dispositivos de refrigeración",
+              "range_template_conditional": "Calor/Frío condicional",
               "range_template_humidity_enabled": "Deshumidificar en banda muerta",
               "range_template_humidity_action": "Acción de humedad",
               "range_template_humidity_hysteresis": "Histéresis de humedad",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Acción a realizar cuando la temperatura actual está dentro del rango objetivo (zona muerta). 'Ninguna' no cambia el modo, pero mantiene un dispositivo que sigue calentando o enfriando en el límite correspondiente.",
               "range_template_heat_entities": "Miembros que pueden calentar. Los miembros no listados no tienen restricciones (decide la capacidad física). Un rol solo puede restringir, nunca ampliar las capacidades de un dispositivo.",
               "range_template_cool_entities": "Miembros que pueden enfriar. Los miembros no listados no tienen restricciones (decide la capacidad física). Un rol solo puede restringir, nunca ampliar las capacidades de un dispositivo.",
+              "range_template_conditional": "Ofrecer Calor/Frío y el rango de temperatura solo mientras al menos un miembro accesible pueda calentar y uno pueda enfriar.",
               "range_template_humidity_enabled": "Dentro del rango de temperatura objetivo, cambia a la acción de humedad si la humedad supera el objetivo.",
               "range_template_humidity_action": "Acción a realizar cuando la humedad actual supera la humedad objetivo dentro de la banda muerta.",
               "range_template_humidity_hysteresis": "Banda de histéresis de disparo Schmitt alrededor de la humedad objetivo para evitar ciclos rápidos.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Desactivado – Bloquear todos los cambios",
-        "all": "Todos – Aceptar todos los cambios manuales",
-        "master_only": "Solo principal – Aceptar solo cambios del dispositivo principal"
+        "off": "Desactivado – Descartar cambios",
+        "all": "Todos – Conservar cambios hasta cerrar las ventanas",
+        "master_only": "Solo principal – Conservar solo cambios del dispositivo principal"
       }
     },
     "window_action": {

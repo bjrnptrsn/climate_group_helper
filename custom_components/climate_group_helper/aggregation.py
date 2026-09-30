@@ -617,7 +617,7 @@ class Aggregator:
         attr_supported_features = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_SUPPORTED_FEATURES)), default=0)
         features = attr_supported_features if isinstance(attr_supported_features, int) else 0
         range_template = self._group.member_template_manager.range_template
-        if range_template is not None and range_template.entity_ids:
+        if self._group.member_template_manager.offers_range():
             features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         # Only worth offering where a reading can be compared against the
         # setpoint. Keyed on configuration, not the current value: a sensor that
@@ -793,7 +793,7 @@ class Aggregator:
         # event path it is a cheap idempotent recompute whose return value is needed
         # for the HEAT_COOL enrichment below.
         template_member_ids = self._group.member_template_manager.update_members()
-        if template_member_ids and HVACMode.HEAT_COOL not in hvac_modes_list:
+        if template_member_ids and self._group.member_template_manager.offers_range() and HVACMode.HEAT_COOL not in hvac_modes_list:
             hvac_modes_list = list(hvac_modes_list) + [HVACMode.HEAT_COOL]
         self._group._attr_hvac_modes = self._sort_hvac_modes(hvac_modes_list)
 

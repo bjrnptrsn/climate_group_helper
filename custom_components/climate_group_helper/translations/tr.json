@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "İklim grubunu pencere/kapı sensörlerine göre etkinleştirin veya devre dışı bırakın. Etkinleştirildiğinde, pencere açıldığında HVAC modu 'off' olarak ayarlanır ve kapandığında önceki duruma geri döner.",
-              "window_adopt_manual_changes": "Pencereler açıkken hedef durum değişikliklerine izin ver.",
+              "window_adopt_manual_changes": "Pencereler açıkken yapılan değişiklikleri sakla ve pencereler kapandığında uygula. O zamana kadar Pencere Açık Eylemi geçerlidir.",
               "window_action": "Pencere açıldığında ne yapılacağı: tamamen kapat veya belirli bir sıcaklık ayarla (örn. donma koruması).",
               "window_temperature": "'Sıcaklık' eylemi seçildiğinde ayarlanacak hedef sıcaklık.",
               "room_sensor": "(İsteğe bağlı) Odanın kendi penceresi/kapısı için binary sensör.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Ölü Bant Eylemi",
               "range_template_heat_entities": "Isıtma Cihazları",
               "range_template_cool_entities": "Soğutma Cihazları",
+              "range_template_conditional": "Koşullu Isıtma/Soğutma",
               "range_template_humidity_enabled": "Ölü bölgede nem alma",
               "range_template_humidity_action": "Nem eylemi",
               "range_template_humidity_hysteresis": "Nem histerezisi",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Mevcut sıcaklık hedef aralığın içindeyken (ölü bant) gerçekleştirilecek eylem. 'Hiçbiri' modu değiştirmez, ancak ısıtmaya veya soğutmaya devam eden bir cihazı ilgili sınırda tutar.",
               "range_template_heat_entities": "Isıtmasına izin verilen üyeler. Listede olmayan üyeler sınırsızdır (fiziksel kapasite karar verir). Bir rol yalnızca kısıtlayabilir, bir cihazın yeteneklerini asla genişletemez.",
               "range_template_cool_entities": "Soğutmasına izin verilen üyeler. Listede olmayan üyeler sınırsızdır (fiziksel kapasite karar verir). Bir rol yalnızca kısıtlayabilir, bir cihazın yeteneklerini asla genişletemez.",
+              "range_template_conditional": "Isıtma/Soğutma ve sıcaklık aralığını yalnızca ulaşılabilir en az bir üye ısıtabiliyor ve biri soğutabiliyorken sun.",
               "range_template_humidity_enabled": "Hedef sıcaklık aralığındayken nem hedef nemi aşarsa nem eylemine geçin.",
               "range_template_humidity_action": "Ölü bölgedeyken mevcut nem hedef nemi aştığında gerçekleştirilecek eylem.",
               "range_template_humidity_hysteresis": "Hızlı döngüyü önlemek için hedef nem etrafındaki Schmitt tetikleyici histerezis bandı.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Kapalı – Tüm değişiklikleri engelle",
-        "all": "Tümü – Tüm manuel değişiklikleri kabul et",
-        "master_only": "Yalnızca Ana Varlık – Yalnızca ana varlığı kabul et"
+        "off": "Kapalı – Değişiklikleri at",
+        "all": "Tümü – Değişiklikleri pencereler kapanana kadar sakla",
+        "master_only": "Yalnızca Ana Varlık – Yalnızca ana cihazdaki değişiklikleri sakla"
       }
     },
     "window_action": {

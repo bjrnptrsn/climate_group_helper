@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Aktivera grupp baserat på sensorer. HVAC sätts till 'off' vid öppna fönster.",
-              "window_adopt_manual_changes": "Tillåt ändringar av målvärde medan fönster är öppna.",
+              "window_adopt_manual_changes": "Behåll ändringar som görs medan fönster är öppna och tillämpa dem när de stängs. Till dess gäller åtgärden vid öppet fönster.",
               "window_action": "Vad som ska hända när ett fönster öppnas: Stäng av helt eller ställ in en specifik temperatur (t.ex. frostskydd).",
               "window_temperature": "Måltemperatur när 'Ställ in temperatur' är valt.",
               "room_sensor": "(Valfritt) Binär sensor för rummets eget fönster/dörr.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Deadband-åtgärd",
               "range_template_heat_entities": "Värmeanordningar",
               "range_template_cool_entities": "Kylaggregat",
+              "range_template_conditional": "Villkorlig Värme/Kyla",
               "range_template_humidity_enabled": "Avfukta i dödband",
               "range_template_humidity_action": "Luftfuktighetsåtgärd",
               "range_template_humidity_hysteresis": "Luftfuktighetshysteres",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Åtgärd som utförs när den aktuella temperaturen är inom målintervallet (deadband). 'Ingen' byter inte läge, men håller en enhet som fortsätter att värma eller kyla på motsvarande gräns.",
               "range_template_heat_entities": "Medlemmar som får värma. Ej listade medlemmar är obegränsade (fysisk kapacitet avgör). En roll kan bara begränsa, aldrig utöka en enhets kapacitet.",
               "range_template_cool_entities": "Medlemmar som får kyla. Ej listade medlemmar är obegränsade (fysisk kapacitet avgör). En roll kan bara begränsa, aldrig utöka en enhets kapacitet.",
+              "range_template_conditional": "Erbjud Värme/Kyla och temperaturområdet endast så länge minst en nåbar medlem får värma och en får kyla.",
               "range_template_humidity_enabled": "Växla till luftfuktighetsåtgärden inom måltemperaturintervallet om luftfuktigheten överstiger målet.",
               "range_template_humidity_action": "Åtgärd som utförs när den aktuella luftfuktigheten överstiger målet i dödbandet.",
               "range_template_humidity_hysteresis": "Schmitt-trigger hysteresband runt målfuktighet för att förhindra snabb växling.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Av – Blockera alla ändringar",
-        "all": "Alla – Acceptera alla manuella ändringar",
-        "master_only": "Endast huvud – Acceptera endast ändringar från huvudenheten"
+        "off": "Av – Förkasta ändringar",
+        "all": "Alla – Behåll ändringar tills fönstren stängs",
+        "master_only": "Endast huvud – Behåll endast ändringar på huvudenheten"
       }
     },
     "window_action": {

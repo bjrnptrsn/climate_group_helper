@@ -130,7 +130,7 @@
             },
             "data_description": {
               "window_mode": "Schakel groep in/uit op basis van sensoren. HVAC gaat naar 'off' als ramen open zijn.",
-              "window_adopt_manual_changes": "Sta wijzigingen van het instelpunt toe terwijl ramen open zijn.",
+              "window_adopt_manual_changes": "Wijzigingen die bij open ramen worden gedaan bewaren en toepassen zodra de ramen sluiten. Tot dan geldt de actie bij open raam.",
               "window_action": "Wat te doen als een raam opent: Volledig uitschakelen of een specifieke temperatuur instellen (bijv. vorstbeveiliging).",
               "window_temperature": "Doeltemperatuur wanneer de actie 'Temperatuur instellen' is geselecteerd.",
               "room_sensor": "(Optioneel) Binaire sensor voor het raam/deur van de kamer.",
@@ -324,6 +324,7 @@
               "range_template_deadband_action": "Deadband-actie",
               "range_template_heat_entities": "Verwarmingsapparaten",
               "range_template_cool_entities": "Koelapparaten",
+              "range_template_conditional": "Voorwaardelijk Verwarmen/Koelen",
               "range_template_humidity_enabled": "Ontvochtigen in dode band",
               "range_template_humidity_action": "Luchtvochtigheidsactie",
               "range_template_humidity_hysteresis": "Luchtvochtigheidshysterese",
@@ -334,6 +335,7 @@
               "range_template_deadband_action": "Actie die wordt uitgevoerd wanneer de huidige temperatuur zich binnen het doelbereik (deadband) bevindt. 'Geen' schakelt geen modus om, maar houdt een apparaat dat blijft verwarmen of koelen op de bijbehorende grens.",
               "range_template_heat_entities": "Leden die mogen verwarmen. Niet-geliste leden zijn onbeperkt (fysieke mogelijkheid bepaalt). Een rol kan een mogelijkheid alleen beperken, nooit uitbreiden.",
               "range_template_cool_entities": "Leden die mogen koelen. Niet-geliste leden zijn onbeperkt (fysieke mogelijkheid bepaalt). Een rol kan een mogelijkheid alleen beperken, nooit uitbreiden.",
+              "range_template_conditional": "Verwarmen/Koelen en het temperatuurbereik alleen aanbieden zolang ten minste één bereikbaar lid mag verwarmen en één mag koelen.",
               "range_template_humidity_enabled": "Binnen het doeltemperatuurbereik overschakelen naar de vochtigheidsactie als de vochtigheid de doelwaarde overschrijdt.",
               "range_template_humidity_action": "Actie die wordt uitgevoerd wanneer de huidige vochtigheid de doelvochtigheid overschrijdt in de dode zone.",
               "range_template_humidity_hysteresis": "Schmitt-trigger hystereseband rond de doelvochtigheid om snel schakelen te voorkomen.",
@@ -492,9 +494,9 @@
     },
     "window_adopt_manual_changes": {
       "options": {
-        "off": "Uit – Alle wijzigingen blokkeren",
-        "all": "Alle – Alle handmatige wijzigingen accepteren",
-        "master_only": "Alleen hoofd – Alleen wijzigingen van het hoofdapparaat accepteren"
+        "off": "Uit – Wijzigingen verwerpen",
+        "all": "Alle – Wijzigingen bewaren tot de ramen sluiten",
+        "master_only": "Alleen hoofd – Alleen wijzigingen op het hoofdapparaat bewaren"
       }
     },
     "window_action": {
