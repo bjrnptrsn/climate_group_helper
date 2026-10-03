@@ -1,34 +1,36 @@
 """Config flow for Climate Group Helper integration."""
 
 from __future__ import annotations
-import yaml  # type: ignore[import-untyped]
+
 from typing import Any
 
 import voluptuous as vol
-
+import yaml  # type: ignore[import-untyped]
 from homeassistant import config_entries
 from homeassistant.components.climate import (
-    DOMAIN as CLIMATE_DOMAIN,
-    ATTR_MIN_TEMP,
-    ATTR_MAX_TEMP,
-    ATTR_PRESET_MODES,
     ATTR_HVAC_MODES,
+    ATTR_MAX_TEMP,
+    ATTR_MIN_TEMP,
+    ATTR_PRESET_MODES,
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
     HVACMode,
 )
+from homeassistant.components.climate import (
+    DOMAIN as CLIMATE_DOMAIN,
+)
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import (
     CONF_ENTITIES,
     CONF_NAME,
     UnitOfTemperature,
 )
-from homeassistant.util.unit_conversion import TemperatureConverter
 from homeassistant.core import callback
-from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.data_entry_flow import section
 from homeassistant.helpers import selector
+from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import (
     CONF_ADVANCED_MODE,
@@ -61,12 +63,12 @@ from .const import (
     CONF_ISOLATION_ACTIVATE_DELAY,
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_RESTORE_DELAY,
-    CONF_ISOLATION_RULES_COUNT,
     CONF_ISOLATION_RULES,
+    CONF_ISOLATION_RULES_COUNT,
     CONF_ISOLATION_SENSOR,
     CONF_ISOLATION_SLOT,
-    CONF_ISOLATION_TRIGGER_HVAC_MODES,
     CONF_ISOLATION_TRIGGER,
+    CONF_ISOLATION_TRIGGER_HVAC_MODES,
     CONF_MASTER_ENTITY,
     CONF_MEMBER_COMMAND_DELAY,
     CONF_MEMBER_OFFSET_CORRECTION,
@@ -133,11 +135,11 @@ from .const import (
     CalibrationMode,
     FeatureStrategy,
     HvacModeStrategy,
-    IsolationTrigger,
     IsolationActionType,
+    IsolationTrigger,
     PresenceAction,
-    PresenceOffRespect,
     PresenceMode,
+    PresenceOffRespect,
     RangeTemplateDeadbandAction,
     RangeTemplateHumidityAction,
     RoundOption,
@@ -147,9 +149,8 @@ from .const import (
     WindowControlAction,
     WindowControlMode,
 )
-from .state import available_state
-
 from .initialization import filter_cgh_entities
+from .state import available_state
 
 
 class ClimateGroupHelperConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):

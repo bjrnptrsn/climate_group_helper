@@ -11,7 +11,7 @@
 
 <p align="center">
   <strong>Die erweiterte Logikschicht für deine Home-Assistant-Klimageräte.</strong><br>
-  Synchronisiere, automatisiere und korrigiere deine Thermostate — ganz ohne YAML.
+  Synchronisiere, automatisiere und korrigiere deine Thermostate — komplett über die Oberfläche eingerichtet.
 </p>
 
 <p align="center">
@@ -25,7 +25,8 @@
   🔥 <b>Temperatur boosten</b> für eine Weile, danach automatisch zurück.<br>
   🚧 <b>Einzelne Geräte isolieren</b>, solange eine Bedingung zutrifft.<br>
   🧩 <b>Einen Heiz-/Kühlbereich ergänzen</b> für Einzel-Sollwert-Geräte mit der Bereichsvorlage.<br>
-  ➕ <b>Die ganze Gruppe verschieben</b> mit einem einzigen Offset.
+  ➕ <b>Die ganze Gruppe verschieben</b> mit einem einzigen Offset.<br>
+  🎛️ <b>Dashboard-Karte inklusive</b> — zeigt, was die Gruppe gerade tut.
 </p>
 
 <p align="center">

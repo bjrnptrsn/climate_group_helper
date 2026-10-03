@@ -6,11 +6,12 @@ import time
 from dataclasses import asdict, dataclass, field, fields, replace
 from datetime import datetime
 from types import MappingProxyType
-from typing import Any, Self, TYPE_CHECKING
-
-from homeassistant.core import Event, State
+from typing import TYPE_CHECKING, Any, Self
 
 from homeassistant.components.climate import ATTR_HVAC_MODE, PRESET_NONE, HVACMode
+from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.core import Event, State
+
 from .const import (
     CONF_IGNORE_OFF_MEMBERS_SYNC,
     FLOAT_TOLERANCE,
@@ -60,6 +61,22 @@ def is_available(state: State | str | None) -> bool:
     if isinstance(state, str):
         return state not in TRANSIENT_STATES
     return available_state(state) is not None
+
+
+def _attribute_changed_in_event(old_state: State, new_state: State, attr: str) -> bool:
+    """Whether `attr` differs between the two states of one event.
+
+    Numeric attributes compare with FLOAT_TOLERANCE; a value missing on either
+    side counts as unchanged (carried).
+    """
+    old_val = old_state.attributes.get(attr)
+    new_val = new_state.attributes.get(attr)
+    if old_val is None or new_val is None:
+        return False
+    try:
+        return abs(float(old_val) - float(new_val)) >= FLOAT_TOLERANCE
+    except (TypeError, ValueError):
+        return old_val != new_val
 
 
 def other_active_members(group: ClimateGroupHelper, entity_id: str | None) -> list[str]:
@@ -533,7 +550,35 @@ class SyncModeStateManager(BaseStateManager):
         if not self._check_partial_sync(entity_id, kwargs):
             return False
 
-        return True
+        # 3. Turn-on filter: a member switched on reports the attributes it
+        #    merely carried; only hvac_mode (the switch-on itself) and
+        #    attributes the event actually changed are adopted.
+        return self._filter_turn_on_attributes(entity_id, kwargs)
+
+    def _filter_turn_on_attributes(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
+        """Drop attributes a member carried through an off->on event.
+
+        Returns False when nothing is left to adopt.
+        """
+        event = self._group.event
+        if event is None:
+            return True
+        data = event.data
+        if data.get(ATTR_ENTITY_ID) != entity_id:
+            return True
+        old_state = data.get("old_state")
+        new_state = data.get("new_state")
+        if old_state is None or new_state is None:
+            return True
+        if old_state.state != HVACMode.OFF or new_state.state == HVACMode.OFF:
+            return True
+
+        for attr in list(kwargs):
+            if attr == ATTR_HVAC_MODE:
+                continue
+            if not _attribute_changed_in_event(old_state, new_state, attr):
+                del kwargs[attr]
+        return bool(kwargs)
 
 
 class AdoptStateManager(SyncModeStateManager):

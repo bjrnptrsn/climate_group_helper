@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
-import yaml  # type: ignore[import-untyped]
 
+import yaml  # type: ignore[import-untyped]
 from homeassistant.components.climate import (
     ATTR_FAN_MODE,
     ATTR_HUMIDITY,
@@ -15,6 +16,7 @@ from homeassistant.components.climate import (
     ATTR_SWING_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
+    HVACMode,
 )
 from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.exceptions import ServiceValidationError
@@ -40,6 +42,8 @@ CLIMATE_NUMERIC_ATTRS: frozenset[str] = frozenset(
         ATTR_HUMIDITY,
     }
 )
+
+_HVAC_MODES: frozenset[str] = frozenset(mode.value for mode in HVACMode)
 
 
 def normalize_yaml_bool_modes(payload: dict[str, Any]) -> dict[str, Any]:
@@ -142,8 +146,13 @@ def validate_climate_payload(
 ) -> dict[str, Any]:
     """Filter a climate payload, dropping invalid values with a warning.
 
-    Mode attributes (hvac_mode, fan_mode, …) must be non-empty strings.
-    Numeric attributes (temperature, humidity, …) must be float-convertible.
+    Mode attributes (hvac_mode, fan_mode, …) must be non-empty strings, and
+    `hvac_mode` one of the `HVACMode` values — it is the only mode with a fixed
+    vocabulary, and a typo (`on`, `Heat`) would otherwise be stored as the
+    group's target and never match a member.
+    Numeric attributes (temperature, humidity, …) must be finite numbers. A bool
+    is not one: YAML reads an unquoted `off`/`no` as `False`, which `float()`
+    would turn into a 0.0 setpoint.
 
     Args:
         entity_id: Logged as the source of the payload.
@@ -163,9 +172,19 @@ def validate_climate_payload(
                     entity_id, context, attr, value,
                 )
                 continue
+            if attr == ATTR_HVAC_MODE and value not in _HVAC_MODES:
+                _LOGGER.warning(
+                    "[%s] %s: 'hvac_mode' expects one of %s, got %r — ignored.",
+                    entity_id, context, ", ".join(sorted(_HVAC_MODES)), value,
+                )
+                continue
         elif attr in CLIMATE_NUMERIC_ATTRS:
             try:
+                if isinstance(value, bool):
+                    raise ValueError(value)
                 value = float(value)
+                if not math.isfinite(value):
+                    raise ValueError(value)
             except (TypeError, ValueError):
                 _LOGGER.warning(
                     "[%s] %s: '%s' expects a numeric value, got %r — ignored.",

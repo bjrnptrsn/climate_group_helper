@@ -8,8 +8,8 @@ import time
 from dataclasses import fields
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import Event
 from homeassistant.components.climate import HVACMode
+from homeassistant.core import Event
 
 from .const import (
     CONF_IGNORE_OFF_MEMBERS_SYNC,
@@ -25,8 +25,8 @@ from .state import ClimateState, FilterState, is_available
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
-    from .state import AdoptStateManager, SyncModeStateManager, TargetState
     from .service_call import SyncCallHandler
+    from .state import AdoptStateManager, SyncModeStateManager, TargetState
 
 _TRUSTED_CONTEXT_IDS = frozenset(
     {

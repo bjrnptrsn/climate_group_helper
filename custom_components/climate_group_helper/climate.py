@@ -1,11 +1,11 @@
 """This platform allows several climate devices to be grouped into one climate device."""
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
-from dataclasses import replace
 import asyncio
 import logging
 import time
+from contextlib import asynccontextmanager
+from dataclasses import replace
 from statistics import mean, median
 from typing import Any, AsyncIterator, Awaitable, Callable
 
@@ -29,12 +29,14 @@ from homeassistant.const import (
     CONF_ENTITIES,
     CONF_NAME,
 )
-from homeassistant.core import HomeAssistant, State, callback, Event
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.core import Event, HomeAssistant, State, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.restore_state import RestoreEntity
 
+from .aggregation import Aggregator
+from .calibration import CalibrationHandler
 from .const import (
     CONF_ADVANCED_MODE,
     CONF_DEBOUNCE_DELAY,
@@ -50,8 +52,8 @@ from .const import (
     CONF_HUMIDITY_USE_MASTER,
     CONF_HVAC_MODE_STRATEGY,
     CONF_IGNORE_OFF_MEMBERS_TEMPERATURE,
-    CONF_ISOLATION_RULES_COUNT,
     CONF_ISOLATION_RULES,
+    CONF_ISOLATION_RULES_COUNT,
     CONF_ISOLATION_SLOT,
     CONF_MASTER_ENTITY,
     CONF_MEMBER_COMMAND_DELAY,
@@ -87,11 +89,9 @@ from .const import (
     AverageOption,
     FeatureStrategy,
     HvacModeStrategy,
-    RoundOption,
     RangeTemplateDeadbandAction,
+    RoundOption,
 )
-from .aggregation import Aggregator
-from .calibration import CalibrationHandler
 from .initialization import (
     filter_sensor_entities,
     restore_state,
@@ -99,6 +99,8 @@ from .initialization import (
     warn_missing_entities,
 )
 from .isolation import MemberIsolationHandler
+from .member_template import MemberTemplateManager
+from .meta_processor import SlotMetaProcessor
 from .override import (
     BoostOverrideManager,
     OverrideHandler,
@@ -106,11 +108,9 @@ from .override import (
     WindowOverrideManager,
 )
 from .presence import PresenceHandler, PresenceOverrideManager
-from .member_template import MemberTemplateManager
 from .preset import PresetManager
 from .reset import async_reset_group
-from .schedule import MainScheduleHandler, BypassScheduleHandler, ScheduleHoldManager
-from .services import async_apply_config, async_boost, async_register_services
+from .schedule import BypassScheduleHandler, MainScheduleHandler, ScheduleHoldManager
 from .service_call import (
     ClimateCallHandler,
     OverrideCallHandler,
@@ -122,21 +122,21 @@ from .service_call import (
     TemplateCallHandler,
     WindowControlCallHandler,
 )
+from .services import async_apply_config, async_boost, async_register_services
 from .state import (
+    AdoptStateManager,
     ChangeState,
+    ClimateStateManager,
     CurrentState,
     RunState,
-    TargetState,
-    ClimateStateManager,
-    AdoptStateManager,
     ScheduleStateManager,
     SyncModeStateManager,
+    TargetState,
     WindowControlStateManager,
 )
+from .status import build_extra_state_attributes
 from .sync_mode import SyncModeHandler
 from .window_control import WindowControlHandler
-from .meta_processor import SlotMetaProcessor
-from .status import build_extra_state_attributes
 
 CALC_TYPES: dict[AverageOption, Callable[..., float]] = {
     AverageOption.MIN: min,

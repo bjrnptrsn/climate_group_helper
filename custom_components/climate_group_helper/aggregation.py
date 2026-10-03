@@ -34,10 +34,10 @@ return — an event must not survive a completed cycle.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from functools import reduce
 import logging
 import time
+from dataclasses import dataclass, replace
+from functools import reduce
 from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import (
@@ -85,10 +85,10 @@ from homeassistant.core import Event, State, callback
 from homeassistant.helpers.event import async_call_later
 
 from .const import (
+    DEFAULT_SUPPORTED_FEATURES,
     FLOAT_TOLERANCE,
     SUPPORTED_FEATURES,
     TEMP_TARGET_ATTRS,
-    DEFAULT_SUPPORTED_FEATURES,
     FeatureStrategy,
     HvacModeStrategy,
     RoundOption,
@@ -763,13 +763,18 @@ class Aggregator:
 
         # Calculate and store ChangeState — must stay ahead of resync(), which
         # reads self._group.change_state (K2, see module docstring).
-        if self._group.event:
+        # The event is held in a local: resync() can request a state refresh
+        # synchronously (a boost abort, a released MEMBER_OFF member), and that
+        # nested run clears `self._group.event` before this one reads it again.
+        event = self._group.event
+        event_entity_id = event.data.get(ATTR_ENTITY_ID) if event else None
+        if event:
             self._group.change_state = ChangeState.from_event(
-                self._group.event,
+                event,
                 self._group.shared_target_state,
                 offset_map=self._group._temp_offset_map or None,
             )
-            self._group._event_entity_id = self._group.event.data.get(ATTR_ENTITY_ID)
+            self._group._event_entity_id = event_entity_id
 
             # Check if the change state is from a member entity.
             # resync() must stay ahead of the HVAC mode calculation below: it can
@@ -781,7 +786,7 @@ class Aggregator:
                 # Range Template owns covered members: drive their changeover/correction
                 # via the TemplateCallHandler — independent of sync_mode. The SyncCallHandler
                 # excludes covered members, so this is the sole, intentional driver.
-                if self._group.member_template_manager.is_covered_state(self._group.event.data.get("new_state")):
+                if self._group.member_template_manager.is_covered_state(event.data.get("new_state")):
                     self._group._trigger_template_changeover()
 
         # All available HVAC modes --> list of HVACMode (str), e.g. [<HVACMode.OFF: 'off'>, <HVACMode.HEAT: 'heat'>, <HVACMode.AUTO: 'auto'>, ...]
@@ -828,12 +833,12 @@ class Aggregator:
         temperature = self._compute_temperature()
         self._apply_temperature(temperature)
         if temperature.needs_calibration:
-            self._group.calibration_handler.update("temperature", self._group._event_entity_id)
+            self._group.calibration_handler.update("temperature", event_entity_id)
 
         humidity = self._compute_humidity()
         self._apply_humidity(humidity)
         if humidity.needs_calibration:
-            self._group.calibration_handler.update("humidity", self._group._event_entity_id)
+            self._group.calibration_handler.update("humidity", event_entity_id)
 
         self._group.member_template_manager.check_humidity(
             humidity.current_humidity, self._group.shared_target_state.humidity

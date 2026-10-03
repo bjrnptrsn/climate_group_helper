@@ -25,9 +25,10 @@ Currently implemented:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import logging
-from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass, field
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import (
     ATTR_CURRENT_TEMPERATURE,
@@ -37,8 +38,8 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_TEMP_STEP,
-    HVACMode,
     ClimateEntityFeature,
+    HVACMode,
 )
 from homeassistant.const import (
     ATTR_SUPPORTED_FEATURES,
@@ -46,7 +47,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import CALLBACK_TYPE, State, callback
 from homeassistant.helpers.event import async_call_later
-from types import MappingProxyType
 
 from .const import (
     DEFAULT_RANGE_TEMPLATE_HUMIDITY_ACTION,

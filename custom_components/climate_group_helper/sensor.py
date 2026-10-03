@@ -1,11 +1,14 @@
 """Support for Climate Group sensors."""
 from __future__ import annotations
 
-from typing import Any
 import json
 import logging
+from typing import Any
 
-from homeassistant.components.climate import ATTR_CURRENT_HUMIDITY, ATTR_CURRENT_TEMPERATURE
+from homeassistant.components.climate import (
+    ATTR_CURRENT_HUMIDITY,
+    ATTR_CURRENT_TEMPERATURE,
+)
 from homeassistant.components.sensor import (
     EntityCategory,
     SensorDeviceClass,

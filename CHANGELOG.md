@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.13.1 - 2026-10-03
+
+### 🐛 Bug Fixes
+
+*   **Turning the Group On Sends the Current Setpoint**: A target temperature, humidity or temperature range that was changed while the group was off now reaches the devices when the group is turned on, instead of them keeping their old value.
+
+*   **Switching a Device On No Longer Changes the Group's Setpoint**: In the sync modes that adopt changes made on a device, switching a device on no longer replaces the group's setpoint with the value the device was merely still carrying.
+
 ## 1.13.0 - 2026-09-30
 
 ### 🌟 New Features

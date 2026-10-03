@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace
 from datetime import timedelta
@@ -15,21 +15,21 @@ from homeassistant.helpers.event import async_call_later, async_track_state_chan
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_BYPASS_ENTITY,
+    CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_FALLBACK_PAYLOAD,
     CONF_SCHEDULE_HOLD_DURATION,
     FLOAT_TOLERANCE,
 )
-from .state import is_available
 from .meta_processor import MetaProcessResult
-from .service_call import SYNC_TARGET, SyncTarget
 from .payload import (
     parse_entity_state,
     parse_fallback_payload,
     split_payload,
     validate_climate_payload,
 )
+from .service_call import SYNC_TARGET, SyncTarget
+from .state import is_available
 
 
 def _attr_values_match(val1: Any, val2: Any) -> bool:
@@ -41,8 +41,8 @@ def _attr_values_match(val1: Any, val2: Any) -> bool:
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
-    from .state import ScheduleStateManager, TargetState
     from .service_call import ScheduleCallHandler
+    from .state import ScheduleStateManager, TargetState
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,6 +60,7 @@ class SlotContext:
     main_payload: dict[str, Any]
     bypass_payload: dict[str, Any]
     bypass_active: bool
+    active_layer: str = "none"
 
 
 class SlotResolver:
@@ -277,7 +278,8 @@ class BaseScheduleHandler(ABC):
         """Read both entity states, process meta-keys, validate — no send policy.
 
         Side effects are bookkeeping only: the meta-processor's claims and slot
-        title, and the display-only `active_schedule_layer`.
+        title. The display-only schedule layer is returned on the `SlotContext`;
+        publishing it is the caller's step (`_publish_active_layer`).
         """
         main_state = self._hass.states.get(self.schedule_entity_id) if self.schedule_entity_id else None
         bypass_state = self._hass.states.get(self.bypass_entity_id) if self.bypass_entity_id else None
@@ -316,11 +318,18 @@ class BaseScheduleHandler(ABC):
         # Display only: unlike `active_layer`, an empty bypass does not count.
         # Nothing reads this back for schedule decisions.
         layer = "bypass" if bypass_active else main_layer
-        if layer != self._group.run_state.active_schedule_layer:
-            self._group.run_state = replace(self._group.run_state, active_schedule_layer=layer)
-            self._group.async_defer_or_update_ha_state()
 
-        return SlotContext(main_payload, bypass_payload, bypass_active)
+        return SlotContext(main_payload, bypass_payload, bypass_active, layer)
+
+    def _publish_active_layer(self, ctx: SlotContext) -> None:
+        """Write the display-only schedule layer to run_state and refresh the entity.
+
+        Kept out of `_read_slots()` so the read stays side-effect free; each
+        `on_slot_change()` calls it right after reading the slot.
+        """
+        if ctx.active_layer != self._group.run_state.active_schedule_layer:
+            self._group.run_state = replace(self._group.run_state, active_schedule_layer=ctx.active_layer)
+            self._group.async_defer_or_update_ha_state()
 
     def _update_state(self, record: dict[str, Any]) -> None:
         if record:
@@ -381,6 +390,7 @@ class MainScheduleHandler(BaseScheduleHandler):
         """
         async with self.slot_transition_lock:
             ctx = await self._read_slots()
+            self._publish_active_layer(ctx)
             record = self.slot_resolver.record(ctx)
             # The hold defers only the climate payload: `_read_slots()` has
             # already run the meta-keys and `record()` its claim bookkeeping.
@@ -540,6 +550,7 @@ class BypassScheduleHandler(BaseScheduleHandler):
         """
         async with self.slot_transition_lock:
             ctx = await self._read_slots()
+            self._publish_active_layer(ctx)
             had_claims = bool(self._group.run_state.schedule_bypass_claims)
             # Not every run of this listener is a bypass run: it also fires for
             # attribute-only updates on an inactive entity. Those three are.

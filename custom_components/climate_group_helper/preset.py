@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 import logging
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import (

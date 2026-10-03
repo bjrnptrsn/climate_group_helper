@@ -11,7 +11,7 @@
 
 <p align="center">
   <strong>The advanced logic layer for your Home Assistant climate devices.</strong><br>
-  Sync, automate, and fix your thermostats — without a single line of YAML.
+  Sync, automate, and fix your thermostats — set up entirely in the UI.
 </p>
 
 <p align="center">
@@ -25,7 +25,8 @@
   🔥 <b>Boost the temperature</b> for a while, then fall back automatically.<br>
   🚧 <b>Isolate single devices</b> from the group while a condition holds.<br>
   🧩 <b>Add a heat/cool range</b> to single-setpoint devices with the Member Template.<br>
-  ➕ <b>Shift the whole group</b> up or down with a single offset.
+  ➕ <b>Shift the whole group</b> up or down with a single offset.<br>
+  🎛️ <b>Dashboard card included</b> — shows what the group is doing.
 </p>
 
 <p align="center">

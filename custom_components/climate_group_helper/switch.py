@@ -79,6 +79,8 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         # schedule meta-key turn_off) so is_on stays in sync in the HA state machine.
         self._group.switch_state_callback = self.async_write_ha_state
         self._group.main_switch_entity_id = self.entity_id
+        # Publish the attribute now — a quiet group writes no state on its own.
+        self._group.async_defer_or_update_ha_state()
 
         # Only an explicit "off" restores the block. A restored unavailable/unknown
         # state (unclean shutdown) carries no user intent — treating it as "off"

@@ -4,8 +4,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Callable
 
-from homeassistant.core import callback
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 
 from .const import (
@@ -105,9 +105,10 @@ class PresenceHandler:
         )
         _LOGGER.debug("[%s] Presence control subscribed to: %s", self._group.entity_id, self._sensors)
 
-        # Check initial collective presence. Skipped under an active slot bypass:
-        # a restored override (schedule slot spanning the restart) already names
-        # the state the block must be in, and apply_bypass() establishes it.
+        # Check initial collective presence. Skipped under an active slot bypass.
+        # Slot overrides are not persisted, so after a restart `bypassed` is
+        # still False here: the startup slot apply runs after this setup and
+        # pulls the block to the slot's state through apply_bypass().
         if not self.bypassed and not self._get_collective_presence():
             _LOGGER.debug("[%s] Initial collective presence absent — activating away mode immediately", self._group.entity_id)
             # Set before the await, like _go_away() — the listener is already

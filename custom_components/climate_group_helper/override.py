@@ -22,17 +22,17 @@ from .const import (
     PresenceAction,
     WindowControlAction,
 )
-from .state import available_state
 from .isolation import drop_all_claims, reevaluate_all
+from .state import available_state
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
     from .service_call import (
         OverrideCallHandler,
+        PresenceCallHandler,
         SwitchCallHandler,
         SwitchEnforceCallHandler,
         WindowControlCallHandler,
-        PresenceCallHandler,
     )
 
 _LOGGER = logging.getLogger(__name__)

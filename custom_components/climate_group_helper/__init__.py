@@ -40,12 +40,12 @@ from .const import (
     CONF_ISOLATION_ACTIVATE_DELAY,
     CONF_ISOLATION_ENTITIES,
     CONF_ISOLATION_RESTORE_DELAY,
-    CONF_ISOLATION_RULES_COUNT,
     CONF_ISOLATION_RULES,
+    CONF_ISOLATION_RULES_COUNT,
     CONF_ISOLATION_SENSOR,
     CONF_ISOLATION_SLOT,
-    CONF_ISOLATION_TRIGGER_HVAC_MODES,
     CONF_ISOLATION_TRIGGER,
+    CONF_ISOLATION_TRIGGER_HVAC_MODES,
     CONF_MASTER_ENTITY,
     CONF_MEMBER_COMMAND_DELAY,
     CONF_MEMBER_OFFSET_CORRECTION,
@@ -290,12 +290,12 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     The Soft Reset combines all historical transformations (v7–v12) into a single pass:
         - Combine data+options (covers pre-v7 entries)
-        - v7→v8: split ignore_off_members into _sync / _schedule variants
-        - v8→v9: rename SyncMode "standard" → "disabled"
-        - v9→v10: rewrite WindowControlMode "off"/"on" → "disabled"/"enabled"
-        - v10→v11: wrap presence_sensor str → list; set advanced_mode=True on existing entries
-        - v11→v12: convert range_template_entities list → CONF_RANGE_TEMPLATE_ENABLED bool;
-                   wrap flat isolation keys into CONF_ISOLATION_RULES list
+        - v7→v8: split ignore_off_members into _sync / _schedule variants;
+                 rename SyncMode "standard" → "disabled"
+        - v8→v9: rewrite WindowControlMode "off"/"on" → "disabled"/"enabled"
+        - v9→v10: wrap presence_sensor str → list; set advanced_mode=True on existing entries
+        - v10→v11: convert range_template_entities list → CONF_RANGE_TEMPLATE_ENABLED bool
+        - v11→v12: wrap flat isolation keys into CONF_ISOLATION_RULES list
         - Filter out invalid/renamed configuration keys via VALID_CONFIG_KEYS whitelist
         - Restore defaults for valid keys not present
 

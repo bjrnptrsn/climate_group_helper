@@ -18,16 +18,19 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_LOW,
     ATTR_TEMPERATURE,
     DEFAULT_MIN_TEMP,
-    DOMAIN as CLIMATE_DOMAIN,
     PRESET_NONE,
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
+from homeassistant.components.climate import (
+    DOMAIN as CLIMATE_DOMAIN,
+)
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import Context, State
 from homeassistant.helpers.debounce import Debouncer
 
+from .aggregation import within_tolerance
 from .const import (
     ATTR_SERVICE_MAP,
     CONF_FEATURE_STRATEGY,
@@ -48,7 +51,6 @@ from .const import (
     UnionOutOfBoundsAction,
     UnsupportedHvacAction,
 )
-from .aggregation import within_tolerance
 from .state import FilterState, available_state, other_active_members
 
 if TYPE_CHECKING:
@@ -425,6 +427,9 @@ class BaseServiceCallHandler(ABC):
             else:
                 raw = self._build_attr_initial_calls(attr, value)
 
+            if attr == ATTR_HVAC_MODE:
+                raw = self._append_turn_on_calls(raw, data)
+
             if raw:
                 calls.extend(self._run_pipeline(raw))
 
@@ -773,6 +778,14 @@ class BaseServiceCallHandler(ABC):
         """
         return not self._group.config.get(CONF_FORCE_RETRY, False)
 
+    def _inject_turn_on_setpoint(self) -> bool:
+        """Whether this handler augments activation calls with the group target.
+
+        Default False. Enabled only for handlers whose payload can switch a
+        member on without carrying the setpoint.
+        """
+        return False
+
     def _get_parent_id(self) -> str:
         """Create a unique Parent ID for echo tracking.
 
@@ -841,8 +854,9 @@ class BaseServiceCallHandler(ABC):
 
         - OFF: split into temp-capable (SET_TEMPERATURE with min_temp + OFF) and
           non-temp (SET_HVAC_MODE OFF)
-        - Restore (ON): inject the setpoint for temp-capable devices, so a device
-          parked at its min_temp does not come back on 5°
+        - Restore (ON): the mode call stays; temp-capable devices get the setpoint
+          as a separate call (offsets included), so a device parked at its
+          min_temp does not come back on 5°
         - Non-applicable calls pass through unchanged.
         """
         if not self._group.min_temp_off:
@@ -889,25 +903,159 @@ class BaseServiceCallHandler(ABC):
                         "entity_ids": non_temp_ids,
                     })
             else:
-                # Restore (turning ON): inject the setpoint for temp-capable devices
-                # (see docstring).
+                # Restore (turning ON): the mode call stays untouched — many
+                # integrations ignore `hvac_mode` inside `set_temperature` — and
+                # the setpoint follows as its own call (see docstring).
+                result.append(call)
                 target_temp = self._min_temp_off_restore_value()
-                if target_temp is not None and temp_ids:
+                if target_temp is None:
+                    continue
+                temp_by_value: dict[float, list[str]] = {}
+                for entity_id in temp_ids:
+                    value = self._turn_on_setpoint(entity_id, target_temp)
+                    temp_by_value.setdefault(value, []).append(entity_id)
+                for value, value_ids in temp_by_value.items():
                     result.append({
                         **call,
                         "service": SERVICE_SET_TEMPERATURE,
-                        "kwargs": {ATTR_TEMPERATURE: target_temp, ATTR_HVAC_MODE: hvac_mode},
-                        "entity_ids": temp_ids,
-                    })
-                if non_temp_ids or (target_temp is None and temp_ids):
-                    result.append({
-                        **call,
-                        "service": SERVICE_SET_HVAC_MODE,
-                        "kwargs": {ATTR_HVAC_MODE: hvac_mode},
-                        "entity_ids": non_temp_ids + (temp_ids if target_temp is None else []),
+                        "kwargs": {ATTR_TEMPERATURE: value},
+                        "entity_ids": value_ids,
+                        "injected": list(set(call.get("injected", [])) | {ATTR_TEMPERATURE}),
                     })
 
         return result
+
+    def _turn_on_offset(self, entity_id: str) -> float:
+        """Offset a member's setpoint carries when switched on.
+
+        Member offset plus the group offset unless a temporary state suspends
+        it — shared by the single-setpoint and range turn-on injections so both
+        stay in step with `_apply_group_offset()`.
+        """
+        offset = self._group._temp_offset_map.get(entity_id, 0.0)
+        if not self._group.run_state.temporary_state_active:
+            offset += self._group.run_state.group_offset
+        return offset
+
+    def _turn_on_setpoint(self, entity_id: str, base: float) -> float:
+        """Setpoint a member should carry when switched on.
+
+        `base` (the group target, or the boost setpoint) plus the turn-on
+        offset, rounded like the offset stages. The group offset applies
+        regardless of the handler — a direct command must not park a correctly
+        offset member back on the un-offset value. Suspended during temporary
+        state, matching `_apply_group_offset()`.
+        """
+        return round(float(base) + self._turn_on_offset(entity_id), 1)
+
+    def _turn_on_range(self, entity_id: str) -> tuple[float, float] | None:
+        """Range a member should carry when switched on into `heat_cool`.
+
+        The range counterpart of `_turn_on_setpoint()`: `target_state`'s bounds
+        plus the turn-on offset, rounded like the offset stages. Returns None
+        unless both bounds are known — a half band has no valid `set_temperature`
+        call (HA requires both together).
+        """
+        low = self.target_state.target_temp_low
+        high = self.target_state.target_temp_high
+        if low is None or high is None:
+            return None
+        offset = self._turn_on_offset(entity_id)
+        return round(float(low) + offset, 1), round(float(high) + offset, 1)
+
+    def _append_turn_on_calls(
+        self, calls: list[dict[str, Any]], data: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Append the group target to an activation call for currently-off members.
+
+        Called from `_generate_calls_from_dict` for the `hvac_mode` attribute,
+        before the pipeline: the extra calls join the raw list and are processed
+        by every stage (offsets, OOB) like any other. The mode call stays
+        untouched — the mode must go through `set_hvac_mode`, since many
+        integrations ignore `hvac_mode` inside `set_temperature`. An attribute
+        the generation already sends is skipped, so a combined payload or a slot
+        carrying mode and temperature never gets a second call. `min_temp_off`
+        owns the temperature of its own restore call, so only humidity is added
+        there. `heat_cool` carries a range rather than a single setpoint, so its
+        bounds are injected in the range's place.
+        """
+        if not self._inject_turn_on_setpoint():
+            return calls
+
+        target_temperature = self.target_state.temperature
+        inject_temp = (
+            ATTR_TEMPERATURE not in data
+            and not self._group.min_temp_off
+            and target_temperature is not None
+        )
+        inject_range = (
+            ATTR_TARGET_TEMP_LOW not in data
+            and ATTR_TARGET_TEMP_HIGH not in data
+            and self.target_state.target_temp_low is not None
+            and self.target_state.target_temp_high is not None
+        )
+        target_humidity = self.target_state.humidity
+        inject_humidity = ATTR_HUMIDITY not in data and target_humidity is not None
+        if not inject_temp and not inject_range and not inject_humidity:
+            return calls
+
+        extra: list[dict[str, Any]] = []
+        for call in calls:
+            hvac_mode = call["kwargs"].get(ATTR_HVAC_MODE)
+            if hvac_mode is None or hvac_mode in (HVACMode.OFF, HVACMode.AUTO):
+                continue
+
+            temp_by_value: dict[float, list[str]] = {}
+            range_by_value: dict[tuple[float, float], list[str]] = {}
+            humidity_ids: list[str] = []
+            for entity_id in call["entity_ids"]:
+                state = available_state(self._group.aggregator.read_member_state(entity_id))
+                if state is None or state.state != HVACMode.OFF:
+                    continue
+                if self._group.member_template_manager.is_covered_state(state):
+                    continue
+                if hvac_mode == HVACMode.HEAT_COOL:
+                    if (
+                        inject_range
+                        and ATTR_TARGET_TEMP_LOW in state.attributes
+                        and ATTR_TARGET_TEMP_HIGH in state.attributes
+                    ):
+                        value = self._turn_on_range(entity_id)
+                        if value is not None and not (
+                            within_tolerance(state.attributes.get(ATTR_TARGET_TEMP_LOW), value[0])
+                            and within_tolerance(state.attributes.get(ATTR_TARGET_TEMP_HIGH), value[1])
+                        ):
+                            range_by_value.setdefault(value, []).append(entity_id)
+                elif inject_temp and ATTR_TEMPERATURE in state.attributes:
+                    value = self._turn_on_setpoint(entity_id, target_temperature)
+                    if not within_tolerance(state.attributes.get(ATTR_TEMPERATURE), value):
+                        temp_by_value.setdefault(value, []).append(entity_id)
+                if inject_humidity and ATTR_HUMIDITY in state.attributes:
+                    if not within_tolerance(state.attributes.get(ATTR_HUMIDITY), target_humidity):
+                        humidity_ids.append(entity_id)
+
+            for value, entity_ids in temp_by_value.items():
+                extra.append({
+                    "service": SERVICE_SET_TEMPERATURE,
+                    "kwargs": {ATTR_TEMPERATURE: value},
+                    "entity_ids": entity_ids,
+                    "injected": [ATTR_TEMPERATURE],
+                })
+            for (low, high), entity_ids in range_by_value.items():
+                extra.append({
+                    "service": SERVICE_SET_TEMPERATURE,
+                    "kwargs": {ATTR_TARGET_TEMP_LOW: low, ATTR_TARGET_TEMP_HIGH: high},
+                    "entity_ids": entity_ids,
+                    "injected": [ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH],
+                })
+            if humidity_ids:
+                extra.append({
+                    "service": ATTR_SERVICE_MAP[ATTR_HUMIDITY],
+                    "kwargs": {ATTR_HUMIDITY: target_humidity},
+                    "entity_ids": humidity_ids,
+                })
+
+        return [*calls, *extra]
 
     def _process_member_offset(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Apply per-entity temperature offset.
@@ -1463,6 +1611,10 @@ class ClimateCallHandler(BaseServiceCallHandler):
     def _should_diff(self) -> bool:
         return False
 
+    def _inject_turn_on_setpoint(self) -> bool:
+        """A direct command may switch members on without carrying the setpoint."""
+        return True
+
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Ignore the global block when turning the group off (isolation still applies).
 
@@ -1612,8 +1764,12 @@ class SyncCallHandler(BaseServiceCallHandler):
         )
 
     def _block_all_calls(self, data: dict[str, Any] | SyncTarget = SYNC_TARGET) -> bool:
-        """Block calls if blocking mode is active."""
-        return self._group.run_state.blocked
+        """Block calls while a temporary state (blocking source or boost) is active.
+
+        `resync()` only checks this when it queues the enforcement; the debounced
+        run executes later, so a boost started in between must still stop it.
+        """
+        return self._group.run_state.temporary_state_active
 
     def _apply_group_offset(self) -> bool:
         # Suspended during temporary state (blocking sources or boost).
@@ -1751,6 +1907,10 @@ class ScheduleCallHandler(BaseServiceCallHandler):
     def _apply_group_offset(self) -> bool:
         # Suspended during temporary state (blocking sources or boost).
         return not self._group.run_state.temporary_state_active
+
+    def _inject_turn_on_setpoint(self) -> bool:
+        """A schedule payload may switch members on without carrying the setpoint."""
+        return True
 
 
 class SwitchCallHandler(BaseServiceCallHandler):
