@@ -125,6 +125,7 @@ def async_register_services(group: ClimateGroupHelper) -> None:
         group.platform.async_register_entity_service(
             SERVICE_BOOST,
             {
+                vol.Optional("hvac_mode"): cv.string,
                 vol.Optional("temperature"): vol.Coerce(float),
                 vol.Optional("temperature_offset"): vol.Coerce(float),
                 vol.Required("duration"): vol.All(vol.Coerce(int), vol.Range(min=1)),
@@ -160,24 +161,49 @@ def async_register_services(group: ClimateGroupHelper) -> None:
 async def async_boost(
     group: ClimateGroupHelper,
     duration: int,
+    hvac_mode: str | None = None,
     temperature: float | None = None,
     temperature_offset: float | None = None,
 ) -> None:
-    """Start a boost override from an absolute temperature or a relative offset."""
+    """Start a boost override from an absolute temperature or a relative offset.
+
+    The boost runs in the mode the group currently runs (see
+    `BoostOverrideManager.resolve_boost_mode`); `hvac_mode` overrides that, but
+    only with a mode that carries a single setpoint (`heat`, `cool`, `dry`,
+    `fan_only`). A boost that no reachable member can take is rejected.
+    """
     if duration <= 0:
         raise ServiceValidationError("Boost duration must be a positive number of minutes.")
     if (temperature is None) == (temperature_offset is None):
         raise ServiceValidationError("Exactly one of 'temperature' or 'temperature_offset' must be provided.")
+
+    boost_modes = group.boost_override_manager.BOOST_SINGLE_MODES
+    if hvac_mode is not None and hvac_mode not in boost_modes:
+        raise ServiceValidationError(
+            f"Boost mode must be one of {', '.join(boost_modes)} — '{hvac_mode}' carries no single setpoint."
+        )
+
+    manager = group.boost_override_manager
+    boost_mode = manager.resolve_boost_mode(hvac_mode)
     if temperature is None:
+        # Only the stored setpoint of the mode the boost runs in is a base for an
+        # offset; a heat fallback or a differing mode has none.
+        if boost_mode != manager.effective_mode():
+            raise ServiceValidationError(
+                f"Cannot use 'temperature_offset' with boost mode '{boost_mode}': use 'temperature' instead."
+            )
         current = group.shared_target_state.temperature
         if current is None:
             raise ServiceValidationError("Cannot use 'temperature_offset': group has no current target temperature.")
         temperature = current + temperature_offset  # type: ignore[operator]
-    started = await group.boost_override_manager.activate(temperature=temperature, duration=duration * 60)
+
+    started = await manager.activate(temperature=temperature, duration=duration * 60, hvac_mode=boost_mode)
     if not started:
-        raise ServiceValidationError(
-            f"Boost rejected: a blocking source is active ({', '.join(sorted(group.run_state.blocking_sources))})."
-        )
+        if group.run_state.blocking_sources:
+            raise ServiceValidationError(
+                f"Boost rejected: a blocking source is active ({', '.join(sorted(group.run_state.blocking_sources))})."
+            )
+        raise ServiceValidationError("Boost rejected: no member can take the boost.")
 
 
 async def async_apply_config(

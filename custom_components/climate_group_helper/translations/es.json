@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Establece temporalmente el grupo a una temperatura objetivo. Al expirar el temporizador, el grupo vuelve automáticamente al horario activo o estado anterior.",
       "fields": {
+        "hvac_mode": {
+          "name": "Modo HVAC",
+          "description": "El modo en el que se ejecuta el impulso (boost). Por defecto, el modo actual del grupo (un grupo apagado se activa en su último modo activo). Los modos sin un único punto de consigna, o un impulso que ningún miembro pueda tomar, se rechazan."
+        },
         "temperature": {
           "name": "Temperatura",
           "description": "Temperatura objetivo absoluta durante el boost (p. ej. 24,0). Excluye temperature_offset."

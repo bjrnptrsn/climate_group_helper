@@ -72,6 +72,18 @@ boost:
       integration: climate_group_helper
       domain: climate
   fields:
+    hvac_mode:
+      name: HVAC Mode
+      description: The mode the boost runs in. Defaults to the group's current mode (an OFF group wakes in its last active mode). Modes without a single setpoint, or a boost no member can take, are rejected.
+      required: false
+      selector:
+        select:
+          options:
+            - heat
+            - cool
+            - dry
+            - fan_only
+          mode: dropdown
     temperature:
       name: Temperature
       description: Absolute target temperature during the boost (e.g. 24.0). Mutually exclusive with temperature_offset.

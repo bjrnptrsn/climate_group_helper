@@ -127,18 +127,26 @@ async def async_reset_group(
         except Exception as err:
             _LOGGER.exception("[%s] Reset failed during slot reapply: %s", group.entity_id, err)
 
-    # Final pushes: the boost-abort and offset steps ran without pushing, so
-    # the restored state reaches the members here. Both are diff-based — a slot
-    # re-apply that already reconciled the members turns them into no-ops, and
-    # the offset push (one diff against target_state) also covers a boost
-    # restore. Independent of each other: a failed offset push must not swallow
-    # the boost restore ("one failure must not stop the others").
-    if reset_offset and ATTR_RESET_OFFSET in succeeded:
+    # Final pushes: the boost-abort and offset steps ran without pushing. Independent
+    # of each other — a failed offset push must not swallow the boost restore.
+    push_offset = reset_offset and ATTR_RESET_OFFSET in succeeded
+    push_boost = reset_boost and ATTR_RESET_BOOST in succeeded
+    # The boost restore already carries the offset, so a second push only repeats
+    # it. Exceptions: a block (the offset push enforces presence's away offset)
+    # and a Range Template (covered members get their own push).
+    if (
+        push_offset
+        and push_boost
+        and not group.run_state.blocking_sources
+        and group.member_template_manager.range_template is None
+    ):
+        push_offset = False
+    if push_offset:
         try:
             await async_push_group_offset(group)
         except Exception as err:
             _LOGGER.exception("[%s] Reset failed pushing group offset: %s", group.entity_id, err)
-    if reset_boost and ATTR_RESET_BOOST in succeeded:
+    if push_boost:
         try:
             await group.override_call_handler.call_immediate()
         except Exception as err:

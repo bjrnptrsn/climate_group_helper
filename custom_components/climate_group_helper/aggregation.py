@@ -173,6 +173,9 @@ class Aggregator:
         self._group = group
         self.states: list[State] = []
         self.capability_states: list[State] = []
+        # True once the first aggregation has run: before that (the restore
+        # path) empty `capability_states` means "not asked yet", not "nothing".
+        self.aggregation_done = False
         self._grace_period_unsub: Callable[[], None] | None = None
         self._grace_period_last_ts: float | None = None
 
@@ -680,6 +683,9 @@ class Aggregator:
             swing_horizontal_mode=self._group._attr_swing_horizontal_mode,
         )
         if initial_data := snapshot.to_dict():
+            # A preset already in the target is the user's choice — keep it.
+            if target.preset_mode is not None:
+                initial_data.pop("preset_mode", None)
             self._group.shared_target_state = target.update(**initial_data)
             _LOGGER.debug(
                 "[%s] Initialized Persistent Target State from current values: %s",
@@ -707,6 +713,9 @@ class Aggregator:
         self.capability_states, _ = self._get_valid_member_states(
             self._group.climate_entity_ids, skip_isolated=False
         )
+        # Before the `not self.states` early return: an all-offline run is a
+        # completed aggregation too, and its empty capability list is the answer.
+        self.aggregation_done = True
 
         # One-time calibration force-sync once all members are ready. startup_time
         # itself is armed in async_added_to_hass() (independent of readiness) — this

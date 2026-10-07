@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Define temporariamente o grupo para uma temperatura de destino. Quando o temporizador expira, o grupo regressa automaticamente ao agendamento ativo ou estado anterior.",
       "fields": {
+        "hvac_mode": {
+          "name": "Modo HVAC",
+          "description": "O modo em que o boost é executado. Por padrão, o modo atual do grupo (um grupo desligado desperta no seu último modo ativo). Modos sem um único ponto de ajuste, ou um boost que nenhum membro possa aceitar, são rejeitados."
+        },
         "temperature": {
           "name": "Temperatura",
           "description": "Temperatura alvo absoluta durante o boost (p. ex. 24,0). Exclui temperature_offset."

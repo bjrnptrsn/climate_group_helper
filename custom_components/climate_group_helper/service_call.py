@@ -159,11 +159,11 @@ class BaseServiceCallHandler(ABC):
             self._debouncer = None
 
     def register_call_trigger(self, callback: Callable[[dict[str, Any] | SyncTarget], Any]) -> None:
-        """Register a callback to be called after successful execution.
+        """Register a callback to be called before the command is sent.
 
         The callback receives the outgoing payload so triggers can react to the
-        command (e.g. BoostOverrideManager.abort() must know when the user
-        commands OFF so it does not restore the pre-boost snapshot over it).
+        command before it goes out (e.g. BoostOverrideManager.abort() ends an
+        active boost when the user commands the group directly).
         """
         if callback not in self._call_triggers:
             self._call_triggers.append(callback)
@@ -270,8 +270,8 @@ class BaseServiceCallHandler(ABC):
             _LOGGER.debug("[%s] Calls suppressed (source=%s): blocked by %s", self._group.entity_id, context_id, causes)
             return
 
-        # Trigger hook for calls — passes the payload so abort() can distinguish
-        # a user OFF command (which must survive) from other manual changes.
+        # Trigger hook for calls — registered callbacks (the boost abort) run
+        # before the command goes out.
         self._call_trigger(data)
 
         # Note: the retry loop deliberately has no success-break. Diff-based handlers
@@ -696,7 +696,7 @@ class BaseServiceCallHandler(ABC):
             if self._is_member_blocked(entity_id):
                 continue
 
-            if (state := available_state(self._group.aggregator.read_member_state(entity_id))) is None:
+            if (state := available_state(self._read_capability_state(entity_id))) is None:
                 continue
             if attr in MODE_MODES_MAP:
                 supported_modes = state.attributes.get(MODE_MODES_MAP[attr], [])
@@ -715,6 +715,14 @@ class BaseServiceCallHandler(ABC):
                 continue
             entity_ids.append(entity_id)
         return entity_ids
+
+    def _read_capability_state(self, entity_id: str):
+        """The member state that decides capability for a call.
+
+        Default: the wrapped (template-rendered) state. Override in handlers
+        that must judge a member by its physical state instead.
+        """
+        return self._group.aggregator.read_member_state(entity_id)
 
     def _get_filtered_entities(self, attr: str, value: Any = None) -> list[str]:
         """Get members that should receive a call for this attribute.
@@ -1966,7 +1974,7 @@ class OverrideCallHandler(BaseServiceCallHandler):
 
     Diffing like ScheduleCallHandler, but:
     - context_id="override" (not "schedule")
-    - no _block_all_calls: boost is already guarded in activate_boost()
+    - no _block_all_calls: boost is already guarded in activate()
     - no _block_unsynced_entity: OFF-member skipping is a future config option
     - no _is_oob_blocked pre-filter: that check compares target_state against the
       device limits, and a boost carries its own setpoint. A member marked OOB by
@@ -1987,6 +1995,14 @@ class OverrideCallHandler(BaseServiceCallHandler):
         if value is not None:
             return value
         return getattr(self.target_state, attr, None)
+
+    def _read_capability_state(self, entity_id: str):
+        """While a boost runs, covered members are judged like the boost judges them
+        (physical state); the target restore after the boost keeps judging them by
+        their proxy."""
+        if self._group.run_state.boost_temperature is not None:
+            return self._group.boost_override_manager.capable_state(entity_id)
+        return super()._read_capability_state(entity_id)
 
     def _apply_group_offset(self) -> bool:
         # Suspended during temporary state (blocking sources or boost).

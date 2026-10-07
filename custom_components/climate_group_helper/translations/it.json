@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Imposta temporaneamente il gruppo a una temperatura target. Alla scadenza del timer, il gruppo torna automaticamente alla programmazione attiva o allo stato precedente.",
       "fields": {
+        "hvac_mode": {
+          "name": "Modalità HVAC",
+          "description": "La modalità in cui opera il boost. Di default la modalità attuale del gruppo (un gruppo spento si riattiva nell'ultima modalità attiva). Le modalità senza un singolo setpoint, o un boost che nessun membro può accettare, vengono rifiutate."
+        },
         "temperature": {
           "name": "Temperatura",
           "description": "Temperatura target assoluta durante il boost (es. 24,0). Esclude temperature_offset."

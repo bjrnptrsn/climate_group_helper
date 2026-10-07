@@ -129,7 +129,7 @@ Schöpfe das volle Potenzial deines Klimasystems aus. Diese speziellen Funktione
 Bestimme ein einzelnes Klima-Mitglied als **Referenzpunkt** oder **Anführer** der Gruppe. Er wird im Abschnitt **Mitglieder & Modi** festgelegt und erfordert den **Erweiterten Modus** — einmal gesetzt, schaltet er zusätzliche Optionen in mehreren Abschnitten frei (Sync-Modus, Fenstersteuerung sowie Temperatur-/Feuchtigkeits-Mittelung).
 
 *   **Zentralisierte Zielanzeige:** Zeigt die Zieleinstellungen des Masters (Temperatur, Luftfeuchtigkeit) als angezeigtes Ziel der Gruppe an, statt berechneter Durchschnitte über alle Mitglieder. Dies betrifft nur die Anzeige des Gruppenzustands — es steuert oder synchronisiert keine Mitglieder (nutze dafür **Sync-Modus: Master/Lock**).
-*   **Hierarchische Synchronisation (Master/Lock):** Aktiviert einen "Folge dem Anführer"-Sync-Modus. Änderungen am Master werden an alle Mitglieder gespiegelt; manuelle Änderungen an anderen Mitgliedern werden automatisch zurückgesetzt.
+*   **Hierarchische Synchronisation (Master/Lock):** Aktiviert einen "Folge dem Anführer"-Sync-Modus. Änderungen am Master werden an alle Mitglieder gespiegelt; Änderungen an anderen Geräten werden für die ausgewählten **Sync-Attribute** zurückgesetzt, unausgewählte werden ignoriert.
 *   **Intelligente Fenstersteuerung:** Wenn aktiviert, aktualisieren nur manuelle Anpassungen am Master den Zielzustand, während Fenster geöffnet sind. Änderungen an anderen Geräten bleiben ignoriert.
 
 ### Externe Sensoren
@@ -142,7 +142,7 @@ Schreibe den externen Sensorwert zurück in deine TRVs, um deren interne Tempera
 
 *   **Modi:** Absolut (Standard), Offset (Delta-Berechnung) und Skaliert (x100 für Danfoss Ally).
 *   **Heartbeat:** Sendet den Kalibrierungswert periodisch erneut, um Sensor-Timeouts bei Zigbee-Geräten zu vermeiden.
-*   **Aus-Mitglieder ignorieren:** Verhindert das Senden von Kalibrierungs-Updates an TRVs, die aktuell `aus` sind, und schont so den Akku bei drahtlosen Geräten.
+*   **Ausgeschaltete Mitglieder ignorieren:** Verhindert das Senden von Kalibrierungs-Updates an TRVs, die aktuell `aus` sind, und schont so den Akku bei drahtlosen Geräten.
 
 ### Erweiterte Sync-Modi
 
@@ -173,18 +173,18 @@ Steuert, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z. B. üb
   | **Mirror** | **ausgewählte** Attribute werden gespiegelt, **nicht ausgewählte** Attribute werden ignoriert. |
   | **Lock** | **ausgewählte** Attribute werden zurückgesetzt, **nicht ausgewählte** Attribute werden ignoriert. |
   | **Mirror/Lock** | **ausgewählte** Attribute werden gespiegelt, **nicht ausgewählte** Attribute werden zurückgesetzt. |
-  | **Master/Lock** | **ausgewählte** Attribute werden von der **Master-Entität** gespiegelt, **nicht ausgewählte** Attribute werden ignoriert. Änderungen von Nicht-Master-Geräten werden immer zurückgesetzt. |
+  | **Master/Lock** | **ausgewählte** Attribute werden von der **Master-Entität** gespiegelt, **nicht ausgewählte** Attribute werden ignoriert. Änderungen von Nicht-Master-Geräten werden für die ausgewählten Attribute zurückgesetzt; unausgewählte Attribute werden ignoriert. |
   | **Nur übernehmen** | **ausgewählte** Attribute werden in die Einstellungen der Gruppe übernommen, **nicht ausgewählte** Attribute werden ignoriert. An die anderen Mitglieder wird nichts gesendet. |
 
 *  **Respektiere Aus-Status der Mitglieder (Sync):** Wenn ein Mitglied manuell `aus` geschaltet wird, spiegelt die Gruppe dieses `aus` weder auf andere, noch erzwingt sie es zurück — das Mitglied wird einfach in Ruhe gelassen. Die eine Ausnahme: Wenn es das *letzte* aktive Mitglied ist, akzeptiert die Gruppe das `aus`, und ihr eigenes Ziel wechselt ebenfalls auf `aus`.
 
 ### Fenstersteuerung
 
-Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn Fenster oder Türen geöffnet werden, und stellt den vorherigen Zustand beim Schließen wieder her. Während Fenster geöffnet sind, werden manuelle Änderungen blockiert. Unterstützt Binärsensoren und Rollladen-/Fensterentitäten (Cover).
+Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn Fenster oder Türen geöffnet werden, und stellt den vorherigen Zustand beim Schließen wieder her. Während Fenster geöffnet sind, werden manuelle Änderungen blockiert. Unterstützt Binärsensoren, `input_boolean`-Helfer und Rollladen-/Fensterentitäten (Cover).
 
 *   **Raum- + Zonensensoren:** Kombiniert einen schnell reagierenden Raumsensor mit einem langsam reagierenden Zonensensor (z. B. für eine ganze Etage). Der Raum ist Teil der Zone: Werden beide genutzt, **muss der Zonensensor den Raumsensor enthalten** (nimm den Raumsensor in die Zonen-Gruppe auf). Sonst gelten die eingestellten Verzögerungen nicht mehr.
 *   **Konfigurierbare Verzögerungen:** Lege eigene Reaktionszeiten für Öffnen und Schließen fest.
-*   **Fenster-Aktion:** Wähle zwischen vollständigem `aus` oder einem konfigurierbaren Temperatur-Sollwert.
+*   **Aktion bei offenem Fenster:** Wähle zwischen vollständigem `aus` oder einem konfigurierbaren Temperatur-Sollwert.
 *   **Manuelle Änderungen übernehmen:** Was mit Änderungen passiert, die bei offenem Fenster gemacht werden. Sie werden nie sofort angewendet — bis die Fenster schließen, gilt die Aktion bei offenem Fenster.
     *   **Aus:** Änderungen werden verworfen.
     *   **Alle:** Änderungen werden gemerkt und beim Schließen der Fenster angewendet. Änderungen direkt an einem Gerät werden nur gemerkt, wenn ein Sync-Modus aktiv ist, der sie übernimmt.
@@ -192,7 +192,7 @@ Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn
 
 ### Anwesenheitssteuerung
 
-Verwaltet Klimaeinstellungen basierend auf Raumanwesenheit. Wähle einen oder mehrere Trigger (Binärsensor, Geräte-Tracker oder Person), optional beschränkt auf bestimmte **Zonen** (z. B. um nur auszulösen, wenn sich jemand tatsächlich "zu Hause" befindet). Konfiguriere Verzögerungen und Fallback-Aktionen für den Fall, dass der Raum leer wird. Die Gruppe gilt als belegt, wenn **irgendein** Sensor Anwesenheit meldet.
+Verwaltet Klimaeinstellungen basierend auf Raumanwesenheit. Wähle einen oder mehrere Trigger (Binärsensor, `input_boolean`, calendar, Geräte-Tracker oder Person), optional beschränkt auf bestimmte **Zonen** (z. B. um nur auszulösen, wenn sich jemand tatsächlich "zu Hause" befindet). Konfiguriere Verzögerungen und Fallback-Aktionen für den Fall, dass der Raum leer wird. Die Gruppe gilt als belegt, wenn **irgendein** Sensor Anwesenheit meldet.
 
 *   **Ausschalten:** Mitglieder werden `aus` geschaltet, während Abwesenheit erkannt wird (Standard).
 *   **Abwesenheits-Offset:** Die Zieltemperatur wird um einen festen Offset reduziert (z. B. −2 °C). Der Offset wird relativ zur *aktuellen Zieltemperatur* der Gruppe angewendet. Ändert sich ein Zeitplan während der Abwesenheit, wird der Offset automatisch auf den neuen geplanten Wert erneut angewendet.
@@ -271,7 +271,7 @@ Du kannst Attribute weglassen, die du nicht brauchst — verwende z. B. nur `hva
 | Key | Mögliche Werte | Beispiel | Effekt |
 |---|---|---|---|
 | `group_offset` | Float −5,0 … 5,0 | `group_offset: 1.5` | Setzt vorübergehend den **Gruppen-Offset** für die Dauer des Zeitblocks. Bewegst du den Offset-Regler manuell, während dieser Zeitblock aktiv ist, übernimmt dein Wert die Kontrolle und das Zurücksetzen am Zeitblock-Ende wird übersprungen. |
-| `sync_mode` | `disabled`, `lock`, `mirror`, `master_lock` | `sync_mode: disabled` | Überschreibt vorübergehend den konfigurierten **Sync-Modus** für die Dauer des Zeitblocks. Nützlich für Zeitblöcke, in denen Mitglieder in Ruhe gelassen werden sollen (z. B. ein "Schlaf"-Zeitblock, in dem manuelle Anpassungen erlaubt sind). |
+| `sync_mode` | `disabled`, `lock`, `mirror`, `mirror_lock`, `master_lock`, `adopt_only` | `sync_mode: disabled` | Überschreibt vorübergehend den konfigurierten **Sync-Modus** für die Dauer des Zeitblocks. Nützlich für Zeitblöcke, in denen Mitglieder in Ruhe gelassen werden sollen (z. B. ein "Schlaf"-Zeitblock, in dem manuelle Anpassungen erlaubt sind). |
 | `sync_attributes` | Beliebige Teilmenge von: `hvac_mode`, `temperature`, `target_temp_low`, `target_temp_high`, `humidity`, `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode` | `sync_attributes: [hvac_mode]` | Überschreibt vorübergehend, welche **Sync-Attribute** für die Dauer des Zeitblocks synchronisiert werden. Nützlich für Zeitblöcke, in denen nur der Modus synchronisiert, aber die Temperatur den Mitgliedern selbst überlassen werden soll. Wird bei Zeitblock-Ende auf die konfigurierten Sync-Attribute zurückgesetzt. |
 | `turn_off` | `true` / `false` | `turn_off: true` | Expliziter Zwei-Zustands-Auslöser: `true` schaltet alle Mitglieder aus (entspricht dem Ausschalten des **Hauptschalters**). `false` stellt alle Mitglieder wieder her (entspricht dem Wiedereinschalten des **Hauptschalters**). Ein Zeitblock ohne `turn_off` hat keine Auswirkung auf den aktuellen Zustand. Der Hauptschalter und dieser Meta-Key sind gleichwertige, austauschbare Steuerungen für dieselbe Sperre — wer zuletzt handelt, gewinnt. Du kannst also den Hauptschalter jederzeit in der UI wieder einschalten, auch während ein `turn_off: true`-Zeitblock aktiv ist, und ein späterer `turn_off: false`-Zeitblock löst ebenso eine Sperre, die du manuell über den Hauptschalter gesetzt hast. |
 | `window_mode` | `disabled` | `window_mode: disabled` | Pausiert die **Fenstersteuerung** für die Dauer des Zeitblocks — ein offenes Fenster schaltet die Heizung nicht mehr aus. Steht ein Fenster beim Start des Zeitblocks bereits offen, geht die Heizung wieder an. |
@@ -363,7 +363,7 @@ Du kannst **bis zu 4 unabhängige Isolationsregeln** pro Gruppe definieren, jede
 *   **HVAC-Modus:** Isolation aktiviert sich, wenn der Zielmodus der Gruppe mit einer konfigurierten Menge übereinstimmt (z. B. Heizkörper isolieren, wenn auf `cool` gewechselt wird).
 *   **Mitglied aus:** Isoliert einzelne Mitglieder automatisch, wenn sie manuell `aus` geschaltet werden. Die Wiederherstellung erfolgt, sobald das Gerät wieder `ein` geschaltet wird.
 *   **Konfigurierbare Verzögerungen:** Lege eigene Reaktionszeiten für Aktivierung und Wiederherstellung fest (nur bei Sensor- und HVAC-Modus-Auslösern).
-*   **Isolationsaktion:** Wähle, welcher Befehl gesendet wird, wenn ein Mitglied isoliert wird. Standard ist `hvac_mode: off`. Für Geräte ohne echten Aus-Modus (z. B. KNX-Fußbodenheizung) verwende stattdessen `preset_mode`, um ein sicheres Standby-Preset zu setzen (z. B. `building_protection`).
+*   **Isolieraktion:** Wähle, welcher Befehl gesendet wird, wenn ein Mitglied isoliert wird. Standard ist `hvac_mode: off`. Für Geräte ohne echten Aus-Modus (z. B. KNX-Fußbodenheizung) verwende stattdessen `preset_mode`, um ein sicheres Standby-Preset zu setzen (z. B. `building_protection`).
 
 ### Mitglieder-Vorlage
 
@@ -375,10 +375,10 @@ Eine **Mitglieder-Vorlage** umhüllt einzelne Gruppenmitglieder mit einem virtue
 
 *   Temperatur **unter** `target_temp_low` → sendet `heat` + unteren Sollwert
 *   Temperatur **über** `target_temp_high` → sendet `cool` + oberen Sollwert
-*   Temperatur **innerhalb** des Bandes → sendet die konfigurierte **Totzonen-Aktion**
+*   Temperatur **innerhalb** des Bandes → sendet die konfigurierte **Deadband-Aktion**
 
-*   **Totzonen-Aktion:** Was zu tun ist, wenn sich der Raum bereits innerhalb des Zielbandes befindet: **Keine** (Standard), **Ausschalten** oder **Nur Lüfter**.
-*   **Im Totband entfeuchten:** Wenn aktiviert, schaltet die Gruppe Geräte im Temperatur-Totband automatisch auf **Trocknen** (oder **Nur Lüfter**), wenn die aktuelle Luftfeuchtigkeit die Zielfeuchtigkeit überschreitet. Aktivierung erfolgt sofort; eine Schmitt-Trigger-Hysterese und eine konfigurierbare Deaktivierungsverzögerung verhindern schnelles Takten. Temperatur-Heizen und -Kühlen haben immer Vorrang, sobald der Raum das Totband verlässt. Ein Feuchtigkeitswert ist Voraussetzung — entweder von einem Mitglied, das ihn meldet, oder von einem der Gruppe hinzugefügten Feuchtigkeitssensor; ohne ihn bietet die Gruppe keine einstellbare Zielfeuchtigkeit an.
+*   **Deadband-Aktion:** Was zu tun ist, wenn sich der Raum bereits innerhalb des Zielbandes befindet: **Keine** (Standard), **Ausschalten** oder **Nur Lüftung**.
+*   **Im Totband entfeuchten:** Wenn aktiviert, schaltet die Gruppe Geräte im Temperatur-Totband automatisch auf **Trocknen** (oder **Nur Lüftung**), wenn die aktuelle Luftfeuchtigkeit die Zielfeuchtigkeit überschreitet. Aktivierung erfolgt sofort; eine Schmitt-Trigger-Hysterese und eine konfigurierbare Deaktivierungsverzögerung verhindern schnelles Takten. Temperatur-Heizen und -Kühlen haben immer Vorrang, sobald der Raum das Totband verlässt. Ein Feuchtigkeitswert ist Voraussetzung — entweder von einem Mitglied, das ihn meldet, oder von einem der Gruppe hinzugefügten Feuchtigkeitssensor; ohne ihn bietet die Gruppe keine einstellbare Zielfeuchtigkeit an.
 *   **Automatische Mitgliedserkennung:** Alle Mitglieder, die `heat_cool` **nicht** nativ melden, werden automatisch erfasst — keine manuelle Auswahl nötig. Mitglieder mit nativer `heat_cool`-Unterstützung bleiben unverändert. Dies ermöglicht auch den `heat_cool`-Modus für Gruppen, die ausschließlich aus reinen Heiz- und Kühlgeräten bestehen, ganz ohne natives `heat_cool`-Gerät.
 *   **Bedingtes Heizen/Kühlen:** Optional bietet die Gruppe **Heizen/Kühlen** und die Bereichssteuerung nur an, solange mindestens ein erreichbares Mitglied heizen und eines kühlen kann — nützlich, wenn eine saisonale Klimaanlage offline ist.
 *   **Erfasste Geräte folgen der Gruppe:** Ein von Hand geänderter Modus oder Sollwert an einem erfassten Gerät wird auf das zurückgesetzt, was der Bereich verlangt, unabhängig vom Sync-Modus — um ihn zu ändern, änderst du den Bereich der Gruppe.
@@ -476,10 +476,10 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Master-Entität** | Bestimmt ein Mitglied als Anführer der Gruppe. Aktiviert den Master/Lock-Sync-Modus, master-bewusste Fenster-Erkennung und zentralisierte Temperatur-/Feuchtigkeits-Zielanzeige. |
+| **Master-Gerät** | Bestimmt ein Mitglied als Anführer der Gruppe. Aktiviert den Master/Lock-Sync-Modus, master-bewusste Fenster-Erkennung und zentralisierte Temperatur-/Feuchtigkeits-Zielanzeige. |
 | **HVAC-Modus-Strategie** | Wie die Gruppe ihren kombinierten Modus meldet. Siehe Tabelle unten. |
-| **Feature-Strategie** | Welche Funktionen die Gruppe bereitstellt. Siehe Tabelle unten. |
-| **Aktion außerhalb des Bereichs** | *(Nur Union)* Was zu tun ist, wenn eine Zieltemperatur außerhalb des Bereichs eines Mitglieds liegt. |
+| **Funktionsstrategie** | Welche Funktionen die Gruppe bereitstellt. Siehe Tabelle unten. |
+| **Außerhalb-Bereich-Aktion** | *(Nur Union)* Was zu tun ist, wenn eine Zieltemperatur außerhalb des Bereichs eines Mitglieds liegt. |
 | **Aktion bei nicht unterstütztem HVAC-Modus** | *(Nur Union)* Was mit Mitgliedern zu tun ist, die den angeforderten Modus nicht unterstützen. |
 
 ### HVAC-Modus-Strategie
@@ -515,16 +515,18 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Externe Sensoren** | Wähle einen oder mehrere Sensoren, um Mitgliedswerte zu überschreiben. |
-| **Master-Temperatur/-Feuchtigkeit verwenden** | *(Erfordert Master-Entität)* Zeigt den Zielwert des Masters als Ziel der Gruppe an, statt des Mitglieder-Durchschnitts. Fällt auf Mittelung zurück, wenn der Master nicht verfügbar ist. Nur für die Anzeige — diese Option steuert oder synchronisiert keine Mitglieder (nutze dafür **Sync-Modus: Master/Lock**). |
-| **Mittelungsmethode** | Mittelwert, Median, Minimum oder Maximum — getrennt für aktuelle und Zielwerte. |
-| **Präzision** | Rundet an Geräte gesendete Zielwerte (z. B. 0,5° oder 1°). |
-| **Kalibrierungsziele** | Schreibt die berechnete Temperatur in Number-Entitäten. Unterstützt die Modi **Absolut** (Standard), **Offset** (Delta) und **Skaliert** (x100). |
+| **Externer Temperatursensor** / **Externe Feuchtigkeitssensoren** | Wähle einen oder mehrere Sensoren, um Mitgliedswerte zu überschreiben. |
+| **Master-Zieltemperatur verwenden** / **Master-Zielfeuchtigkeit verwenden** | *(Erfordert Master-Gerät)* Zeigt den Zielwert des Masters als Ziel der Gruppe an, statt des Mitglieder-Durchschnitts. Fällt auf Mittelung zurück, wenn der Master nicht verfügbar ist. Nur für die Anzeige — diese Option steuert oder synchronisiert keine Mitglieder (nutze dafür **Sync-Modus: Master/Lock**). |
+| **Zieltemperatur** / **Aktuelle Temperatur** (und entsprechend für die Feuchtigkeit) | Wie Mitgliedswerte zusammengefasst werden: Mittelwert, Median, Minimum oder Maximum — getrennt für den aktuellen und den Zielwert. |
+| **Zieltemperatur Präzision** / **Ziel-Feuchtigkeit Präzision** | Rundet an Geräte gesendete Zielwerte (z. B. 0,5° oder 1°). |
+| **Schreibe externe Temp. in Entitäten** / **Schreibe externe Feuchtigkeit in Entitäten** | Schreibt den berechneten Wert in Number-Entitäten. |
+| **Kalibrierungs-Modus** | Wie der Wert gesendet wird: **Absolut** (Standard), **Offset** (Delta) oder **Skaliert** (x100). |
 | **Kalibrierungs-Heartbeat** | Sendet Kalibrierungswerte periodisch erneut (in Minuten). Hilft, Timeouts bei Geräten zu vermeiden, die häufige Updates erwarten. |
-| **Aus-Mitglieder ignorieren** | Verhindert das Senden von Kalibrierungs-Updates an aktuell `aus` geschaltete Geräte und schont so den Akku bei drahtlosen Sensoren und TRVs. |
-| **Aus-Mitglieder ausschließen** | Schließt aktuell `aus` geschaltete Mitglieder von Temperaturberechnungen aus (sowohl aktuell als auch Ziel). Verhindert, dass ein kalter, ausgeschalteter Heizkörper den angezeigten Durchschnitt nach unten zieht. |
-| **Geräte-Zuordnung** | Verknüpft externe Sensoren automatisch mit internen TRV-Sensoren über das HA-Geräteregister (für präzise Offset-Berechnung). |
-| **Min. Temperatur bei Aus** | Erzwingt eine Mindesttemperatur (z. B. 5 °C), selbst wenn die Gruppe `aus` ist. Stellt sicher, dass Ventile für den Frostschutz vollständig schließen (essentiell für TRVs, die im `aus`-Modus nicht vollständig schließen). |
+| **Ausgeschaltete Mitglieder ignorieren** | Verhindert das Senden von Kalibrierungs-Updates an aktuell `aus` geschaltete Geräte und schont so den Akku bei drahtlosen Sensoren und TRVs. |
+| **Ausgeschaltete Mitglieder von Temperatur ausschließen** | Schließt aktuell `aus` geschaltete Mitglieder von Temperaturberechnungen aus (sowohl aktuell als auch Ziel). Verhindert, dass ein kalter, ausgeschalteter Heizkörper den angezeigten Durchschnitt nach unten zieht. |
+| **Min. Temp bei 'Aus'** | Erzwingt eine Mindesttemperatur (z. B. 5 °C), selbst wenn die Gruppe `aus` ist. Stellt sicher, dass Ventile für den Frostschutz vollständig schließen (essentiell für TRVs, die im `aus`-Modus nicht vollständig schließen). |
+
+Externe Sensoren werden automatisch über das Home-Assistant-Geräteregister mit den internen Sensoren des TRVs verknüpft — dadurch ist der Kalibrierungs-Modus Offset präzise.
 
 ### Sync-Modus
 
@@ -532,29 +534,29 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 |--------|-------------|
 | **Sync-Modus** | Was zu tun ist, wenn ein Mitglied außerhalb der Gruppe geändert wird. **Deaktiviert**: alles ignorieren. **Mirror**: Änderungen spiegeln. **Lock**: Änderungen zurücksetzen. **Mirror/Lock**: ausgewählte Attribute spiegeln, nicht ausgewählte zurücksetzen. **Master/Lock** *(erfordert Master-Entität)*: nur Änderungen der **Master-Entität** spiegeln, Änderungen von Nicht-Master-Entitäten zurücksetzen. **Nur übernehmen**: die Gruppe an das geänderte Gerät anpassen, ohne die anderen anzufassen. |
 | **Sync-Attribute** | Auf welche Attribute der Modus wirkt. Bei **Mirror**: nur ausgewählte Attribute werden gespiegelt, nicht ausgewählt = keine Aktion. Bei **Lock**: nur ausgewählte Attribute werden zurückgesetzt, nicht ausgewählt = keine Aktion. Bei **Mirror/Lock**: ausgewählte Attribute werden gespiegelt, nicht ausgewählte zurückgesetzt. Bei **Master/Lock**: nur die Attribute der Master-Entität werden gespiegelt, nicht ausgewählt = keine Aktion. Bei **Nur übernehmen**: nur ausgewählte Attribute werden in die Gruppe übernommen, nicht ausgewählt = keine Aktion. |
-| **Respektiere Aus-Status der Mitglieder (Sync)** | Mitglieder, die manuell `aus` geschaltet wurden, werden in Ruhe gelassen. Ihr `aus`-Zustand wird weder auf andere gespiegelt noch auf das Gruppenziel zurückgesetzt. Ausnahme: Ist es das letzte aktive Mitglied, wechselt die Gruppe selbst auf `aus` (Last Man Standing). Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
+| **Respektiere 'Aus'-Status der Mitglieder (Sync)** | Mitglieder, die manuell `aus` geschaltet wurden, werden in Ruhe gelassen. Ihr `aus`-Zustand wird weder auf andere gespiegelt noch auf das Gruppenziel zurückgesetzt. Ausnahme: Ist es das letzte aktive Mitglied, wechselt die Gruppe selbst auf `aus` (Last Man Standing). Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
 
 ### Fenstersteuerung
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Fenster-Aktion** | **Ausschalten** (Standard) oder **Temperatur setzen**. Nützlich für Frostschutz. |
+| **Aktion bei offenem Fenster** | **Ausschalten** (Standard) oder **Temperatur setzen**. Nützlich für Frostschutz. |
 | **Manuelle Änderungen übernehmen** | Was mit Änderungen passiert, die bei offenem Fenster gemacht werden: **Aus** (verwerfen), **Alle** (merken und beim Schließen der Fenster anwenden) oder **Nur Master** *(erfordert Master-Entität)*. |
-| **Fenster-Temperatur** | Zieltemperatur, die bei Aktion "Temperatur setzen" gesetzt wird. |
-| **Raumsensor** | (Optional) Binärsensor (Fenster/Tür) oder Cover-Entität für schnelle Reaktion. Cover gelten als "offen", solange sie nicht vollständig geschlossen sind. |
-| **Zonensensor** | (Optional) Binärsensor oder Cover-Entität für langsame Reaktion (z. B. Wohnung oder Etage). Muss den Raumsensor enthalten, wenn beide genutzt werden. |
-| **Raum-/Zonen-Verzögerung** | Zeit bis zum Ausschalten der Heizung (Standard: 15s / 5min). |
-| **Schließ-Verzögerung** | Zeit bis zur Wiederherstellung der Heizung nach dem Schließen der Fenster (Standard: 30s). |
+| **Zieltemperatur bei offenem Fenster** | Zieltemperatur, die bei Aktion "Temperatur setzen" gesetzt wird. |
+| **Raum-Fenstersensor** | (Optional) Binärsensor (Fenster/Tür), `input_boolean` oder Cover-Entität für schnelle Reaktion. Cover gelten in `open`/`opening`/`closing` als offen. Bei jedem Sensortyp behalten `unknown`/`unavailable` den letzten bekannten Zustand. |
+| **Zonen-Fenstersensor** | (Optional) Binärsensor, `input_boolean` oder Cover-Entität für langsame Reaktion (z. B. Wohnung oder Etage). Muss den Raum-Fenstersensor enthalten, wenn beide genutzt werden. |
+| **Verzögerung Raum** / **Verzögerung Zone** | Zeit bis zum Ausschalten der Heizung (Standard: 15s / 5min). |
+| **Verzögerung Schließen** | Zeit bis zur Wiederherstellung der Heizung nach dem Schließen der Fenster (Standard: 30s). |
 
 ### Anwesenheitssteuerung
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Anwesenheitssteuerungs-Modus** | **Deaktiviert** (Standard) oder **Aktiviert**. |
-| **Anwesenheits-Trigger** | Eine oder mehrere Entitäten, die Raumanwesenheit melden (binary_sensor, device_tracker oder person). Jeder `on`- oder `home`-Zustand gilt als anwesend; `not_home` und `away` gelten als abwesend. Die Gruppe gilt als belegt, wenn **irgendein** Sensor Anwesenheit meldet. |
-| **Anwesenheits-Zone** | *(Optional)* Eine oder mehrere `zone`-Entitäten. Ist konfiguriert, zählt ein person/device_tracker-Sensor nur als anwesend, wenn er sich in einer der ausgewählten Zonen befindet. Leer lassen, um jeden Nicht-Away-Zustand als anwesend zu behandeln. |
-| **Abwesenheits-Aktion** | Die Fallback-Aktion bei erkannter Abwesenheit: **Ausschalten**, **Abwesenheits-Offset**, **Abwesenheits-Temperatur** oder **Abwesenheits-Preset**. |
-| **Abwesenheits-Offset** | *(Aktion Abwesenheits-Offset)* Offset vom aktuellen Ziel bei Abwesenheit (z. B. `−2,0 °C` oder `+2,0 °C`). |
+| **Präsenzmodus** | **Deaktiviert** (Standard) oder **Aktiviert**. |
+| **Präsenz-Trigger** | Eine oder mehrere Entitäten, die Raumanwesenheit melden (binary_sensor, `input_boolean`, calendar, device_tracker oder person). Jeder `on`- oder `home`-Zustand gilt als anwesend; `not_home` und `away` gelten als abwesend. Die Gruppe gilt als belegt, wenn **irgendein** Sensor Anwesenheit meldet. |
+| **Anwesenheitszone** | *(Optional)* Eine oder mehrere `zone`-Entitäten. Ist konfiguriert, zählt ein person/device_tracker-Sensor nur als anwesend, wenn er sich in einer der ausgewählten Zonen befindet. Leer lassen, um jeden Nicht-Away-Zustand als anwesend zu behandeln. |
+| **Abwesenheits-Aktion** | Die Fallback-Aktion bei erkannter Abwesenheit: **Ausschalten**, **Abwesenheits-Versatz**, **Abwesenheits-Temperatur** oder **Abwesenheits-Preset**. |
+| **Abwesenheits-Temperaturversatz** | *(Aktion Abwesenheits-Versatz)* Offset vom aktuellen Ziel bei Abwesenheit (z. B. `−2,0 °C` oder `+2,0 °C`). |
 | **Abwesenheits-Temperatur** | *(Aktion Abwesenheits-Temperatur)* Feste Temperatur, die bei Abwesenheit gesetzt wird. |
 | **Abwesenheits-Preset** | *(Aktion Abwesenheits-Preset)* Preset-Modus, der bei Abwesenheit aktiviert wird. |
 | **Abwesenheits-Verzögerung** | Wartezeit (Sekunden) nach Meldung der Abwesenheit durch den Sensor, bevor der Abwesenheitsmodus aktiviert wird. |
@@ -565,10 +567,10 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Zeitplan-Entität** | Eine Home-Assistant-`schedule.*`- oder `calendar.*`-Entität zur Steuerung der Gruppe. |
+| **Haupt-Zeitplan / Kalenderentität** | Eine Home-Assistant-`schedule.*`- oder `calendar.*`-Entität zur Steuerung der Gruppe. |
 | **Fallback-Zustand bei inaktivem Haupt-Zeitplan / Kalender (YAML)** | *(Optional)* Zustand, der außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan einspringt (z. B. Nachtabsenkung oder vollständiges Ausschalten). Die Bypass-Ebene überschreibt ihn, solange sie aktiv ist. |
-| **Bypass-Entität** | *(Optional)* Eine zweite `schedule.*`- oder `calendar.*`-Entität, die als Prioritätsebene fungiert. Ist ein Bypass-Zeitblock aktiv, überschreibt er den Haupt-Zeitplan. |
-| **Respektiere Aus-Status der Mitglieder (Zeitplan)** | Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet. Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
+| **Bypass-Zeitplan / Kalenderentität** | *(Optional)* Eine zweite `schedule.*`- oder `calendar.*`-Entität, die als Prioritätsebene fungiert. Ist ein Bypass-Zeitblock aktiv, überschreibt er den Haupt-Zeitplan. |
+| **Respektiere 'Aus'-Status der Mitglieder (Zeitplan)** | Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet. Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
 | **Per Dienst geänderte Werte beibehalten (Zeitplan)** | Behält Haupt-Zeitplan, Bypass-Entität und Fallback-Zustand über Neustarts hinweg bei, wenn sie über einen Dienst geändert wurden. Ohne diese Option kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück. |
 | **Manuelle Haltezeit** | Wie lange eine manuelle Anpassung (Temperatur oder die Gruppe von Hand ein-/ausschalten) hält, bevor der Zeitplan mit dem dann aktuellen Zeitblock wieder übernimmt. `0` deaktiviert die Haltezeit. |
 
@@ -583,8 +585,8 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Offset pro Mitglied** | Wendet individuelle Temperaturverschiebungen (±20 °C, 0,5 °C-Schritte) an, damit bestimmte Mitglieder proportional wärmer oder kühler laufen als der Zielsollwert der Gruppe. |
-| **Mitglieder-Offset korrigieren (Standard)** | Zieht Mitglieder-Offsets vor der Mittelung ab, um den logischen Sollwert des Raums anstelle des rohen physischen Durchschnitts anzuzeigen. |
+| **Geräte-Offsets** (ein Feld pro Mitglied) | Wendet individuelle Temperaturverschiebungen (±20 °C, 0,5 °C-Schritte) an, damit bestimmte Mitglieder proportional wärmer oder kühler laufen als der Zielsollwert der Gruppe. |
+| **Mitglieds-Offset korrigieren (Standard)** | Zieht Mitglieder-Offsets vor der Mittelung ab, um den logischen Sollwert des Raums anstelle des rohen physischen Durchschnitts anzuzeigen. |
 
 ### Mitglieder-Isolation
 
@@ -592,12 +594,12 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 |--------|-------------|
 | **Anzahl der Regeln** | Wie viele unabhängige Isolationsregeln konfiguriert werden (1–4). Jede Regel hat ihren eigenen Auslöser, Mitglieder, Verzögerungen und Aktion. Nach einer Änderung speichern, um zusätzliche Regelabschnitte ein- oder auszublenden. |
 | **Zu isolierende Entitäten** | Welche Gruppenmitglieder diese Regel isoliert. |
-| **Auslösertyp** | **Binärsensor** (aktiviert, wenn Sensor EIN ist), **HVAC-Modus** (aktiviert, wenn Gruppenmodus übereinstimmt) oder **Mitglied aus** (isoliert jedes Mitglied einzeln, wenn es manuell ausgeschaltet wird). |
+| **Trigger-Typ** | **Binärer Sensor** (aktiviert, wenn Sensor EIN ist), **HVAC-Modus** (aktiviert, wenn Gruppenmodus übereinstimmt) oder **Mitglied aus** (isoliert jedes Mitglied einzeln, wenn es manuell ausgeschaltet wird). |
 | **Isolationssensor** | *(Sensor-Auslöser)* Binärsensor, der die Isolation auslöst, wenn aktiv. |
-| **HVAC-Modus-Auslöser** | *(HVAC-Modus-Auslöser)* Die Gruppenmodi, die die Isolation aktivieren. |
-| **Aktivierungs-Verzögerung** | Wartezeit nach Aktivierung des Auslösers, bevor Mitglieder isoliert werden. |
-| **Wiederherstellungs-Verzögerung** | Wartezeit nach Deaktivierung des Auslösers, bevor Mitglieder wiederhergestellt werden. |
-| **Isolationsaktion** | Was an das Mitglied gesendet wird, wenn die Isolation aktiviert: **HVAC-Modus setzen** (Standard: `off`) oder **Preset-Modus setzen** (z. B. `building_protection` für Fußbodenheizung ohne echten Aus-Modus). |
+| **HVAC-Modus-Trigger** | *(HVAC-Modus-Trigger)* Die Gruppenmodi, die die Isolation aktivieren. |
+| **Aktivierungsverzögerung** | Wartezeit nach Aktivierung des Auslösers, bevor Mitglieder isoliert werden. |
+| **Wiederherstellungsverzögerung** | Wartezeit nach Deaktivierung des Auslösers, bevor Mitglieder wiederhergestellt werden. |
+| **Isolieraktion** | Was an das Mitglied gesendet wird, wenn die Isolation aktiviert: **HVAC-Modus setzen** (Standard: `off`) oder **Preset-Modus setzen** (z. B. `building_protection` für Fußbodenheizung ohne echten Aus-Modus). |
 | **HVAC-Modus** | *(Aktion HVAC-Modus)* Der HVAC-Modus, der beim isolierten Mitglied gesetzt wird (Standard: `off`). |
 | **Preset-Modus** | *(Aktion Preset-Modus)* Das Preset, das beim isolierten Mitglied gesetzt wird. Fällt auf `hvac_mode: off` zurück, wenn das Preset vom Gerät nicht unterstützt wird. |
 
@@ -607,9 +609,9 @@ Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus vor
 |--------|-------------|
 | **Bereichsvorlage aktivieren** | Aktiviert automatische `heat_cool`-Bereichssteuerung für alle Mitglieder, die `heat_cool` nicht nativ melden. Keine manuelle Auswahl nötig — die Gruppe erkennt geeignete Mitglieder automatisch. |
 | **Bedingtes Heizen/Kühlen** | Bietet Heizen/Kühlen und die Bereichssteuerung nur an, solange mindestens ein erreichbares Mitglied heizen und eines kühlen kann. |
-| **Totzonen-Aktion** | Was zu tun ist, wenn die Raumtemperatur bereits innerhalb des Zielbandes liegt (zwischen unterem und oberem Sollwert). **Keine** (Standard — kein Moduswechsel; ein Gerät, das weiter heizt oder kühlt, wird auf dem passenden Sollwert gehalten: Heizen auf dem unteren, Kühlen auf dem oberen), **Ausschalten** oder **Nur Lüfter**. |
+| **Deadband-Aktion** | Was zu tun ist, wenn die Raumtemperatur bereits innerhalb des Zielbandes liegt (zwischen unterem und oberem Sollwert). **Keine** (Standard — kein Moduswechsel; ein Gerät, das weiter heizt oder kühlt, wird auf dem passenden Sollwert gehalten: Heizen auf dem unteren, Kühlen auf dem oberen), **Ausschalten** oder **Nur Lüftung**. |
 | **Im Totband entfeuchten** | Schaltet im Temperatur-Totband automatisch auf Entfeuchtung oder Luftzirkulation um, wenn die Raumfeuchtigkeit die Zielfeuchtigkeit überschreitet. Setzt einen Feuchtigkeitswert von einem Mitglied oder einem Feuchtigkeitssensor voraus. |
-| **Feuchtigkeits-Aktion** | Physische Aktion bei Überschreitung des Feuchtigkeitsschwellwerts im Totband: **Trocknen** (Standard) oder **Nur Lüfter**. |
+| **Feuchtigkeits-Aktion** | Physische Aktion bei Überschreitung des Feuchtigkeitsschwellwerts im Totband: **Trocknen** (Standard) oder **Nur Lüftung**. |
 | **Feuchtigkeits-Hysterese** | Symmetrisches Hystereseband um die Zielfeuchtigkeit zur Vermeidung schnellen Taktens (Standard: 3,0%). |
 | **Deaktivierungsverzögerung** | Verzögerung, bevor die Feuchtigkeits-Aktion nach Unterschreiten des Schwellwerts wieder beendet wird (Standard: 0s). Aktivierung erfolgt sofort — wie beim Verlassen des Temperaturbandes wird das Reagieren auf zu hohe Feuchtigkeit nicht künstlich verzögert. |
 
@@ -623,15 +625,15 @@ Befehle zeitlich zu strecken, statt sie alle gleichzeitig zu senden.
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Entprellungs-Verzögerung** | Wartezeit vor dem Senden von Befehlen. Höhere Werte verhindern 'Schnellfeuer'-Befehle beim Verschieben von Reglern, fühlen sich aber langsamer an (Standard: 0,3s). |
+| **Entprellverzögerung** | Wartezeit vor dem Senden von Befehlen. Höhere Werte verhindern 'Schnellfeuer'-Befehle beim Verschieben von Reglern, fühlen sich aber langsamer an (Standard: 0,3s). |
 | **Wiederholungsversuche** | Anzahl der Wiederholungen bei fehlgeschlagenem Befehl. |
-| **Wiederholungs-Verzögerung** | Zeit zwischen Wiederholungen (z. B. 1,0s). |
-| **Erzwungene Wiederholung** | Sendet Befehle immer an alle Mitglieder, auch wenn sie bereits den Zielzustand melden. Nützlich für IR-basierte Klimaanlagen oder andere Geräte, die ihren Zustand nach Erhalt eines Befehls möglicherweise nicht zuverlässig aktualisieren. |
+| **Wiederholungsverzögerung** | Zeit zwischen Wiederholungen (z. B. 1,0s). |
+| **Wiederholung erzwingen** | Sendet Befehle immer an alle Mitglieder, auch wenn sie bereits den Zielzustand melden. Nützlich für IR-basierte Klimaanlagen oder andere Geräte, die ihren Zustand nach Erhalt eines Befehls möglicherweise nicht zuverlässig aktualisieren. |
 | **Verzögerung zwischen Mitglieder-Befehlen** | Pause zwischen Befehlen an einzelne Mitglieder, statt sie alle gleichzeitig zu senden. Hilft, wenn das gleichzeitige Ansteuern mehrerer Geräte dein Netzwerk oder deine Bridge überlastet — ein bekanntes Problem bei IR-Blastern und manchen Zigbee-Koordinatoren (Standard: 0s, deaktiviert). |
-| **UI-Schonfrist** | Dauer (Sekunden), für die die Gruppe den befohlenen Wert sofort nach einer UI-Aktion anzeigt, bevor langsame Mitgliedsgeräte ihren Zustand zurückmelden. Verhindert visuelles Flackern im Dashboard. Gilt für alle Attribute: HVAC-Modus, Temperatur, Luftfeuchtigkeit, Lüfter-/Preset-/Schwenk-Modi. |
-| **Smart-Sensoren anzeigen** | Erstellt zusätzliche Temperatur- und Feuchtigkeits-Sensor-Entitäten, die den aktuellen aggregierten Zustand der Gruppe widerspiegeln (nützlich für Verlaufsgraphen und Dashboards). |
+| **Optimistische UI-Übergangszeit** | Dauer (Sekunden), für die die Gruppe den befohlenen Wert sofort nach einer UI-Aktion anzeigt, bevor langsame Mitgliedsgeräte ihren Zustand zurückmelden (Standard: 3,0 s). Verhindert visuelles Flackern im Dashboard. Gilt für alle Attribute: HVAC-Modus, Temperatur, Luftfeuchtigkeit, Lüfter-/Preset-/Schwenk-Modi. |
+| **Smarte Sensoren bereitstellen** | Erstellt zusätzliche Temperatur- und Feuchtigkeits-Sensor-Entitäten, die den aktuellen aggregierten Zustand der Gruppe widerspiegeln (nützlich für Verlaufsgraphen und Dashboards). |
 | **Mitgliederliste bereitstellen** | Fügt das Attribut `entity_id` mit der Liste aller Mitglieds-Entitäts-IDs hinzu, sodass Home Assistants More-Info-Dialog die native Mitgliederliste anzeigt (ermöglicht außerdem `expand()`-Templates). |
-| **Konfigurations-Sensor anzeigen** | Erstellt eine diagnostische Konfigurations-Sensor-Entität (`sensor.*_configuration`), die einen portablen JSON-Schnappschuss aller Gruppeneinstellungen unter dem Attribut `settings_json` enthält. |
+| **Konfiguration anzeigen (Debug)** | Erstellt eine diagnostische Konfigurations-Sensor-Entität (`sensor.*_configuration`), die einen portablen JSON-Schnappschuss aller Gruppeneinstellungen unter dem Attribut `settings_json` enthält. |
 | **Alle Sektionen standardmäßig aufklappen** | Hält standardmäßig alle Konfigurationsabschnitte im Optionsdialog aufgeklappt. |
 
 ## Dienste
@@ -644,13 +646,16 @@ Setzt die Gruppe vorübergehend für eine feste Dauer auf eine Zieltemperatur. L
 
 | Feld | Erforderlich | Beschreibung |
 |-------|----------|-------------|
+| `hvac_mode` | Nein | Der Modus, in dem der Boost läuft: `heat`, `cool`, `dry` oder `fan_only`. Standard: der aktuelle Modus der Gruppe — eine `aus`-Gruppe wacht in ihrem letzten aktiven Modus auf; die Modi ohne Einzel-Sollwert fallen auf `heat` zurück. |
 | `temperature` | Nein* | Absolute Zieltemperatur während des Boosts (z. B. `24.0`). |
 | `temperature_offset` | Nein* | Relativer Offset, der zur aktuellen Zieltemperatur addiert wird (z. B. `+3.0` oder `−2.0`). |
 | `duration` | **Ja** | Dauer in Minuten (Minimum 1). |
 
-*\*Entweder `temperature` oder `temperature_offset` muss angegeben werden.*
+*\*Entweder `temperature` oder `temperature_offset` muss angegeben werden. Ein Offset braucht den eigenen Einzel-Sollwert der Gruppe als Basis — er wird abgelehnt (mit dem Hinweis, `temperature` zu verwenden), wenn der Boost auf `heat` zurückfällt oder in einem abweichenden Modus läuft.*
 
-Manuelle Änderungen (direkte Gruppenbefehle oder Mirror-Übernahmen) brechen den Boost sofort ab. Lock-Durchsetzung nicht. Der Boost wird ignoriert, während eine Gruppensperre (wie ein offenes Fenster) aktiv ist. Ein Boost rangiert **über** dem Zeitplan und der Bypass-Ebene: Zeitplan-Zeitblock-Änderungen und Bypass-Aktivierungen laufen im Hintergrund weiter, ohne die geboostete Temperatur anzufassen, und alles wird erneut angewendet, sobald der Boost endet. Schaltet der Zeitplan die Gruppe während eines Boosts aus, hält der Boost die Mitglieder in ihrem letzten aktiven Modus am Laufen.
+Der Boost läuft immer in einem Modus, der einen Einzel-Sollwert trägt; der Modus selbst geht nur dann an die Geräte, wenn er vom Gruppen-Modus abweicht. Mit der Funktionsstrategie **Union** erreicht der Boost nur Mitglieder, die diesen Modus anbieten; mit **Schnittmenge** wird er wie jeder andere Gruppenbefehl gesendet. Kann kein Mitglied den Boost aufnehmen, meldet der Dienst einen Fehler — es wird nichts gesetzt und kein Countdown gestartet. Dasselbe gilt, während eine Gruppensperre (wie ein offenes Fenster) aktiv ist.
+
+Manuelle Änderungen (direkte Gruppenbefehle) brechen den Boost sofort ab. Eine Änderung direkt am Gerät nicht — während eines Boosts werden Meldungen der Mitglieder ignoriert (die verspätete Bestätigung des Boost-Sollwerts durch ein langsames Gerät ist von einer manuellen Änderung nicht unterscheidbar), und der Boost stellt beim Ende den vorherigen Zustand wieder her. Ein `aus` eines Mitglieds beendet den Boost genau dort, wo der Sync-Modus es übernehmen würde: in den Mirror-Modi ohne **Respektiere Aus-Status der Mitglieder (Sync)** das `aus` jedes einzelnen Mitglieds, mit der Option nur das des letzten laufenden; bei **Master/Lock** nur das des Masters; bei **Lock** nur das des letzten laufenden Mitglieds mit der Option; bei **Nur übernehmen** oder deaktiviertem Sync nie. Lock-Durchsetzung bricht den Boost nicht ab. Ein Boost rangiert **über** dem Zeitplan und der Bypass-Ebene: Zeitplan-Zeitblock-Änderungen und Bypass-Aktivierungen laufen im Hintergrund weiter, ohne die geboostete Temperatur anzufassen, und alles wird erneut angewendet, sobald der Boost endet. Schaltet der Zeitplan die Gruppe während eines Boosts aus, hält der Boost die Mitglieder in ihrem letzten aktiven Modus am Laufen.
 
 **Beispiel (absolut):**
 ```yaml

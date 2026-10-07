@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.14.0 - 2026-10-07
+
+### 🐛 Bug Fixes
+
+*   **Boost survives devices' late confirmations**: A member that confirms the boost setpoint only after a few seconds no longer ends the boost or becomes the group's target — the boost runs through and restores the previous state at its end.
+
+*   **A boost that would reach no device is rejected**: If no member can take the boost's mode (no member offers it with a single setpoint), the service reports an error instead of showing an active boost that never reaches a device.
+
+### ✨ Improvements
+
+*   **The boost mode can be chosen**: The boost service now takes an optional `hvac_mode`.
+
 ## 1.13.1 - 2026-10-03
 
 ### 🐛 Bug Fixes

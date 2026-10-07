@@ -129,7 +129,7 @@ Unlock the full potential of your climate system. These specialized features are
 Designate a single climate member as the **Reference Point** or **Leader** for the group. It is set in the **Members & Modes** section and requires **Advanced Mode** — once set, it unlocks additional options in several sections (Sync Mode, Window Control, and Temperature/Humidity averaging).
 
 *   **Centralized Target Display:** Show the Master's target settings (temperature, humidity) as the group's displayed target, rather than calculated averages across all members. This affects only how the group state is displayed — it does not control or synchronize members (use **Sync Mode: Master/Lock** for that).
-*   **Hierarchical Sync (Master/Lock):** Enables a "Follow the Leader" sync mode. Changes on the Master are mirrored to all members; manual changes on other members are automatically reverted.
+*   **Hierarchical Sync (Master/Lock):** Enables a "Follow the Leader" sync mode. Changes on the Master are mirrored to all members; changes on other devices are reverted for the selected **Sync Attributes**, unselected ones are ignored.
 *   **Intelligent Window Control:** If enabled, only manual adjustments on the Master update the target state while windows are open. Changes on other devices remain ignored.
 
 ### External Sensors
@@ -173,18 +173,18 @@ Controls what happens when a member device is changed directly (e.g. via its own
   | **Mirror** | **selected** attributes are mirrored, **unselected** attributes are ignored. |
   | **Lock** | **selected** attributes are reverted, **unselected** attributes are ignored. |
   | **Mirror/Lock** | **selected** attributes are mirrored, **unselected** attributes are reverted. |
-  | **Master/Lock** | **selected** attributes are mirrored from the **Master Entity**, **unselected** attributes are ignored. Changes from non-master devices are always reverted. |
+  | **Master/Lock** | **selected** attributes are mirrored from the **Master Entity**, **unselected** attributes are ignored. Changes from non-master devices are reverted for the selected attributes; unselected attributes are ignored. |
   | **Adopt Only** | **selected** attributes are adopted into the group's settings, **unselected** attributes are ignored. Nothing is sent to the other members. |
 
 *  **Respect Member Off State (Sync):** When a member is manually turned `off`, the group neither mirrors that `off` to others nor forces it back on — the member is simply left alone. The one exception: if it is the *last* active member, the group accepts the `off` and its own target switches to `off` as well.
 
 ### Window Control
 
-Automatically turn off heating or set a frost-protection temperature when windows or doors are opened, and restore the previous state when they close. While windows are open, manual changes are blocked. Supports binary sensors and cover entities.
+Automatically turn off heating or set a frost-protection temperature when windows or doors are opened, and restore the previous state when they close. While windows are open, manual changes are blocked. Supports binary sensors, `input_boolean` helpers and cover entities.
 
 *   **Room + Zone Sensors:** Combines a fast-reacting room sensor with a slow-reacting zone sensor (e.g. for a whole floor). The room is part of the zone: when you use both, the zone sensor **must include the room sensor** (add the room sensor to your zone group). Otherwise the configured delays no longer apply.
 *   **Configurable Delays:** Set custom reaction times for opening and closing.
-*   **Window Action:** Choose between full `off` or a configurable temperature setpoint.
+*   **Window Open Action:** Choose between full `off` or a configurable temperature setpoint.
 *   **Adopt Manual Changes:** What happens to changes made while windows are open. They are never applied right away — the Window Open Action stays in effect until the windows close.
     *   **Off:** Changes are discarded.
     *   **All:** Changes are kept and applied when the windows close. Changes made directly on a device are only kept if a Sync Mode that adopts them is enabled.
@@ -192,7 +192,7 @@ Automatically turn off heating or set a frost-protection temperature when window
 
 ### Presence Control
 
-Manage climate settings based on room presence. Select one or more triggers (binary sensor, device tracker, or person), optionally restricted to specific **zones** (e.g. to only trigger when someone is actually at 'Home'). Configure delays and fallback actions for when the room becomes empty. The group is considered occupied if **any** sensor reports presence.
+Manage climate settings based on room presence. Select one or more triggers (binary sensor, `input_boolean`, calendar, device tracker, or person), optionally restricted to specific **zones** (e.g. to only trigger when someone is actually at 'Home'). Configure delays and fallback actions for when the room becomes empty. The group is considered occupied if **any** sensor reports presence.
 
 *   **Turn Off:** Members are turned `off` while absence is detected (default).
 *   **Away Offset:** Target temperature is reduced by a fixed offset (e.g. −2°C). The offset is applied relative to the group's *current target temperature*. If a schedule changes during absence, the offset is automatically reapplied to the new scheduled value.
@@ -271,7 +271,7 @@ You can omit attributes you don't need — for example, use only `hvac_mode: off
 | Key | Possible values | Example | Effect |
 |---|---|---|---|
 | `group_offset` | Float −5.0 … 5.0 | `group_offset: 1.5` | Temporarily sets the **Group Offset** for the slot duration. If you move the offset slider manually while this slot is active, your value takes over and the slot-end reset is skipped. |
-| `sync_mode` | `disabled`, `lock`, `mirror`, `master_lock` | `sync_mode: disabled` | Temporarily overrides the configured **Sync Mode** for the slot duration. Useful for slots where you want members to be left alone (e.g. a "sleep" slot where manual adjustments are allowed). |
+| `sync_mode` | `disabled`, `lock`, `mirror`, `mirror_lock`, `master_lock`, `adopt_only` | `sync_mode: disabled` | Temporarily overrides the configured **Sync Mode** for the slot duration. Useful for slots where you want members to be left alone (e.g. a "sleep" slot where manual adjustments are allowed). |
 | `sync_attributes` | Any subset of: `hvac_mode`, `temperature`, `target_temp_low`, `target_temp_high`, `humidity`, `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode` | `sync_attributes: [hvac_mode]` | Temporarily overrides which **Sync Attributes** are synchronized for the slot duration. Useful for slots where you want to sync only the mode but let members manage their own temperature. Restores to the configured Sync Attributes setting when the slot ends. |
 | `turn_off` | `true` / `false` | `turn_off: true` | Explicit two-state trigger: `true` turns all members off (equivalent to toggling the **Main Switch** off). `false` restores all members (equivalent to toggling the **Main Switch** back on). A slot without `turn_off` has no effect on the current state. The Main Switch and this meta-key are equal, interchangeable controls for the same block — whichever acts last wins, so you can always turn the Main Switch back on in the UI, even while a `turn_off: true` slot is active, and a later `turn_off: false` slot will likewise release a block you set manually via the Main Switch. |
 | `window_mode` | `disabled` | `window_mode: disabled` | Pauses **Window Control** for the slot duration — an open window no longer switches the heating off. If a window is already open when the slot starts, the heating comes back on. |
@@ -513,16 +513,18 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 
 | Option | Description |
 |--------|-------------|
-| **External Sensors** | Select one or more sensors to override member readings. |
-| **Use Master Temperature/Humidity** | *(Requires Master Entity)* Display the Master's target value as the group's target instead of the member average. Falls back to averaging if the master is unavailable. Display-only — this option does not control or synchronize members (use **Sync Mode: Master/Lock** for that). |
-| **Averaging Method** | Mean, Median, Min, or Max—separately for Current and Target values. |
-| **Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
-| **Calibration Targets** | Write calculated temperature to number entities. Supports **Absolute** (Standard), **Offset** (Delta), and **Scaled** (x100) modes. |
+| **External Temperature Sensors** / **External Humidity Sensors** | Select one or more sensors to override member readings. |
+| **Use Master Target Temperature** / **Use Master Target Humidity** | *(Requires Master Entity)* Display the Master's target value as the group's target instead of the member average. Falls back to averaging if the master is unavailable. Display-only — this option does not control or synchronize members (use **Sync Mode: Master/Lock** for that). |
+| **Target Temperature** / **Current Temperature** (and the same for humidity) | How member values are combined: Mean, Median, Min, or Max — separately for the current and the target value. |
+| **Target Temperature Precision** / **Target Humidity Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
+| **Write External Temp to Entities** / **Write External Humidity to Entities** | Write the calculated value to number entities. |
+| **Calibration Mode** | How the value is sent: **Absolute** (Standard), **Offset** (Delta), or **Scaled** (x100). |
 | **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
 | **Ignore Off Members** | Prevents sending calibration updates to devices that are currently `off`, preserving battery life on wireless sensors and TRVs. |
-| **Exclude Off Members** | Exclude members that are currently `off` from temperature calculations (both current and target). Prevents a cold, switched-off radiator from dragging down the displayed average. |
-| **Device Mapping** | Automatically links external sensors to TRV internal sensors using HA Device Registry (for precise Offset calculation). |
-| **Min Temp Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). |
+| **Exclude Off Members from Temperature** | Exclude members that are currently `off` from temperature calculations (both current and target). Prevents a cold, switched-off radiator from dragging down the displayed average. |
+| **Minimum Temperature when Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). |
+
+External sensors are linked to the TRV's internal sensors automatically, through the Home Assistant device registry — this is what makes the Offset calibration mode precise.
 
 ### Sync Mode
 
@@ -536,12 +538,12 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 
 | Option | Description |
 |--------|-------------|
-| **Window Action** | **Turn Off** (Default) or **Set Temperature**. Useful for frost protection. |
+| **Window Open Action** | **Turn Off** (Default) or **Set Temperature**. Useful for frost protection. |
 | **Adopt Manual Changes** | What happens to changes made while windows are open: **Off** (discard), **All** (keep and apply when windows close), or **Master Only** *(requires Master Entity)*. |
-| **Window Temperature** | Target temperature to set when 'Set Temperature' action is selected. |
-| **Room Sensor** | (Optional) Binary sensor (window/door) or cover entity for fast reaction. Covers are treated as "open" unless they are fully closed. |
-| **Zone Sensor** | (Optional) Binary sensor or cover entity for slow reaction (e.g. apartment or floor). Must include the Room Sensor when both are used. |
-| **Room/Zone Delay** | Time before turning off heating (default: 15s / 5min). |
+| **Window Open Temperature** | Target temperature to set when 'Set Temperature' action is selected. |
+| **Room Window Sensor** | (Optional) Binary sensor (window/door), `input_boolean` or cover entity for fast reaction. Covers count as open in `open`/`opening`/`closing`. For every sensor type, `unknown`/`unavailable` keep the last known state. |
+| **Zone Window Sensor** | (Optional) Binary sensor, `input_boolean` or cover entity for slow reaction (e.g. apartment or floor). Must include the Room Window Sensor when both are used. |
+| **Room Open Delay** / **Zone Open Delay** | Time before turning off heating (default: 15s / 5min). |
 | **Close Delay** | Time before restoring heating after windows close (default: 30s). |
 
 ### Presence Control
@@ -549,10 +551,10 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 | Option | Description |
 |--------|-------------|
 | **Presence Control Mode** | **Disabled** (default) or **Enabled**. |
-| **Presence Trigger** | One or more entities reporting room presence (binary_sensor, device_tracker, or person). Any `on` or `home` state is treated as present; `not_home` and `away` are treated as absent. The group is occupied if **any** sensor reports presence. |
+| **Presence Trigger** | One or more entities reporting room presence (binary_sensor, `input_boolean`, calendar, device_tracker, or person). Any `on` or `home` state is treated as present; `not_home` and `away` are treated as absent. The group is occupied if **any** sensor reports presence. |
 | **Presence Zone** | *(Optional)* One or more `zone` entities. If configured, a person/device_tracker sensor only counts as present when located in one of the selected zones. Leave empty to treat any non-away state as present. |
 | **Away Action** | The fallback action to perform when absence is detected: **Turn Off**, **Away Offset**, **Away Temperature**, or **Away Preset**. |
-| **Away Offset** | *(Away Offset action)* Offset from current target when away (e.g. `−2.0°C` or `+2.0°C`). |
+| **Away Temperature Offset** | *(Away Offset action)* Offset from current target when away (e.g. `−2.0°C` or `+2.0°C`). |
 | **Away Temperature** | *(Away Temperature action)* Fixed temperature to set when away. |
 | **Away Preset** | *(Away Preset action)* Preset mode to activate when away. |
 | **Away Delay** | Wait time (seconds) after sensor reports absence before activating away mode. |
@@ -563,9 +565,9 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 
 | Option | Description |
 |--------|-------------|
-| **Schedule Entity** | A Home Assistant `schedule.*` or `calendar.*` entity to control the group. |
+| **Main Schedule / Calendar Entity** | A Home Assistant `schedule.*` or `calendar.*` entity to control the group. |
 | **Fallback State for Inactive Main Schedule / Calendar (YAML)** | *(Optional)* State that stands in for the main schedule outside its active slots (e.g. night setback or complete turn off). The bypass layer overrides it while active. |
-| **Bypass Entity** | *(Optional)* A second `schedule.*` or `calendar.*` entity acting as a priority layer. When a bypass slot is active, it overrides the main schedule. |
+| **Bypass Schedule / Calendar Entity** | *(Optional)* A second `schedule.*` or `calendar.*` entity acting as a priority layer. When a bypass slot is active, it overrides the main schedule. |
 | **Respect Member Off State (Schedule)** | Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on. Direct group commands always reach all members regardless of this setting. |
 | **Retain Changes Made via Service (Schedule)** | Keep the main schedule, bypass entity and fallback state across restarts when changed via service. Without this, the group always reverts to its configured defaults on restart. |
 | **Manual Hold Duration** | How long a manual adjustment (temperature, or switching the group on/off) holds before the schedule resumes with the then-current slot. `0` disables the hold. |
@@ -581,7 +583,7 @@ Everything in this group except `enabled_features` requires Advanced Mode — wi
 
 | Option | Description |
 |--------|-------------|
-| **Offset per Member** | Apply individual temperature shifts (±20°C, 0.5°C steps) so specific members run proportionately warmer or cooler than the group's target setpoint. |
+| **Member Offsets** (one field per member) | Apply individual temperature shifts (±20°C, 0.5°C steps) so specific members run proportionately warmer or cooler than the group's target setpoint. |
 | **Correct member offset (Default)** | Subtracts member offsets before averaging to show the room's logical setpoint instead of the raw physical average. |
 
 ### Member Isolation
@@ -625,10 +627,10 @@ pace the commands out instead of sending them all together.
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
 | **Force Retry** | Always send commands to all members, even if they already report the target state. Useful for IR-based AC units or other devices that may not reliably update their state after receiving a command. |
 | **Member Command Delay** | Pause between commands to each individual member instead of sending them all at once. Helps when controlling several devices at the same time overloads your network or bridge — a common issue with IR blasters and some Zigbee coordinators (default: 0s, disabled). |
-| **UI Grace Period** | Duration (seconds) for which the group shows the commanded value right after a UI action, before slow member devices report their state back. Prevents visual flicker in the dashboard (default: 3.0s). Applies to all attributes: HVAC mode, temperature, humidity, fan/preset/swing modes. |
+| **Optimistic UI Grace Period** | Duration (seconds) for which the group shows the commanded value right after a UI action, before slow member devices report their state back. Prevents visual flicker in the dashboard (default: 3.0s). Applies to all attributes: HVAC mode, temperature, humidity, fan/preset/swing modes. |
 | **Expose Smart Sensors** | When enabled, creates separate temperature and humidity sensor entities reflecting the group's current aggregated state (useful for history graphs and dashboards). |
 | **Expose Member List** | When enabled, adds the `entity_id` attribute with the list of member entity IDs, so Home Assistant's More-Info dialog shows the native member breakdown (also enables `expand()` templates). |
-| **Expose Configuration** | When enabled, creates a diagnostic sensor exposing the group's configuration as portable JSON. |
+| **Expose Configuration Sensor** | When enabled, creates a diagnostic sensor exposing the group's configuration as portable JSON. |
 | **Expand all sections by default** | Keeps all configuration sections expanded by default in the options dialog. |
 
 ---
@@ -645,13 +647,16 @@ Temporarily set the group to a target temperature for a fixed duration. When the
 
 | Field | Required | Description |
 |-------|----------|-------------|
+| `hvac_mode` | No | The mode the boost runs in: `heat`, `cool`, `dry` or `fan_only`. Defaults to the group's current mode — an `off` group wakes in its last active mode; the modes without a single setpoint fall back to `heat`. |
 | `temperature` | No* | Absolute target temperature during boost (e.g. `24.0`). |
 | `temperature_offset` | No* | Relative offset added to the current target temperature (e.g. `+3.0` or `−2.0`). |
 | `duration` | **Yes** | Duration in minutes (minimum 1). |
 
-*\*Either `temperature` or `temperature_offset` must be provided.*
+*\*Either `temperature` or `temperature_offset` must be provided. An offset needs the group's own single setpoint as a base — it is rejected (with a hint to use `temperature`) when the boost falls back to `heat` or runs in a mode differing from the group's.*
 
-Manual changes (direct group commands or Mirror adoptions) abort the boost immediately. Lock enforcement does not. Boost is ignored while a group block (like an open window) is active. A boost ranks **above** the schedule and the bypass layer: schedule slot changes and bypass activations run in the background without touching the boosted temperature, and everything is re-applied once the boost ends. If the schedule turns the group off during a boost, the boost keeps the members running in their last active mode.
+The boost always runs in a mode that carries a single setpoint; the mode is only sent to the devices when it differs from the group's. With the **Union** feature strategy the boost only reaches members that offer that mode; with **Intersection** it is sent like any other group command. If no member can take the boost, the service raises an error — nothing is set and no countdown runs. The same happens while a group block (like an open window) is active.
+
+Manual changes (direct group commands) abort the boost immediately. A change made directly at a device does not — while a boost runs, member reports are ignored (a slow device's confirmation of the boost setpoint is indistinguishable from a manual change), and the boost restores the previous state when it ends. A member's `off` ends the boost exactly where the sync mode would adopt it: in the mirror modes any single member's `off` without **Respect Member Off State (Sync)**, only the last running member's with it; in **Master/Lock** only the master's; in **Lock** only the last running member's with the option; with **Adopt Only** or sync **Disabled** never. Lock enforcement does not abort the boost. A boost ranks **above** the schedule and the bypass layer: schedule slot changes and bypass activations run in the background without touching the boosted temperature, and everything is re-applied once the boost ends. If the schedule turns the group off during a boost, the boost keeps the members running in their last active mode.
 
 **Example (absolute):**
 ```yaml

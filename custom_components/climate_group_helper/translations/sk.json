@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Dočasne nastaví skupinu na cieľovú teplotu. Po vypršaní časovača sa skupina automaticky vráti k aktívnemu plánu alebo predchádzajúcemu stavu.",
       "fields": {
+        "hvac_mode": {
+          "name": "Režim HVAC",
+          "description": "Režim, v ktorom boost beží. Štandardne aktuálny režim skupiny (vypnutá skupina sa prebudí do posledného aktívneho režimu). Režimy bez jednotného cieľa alebo boost, ktorý nemôže prijať žiadny člen, sa odmietajú."
+        },
         "temperature": {
           "name": "Teplota",
           "description": "Absolútna cieľová teplota počas boostu (napr. 24,0). Vylučuje temperature_offset."

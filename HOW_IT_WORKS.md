@@ -55,7 +55,7 @@ From top to bottom, the first one that applies decides what the devices get:
 | **Main Switch off** | Off, all of them. | Held back. | The target is sent again. |
 | **Window open** | Off, or the window temperature. | Held back, unless **Adopt Manual Changes** lets them through for later — that works only while the window is the only active rule. | The target is sent again. |
 | **Nobody home** | The away action: off, an offset, a fixed temperature or a preset. | Held back. | The target is sent again. |
-| **Boost** | The boost temperature, for the time you asked for. | A direct command to the group ends the boost, and so does a device change that the Sync Mode adopts. | The target is sent again, including the schedule slot that is current by then. |
+| **Boost** | The boost temperature, for the time you asked for. | A direct command to the group ends the boost, and so does a device's `off` when the Sync Mode would mirror that `off` anyway. Other device changes are ignored while a boost runs. | The target is sent again, including the schedule slot that is current by then. |
 
 The first three are **blocks**. A few things are worth knowing about them:
 
@@ -101,7 +101,7 @@ Changing a device directly at the device or in its own app does not go through t
 | **Mirror** | becomes the new target and is passed on to the other devices. |
 | **Lock** | is set back to the target. |
 | **Mirror/Lock** | becomes the target for selected settings and is set back for the rest. |
-| **Master/Lock** | becomes the target on the master device and is set back on all others. |
+| **Master/Lock** | becomes the target on the master device and is set back on all others (for the selected settings). |
 | **Adopt Only** | becomes the new target, but the other devices are left as they are. |
 
 The full table, including what happens to settings that are not selected, is in the README under [Sync Modes](README.md#advanced-sync-modes).

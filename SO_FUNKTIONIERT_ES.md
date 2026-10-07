@@ -55,7 +55,7 @@ Von oben nach unten entscheidet die erste Regel, die zutrifft, was die Geräte b
 | **Hauptschalter aus** | Aus, und zwar alle. | Werden zurückgehalten. | Der Zielzustand wird wieder geschickt. |
 | **Fenster offen** | Aus, oder die Zieltemperatur bei offenem Fenster. | Werden zurückgehalten, außer **Manuelle Änderungen übernehmen** lässt sie für später durch — das gilt nur, solange das Fenster die einzige aktive Regel ist. | Der Zielzustand wird wieder geschickt. |
 | **Niemand zu Hause** | Die Abwesenheits-Aktion: aus, ein Versatz, eine feste Temperatur oder ein Preset. | Werden zurückgehalten. | Der Zielzustand wird wieder geschickt. |
-| **Boost** | Die Boost-Temperatur, so lange wie angefordert. | Ein direkter Befehl an die Gruppe beendet den Boost, ebenso eine Geräteänderung, die der Sync-Modus übernimmt. | Der Zielzustand wird wieder geschickt, einschließlich des Zeitblocks, der dann gerade aktiv ist. |
+| **Boost** | Die Boost-Temperatur, so lange wie angefordert. | Ein direkter Befehl an die Gruppe beendet den Boost, ebenso ein `aus` am Gerät, wenn der Sync-Modus dieses `aus` ohnehin übernehmen würde. Andere Geräteänderungen werden während eines Boosts ignoriert. | Der Zielzustand wird wieder geschickt, einschließlich des Zeitblocks, der dann gerade aktiv ist. |
 
 Die ersten drei sind **Sperren**. Ein paar Dinge solltest du über sie wissen:
 
@@ -86,7 +86,7 @@ Der Zielzustand ist für die ganze Gruppe gleich. Auf dem Weg zu jedem Gerät wi
 Welche Geräte einen Befehl bekommen:
 
 - **Befehle, die du der Gruppe gibst,** gehen an jedes Gerät, das sie unterstützt.
-- **Automatische Befehle** (Zeitplan, Sync-Modus) gehen nur an die Geräte, die vom Zielzustand abweichen. **Erzwungene Wiederholung** schickt sie trotzdem an alle, für Geräte, die ihren Zustand nicht zuverlässig melden.
+- **Automatische Befehle** (Zeitplan, Sync-Modus) gehen nur an die Geräte, die vom Zielzustand abweichen. **Wiederholung erzwingen** schickt sie trotzdem an alle, für Geräte, die ihren Zustand nicht zuverlässig melden.
 - **Verzögerung zwischen Mitglieder-Befehlen** verteilt die Befehle zeitlich, statt sie alle auf einmal zu senden.
 
 ---
@@ -101,7 +101,7 @@ Wer ein Gerät direkt an ihm selbst oder in seiner eigenen App ändert, geht an 
 | **Mirror** | wird zum neuen Zielzustand und an die anderen Geräte weitergegeben. |
 | **Lock** | wird auf den Zielzustand zurückgesetzt. |
 | **Mirror/Lock** | wird für ausgewählte Einstellungen zum Zielzustand und für die übrigen zurückgesetzt. |
-| **Master/Lock** | wird am Master-Gerät zum Zielzustand und an allen anderen zurückgesetzt. |
+| **Master/Lock** | wird am Master-Gerät zum Zielzustand und an allen anderen zurückgesetzt (für die ausgewählten Einstellungen). |
 | **Nur übernehmen** | wird zum neuen Zielzustand, aber die anderen Geräte bleiben, wie sie sind. |
 
 Die vollständige Tabelle, auch mit dem, was bei nicht ausgewählten Einstellungen passiert, steht in der LIESMICH unter [Sync-Modi](LIESMICH.md#erweiterte-sync-modi).

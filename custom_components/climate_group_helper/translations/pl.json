@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Tymczasowo ustawia grupę na temperaturę docelową. Po wygaśnięciu timera grupa automatycznie powraca do aktywnego harmonogramu lub poprzedniego stanu.",
       "fields": {
+        "hvac_mode": {
+          "name": "Tryb HVAC",
+          "description": "Tryb, w którym działa boost. Domyślnie aktualny tryb grupy (wyłączona grupa budzi się w ostatnim aktywnym trybie). Tryby bez pojedynczego punktu nastawy lub boost, którego żaden członek nie może przyjąć, są odrzucane."
+        },
         "temperature": {
           "name": "Temperatura",
           "description": "Bezwzględna temperatura docelowa podczas boostu (np. 24,0). Wyklucza temperature_offset."

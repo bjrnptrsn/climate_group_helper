@@ -242,6 +242,14 @@ class SyncModeHandler:
         if own_echo:
             if origin_event is None:
                 return
+            # Same rule as the fresh-event adoption (`_adopt_fresh_change`):
+            # while a boost runs no member report is adopted. A call sent just
+            # before the boost started can still deliver its echo mid-boost;
+            # adopting its side effect would drift target_state out from under
+            # the running boost.
+            if self._group.run_state.boost_temperature is not None:
+                _LOGGER.debug("[%s] Ignoring own-echo side effect during boost", self._group.entity_id)
+                return
             accepted = self._filter_echo_changes(origin_event, change_dict, change_entity_id)
             # The Mirror/Lock split (`sync_attributes`) applies to adopted side
             # effects too: an attribute the user excluded from mirroring must not
@@ -322,10 +330,7 @@ class SyncModeHandler:
                 if self.sync_mode == SyncMode.ADOPT_ONLY:
                     self.adopt_state_manager.update(entity_id=change_entity_id, **filtered)
                 else:
-                    was_boost = self._group.run_state.boost_temperature is not None
-                    if self.state_manager.update(entity_id=change_entity_id, **filtered) and was_boost:
-                        self._group.boost_override_manager.abort(push=True)
-                _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
+                    self._adopt_fresh_change(change_entity_id, filtered)
 
         # 2. Lock mode: only accept "Last Man Standing" OFF (Partial Sync).
         # Covered members excluded — a physically-off template member in the deadband is
@@ -352,10 +357,7 @@ class SyncModeHandler:
             if master_id and change_entity_id == master_id and not is_covered and not is_reconnect:
                 if filtered := {key: value for key, value in change_dict.items() if filter_dict.get(key)}:
                     filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
-                    was_boost = self._group.run_state.boost_temperature is not None
-                    if self.state_manager.update(entity_id=change_entity_id, **filtered) and was_boost:
-                        self._group.boost_override_manager.abort(push=True)
-                    _LOGGER.debug("[%s] Master entity change adopted: %s", self._group.entity_id, filtered)
+                    self._adopt_fresh_change(change_entity_id, filtered)
             # Non-master changes are enforced (reverted) via call_debounced below
 
         # ADOPT_ONLY is the adoption without the push: the target adopts the
@@ -375,6 +377,26 @@ class SyncModeHandler:
             _LOGGER.debug("[%s] Enforcement skipped (temporary state active)", self._group.entity_id)
 
     # --- Offset Helpers ---
+
+    def _adopt_fresh_change(self, change_entity_id: str, filtered: dict[str, Any]) -> None:
+        """Adopt a member change, unless a boost runs and suppresses it.
+
+        While a boost runs no member report is adopted: a slow device's (possibly
+        long-delayed) confirmation of the boost setpoint carries a fresh context
+        and is indistinguishable from a manual change, so both are ignored and
+        the boost runs to its end, which restores the untouched target. Only
+        `hvac_mode: off` is exempt — the boost never sends it, so it is the
+        user's intent and takes the usual path: Last Man Standing decides, and
+        the boost ends only when the OFF is actually adopted.
+        """
+        was_boost = self._group.run_state.boost_temperature is not None
+        if was_boost and filtered.get("hvac_mode") != HVACMode.OFF:
+            _LOGGER.debug("[%s] Ignoring member report during boost: %s", self._group.entity_id, filtered)
+            return
+        if self.state_manager.update(entity_id=change_entity_id, **filtered):
+            _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
+            if was_boost:
+                self._group.boost_override_manager.abort(push=True)
 
     def _reverse_offset_temperatures(self, entity_id: str, data: dict[str, Any]) -> dict[str, Any]:
         """Reverse-transform member temperatures to logical group values.

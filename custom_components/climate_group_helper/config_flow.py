@@ -302,6 +302,18 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             self._min_temp = default_min
             self._max_temp = default_max
 
+    def _within_limits(self, value: float | None) -> float | None:
+        """Clamp a stored setpoint into the current slider range.
+
+        The limits follow the members as they are now, the stored value was set
+        against whatever they were. The form submits what it shows, and the
+        selector rejects a value outside its range — shown as stored, it would
+        fail every save until the user touched the slider.
+        """
+        if value is None:
+            return None
+        return min(max(value, self._min_temp), self._max_temp)
+
     def _normalize_options(
         self, user_input: dict[str, Any], refresh: bool = False
     ) -> dict[str, Any]:
@@ -968,7 +980,9 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         vol.Optional(
                             CONF_WINDOW_TEMPERATURE,
                             description={
-                                "suggested_value": config.get(CONF_WINDOW_TEMPERATURE)
+                                "suggested_value": self._within_limits(
+                                    config.get(CONF_WINDOW_TEMPERATURE)
+                                )
                             },
                         ): selector.NumberSelector(
                             selector.NumberSelectorConfig(
@@ -1177,8 +1191,8 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         vol.Optional(
                             CONF_PRESENCE_AWAY_TEMPERATURE,
                             description={
-                                "suggested_value": config.get(
-                                    CONF_PRESENCE_AWAY_TEMPERATURE
+                                "suggested_value": self._within_limits(
+                                    config.get(CONF_PRESENCE_AWAY_TEMPERATURE)
                                 )
                             },
                         ): selector.NumberSelector(
@@ -1856,11 +1870,26 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 render_config[CONF_ISOLATION_RULES_COUNT] = new_rule_count
                 return await self._show_main_form(render_config)
 
+            # Every re-render below shows the submit, not the saved options: the
+            # frontend rebuilds the form from the schema defaults on each flow
+            # update, so whatever the factories do not find is gone. The
+            # isolation and offset factories read the maps `_normalize_options`
+            # builds from the flat slot/offset keys, so the submit must pass
+            # through it — exactly as a real save would.
+            adv_mode_changed = (
+                CONF_ADVANCED_MODE in flattened_input
+                and bool(flattened_input[CONF_ADVANCED_MODE]) != self._from_adv_mode
+            )
+            render_config = self._normalize_options(flattened_input, refresh=adv_mode_changed)
+
             # Validate: the group must keep at least one member
             submitted_entities = flattened_input.get(
                 CONF_ENTITIES, self._config_entry.options.get(CONF_ENTITIES, [])
             )
             if not submitted_entities:
+                # Deliberately not render_config: normalizing against no members
+                # drops every rule that targets one, and the form would show
+                # them gone.
                 return await self._show_main_form(
                     current_config,
                     form_errors={"members_section": "no_entities"},
@@ -1870,7 +1899,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             new_master = flattened_input.get(CONF_MASTER_ENTITY)
             if new_master and new_master not in submitted_entities:
                 return await self._show_main_form(
-                    current_config,
+                    render_config,
                     form_errors={"members_section": "master_not_in_members"},
                 )
 
@@ -1882,7 +1911,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             if master_changed and not self._refresh_hint_shown:
                 self._refresh_hint_shown = True
                 return await self._show_main_form(
-                    current_config,
+                    render_config,
                     form_errors={
                         "base": "master_refresh_notice",
                         "temperature_section": "master_options_notice",
@@ -1911,7 +1940,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     break
             if isolation_error:
                 return await self._show_main_form(
-                    current_config,
+                    render_config,
                     form_errors={
                         isolation_error: "isolation_all_selected",
                     },
@@ -1945,7 +1974,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 if error:
                     section_key = f"isolation_rule_{rule_index}_section" if rule_index > 1 else "isolation_section"
                     return await self._show_main_form(
-                        current_config,
+                        render_config,
                         form_errors={section_key: error},
                     )
 
@@ -1959,7 +1988,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 overlap = slot_entities & seen_isolation_entities
                 if overlap:
                     return await self._show_main_form(
-                        current_config,
+                        render_config,
                         form_errors={f"isolation_rule_{rule_index}_section": "isolation_entity_overlap"},
                     )
                 seen_isolation_entities |= slot_entities
@@ -1983,7 +2012,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 and flattened_input.get(CONF_WINDOW_TEMPERATURE) is None
             ):
                 return await self._show_main_form(
-                    current_config,
+                    render_config,
                     form_errors={"window_section": "window_temperature_required"},
                 )
 
@@ -2001,7 +2030,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     and not flattened_input.get(CONF_PRESENCE_AWAY_PRESET)
                 ):
                     return await self._show_main_form(
-                        current_config,
+                        render_config,
                         form_errors={"presence_section": "presence_action_value_required"},
                     )
 
@@ -2016,7 +2045,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         else "humidity_section"
                     )
                     return await self._show_main_form(
-                        current_config,
+                        render_config,
                         form_errors={
                             section_key: "sensor_loop_protection",
                         },
@@ -2033,7 +2062,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         else "humidity_section"
                     )
                     return await self._show_main_form(
-                        current_config,
+                        render_config,
                         form_errors={
                             section_key: "sensor_loop_protection",
                         },
@@ -2046,12 +2075,12 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     parsed = yaml.safe_load(fallback_payload_raw)
                     if not isinstance(parsed, dict):
                         return await self._show_main_form(
-                            current_config,
+                            render_config,
                             form_errors={"schedule_section": "schedule_fallback_payload_invalid"},
                         )
                 except yaml.YAMLError:
                     return await self._show_main_form(
-                        current_config,
+                        render_config,
                         form_errors={"schedule_section": "schedule_fallback_payload_invalid"},
                     )
 
@@ -2062,12 +2091,12 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     parsed_presets = yaml.safe_load(group_presets_raw)
                     if not isinstance(parsed_presets, dict):
                         return await self._show_main_form(
-                            current_config,
+                            render_config,
                             form_errors={"presets_section": "group_presets_invalid"},
                         )
                 except yaml.YAMLError:
                     return await self._show_main_form(
-                        current_config,
+                        render_config,
                         form_errors={"presets_section": "group_presets_invalid"},
                     )
 
@@ -2079,7 +2108,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     not isinstance(payload, dict) for payload in parsed_presets.values()
                 ):
                     return await self._show_main_form(
-                        current_config,
+                        render_config,
                         form_errors={"presets_section": "group_presets_invalid"},
                     )
 
@@ -2096,15 +2125,9 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 if colliding and not self._preset_collision_warning_shown:
                     self._preset_collision_warning_shown = True
                     return await self._show_main_form(
-                        current_config,
+                        render_config,
                         form_errors={"presets_section": "preset_name_collision_notice"},
                     )
-
-            new_adv_mode = bool(flattened_input.get(CONF_ADVANCED_MODE))
-            adv_mode_changed = (
-                CONF_ADVANCED_MODE in flattened_input
-                and new_adv_mode != self._from_adv_mode
-            )
 
             final_options = self._normalize_options(
                 flattened_input, refresh=adv_mode_changed

@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Règle temporairement le groupe à une température cible. À l'expiration de la minuterie, le groupe revient automatiquement au planning actif ou à son état précédent.",
       "fields": {
+        "hvac_mode": {
+          "name": "Mode HVAC",
+          "description": "Le mode dans lequel le boost fonctionne. Par défaut, le mode actuel du groupe (un groupe éteint se réveille dans son dernier mode actif). Les modes sans point de consigne unique, ou un boost qu'aucun membre ne peut prendre, sont rejetés."
+        },
         "temperature": {
           "name": "Température",
           "description": "Température cible absolue pendant le boost (p. ex. 24,0). Exclut temperature_offset."

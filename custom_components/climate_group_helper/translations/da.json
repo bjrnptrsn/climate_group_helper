@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Sætter midlertidigt gruppen til en måltemperatur. Når timeren udløber, vender gruppen automatisk tilbage til den aktive tidsplan eller tidligere tilstand.",
       "fields": {
+        "hvac_mode": {
+          "name": "HVAC-tilstand",
+          "description": "Den tilstand, boostet kører i. Som standard gruppens aktuelle tilstand (en slukket gruppe vågner i sin sidste aktive tilstand). Tilstande uden et enkelt sætpunkt, eller et boost intet medlem kan tage, afvises."
+        },
         "temperature": {
           "name": "Temperatur",
           "description": "Absolut måltemperatur under boost (f.eks. 24,0). Udelukker temperature_offset."

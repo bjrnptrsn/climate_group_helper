@@ -696,6 +696,10 @@
       "name": "Boost 加热",
       "description": "在指定时间内临时将群组设置为目标温度。计时器到期后，群组将自动恢复到活动日程或之前的状态。",
       "fields": {
+        "hvac_mode": {
+          "name": "HVAC 模式",
+          "description": "Boost 运行的模式。默认使用群组当前模式（关闭的群组会在最后一次活动模式下唤醒）。没有单一设定点的模式，或任何成员都无法接受的提升，都会被拒绝。"
+        },
         "temperature": {
           "name": "温度",
           "description": "Boost 期间的绝对目标温度（例如 24.0）。与 temperature_offset 互斥。"

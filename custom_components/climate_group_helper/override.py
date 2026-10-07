@@ -7,7 +7,8 @@ from datetime import timedelta
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
+from homeassistant.components.climate import ATTR_HVAC_MODE, ATTR_HVAC_MODES, HVACMode
+from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
@@ -39,11 +40,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class OverrideHandler:
-    """Coordinator for all override managers.
+    """Coordinator for the override managers.
 
-    Owns async_setup/async_teardown and routes call_triggers to BoostOverrideManager.
-    Individual managers are instantiated on ClimateGroupHelper and accessed directly
-    by their respective modules (window_control, switch, climate).
+    Owns async_setup/async_teardown and routes the direct-command trigger to
+    BoostOverrideManager. Individual managers are instantiated on
+    ClimateGroupHelper and accessed directly by their respective modules
+    (window_control, switch, climate).
     """
 
     def __init__(self, group: ClimateGroupHelper) -> None:
@@ -54,9 +56,8 @@ class OverrideHandler:
         return self._group.boost_override_manager
 
     def async_setup(self) -> None:
-        """Register call triggers to abort boost on user/mirror events."""
+        """Register the call trigger that aborts the boost on user commands."""
         self._group.climate_call_handler.register_call_trigger(self._on_service_call)
-        self._group.sync_mode_call_handler.register_call_trigger(self._on_sync_call)
 
     def async_teardown(self) -> None:
         """Cancel any active boost timer."""
@@ -66,12 +67,6 @@ class OverrideHandler:
     def _on_service_call(self, data: dict[str, Any] | None = None) -> None:  # noqa: ARG002
         """Abort boost on any direct user command."""
         self.override_manager.abort(push=True)
-
-    @callback
-    def _on_sync_call(self, data: dict[str, Any] | None = None) -> None:  # noqa: ARG002
-        """Abort boost on MIRROR/MASTER adoption, not LOCK enforcement."""
-        if self._group.shared_target_state.last_source == "sync_mode":
-            self.override_manager.abort(push=True)
 
 
 class BaseOverrideManager:
@@ -170,16 +165,27 @@ class BoostOverrideManager(BaseOverrideManager):
 
     OVERRIDE_NAME = "boost"
 
-    async def activate(self, temperature: float, duration: float) -> bool:
+    BOOST_SINGLE_MODES = (HVACMode.HEAT, HVACMode.COOL, HVACMode.DRY, HVACMode.FAN_ONLY)
+
+    async def activate(self, temperature: float, duration: float, hvac_mode: str | None = None) -> bool:
         """Start boost override directly on members.
 
-        Rejected if any blocking source is active. TargetState is NOT modified.
+        Rejected if any blocking source is active, or if no reachable member can
+        take the boost mode with a single setpoint. TargetState is NOT modified.
         Returns False if rejected, True if started.
         """
         if self._group.run_state.blocking_sources:
             _LOGGER.warning(
                 "[%s] Boost rejected: block active (%s)",
                 self._group.entity_id, self._group.run_state.blocking_sources,
+            )
+            return False
+
+        boost_mode = self.resolve_boost_mode(hvac_mode)
+        if not self._has_recipient(boost_mode):
+            _LOGGER.warning(
+                "[%s] Boost rejected: no member can take mode %s with a single setpoint",
+                self._group.entity_id, boost_mode,
             )
             return False
 
@@ -192,25 +198,63 @@ class BoostOverrideManager(BaseOverrideManager):
 
         self._start_timer(duration, self._on_expired)
 
+        # The mode goes out only when it differs from the group target — a boost
+        # in the group's own mode is a bare setpoint change, nothing else.
         payload: dict[str, Any] = {"temperature": temperature}
-        if self._group.shared_target_state.hvac_mode == HVACMode.OFF:
-            fallback_mode = self._group.run_state.last_active_hvac_mode or HVACMode.HEAT
-            # heat_cool and auto cannot carry a single setpoint — the wake-up
-            # filter drops it, leaving an active-looking boost that never reaches
-            # the devices. Fall back to heat, the same default used when no
-            # last-active mode is known.
-            if fallback_mode in (HVACMode.HEAT_COOL, HVACMode.AUTO):
-                fallback_mode = HVACMode.HEAT
-            payload["hvac_mode"] = fallback_mode
+        if boost_mode != self._group.shared_target_state.hvac_mode:
+            payload[ATTR_HVAC_MODE] = boost_mode
 
         await self.call_handler.call_immediate(payload)
         self._group.async_defer_or_update_ha_state()
 
         _LOGGER.debug(
-            "[%s] Boost started: temperature=%s, duration=%.0fs",
-            self._group.entity_id, temperature, duration,
+            "[%s] Boost started: temperature=%s, mode=%s, duration=%.0fs",
+            self._group.entity_id, temperature, boost_mode, duration,
         )
         return True
+
+    def effective_mode(self) -> str:
+        """The mode whose stored setpoint the group holds: its own, or for an OFF group the last active one."""
+        mode = self._group.shared_target_state.hvac_mode
+        if mode == HVACMode.OFF:
+            return self._group.run_state.last_active_hvac_mode or HVACMode.HEAT
+        return mode
+
+    def resolve_boost_mode(self, hvac_mode: str | None) -> str:
+        """The mode the boost runs in: an explicit one, else the group's own.
+
+        `heat_cool` and `auto` carry no single setpoint and fall back to `heat`.
+        """
+        mode = hvac_mode or self.effective_mode()
+        return mode if mode in self.BOOST_SINGLE_MODES else HVACMode.HEAT
+
+    def _has_recipient(self, mode: str) -> bool:
+        """True when at least one reachable member offers the mode and a single setpoint."""
+        for entity_id in self._group.climate_entity_ids:
+            if entity_id in self._group.run_state.isolated_members:
+                continue
+            state = available_state(self.capable_state(entity_id))
+            if state is None:
+                continue
+            supported_modes = state.attributes.get(ATTR_HVAC_MODES)
+            if supported_modes and mode not in supported_modes:
+                continue
+            if ATTR_TEMPERATURE not in state.attributes:
+                continue
+            return True
+        return False
+
+    def capable_state(self, entity_id: str):
+        """The state that decides whether a member can take the boost.
+
+        Range-Template-covered members are single-setpoint devices behind a range
+        proxy: the proxy reports neither `temperature` nor the single-setpoint
+        feature, so the physical state has to decide for them.
+        """
+        state = self._group.aggregator.read_member_state(entity_id)
+        if state is not None and self._group.member_template_manager.is_covered_state(state):
+            return self._group.hass.states.get(entity_id)
+        return state
 
     def abort(self, push: bool = True) -> None:
         """Abort active boost.

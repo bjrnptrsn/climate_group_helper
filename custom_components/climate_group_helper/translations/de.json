@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Setzt die Gruppe vorübergehend auf eine Zieltemperatur. Nach Ablauf des Timers kehrt die Gruppe automatisch zum aktiven Zeitplan oder vorherigen Zustand zurück.",
       "fields": {
+        "hvac_mode": {
+          "name": "HVAC-Modus",
+          "description": "Der Modus, in dem der Boost läuft. Standard: der aktuelle Modus der Gruppe (eine ausgeschaltete Gruppe wacht in ihrem letzten aktiven Modus auf). Modi ohne Einzel-Sollwert oder ein Boost, den kein Mitglied annehmen kann, werden abgelehnt."
+        },
         "temperature": {
           "name": "Temperatur",
           "description": "Absolute Zieltemperatur während des Boosts (z.B. 24,0). Schließt temperature_offset aus."

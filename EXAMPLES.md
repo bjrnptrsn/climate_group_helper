@@ -49,7 +49,7 @@ Two radiators in the same room, grouped as one entity. One only accepts whole-de
 | Setting | Value |
 |---|---|
 | Members | `climate.living_room_trv1`, `climate.living_room_trv2` |
-| Precision | 1° |
+| Target Temperature Precision | 1° |
 
 **Result:** Every setpoint sent to members is rounded to whole degrees before dispatch — 21.3°C becomes 21°C for both devices, so the coarser TRV always receives a value it actually supports instead of silently clamping or rejecting it.
 
@@ -86,7 +86,7 @@ Three rooms, each with one TRV, following the same weekly schedule. Manual adjus
 |---|---|
 | Members | `climate.bedroom_trv`, `climate.living_room_trv`, `climate.kitchen_trv` |
 | Sync Mode | Lock |
-| Schedule Entity | `schedule.house_weekly` |
+| Main Schedule / Calendar Entity | `schedule.house_weekly` |
 
 **Schedule slots (YAML in additional data):**
 ```yaml
@@ -123,8 +123,8 @@ One thermostat, but heating should pause automatically while a window is open �
 |---|---|
 | Members | `climate.living_room_trv` |
 | Window Control | on |
-| Room Sensor | `binary_sensor.living_room_window` |
-| Window Action | Turn Off |
+| Room Window Sensor | `binary_sensor.living_room_window` |
+| Window Open Action | Turn Off |
 
 **Result:** Window opens → heater turns off. Window closes → previous state restores.
 
@@ -144,11 +144,11 @@ Same idea as Example 4, but the "window sensor" is a roller shutter, and instead
 |---|---|
 | Members | `climate.bedroom_trv` |
 | Window Control | on |
-| Room Sensor | `cover.bedroom_shutter` |
-| Window Action | Set Temperature |
-| Window Temperature | 16.0 |
+| Room Window Sensor | `cover.bedroom_shutter` |
+| Window Open Action | Set Temperature |
+| Window Open Temperature | 16.0 |
 
-**Result:** Shutter open/opening/closing → treated as "window open", temperature drops to 16 °C. Shutter closed → heating restores. (Any state other than fully `closed` counts as open.)
+**Result:** Shutter open/opening/closing → treated as "window open", temperature drops to 16 °C. Shutter closed → heating restores. (`open`, `opening` and `closing` count as open; `unknown`/`unavailable` keep the last known state.)
 
 ---
 
@@ -169,7 +169,7 @@ Save energy automatically based on presence, without writing a separate automati
 
 **Result:** Once *all* trigger entities report "away" for 5 minutes, heating turns off. As soon as anyone returns, it restores after a 1-minute confirmation delay.
 
-> **Variant:** Set **Away Action: Away Offset** with **Away Offset: -3.0** instead of turning off completely — useful if the room shouldn't go fully cold (e.g. a room with plants or pets). With this action, **Respect Member Off State (Presence)** additionally keeps a radiator you switched off yourself from being turned on again when you get home.
+> **Variant:** Set **Away Action: Away Offset** with **Away Temperature Offset: -3.0** instead of turning off completely — useful if the room shouldn't go fully cold (e.g. a room with plants or pets). With this action, **Respect Member Off State (Presence)** additionally keeps a radiator you switched off yourself from being turned on again when you get home.
 
 > **Variant — Group Preset as Away Action:** If you have defined group presets (Example 8), you can also set **Away Action: Away Preset** and choose one of your group presets (e.g. `eco`) to activate whenever nobody is home.
 
@@ -282,8 +282,8 @@ The schedule decides *when* to heat, two sliders decide *how warm*. The schedule
 | Setting | Value |
 |---|---|
 | Members | `climate.living_room_trv` |
-| Schedule Entity | `schedule.house_weekly` |
-| Inactive Schedule Fallback | see below |
+| Main Schedule / Calendar Entity | `schedule.house_weekly` |
+| Fallback State for Inactive Main Schedule / Calendar | see below |
 | Retain Changes Made via Service (Presets) | on |
 
 **Heating slot (e.g. 06:00–22:00):**
@@ -335,8 +335,8 @@ A TRV's built-in sensor sits right next to a hot pipe and reads too high. Correc
 | Setting | Value |
 |---|---|
 | Members | `climate.living_room_trv` |
-| External Sensors | `sensor.living_room_temperature` |
-| Calibration Target | `number.living_room_trv_calibration` |
+| External Temperature Sensors | `sensor.living_room_temperature` |
+| Write External Temp to Entities | `number.living_room_trv_calibration` |
 | Calibration Mode | Offset |
 | Calibration Heartbeat | 5 (minutes) |
 
@@ -360,10 +360,10 @@ Each room keeps its own setpoint, managed entirely by its own BT/VT instance. CG
 |---|---|
 | Members | `climate.bt_living_room_trv`, `climate.bt_bedroom_trv` |
 | Sync Mode | Disabled |
-| Schedule Entity | `schedule.house_weekly` |
+| Main Schedule / Calendar Entity | `schedule.house_weekly` |
 | Window Control | on — centralize this in CGH instead of configuring it per-device |
 | Calibration | off — the regulation integration handles this |
-| External Sensors | off — the regulation integration uses its own |
+| External Temperature Sensors | off — the regulation integration uses its own |
 
 **Result:** Each BT/VT instance keeps regulating its own device independently. CGH only pushes the schedule's `hvac_mode`/`temperature` to each room and handles window/presence centrally — it never tries to keep rooms in sync with each other.
 
@@ -393,7 +393,7 @@ During certain slots (e.g. a "comfort" evening slot), occupants should be able t
 |---|---|
 | Members | `climate.bedroom_trv` |
 | Sync Mode | Lock |
-| Schedule Entity | `schedule.bedroom_weekly` |
+| Main Schedule / Calendar Entity | `schedule.bedroom_weekly` |
 
 **Schedule slots using meta-keys:**
 ```yaml
@@ -420,7 +420,7 @@ Turn a group off for an extended period (e.g. summer) and back on again automati
 | Setting | Value |
 |---|---|
 | Members | `climate.living_room_trv` |
-| Schedule Entity | `schedule.house_weekly` |
+| Main Schedule / Calendar Entity | `schedule.house_weekly` |
 
 **Schedule slots using the `turn_off` meta-key:**
 ```yaml
@@ -449,7 +449,7 @@ it off.
 | Setting | Value |
 |---|---|
 | Members | `climate.living_room_trv` |
-| Schedule Entity | `calendar.house_events` |
+| Main Schedule / Calendar Entity | `calendar.house_events` |
 
 **Calendar event descriptions:**
 ```yaml
@@ -497,8 +497,8 @@ A weekly `schedule.*` entity already drives day-to-day heating. On top of that, 
 | Setting | Value |
 |---|---|
 | Members | `climate.living_room_trv` |
-| Schedule Entity | `schedule.house_weekly` |
-| Bypass Entity | `calendar.household_overrides` |
+| Main Schedule / Calendar Entity | `schedule.house_weekly` |
+| Bypass Schedule / Calendar Entity | `calendar.household_overrides` |
 
 **Main schedule slot (unchanged):**
 ```yaml
@@ -527,8 +527,8 @@ temperature: 22.0
 | Setting | Value |
 |---|---|
 | Members | `climate.living_room_trv` |
-| Schedule Entity | `schedule.house_weekly` |
-| Inactive Schedule Fallback | see below |
+| Main Schedule / Calendar Entity | `schedule.house_weekly` |
+| Fallback State for Inactive Main Schedule / Calendar | see below |
 
 **Inactive Schedule Fallback** (options flow → Schedule section, YAML):
 ```yaml
@@ -578,7 +578,7 @@ A room has a heat-only radiator (Wiser) and a heat/cool AC (Daikin/Faikin). The 
 | **Isolation Rule 1** | Trigger: HVAC Mode `heat` → Isolate `climate.daikin_ac` (Set HVAC Mode `off`) |
 | **Isolation Rule 2** | Trigger: HVAC Mode `cool` → Isolate `climate.wiser_radiator` (Set HVAC Mode `off`) |
 
-**Result:** In `heat`, the AC is fully isolated (off, and its presets/fan/swing drop out of the group). In `cool`, the radiator is isolated the same way — symmetric behavior on both sides, no mode bleed-through. This needs **multiple isolation rules**, one per device/trigger pair.
+**Result:** In `heat`, the AC is fully isolated (turned off and no longer driven, but its presets/fan/swing stay offered by the group). In `cool`, the radiator is isolated the same way — symmetric behavior on both sides, no mode bleed-through. This needs **multiple isolation rules**, one per device/trigger pair.
 
 ---
 
@@ -780,8 +780,8 @@ Only modes the device really has belong in the list — the group treats it as t
 
 - **Start simple:** get basic grouping working first (just Members, no other settings), then layer on features one at a time.
 - **Advanced Mode:** toggle it on in the group's configuration to unlock everything beyond Basic-tier settings — every example past the Basic section needs it.
-- **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted and mirrored to peers; use `Adopt Only` if member changes should update the group target without touching other devices; use `Mirror/Lock` when only some attributes should sync (Example 22).
+- **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted and mirrored to peers; use `Adopt Only` if member changes should update the group target without touching other devices; use `Mirror` with limited **Sync Attributes** when only some attributes should sync and the rest be left alone (Example 22).
 - **Blocking priority:** Main Switch > Window Control > Presence Control — if several are active at once, only the highest-ranked one's action is sent to members.
 - **Schedule + Boost:** Boost outranks the schedule. Schedule slot changes still run in the background during a boost.
 - **Calibration:** only use CGH's own calibration if you're not already using Better Thermostat or Versatile Thermostat — they handle their own (Example 13).
-- **Multiple Isolation Rules:** when different member devices need different reactions to the same trigger (or different triggers entirely), add one isolation rule per device — see Examples 14 and 15.
+- **Multiple Isolation Rules:** when different member devices need different reactions to the same trigger (or different triggers entirely), add one isolation rule per device — see Examples 19 and 20.

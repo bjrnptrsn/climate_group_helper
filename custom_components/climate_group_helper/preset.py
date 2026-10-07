@@ -461,16 +461,30 @@ class PresetManager:
         """Return True if the group can offer `PRESET_NONE`.
 
         A virtual group preset adds it (it must be deselectable); otherwise a
-        single member announcing `none` is enough. The reset value is exempt from
-        the feature strategy — the real names still follow it — and both the
-        offered list and the restored target ask this.
+        single reachable member announcing `none` is enough. Reachable means
+        `capability_states` — an unavailable member keeps its `preset_modes` in
+        its attributes, but the group cannot execute them. The reset value is
+        exempt from the feature strategy, and both the offered list and the
+        restored target ask this.
+
+        Before the first aggregation (the restore path runs earlier) the
+        capability list is still empty, so the raw states answer instead — one
+        predicate for both callers.
         """
         if self.group_presets:
             return True
+        aggregator = self._group.aggregator
+        if aggregator.aggregation_done:
+            states = aggregator.capability_states
+        else:
+            states = [
+                state
+                for entity_id in self._group.climate_entity_ids
+                if (state := self._group.hass.states.get(entity_id)) is not None
+            ]
         return any(
-            (state := self._group.hass.states.get(entity_id)) is not None
-            and PRESET_NONE in (state.attributes.get(ATTR_PRESET_MODES) or [])
-            for entity_id in self._group.climate_entity_ids
+            PRESET_NONE in (state.attributes.get(ATTR_PRESET_MODES) or [])
+            for state in states
         )
 
     def get_preset_modes(self, native_modes: list[str]) -> list[str]:

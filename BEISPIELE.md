@@ -49,7 +49,7 @@ Zwei Heizkörper im selben Raum, zu einer Entität gruppiert. Einer akzeptiert n
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.living_room_trv1`, `climate.living_room_trv2` |
-| Präzision | 1° |
+| Zieltemperatur Präzision | 1° |
 
 **Ergebnis:** Jeder an Mitglieder gesendete Sollwert wird vor dem Versand auf ganze Grade gerundet — 21,3 °C wird für beide Geräte zu 21 °C, sodass der gröbere TRV immer einen Wert erhält, den er tatsächlich unterstützt, statt ihn stillschweigend zu klemmen oder abzulehnen.
 
@@ -86,7 +86,7 @@ Drei Räume, jeweils mit einem TRV, folgen demselben Wochenplan. Manuelle Anpass
 |---|---|
 | Mitglieder | `climate.bedroom_trv`, `climate.living_room_trv`, `climate.kitchen_trv` |
 | Sync-Modus | Lock |
-| Zeitplan-Entität | `schedule.house_weekly` |
+| Haupt-Zeitplan / Kalenderentität | `schedule.house_weekly` |
 
 **Zeitplan-Zeitblöcke (YAML in zusätzlichen Daten):**
 ```yaml
@@ -123,14 +123,14 @@ Ein Thermostat, aber die Heizung soll automatisch pausieren, während ein Fenste
 |---|---|
 | Mitglieder | `climate.living_room_trv` |
 | Fenstersteuerung | an |
-| Raumsensor | `binary_sensor.living_room_window` |
-| Fenster-Aktion | Ausschalten |
+| Raum-Fenstersensor | `binary_sensor.living_room_window` |
+| Aktion bei offenem Fenster | Ausschalten |
 
 **Ergebnis:** Fenster öffnet → Heizung schaltet aus. Fenster schließt → vorheriger Zustand wird wiederhergestellt.
 
 > **Tipp:** Das funktioniert auch mit einem einzelnen Mitglied — CGH ist nicht nur für Gruppen.
 
-> **Tipp — eine ganze Etage:** Ergänze neben dem Raumsensor einen langsam reagierenden Zonensensor (z. B. eine Gruppen-Helfer-Entität für alle Etagenfenster) mit längerer Verzögerung. Behalte den Raumsensor in dieser Zonengruppe — die Zone muss den Raum enthalten, sonst gelten die Verzögerungen nicht mehr.
+> **Tipp — eine ganze Etage:** Ergänze neben dem Raum-Fenstersensor einen langsam reagierenden Zonen-Fenstersensor (z. B. eine Gruppen-Helfer-Entität für alle Etagenfenster) mit längerer Verzögerung. Behalte den Raumsensor in dieser Zonengruppe — die Zone muss den Raum enthalten, sonst gelten die Verzögerungen nicht mehr.
 
 ---
 
@@ -144,11 +144,11 @@ Gleiche Idee wie Beispiel 4, aber der "Fenstersensor" ist ein Rollladen, und sta
 |---|---|
 | Mitglieder | `climate.bedroom_trv` |
 | Fenstersteuerung | an |
-| Raumsensor | `cover.bedroom_shutter` |
-| Fenster-Aktion | Temperatur setzen |
-| Fenster-Temperatur | 16.0 |
+| Raum-Fenstersensor | `cover.bedroom_shutter` |
+| Aktion bei offenem Fenster | Temperatur setzen |
+| Zieltemperatur bei offenem Fenster | 16.0 |
 
-**Ergebnis:** Rollladen offen/öffnend/schließend → gilt als "Fenster offen", Temperatur sinkt auf 16 °C. Rollladen geschlossen → Heizung wird wiederhergestellt. (Jeder Zustand außer vollständig `closed` gilt als offen.)
+**Ergebnis:** Rollladen offen/öffnend/schließend → gilt als "Fenster offen", Temperatur sinkt auf 16 °C. Rollladen geschlossen → Heizung wird wiederhergestellt. (`open`, `opening` und `closing` gelten als offen; `unknown`/`unavailable` behalten den letzten bekannten Zustand.)
 
 ---
 
@@ -161,15 +161,15 @@ Spart automatisch Energie basierend auf Anwesenheit, ohne eine separate Automati
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.living_room_trv` |
-| Anwesenheitssteuerung | an |
-| Anwesenheits-Trigger | `person.wife`, `person.husband` |
+| Präsenzerkennung | an |
+| Präsenz-Trigger | `person.wife`, `person.husband` |
 | Abwesenheits-Aktion | Ausschalten |
 | Abwesenheits-Verzögerung | 300 (Sekunden) |
 | Rückkehr-Verzögerung | 60 (Sekunden) |
 
 **Ergebnis:** Sobald *alle* Trigger-Entitäten für 5 Minuten "abwesend" melden, schaltet die Heizung aus. Sobald jemand zurückkehrt, wird nach einer 1-minütigen Bestätigungsverzögerung wiederhergestellt.
 
-> **Variante:** Setze **Abwesenheits-Aktion: Abwesenheits-Offset** mit **Abwesenheits-Offset: -3.0** statt komplett auszuschalten — nützlich, wenn der Raum nicht vollständig auskühlen soll (z. B. ein Raum mit Pflanzen oder Haustieren). Bei dieser Aktion sorgt **Aus-Zustand der Mitglieder respektieren (Anwesenheit)** zusätzlich dafür, dass ein selbst ausgeschalteter Heizkörper bei der Rückkehr nicht wieder angeht.
+> **Variante:** Setze **Abwesenheits-Aktion: Abwesenheits-Versatz** mit **Abwesenheits-Temperaturversatz: -3.0** statt komplett auszuschalten — nützlich, wenn der Raum nicht vollständig auskühlen soll (z. B. ein Raum mit Pflanzen oder Haustieren). Bei dieser Aktion sorgt **Aus-Zustand der Mitglieder respektieren (Anwesenheit)** zusätzlich dafür, dass ein selbst ausgeschalteter Heizkörper bei der Rückkehr nicht wieder angeht.
 
 > **Variante — Gruppen-Preset als Abwesenheits-Aktion:** Wenn du Gruppen-Presets definiert hast (Beispiel 8), kannst du auch **Abwesenheits-Aktion: Abwesenheits-Preset** wählen und eines deiner Gruppen-Presets (z. B. `eco`) aktivieren lassen, sobald niemand zu Hause ist.
 
@@ -184,7 +184,7 @@ Günstige TRVs messen die Raumtemperatur schlecht. Lass ein präzises Gerät die
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.generic_thermostat`, `climate.trv1`, `climate.trv2` |
-| Master-Entität | `climate.generic_thermostat` |
+| Master-Gerät | `climate.generic_thermostat` |
 | Sync-Modus | Master/Lock |
 
 **Ergebnis:** Änderungen am Master werden an jedes Mitglied weitergegeben. Direkte Änderungen an `climate.trv1` oder `climate.trv2` werden zurückgesetzt.
@@ -232,7 +232,7 @@ Gleiches Ziel wie Beispiel 8, aber die Preset-Temperaturen liegen in einem separ
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.generic_thermostat`, `climate.trv1`, `climate.trv2` |
-| Master-Entität | `climate.generic_thermostat` |
+| Master-Gerät | `climate.generic_thermostat` |
 | Sync-Modus | Master/Lock |
 
 Konfiguriere die Away-/Home-Presets des `generic_thermostat` mit den gewünschten Temperaturen (z. B. Eco = 17 °C, Comfort = 21 °C).
@@ -282,8 +282,8 @@ Der Zeitplan bestimmt das *Wann*, zwei Schieberegler das *Wie warm*. Der Zeitpla
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.living_room_trv` |
-| Zeitplan-Entität | `schedule.house_weekly` |
-| Fallback bei inaktivem Zeitplan | siehe unten |
+| Haupt-Zeitplan / Kalenderentität | `schedule.house_weekly` |
+| Fallback-Zustand bei inaktivem Haupt-Zeitplan / Kalender | siehe unten |
 | Per Dienst geänderte Werte beibehalten (Presets) | an |
 
 **Heiz-Zeitblock (z. B. 06:00–22:00):**
@@ -335,9 +335,9 @@ Der eingebaute Sensor eines TRVs sitzt direkt neben einem heißen Rohr und misst
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.living_room_trv` |
-| Externe Sensoren | `sensor.living_room_temperature` |
-| Kalibrierungsziel | `number.living_room_trv_calibration` |
-| Kalibrierungsmodus | Offset |
+| Externer Temperatursensor | `sensor.living_room_temperature` |
+| Schreibe externe Temp. in Entitäten | `number.living_room_trv_calibration` |
+| Kalibrierungs-Modus | Offset |
 | Kalibrierungs-Heartbeat | 5 (Minuten) |
 
 **Ergebnis:** CGH berechnet den Offset zwischen der internen Messung des TRVs und dem externen Sensor, schreibt ihn in die Kalibrierungs-`number`-Entität und sendet ihn periodisch erneut, um Timeouts bei batteriebetriebenen Geräten zu vermeiden.
@@ -360,10 +360,10 @@ Jeder Raum behält seinen eigenen Sollwert, vollständig verwaltet von seiner ei
 |---|---|
 | Mitglieder | `climate.bt_living_room_trv`, `climate.bt_bedroom_trv` |
 | Sync-Modus | Deaktiviert |
-| Zeitplan-Entität | `schedule.house_weekly` |
+| Haupt-Zeitplan / Kalenderentität | `schedule.house_weekly` |
 | Fenstersteuerung | an — hier zentralisieren statt pro Gerät zu konfigurieren |
 | Kalibrierung | aus — die Regelungs-Integration übernimmt das |
-| Externe Sensoren | aus — die Regelungs-Integration nutzt ihre eigenen |
+| Externer Temperatursensor | aus — die Regelungs-Integration nutzt ihre eigenen |
 
 **Ergebnis:** Jede BT/VT-Instanz regelt ihr eigenes Gerät weiterhin unabhängig. CGH überträgt nur den `hvac_mode`/`temperature`-Wert des Zeitplans an jeden Raum und übernimmt Fenster/Anwesenheit zentral — es versucht nie, Räume miteinander zu synchronisieren.
 
@@ -376,7 +376,7 @@ Ein Raum hat ein gut kalibriertes BT/VT-Gerät (guter externer Sensor, saubere R
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.bt_living_room_trv`, `climate.bedroom_trv`, `climate.hallway_trv` |
-| Master-Entität | `climate.bt_living_room_trv` |
+| Master-Gerät | `climate.bt_living_room_trv` |
 | Sync-Modus | Master/Lock |
 
 **Ergebnis:** Die BT/VT-Instanz regelt ihr eigenes Gerät weiterhin über ihren eigenen Algorithmus; ihre resultierende Zieltemperatur wird auch an `climate.bedroom_trv` und `climate.hallway_trv` übertragen, die sie direkt übernehmen. Manuelle Änderungen an den einfachen TRVs werden zurückgesetzt. Vermeide hier `Mirror`/`Mirror-Lock` — sie übernehmen *jede* Änderung von `hvac_mode`/Temperatur eines Mitglieds, als wäre sie beabsichtigte Nutzereingabe, und Versatile Thermostats eigene Fenster-/Sicherheits-/Leistungs-Manager können diese Attribute selbstständig ändern, was dann auf jedes andere Mitglied gespiegelt würde.
@@ -393,7 +393,7 @@ Während bestimmter Zeitblöcke (z. B. ein "Comfort"-Zeitblock am Abend) sollen 
 |---|---|
 | Mitglieder | `climate.bedroom_trv` |
 | Sync-Modus | Lock |
-| Zeitplan-Entität | `schedule.bedroom_weekly` |
+| Haupt-Zeitplan / Kalenderentität | `schedule.bedroom_weekly` |
 
 **Zeitplan-Zeitblöcke mit Meta-Keys:**
 ```yaml
@@ -420,7 +420,7 @@ Schaltet eine Gruppe für einen längeren Zeitraum (z. B. Sommer) aus und über 
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.living_room_trv` |
-| Zeitplan-Entität | `schedule.house_weekly` |
+| Haupt-Zeitplan / Kalenderentität | `schedule.house_weekly` |
 
 **Zeitplan-Zeitblöcke mit dem `turn_off`-Meta-Key:**
 ```yaml
@@ -449,7 +449,7 @@ soll, obwohl eine Regel ihn ausgeschaltet hält.
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.wohnzimmer_trv` |
-| Zeitplan-Entität | `calendar.haus_termine` |
+| Haupt-Zeitplan / Kalenderentität | `calendar.haus_termine` |
 
 **Beschreibungen der Kalendereinträge:**
 ```yaml
@@ -500,8 +500,8 @@ Eine wöchentliche `schedule.*`-Entität steuert bereits das alltägliche Heizen
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.living_room_trv` |
-| Zeitplan-Entität | `schedule.house_weekly` |
-| Bypass-Entität | `calendar.household_overrides` |
+| Haupt-Zeitplan / Kalenderentität | `schedule.house_weekly` |
+| Bypass-Zeitplan / Kalenderentität | `calendar.household_overrides` |
 
 **Haupt-Zeitplan-Zeitblock (unverändert):**
 ```yaml
@@ -530,8 +530,8 @@ temperature: 22.0
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.living_room_trv` |
-| Zeitplan-Entität | `schedule.house_weekly` |
-| Fallback bei inaktivem Zeitplan | siehe unten |
+| Haupt-Zeitplan / Kalenderentität | `schedule.house_weekly` |
+| Fallback-Zustand bei inaktivem Haupt-Zeitplan / Kalender | siehe unten |
 
 **Fallback bei inaktivem Zeitplan** (Options-Flow → Zeitplan-Bereich, YAML):
 ```yaml
@@ -574,14 +574,14 @@ Ein Raum hat einen reinen Heizkörper (Wiser) und eine Heiz-/Kühl-Klimaanlage (
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.wiser_radiator`, `climate.daikin_ac` |
-| Feature-Strategie | Union |
+| Funktionsstrategie | Union |
 | Aktion bei nicht unterstütztem HVAC-Modus | Aus |
 | Sync-Modus | Deaktiviert |
 | Mitglieder-Isolation | an |
 | **Isolationsregel 1** | Trigger: HVAC-Modus `heat` → Isoliere `climate.daikin_ac` (HVAC-Modus setzen: `off`) |
 | **Isolationsregel 2** | Trigger: HVAC-Modus `cool` → Isoliere `climate.wiser_radiator` (HVAC-Modus setzen: `off`) |
 
-**Ergebnis:** Im Modus `heat` ist die Klimaanlage vollständig isoliert (aus, und ihre Presets/Lüfter/Schwenkfunktion fallen aus der Gruppe heraus). Im Modus `cool` wird der Heizkörper genauso isoliert — symmetrisches Verhalten auf beiden Seiten, kein Übergreifen zwischen den Modi. Dies erfordert **mehrere Isolationsregeln**, eine pro Geräte-/Trigger-Paar.
+**Ergebnis:** Im Modus `heat` ist die Klimaanlage vollständig isoliert (ausgeschaltet und nicht mehr angesteuert, ihre Presets/Lüfter/Schwenkfunktion bleiben aber im Gruppen-Angebot). Im Modus `cool` wird der Heizkörper genauso isoliert — symmetrisches Verhalten auf beiden Seiten, kein Übergreifen zwischen den Modi. Dies erfordert **mehrere Isolationsregeln**, eine pro Geräte-/Trigger-Paar.
 
 ---
 
@@ -594,7 +594,7 @@ Eine wasserbasierte Fußbodenheizung hat keinen `off`-Modus — sie unterstützt
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.floor_heating`, `climate.bedroom_ac` |
-| Feature-Strategie | Union |
+| Funktionsstrategie | Union |
 | Mitglieder-Isolation | an |
 | Isolationsregel 1 | Trigger: HVAC-Modus `cool`, `dry`, `fan_only` → Isoliere `climate.floor_heating` (Preset-Modus setzen: `building_protection`) |
 
@@ -611,8 +611,8 @@ Mischung von Geräten mit unterschiedlichen Temperaturbereichen — ein TRV mit 
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.trv`, `climate.ac` |
-| Feature-Strategie | Union |
-| Aktion außerhalb des Bereichs | Aus |
+| Funktionsstrategie | Union |
+| Außerhalb-Bereich-Aktion | Aus |
 
 **Ergebnis:** Ziel auf 14 °C gesetzt → die Klimaanlage kann das nicht erreichen (Min. 16 °C) und schaltet aus; der TRV heizt weiter. Ziel auf 22 °C gesetzt → beide liegen im Bereich und bleiben aktiv.
 
@@ -643,9 +643,9 @@ Ein HRV (Wärmerückgewinnungslüftung) mit heat/cool/auto fungiert als "Dirigen
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.hrv`, `climate.floor_zone_1` … `climate.floor_zone_5` |
-| Master-Entität | `climate.hrv` |
+| Master-Gerät | `climate.hrv` |
 | Sync-Modus | Master/Lock |
-| Feature-Strategie | Union |
+| Funktionsstrategie | Union |
 | Aktion bei nicht unterstütztem HVAC-Modus | Aus |
 
 **Ergebnis:** Der HRV steuert den `hvac_mode` der Gruppe. Wechselt er in `cool` (manuell oder über `auto`), werden die Fußbodenzonen — die `cool` nicht unterstützen — automatisch über die Union-Behandlung für nicht unterstützte Modi ausgeschaltet. Das Zurückschalten des HRV auf `heat` stellt sie wieder her.
@@ -697,17 +697,17 @@ Manche Thermostate (z.B. Honeywell Lyric T5) beherrschen physisch eine automatis
 |---|---|
 | Mitglieder | `climate.lyric_wohnzimmer`, `climate.lyric_schlafzimmer` |
 | Bereichsvorlage aktivieren | an |
-| Totzonen-Aktion | Nur Lüfter |
+| Deadband-Aktion | Nur Lüftung |
 
 **Ergebnis:** Die Gruppe bietet `heat_cool` mit unterem und oberem Sollwert an, obwohl kein Mitglied Bereichsunterstützung meldet. Unterhalb des Bandes bekommt ein Gerät `heat` mit dem unteren Sollwert, oberhalb `cool` mit dem oberen, innerhalb die Totzonen-Aktion. Die Mitglieder werden automatisch erkannt — wer `heat_cool` bereits nativ meldet, bleibt unangetastet.
 
-**Die Totzonen-Aktion "Keine"** schaltet innerhalb des Bandes keinen Modus um: Jedes Gerät regelt sich selbst, und eines, das weiter heizt oder kühlt, wird auf dem passenden Sollwert gehalten (Heizen auf dem unteren, Kühlen auf dem oberen) und folgt so einer Änderung des Bandes. Sinnvoll für Geräte, die sich selbst regeln; "Ausschalten" oder "Nur Lüfter" nutzen, wenn die Gruppe sie aktiv ruhigstellen soll.
+**Die Deadband-Aktion "Keine"** schaltet innerhalb des Bandes keinen Modus um: Jedes Gerät regelt sich selbst, und eines, das weiter heizt oder kühlt, wird auf dem passenden Sollwert gehalten (Heizen auf dem unteren, Kühlen auf dem oberen) und folgt so einer Änderung des Bandes. Sinnvoll für Geräte, die sich selbst regeln; "Ausschalten" oder "Nur Lüftung" nutzen, wenn die Gruppe sie aktiv ruhigstellen soll.
 
 ---
 
 ### 26. Entfeuchten, während der Raum auf Temperatur ist
 
-Eine von der Bereichsvorlage erfasste Klimaanlage läuft innerhalb des Bandes auf Nur Lüfter — an schwülen Tagen bleibt der Raum dabei temperaturmäßig angenehm und trotzdem klamm. Die Gruppe kann stattdessen auf Trocknen umschalten, sobald die Feuchtigkeit über dem Zielwert liegt, ohne die Temperaturregelung aufzugeben.
+Eine von der Bereichsvorlage erfasste Klimaanlage läuft innerhalb des Bandes auf Nur Lüftung — an schwülen Tagen bleibt der Raum dabei temperaturmäßig angenehm und trotzdem klamm. Die Gruppe kann stattdessen auf Trocknen umschalten, sobald die Feuchtigkeit über dem Zielwert liegt, ohne die Temperaturregelung aufzugeben.
 
 **Entitäten:** `climate.schlafzimmer_ac` (heat/cool/dry/fan_only/off, ein Sollwert), `sensor.schlafzimmer_feuchtigkeit`
 
@@ -716,13 +716,13 @@ Eine von der Bereichsvorlage erfasste Klimaanlage läuft innerhalb des Bandes au
 | Mitglieder | `climate.schlafzimmer_ac` |
 | Externe Feuchtigkeitssensoren | `sensor.schlafzimmer_feuchtigkeit` |
 | Bereichsvorlage aktivieren | an |
-| Totzonen-Aktion | Nur Lüfter |
+| Deadband-Aktion | Nur Lüftung |
 | Im Totband entfeuchten | an |
 | Feuchtigkeits-Aktion | Trocknen |
 | Feuchtigkeits-Hysterese | 3,0 % |
 | Deaktivierungsverzögerung | 600 s |
 
-**Ergebnis:** Innerhalb des Temperaturbandes läuft die Klimaanlage auf Nur Lüfter, solange die Feuchtigkeit im Soll ist, und wechselt auf Trocknen, sobald sie die Zielfeuchtigkeit überschreitet. Das Verlassen des Bandes hat immer Vorrang — Heizen und Kühlen gehen dem Entfeuchten vor. Die Verzögerung verhindert, dass Duschen oder ein Topf Nudeln das Gerät sofort wieder zurückschalten.
+**Ergebnis:** Innerhalb des Temperaturbandes läuft die Klimaanlage auf Nur Lüftung, solange die Feuchtigkeit im Soll ist, und wechselt auf Trocknen, sobald sie die Zielfeuchtigkeit überschreitet. Das Verlassen des Bandes hat immer Vorrang — Heizen und Kühlen gehen dem Entfeuchten vor. Die Verzögerung verhindert, dass Duschen oder ein Topf Nudeln das Gerät sofort wieder zurückschalten.
 
 Ein Feuchtigkeitswert ist Voraussetzung: entweder ein Sensor wie oben oder ein Mitglied, das ihn meldet. Ohne ihn bietet die Gruppe keine Zielfeuchtigkeit an und die Option bleibt wirkungslos. Geräte ohne Trocknen-Modus fallen auf die Totzonen-Aktion zurück, und bei zugewiesenen Heiz-/Kühlrollen zählt Trocknen als Kühlen — ein reines Heizgerät bekommt es nie.
 
@@ -747,14 +747,14 @@ Drei IR-gesteuerte Klimaanlagen, alle über denselben IR-Blaster angesteuert. Wi
 
 Ein Raum mit zwei Klimaanlagen — eine heizt zusätzlich, die andere kühlt nur. Damit die Gruppe Heizen überhaupt anbietet, braucht sie **Union** — mit *Intersection* bliebe nur, was beide Mitglieder können, und Heizen fiele weg.
 
-Beide Anlagen können außerdem trocknen und als reiner Lüfter laufen. Union bietet jeden Modus an, den ein Mitglied meldet, also stünden auch Trocknen und Nur Lüfter in der Auswahl. Die Gruppe soll nur Aus, Heizen und Kühlen anbieten.
+Beide Anlagen können außerdem trocknen und als reiner Lüfter laufen. Union bietet jeden Modus an, den ein Mitglied meldet, also stünden auch Trocknen und Nur Lüftung in der Auswahl. Die Gruppe soll nur Aus, Heizen und Kühlen anbieten.
 
 **Entitäten:** `climate.living_ac` (heat/cool/dry/fan_only/off), `climate.bedroom_ac` (cool/dry/fan_only/off)
 
 | Einstellung | Wert |
 |---|---|
 | Mitglieder | `climate.living_ac`, `climate.bedroom_ac` |
-| Feature-Strategie | Union |
+| Funktionsstrategie | Union |
 | Aktion bei nicht unterstütztem HVAC-Modus | Aus |
 
 Die Gruppe bietet die Modi an, die ihre Mitglieder melden — also kürzt du die Liste bei den Mitgliedern. Die Home-Assistant-eigene Option `customize` ersetzt die Modusliste, die eine Entität meldet; die Vereinigung der Gruppe folgt den gekürzten Listen. Eintrag in die `configuration.yaml` übernehmen und Home Assistant neu starten:
@@ -783,8 +783,8 @@ In die Liste gehören nur Modi, die das Gerät wirklich beherrscht — die Grupp
 
 - **Einfach anfangen:** Zuerst die grundlegende Gruppierung zum Laufen bringen (nur Mitglieder, keine weiteren Einstellungen), dann Funktionen nach und nach hinzufügen.
 - **Erweiterte Funktionen:** In der Gruppenkonfiguration aktivieren, um alles jenseits der Basic-Stufe freizuschalten — jedes Beispiel nach dem Basic-Abschnitt benötigt sie.
-- **Sync-Modus:** Nutze `Lock`, wenn die Gruppe die alleinige Quelle der Wahrheit sein soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen und an alle gespiegelt werden sollen; nutze `Adopt Only` (bzw. *Nur übernehmen*), wenn Änderungen an einem Mitglied das Gruppenziel anpassen sollen, ohne die anderen Geräte anzusteuern; nutze `Mirror/Lock`, wenn nur einige Attribute synchronisiert werden sollen (Beispiel 22).
+- **Sync-Modus:** Nutze `Lock`, wenn die Gruppe die alleinige Quelle der Wahrheit sein soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen und an alle gespiegelt werden sollen; nutze `Adopt Only` (bzw. *Nur übernehmen*), wenn Änderungen an einem Mitglied das Gruppenziel anpassen sollen, ohne die anderen Geräte anzusteuern; nutze `Mirror` mit eingeschränkten **Sync-Attributen**, wenn nur einige Attribute synchronisiert werden sollen und der Rest in Ruhe gelassen wird (Beispiel 22).
 - **Sperr-Priorität:** Hauptschalter > Fenstersteuerung > Anwesenheitssteuerung — sind mehrere gleichzeitig aktiv, wird nur die Aktion der höchstrangigen an Mitglieder gesendet.
 - **Zeitplan + Boost:** Boost rangiert über dem Zeitplan. Zeitplan-Zeitblock-Änderungen laufen während eines Boosts weiterhin im Hintergrund.
 - **Kalibrierung:** Nutze CGHs eigene Kalibrierung nur, wenn du nicht bereits Better Thermostat oder Versatile Thermostat verwendest — die haben ihre eigene (Beispiel 13).
-- **Mehrere Isolationsregeln:** Wenn verschiedene Mitgliedsgeräte unterschiedlich auf denselben Trigger (oder ganz unterschiedliche Trigger) reagieren müssen, füge eine Isolationsregel pro Gerät hinzu — siehe Beispiele 14 und 15.
+- **Mehrere Isolationsregeln:** Wenn verschiedene Mitgliedsgeräte unterschiedlich auf denselben Trigger (oder ganz unterschiedliche Trigger) reagieren müssen, füge eine Isolationsregel pro Gerät hinzu — siehe Beispiele 19 und 20.

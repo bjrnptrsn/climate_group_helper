@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Stelt de groep tijdelijk in op een doeltemperatuur. Na afloop keert de groep automatisch terug naar het actieve schema of de vorige staat.",
       "fields": {
+        "hvac_mode": {
+          "name": "HVAC-modus",
+          "description": "De modus waarin de boost wordt uitgevoerd. Standaard de huidige modus van de groep (een uitgeschakelde groep wordt wakker in de laatste actieve modus). Modussen zonder enkel streefpunt, of een boost die geen enkel lid kan aannemen, worden afgewezen."
+        },
         "temperature": {
           "name": "Temperatuur",
           "description": "Absolute doeltemperatuur tijdens de boost (bijv. 24,0). Sluit temperature_offset uit."

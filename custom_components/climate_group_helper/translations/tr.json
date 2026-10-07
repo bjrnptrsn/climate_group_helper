@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Grubu geçici olarak bir hedef sıcaklığa ayarlar. Zamanlayıcı sona erdiğinde grup otomatik olarak aktif programa veya önceki duruma geri döner.",
       "fields": {
+        "hvac_mode": {
+          "name": "HVAC modu",
+          "description": "Boostun çalıştığı mod. Varsayılan: grubun mevcut modu (kapalı bir grup son aktif modunda uyanır). Tek ayar noktası olmayan modlar veya hiçbir üyenin kabul edemeyeceği bir boost reddedilir."
+        },
         "temperature": {
           "name": "Sıcaklık",
           "description": "Boost sırasında mutlak hedef sıcaklık (örn. 24.0). temperature_offset ile birlikte kullanılamaz."

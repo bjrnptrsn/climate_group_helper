@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Setter gruppen midlertidig til en måltemperatur. Når timeren utløper, går gruppen automatisk tilbake til den aktive tidsplanen eller forrige tilstand.",
       "fields": {
+        "hvac_mode": {
+          "name": "HVAC-modus",
+          "description": "Modusen boosten kjører i. Som standard gruppens gjeldende modus (en slått av gruppe våkner i sin siste aktive modus). Moduser uten enkelt settpunkt, eller en boost ingen medlemmer kan ta, avvises."
+        },
         "temperature": {
           "name": "Temperatur",
           "description": "Absolutt måltemperatur under boost (f.eks. 24,0). Utelukker temperature_offset."

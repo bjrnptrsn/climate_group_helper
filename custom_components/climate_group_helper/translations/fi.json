@@ -696,6 +696,10 @@
       "name": "Boost",
       "description": "Asettaa ryhmän väliaikaisesti tavoitelämpötilaan. Ajastimen umpeuduttua ryhmä palaa automaattisesti aktiiviseen aikatauluun tai edelliseen tilaan.",
       "fields": {
+        "hvac_mode": {
+          "name": "HVAC-tila",
+          "description": "Tila, jossa boost toimii. Oletus: ryhmän nykyinen tila (sammunut ryhmä herää viimeiseen aktiiviseen tilaansa). Tilat, joilla ei ole yksittäistä asetusarvoa, tai boost, jota mikään jäsen ei voi ottaa vastaan, hylätään."
+        },
         "temperature": {
           "name": "Lämpötila",
           "description": "Absoluuttinen tavoitelämpötila boostin aikana (esim. 24.0). Ei voi käyttää yhdessä temperature_offsetin kanssa."
