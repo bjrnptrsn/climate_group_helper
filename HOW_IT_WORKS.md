@@ -112,6 +112,8 @@ Some cases don't follow the Sync Mode:
 - **Isolated devices** are left alone.
 - **Devices covered by the Member Template** always follow the group's range.
 - **With Respect Member Off State (Sync),** a device you turn off is left off, and its off is not passed on to the others. If it is the last device still running, the whole group turns off.
+- **Right after the group sent a command to that device,** a change you make directly at the device within about five seconds is not taken over. Home Assistant counts the device's reports as the answer to that command for this long, so a value that differs from the one the group just sent is ignored and the group keeps its own value. If you need your value, wait a few seconds and set it again.
+- **A temperature you set on a switched-off device** is ignored on some devices: while off, they show the same value as the group, so the first change there cannot be told apart from the switch-off itself. Switch the device on first and set the temperature afterwards.
 
 ---
 

@@ -514,6 +514,17 @@ TEMP_TARGET_ATTRS: frozenset[str] = frozenset({
     ATTR_TARGET_TEMP_HIGH,
 })
 
+# The float setpoint attributes: compared with FLOAT_TOLERANCE, and the ones a
+# device can carry through an off transition as a placeholder value. Wider
+# than TEMP_TARGET_ATTRS: humidity is a setpoint too, though no offset or
+# temperature limit applies to it.
+SETPOINT_ATTRS: frozenset[str] = frozenset({
+    ATTR_TEMPERATURE,
+    ATTR_HUMIDITY,
+    ATTR_TARGET_TEMP_LOW,
+    ATTR_TARGET_TEMP_HIGH,
+})
+
 # Float comparison tolerance for temperature and humidity
 FLOAT_TOLERANCE = 0.05
 

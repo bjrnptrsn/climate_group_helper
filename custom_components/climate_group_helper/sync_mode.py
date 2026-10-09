@@ -8,7 +8,7 @@ import time
 from dataclasses import fields
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.climate import HVACMode
+from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
 from homeassistant.core import Event
 
 from .const import (
@@ -17,11 +17,12 @@ from .const import (
     CONF_SYNC_MODE,
     META_KEY_SYNC_ATTRS,
     META_KEY_SYNC_MODE,
+    SETPOINT_ATTRS,
     STARTUP_BLOCK_DELAY,
     SYNC_TARGET_ATTRS,
     SyncMode,
 )
-from .state import ClimateState, FilterState, is_available
+from .state import ClimateState, FilterState, is_available, is_member_change
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -284,27 +285,41 @@ class SyncModeHandler:
         if self.sync_mode == SyncMode.DISABLED:
             return
 
-        # Filter out setpoint values when HVAC is OFF (meaningless frost protection
-        # values). The change itself may be the transition to OFF, with the device
-        # reporting its frost setpoint in the same write — the target is still on
-        # then, so the check must not rely on it.
-        is_switching_on = "hvac_mode" in change_dict and change_dict["hvac_mode"] != HVACMode.OFF
-        if (
-            self.target_state.hvac_mode == HVACMode.OFF
-            or change_dict.get("hvac_mode") == HVACMode.OFF
-        ) and not is_switching_on:
-            setpoint_attrs = {"temperature", "target_temp_low", "target_temp_high", "humidity"}
-            change_dict = {key: value for key, value in change_dict.items() if key not in setpoint_attrs}
+        # While a member is off, its setpoints are either the placeholder of
+        # its own off transition or a deliberate value. The member's own state
+        # decides, not the target's mode — a single member switching off keeps
+        # the target on (Last Man Standing).
+        old_state = event.data.get("old_state")
+        new_state = event.data.get("new_state")
+        if old_state is not None and new_state is not None and new_state.state == HVACMode.OFF:
+            for attr in list(change_dict):
+                if attr in SETPOINT_ATTRS and not is_member_change(
+                    self._group, change_entity_id, attr, old_state, new_state
+                ):
+                    del change_dict[attr]
             if not change_dict:
-                _LOGGER.debug("[%s] Ignoring setpoint changes while OFF", self._group.entity_id)
+                _LOGGER.debug("[%s] Ignoring off-induced setpoint changes", self._group.entity_id)
                 return
+
+        # An off member that only changes a setpoint is not switching off again: its
+        # unchanged mode must not reach the adoption, where it counts as an off signal
+        # and partial sync would drop the setpoint with it. change_dict stays whole —
+        # the enforcement below and Last Man Standing still read it.
+        stays_off = (
+            old_state is not None
+            and new_state is not None
+            and old_state.state == new_state.state == HVACMode.OFF
+        )
+        adoptable = {
+            key: value
+            for key, value in change_dict.items()
+            if not (stays_off and key == ATTR_HVAC_MODE)
+        }
 
         # 1. Mirror mode: adopt filtered changes into target_state.
         # Guard: skip adoption on reconnect (old_state was unavailable/unknown) — the device
         # is reporting its restored hardware state, not a deliberate user change.
         # LOCK enforcement below still runs to correct the member if needed.
-        old_state = event.data.get("old_state")
-        new_state = event.data.get("new_state")
         is_reconnect = old_state is not None and not is_available(old_state)
 
         # Member-Template ownership: covered members are owned by the Range Template.
@@ -325,7 +340,7 @@ class SyncModeHandler:
             and not is_reconnect
             and not is_covered
         ):
-            if filtered := {key: value for key, value in change_dict.items() if filter_dict.get(key)}:
+            if filtered := {key: value for key, value in adoptable.items() if filter_dict.get(key)}:
                 filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
                 if self.sync_mode == SyncMode.ADOPT_ONLY:
                     self.adopt_state_manager.update(entity_id=change_entity_id, **filtered)
@@ -355,7 +370,7 @@ class SyncModeHandler:
                 return
             master_id = self._group._master_entity_id
             if master_id and change_entity_id == master_id and not is_covered and not is_reconnect:
-                if filtered := {key: value for key, value in change_dict.items() if filter_dict.get(key)}:
+                if filtered := {key: value for key, value in adoptable.items() if filter_dict.get(key)}:
                     filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
                     self._adopt_fresh_change(change_entity_id, filtered)
             # Non-master changes are enforced (reverted) via call_debounced below

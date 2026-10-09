@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.14.1 - 2026-10-09
+
+### 🐛 Bug Fixes
+
+*   **A Temperature Set on a Switched-Off Device Is No Longer Overwritten**: In the sync modes that adopt changes made on a device, a temperature set while the device is off, or together with switching it on, now becomes the group's setpoint instead of being replaced by the group's old value.
+
 ## 1.14.0 - 2026-10-07
 
 ### 🐛 Bug Fixes

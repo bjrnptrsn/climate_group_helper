@@ -15,6 +15,8 @@ from homeassistant.core import Event, State
 from .const import (
     CONF_IGNORE_OFF_MEMBERS_SYNC,
     FLOAT_TOLERANCE,
+    SETPOINT_ATTRS,
+    TEMP_TARGET_ATTRS,
     TRANSIENT_STATES,
     AdoptManualChanges,
 )
@@ -63,6 +65,32 @@ def is_available(state: State | str | None) -> bool:
     return available_state(state) is not None
 
 
+def _values_match(val1: Any, val2: Any) -> bool:
+    """Whether two attribute values count as equal (FLOAT_TOLERANCE for numbers)."""
+    if val1 is None or val2 is None:
+        return False
+    if val1 == val2:
+        return True
+    try:
+        return abs(float(val1) - float(val2)) < FLOAT_TOLERANCE
+    except (TypeError, ValueError):
+        return False
+
+
+def _member_target_value(group: ClimateGroupHelper, entity_id: str | None, attr: str) -> Any:
+    """The target value an attribute is compared against, member and group offset applied.
+
+    The member reports what it was sent, so it carries both offsets; compared
+    without them, a value equal to the plain target would show no deviation.
+    Shared with `ChangeState.from_event`, so deviation and off-induced checks
+    judge against the same number.
+    """
+    target_val = getattr(group.shared_target_state, attr, None)
+    if attr in TEMP_TARGET_ATTRS and target_val is not None:
+        target_val += group._temp_offset_map.get(entity_id, 0.0) + group.run_state.group_offset
+    return target_val
+
+
 def _attribute_changed_in_event(old_state: State, new_state: State, attr: str) -> bool:
     """Whether `attr` differs between the two states of one event.
 
@@ -73,10 +101,43 @@ def _attribute_changed_in_event(old_state: State, new_state: State, attr: str) -
     new_val = new_state.attributes.get(attr)
     if old_val is None or new_val is None:
         return False
-    try:
-        return abs(float(old_val) - float(new_val)) >= FLOAT_TOLERANCE
-    except (TypeError, ValueError):
-        return old_val != new_val
+    return not _values_match(old_val, new_val)
+
+
+def is_member_change(
+    group: ClimateGroupHelper,
+    entity_id: str | None,
+    attr: str,
+    old_state: State,
+    new_state: State,
+) -> bool:
+    """Whether `attr` is the member's own change in this event.
+
+    Deviation (`new_state` vs target) only asks whether there is something to
+    adopt; whether the member did it is answered here, from the event's own
+    change. Used for events involving `off`; every other event keeps the plain
+    deviation gate.
+
+    While the member is `off`, a setpoint is off-induced — and dropped — when
+    the off-switch carried it (`old_state.state != off`), when the event repeats
+    it unchanged (it deviates from the target but the member did not set it),
+    or when the member fell from the target value onto the placeholder
+    (`old == target`). On
+    `off` -> active, only a setpoint missing in `old_state` counts as changed:
+    a device can suppress a mode, preset or fan while off just as well, and the
+    carried value must not be adopted.
+    """
+    if new_state.state == HVACMode.OFF:
+        if old_state.state != HVACMode.OFF:
+            return False
+        if _values_match(old_state.attributes.get(attr), new_state.attributes.get(attr)):
+            return False
+        target_val = _member_target_value(group, entity_id, attr)
+        return not _values_match(old_state.attributes.get(attr), target_val)
+
+    if old_state.attributes.get(attr) is None:
+        return attr in SETPOINT_ATTRS and new_state.attributes.get(attr) is not None
+    return _attribute_changed_in_event(old_state, new_state, attr)
 
 
 def other_active_members(group: ClimateGroupHelper, entity_id: str | None) -> list[str]:
@@ -248,11 +309,16 @@ class FilterState(ClimateState):
 
 @dataclass(frozen=True)
 class ChangeState(ClimateState):
-    """Delta between a member's current state and the group's TargetState.
+    """Deviation between a member's current state and the group's TargetState.
 
-    Only attributes that deviate from the target are populated — all others are None.
-    Float attributes (temperature, humidity) use FLOAT_TOLERANCE to suppress noise.
-    Per-member offsets are applied before comparison so the delta reflects logical values.
+    Only attributes that deviate from the target are populated — all others are
+    None. Float attributes use FLOAT_TOLERANCE to suppress noise; the member
+    and group offsets are applied to the target before comparison, so a member
+    that only mirrors them shows no deviation.
+
+    This is the *deviation* (`new_state` vs target), not the event's own change
+    (`old_state` vs `new_state`) — whether the member did it is decided by the
+    caller (`is_member_change()` for events involving `off`).
     """
     entity_id: str | None = None
 
@@ -260,31 +326,19 @@ class ChangeState(ClimateState):
     def from_event(
         cls,
         event: Event,
-        target_state: ClimateState,
-        offset_map: dict[str, float] | None = None,
+        group: ClimateGroupHelper,
     ) -> ChangeState:
-        """Build a ChangeState from a state_changed event vs. the current TargetState."""
+        """Build a ChangeState from a state_changed event vs. the group's TargetState."""
         entity_id = event.data.get("entity_id")
         new_state = event.data.get("new_state")
-        if new_state is None or target_state is None:
+        if new_state is None or group.shared_target_state is None:
             return cls(entity_id=entity_id)
-
-        def within_tolerance(val1: float, val2: float, tolerance: float = FLOAT_TOLERANCE) -> bool:
-            try:
-                return abs(float(val1) - float(val2)) < tolerance
-            except (ValueError, TypeError):
-                return False
 
         deviations: dict[str, Any] = {}
         # Iterate over ClimateState fields only — ignores ChangeState metadata (entity_id)
         for f in fields(ClimateState):
             key = f.name
-            target_val = getattr(target_state, key, None)
-
-            # Apply per-member offset for temperature fields
-            if key in ("temperature", "target_temp_low", "target_temp_high"):
-                if offset_map and entity_id and entity_id in offset_map and target_val is not None:
-                    target_val = target_val + offset_map[entity_id]
+            target_val = _member_target_value(group, entity_id, key)
 
             if key == "hvac_mode":
                 member_val = new_state.state
@@ -294,7 +348,9 @@ class ChangeState(ClimateState):
             if target_val is None or member_val is None or member_val == target_val:
                 continue
 
-            if key in ("temperature", "humidity", "target_temp_low", "target_temp_high") and within_tolerance(target_val, member_val):
+            # Tolerance only for the setpoints; modes and presets are strings
+            # and compare exactly.
+            if key in SETPOINT_ATTRS and _values_match(target_val, member_val):
                 continue
 
             deviations[key] = member_val
@@ -556,7 +612,10 @@ class SyncModeStateManager(BaseStateManager):
         return self._filter_turn_on_attributes(entity_id, kwargs)
 
     def _filter_turn_on_attributes(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
-        """Drop attributes a member carried through an off->on event.
+        """Adopt only the switch-on itself, not the attributes the member carried.
+
+        `kwargs` is the deviation (`new_state` vs target), so a carried value
+        that deviates lands in it too; `is_member_change()` tells the two apart.
 
         Returns False when nothing is left to adopt.
         """
@@ -576,7 +635,7 @@ class SyncModeStateManager(BaseStateManager):
         for attr in list(kwargs):
             if attr == ATTR_HVAC_MODE:
                 continue
-            if not _attribute_changed_in_event(old_state, new_state, attr):
+            if not is_member_change(self._group, entity_id, attr, old_state, new_state):
                 del kwargs[attr]
         return bool(kwargs)
 

@@ -21,6 +21,7 @@ from .payload import (
     validate_climate_payload,
 )
 from .service_call import SYNC_TARGET, SyncTarget
+from .state import available_state
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -468,8 +469,8 @@ class PresetManager:
         restored target ask this.
 
         Before the first aggregation (the restore path runs earlier) the
-        capability list is still empty, so the raw states answer instead — one
-        predicate for both callers.
+        capability list is still empty, so the raw states answer instead, with
+        the same availability filter — one predicate for both callers.
         """
         if self.group_presets:
             return True
@@ -480,7 +481,7 @@ class PresetManager:
             states = [
                 state
                 for entity_id in self._group.climate_entity_ids
-                if (state := self._group.hass.states.get(entity_id)) is not None
+                if (state := available_state(self._group.hass.states.get(entity_id)))
             ]
         return any(
             PRESET_NONE in (state.attributes.get(ATTR_PRESET_MODES) or [])

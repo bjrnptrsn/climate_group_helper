@@ -112,6 +112,8 @@ Einige Fälle folgen nicht dem Sync-Modus:
 - **Isolierte Geräte** bleiben in Ruhe.
 - **Von der Mitglieder-Vorlage erfasste Geräte** folgen immer dem Bereich der Gruppe.
 - **Mit Respektiere Aus-Status der Mitglieder (Sync)** bleibt ein Gerät, das du ausschaltest, aus, und sein „aus“ wird nicht an die anderen weitergegeben. Ist es das letzte Gerät, das noch läuft, schaltet sich die ganze Gruppe aus.
+- **Kurz nachdem die Gruppe diesem Gerät einen Befehl geschickt hat,** übernimmt sie eine Änderung, die du innerhalb von etwa fünf Sekunden direkt am Gerät machst, nicht. Home Assistant wertet die Meldungen des Geräts so lange als Antwort auf diesen Befehl; ein Wert, der vom soeben gesendeten abweicht, wird deshalb ignoriert, und die Gruppe behält ihren eigenen. Brauchst du deinen Wert, warte ein paar Sekunden und stelle ihn erneut ein.
+- **Eine Temperatur, die du an einem ausgeschalteten Gerät einstellst,** wird bei manchen Geräten ignoriert: Im Aus zeigen sie denselben Wert wie die Gruppe, die erste Änderung lässt sich deshalb nicht vom Ausschalten selbst unterscheiden. Schalte das Gerät zuerst ein und stelle die Temperatur danach ein.
 
 ---
 

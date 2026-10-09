@@ -778,11 +778,7 @@ class Aggregator:
         event = self._group.event
         event_entity_id = event.data.get(ATTR_ENTITY_ID) if event else None
         if event:
-            self._group.change_state = ChangeState.from_event(
-                event,
-                self._group.shared_target_state,
-                offset_map=self._group._temp_offset_map or None,
-            )
+            self._group.change_state = ChangeState.from_event(event, self._group)
             self._group._event_entity_id = event_entity_id
 
             # Check if the change state is from a member entity.
