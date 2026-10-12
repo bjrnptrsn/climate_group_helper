@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  🇬🇧 English · <a href="LIESMICH.md">🇩🇪 Deutsch</a>
+</p>
+
+<p align="center">
   <strong>The advanced logic layer for your Home Assistant climate devices.</strong><br>
   Sync, automate, and fix your thermostats — set up entirely in the UI.
 </p>
@@ -86,7 +90,7 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 - [Management Entities (Switch & Slider)](#management-entities-switch--slider)
   - [Main Switch](#main-switch)
   - [Group Offset](#group-offset)
-- [Lovelace Card](#lovelace-card)
+- [Dashboard Card](#dashboard-card)
 - [What the Group Reports About Itself](#what-the-group-reports-about-itself)
 - [Configuration Options](#configuration-options)
 - [Services](#services)
@@ -400,7 +404,7 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 *   **Auto-reset:** Setting a temperature directly on the group (via UI or service) resets the offset to `0` automatically.
 *   **Persistence:** The offset value survives Home Assistant restarts.
 
-## Lovelace Card
+## Dashboard Card
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate Group Helper card next to its editor" width="700"/>
@@ -421,7 +425,7 @@ resource entry or separate repository.
 
 Beyond the usual climate values, the group publishes its own state as attributes — what it currently intends, why it is or isn't acting, and where its devices stand. You can read them in the more-info dialog under **Attributes**, show them on a dashboard, or branch on them in an automation.
 
-Most are self-explanatory. The ones worth knowing about:
+Most are self-explanatory. The ones worth knowing about, grouped by the question they answer.
 
 ### Which devices disagree
 
@@ -441,9 +445,9 @@ When everything agrees, it is empty. Two details make it trustworthy:
 
 ### Why the group isn't doing what you expect
 
-*   **`blocking_sources`** — present whenever something is holding the group back, listing what: `window`, `presence`, `switch`. While one of these is listed, commands don't reach the devices. Absent when nothing blocks.
+*   **`blocking_sources`** — present whenever something is holding the group back, listing what: `window`, `presence`, `switch`. While one of these is listed, the group doesn't push changes to its devices. Absent when nothing blocks.
 *   **`blocking_reason`** — of everything listed there, the one currently in charge, and since when (`source` and `since`): the Main Switch outranks a window, a window outranks Presence Control. After a Home Assistant restart the time counts from the restart. Absent when nothing blocks.
-*   **`main_switch_entity_id`** — the group's Main Switch, so a dashboard or automation can find it without guessing its name. Only in Advanced Mode.
+*   **`main_switch_entity_id`** — the group's Main Switch, so a dashboard or automation can find it without guessing its name.
 *   **`isolated_members`** — devices an isolation rule currently excludes. They keep their own state and are left out of the group's readings.
 *   **`oob_members`** — devices that could not follow the last target because it lies outside their own temperature range.
 *   **`master_entity_id`** — which device is currently set as the group's Master Entity. Present only when one is configured.
@@ -457,8 +461,6 @@ When everything agrees, it is empty. Two details make it trustworthy:
 *   **`active_member_count` / `total_member_count`** — how many devices are actually running, out of how many are configured.
 
 ### What is currently in effect
-
-Everything in this group except `enabled_features` requires Advanced Mode — without it those features don't exist, and neither do their attributes.
 
 *   **`enabled_features`** — which features are configured at all (`window`, `presence`, `schedule`, `sync`, `isolation`, `range_template`, `calibration`, `master`), so a dashboard can tell "off" from "not set up".
 *   **`effective_sync_mode` / `effective_sync_attributes`** — the sync settings in force *right now*, including a schedule slot's or preset's temporary override — not necessarily what the settings page shows.

@@ -458,7 +458,6 @@ class Aggregator:
             else self.states
         )
 
-        # Current temperature
         member_temp_avg = reduce_attribute(
             temp_states, ATTR_CURRENT_TEMPERATURE, reduce=lambda *data: self._group._temp_current_avg_calc(data)
         )
@@ -530,7 +529,6 @@ class Aggregator:
 
         Pure — see `_compute_temperature` for why calibration runs after the apply.
         """
-        # Current humidity
         needs_calibration = False
         if self._group.humidity_sensor_entity_ids:  # always empty in simple mode
             current_humidity = self._get_avg_sensor_value(
@@ -699,9 +697,9 @@ class Aggregator:
 
         Called by HA whenever a member entity changes state. Responsibilities:
         - Collect valid member states (excludes isolated and unavailable members).
-        - Set startup_time once all members are ready and trigger startup resync.
+        - Run the one-time calibration force-sync once all members are ready.
         - Aggregate hvac_mode, hvac_action, temperature/humidity readings.
-        - Apply Range Template to covered members before aggregation.
+        - Read member states through the Member Template gateway.
         - Update group attributes (min/max/step, supported features, hvac_modes).
         - Push calibration and temperature update targets if configured.
         """
@@ -729,7 +727,6 @@ class Aggregator:
                 self._group.calibration_handler.update("humidity", force_sync=True)
             _LOGGER.debug("[%s] All members ready the first time.", self._group.entity_id)
 
-        # No states available
         if not self.states:
             self._group._attr_hvac_mode = None
             self._group._attr_available = False
@@ -741,7 +738,6 @@ class Aggregator:
             self._group._event_entity_id = None
             return
 
-        # Load master entity state
         if self._group._master_entity_id:
             raw = self.read_member_state(self._group._master_entity_id)
             if is_available(raw):
@@ -794,7 +790,7 @@ class Aggregator:
                 if self._group.member_template_manager.is_covered_state(event.data.get("new_state")):
                     self._group._trigger_template_changeover()
 
-        # All available HVAC modes --> list of HVACMode (str), e.g. [<HVACMode.OFF: 'off'>, <HVACMode.HEAT: 'heat'>, <HVACMode.AUTO: 'auto'>, ...]
+        # All available HVAC modes
         hvac_modes = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_HVAC_MODES)))
         hvac_modes_list = hvac_modes if isinstance(hvac_modes, list) else []
         # Not redundant with the call in `_state_change_listener`: three of the four
@@ -807,34 +803,27 @@ class Aggregator:
             hvac_modes_list = list(hvac_modes_list) + [HVACMode.HEAT_COOL]
         self._group._attr_hvac_modes = self._sort_hvac_modes(hvac_modes_list)
 
-        # A list of all HVAC modes that are currently set
         self._group._current_hvac_modes = [
             self._group.member_template_manager.display_mode(state) for state in self.states
         ]
 
-        # Determine the group's HVAC mode and update the attribute
         self._group._attr_hvac_mode = self._determine_hvac_mode(self._group._current_hvac_modes)
 
-        # Update last active HVAC mode
         if self._group._attr_hvac_mode is not None and self._group._attr_hvac_mode not in (HVACMode.OFF, self._group.run_state.last_active_hvac_mode):
             self._group.run_state = replace(self._group.run_state, last_active_hvac_mode=self._group._attr_hvac_mode)
 
-        # The group is available if any member is available
         self._group._attr_available = True
 
         # The group state is assumed if not all states are equal
         self._group._attr_assumed_state = len(set(self._group._current_hvac_modes)) > 1
 
-        # Determine HVAC action
         current_hvac_actions = list(find_state_attributes(self.states, ATTR_HVAC_ACTION))
         self._group._attr_hvac_action = self._determine_hvac_action(current_hvac_actions)
 
-        # Get temperature unit from system settings
         self._group._attr_temperature_unit = self._group.hass.config.units.temperature_unit
 
         # Compute → apply → side effect, bundled per domain. The calibration call
-        # must run AFTER the apply (K1, see the module docstring) and the domains
-        # stay in their original order so no observable behaviour shifts.
+        # must run AFTER the apply (K1, see the module docstring).
         temperature = self._compute_temperature()
         self._apply_temperature(temperature)
         if temperature.needs_calibration:

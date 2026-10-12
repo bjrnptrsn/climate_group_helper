@@ -129,4 +129,4 @@ This is why the display can differ from what you set: while an open window has s
 
 **External sensors** work independently of the target: they provide the room temperature, and with calibration configured, the group writes that value back to your thermostats.
 
-To see what the group is doing and why, check the [attributes the group reports](README.md#what-the-group-reports-about-itself) or the status panel of the [Lovelace card](README.md#lovelace-card).
+To see what the group is doing and why, check the [attributes the group reports](README.md#what-the-group-reports-about-itself) or the status panel of the [dashboard card](README.md#dashboard-card).

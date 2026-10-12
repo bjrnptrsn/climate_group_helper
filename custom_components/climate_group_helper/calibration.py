@@ -134,13 +134,13 @@ class CalibrationHandler:
         """Clean up `calibration_mode`: catch up the values the slot suppressed.
 
         `force_sync` writes regardless of the out-of-sync check (the startup /
-        heartbeat path). Withdraw the key first, or `update()` returns early.
+        heartbeat path). The caller has already withdrawn the key — `update()`
+        returns early while it is present.
         """
         _LOGGER.debug(
             "[%s] Meta-Key cleanup: calibration_mode absent → catching up calibration values",
             self._group.entity_id,
         )
-        self._group.run_state = self._group.run_state.clear_config_overrides({key})
         self.update("temperature", force_sync=True)
         self.update("humidity", force_sync=True)
 
@@ -181,8 +181,8 @@ class CalibrationHandler:
 
         event_entity_id: the entity that triggered the update (used for smart-filtering).
           - None → always runs (startup, heartbeat).
-          - sensor entity → updates all targets (ABSOLUTE/SCALED) or all targets (OFFSET).
-          - member entity → OFFSET only: updates only the target mapped to that member.
+          - sensor entity → all targets of its domain.
+          - member entity → OFFSET only: only the target mapped to that member.
           - anything else → skipped (irrelevant trigger).
 
         force_sync=True skips the out-of-sync check so all targets are written even

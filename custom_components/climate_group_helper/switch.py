@@ -45,12 +45,7 @@ async def async_setup_entry(
 
 
 class ControlSwitch(SwitchEntity, RestoreEntity):
-    """Main on/off switch for a climate group.
-
-    When OFF: group is forced to hvac_mode=off, target_state preserved.
-    When ON: group restored to target_state.
-    Persists state across restarts via RestoreEntity.
-    """
+    """Main on/off switch for a climate group (see the module docstring)."""
 
     _attr_has_entity_name = True
     _attr_should_poll = False

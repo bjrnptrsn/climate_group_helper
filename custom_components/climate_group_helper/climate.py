@@ -613,12 +613,11 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if event is not None:
             # Template coverage must be current BEFORE the event is rendered:
             # `read_member_event` → `apply_state` decides per entity_id whether to
-            # wrap, and that decision travels with the event through the whole
-            # downstream chain. `async_update_group_state()` recomputes coverage
-            # too, but only after this listener returns — an event rendered here
-            # would carry the *previous* cycle's snapshot. That gap is what let a
-            # covered member reconnecting as physically `off` (the normal deadband
-            # state) be adopted as a group OFF.
+            # wrap, and that decision travels with the event downstream.
+            # `async_update_group_state()` recomputes coverage too, but only after
+            # this listener returns — an event rendered here would carry the
+            # *previous* cycle's snapshot, and a covered member reconnecting as
+            # physically `off` would be adopted as a group OFF.
             self.member_template_manager.update_members()
             new_wrapped, old_wrapped = self.aggregator.read_member_event(event)
             event = Event(

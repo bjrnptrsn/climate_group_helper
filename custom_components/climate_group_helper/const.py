@@ -428,7 +428,7 @@ ENTITY_SELECTOR_KEYS: frozenset[str] = frozenset({
     CONF_MEMBER_TEMP_OFFSETS,
 })
 
-# Schedule Meta-Keys (v1 — State-Keys only)
+# Schedule Meta-Keys
 META_KEY_TURN_OFF = "turn_off"  # no CONF_ mapping
 META_KEY_SYNC_MODE = CONF_SYNC_MODE  # == "sync_mode"
 META_KEY_GROUP_OFFSET = ATTR_GROUP_OFFSET  # RunState field, no CONF_ mapping

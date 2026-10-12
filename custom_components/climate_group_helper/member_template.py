@@ -280,20 +280,23 @@ class MemberTemplateManager:
         current_temp = self._read_current_temp(state)
         supported_modes = state.attributes.get(ATTR_HVAC_MODES)
         # Offsets: the band is raw (target_state / cache carry no offsets), so
-        # both halves of the template re-apply them before comparing. This input
-        # side must add member + group offset UNCONDITIONALLY — it does not know
-        # which handler consumes the wrapped state and cannot reproduce the
-        # output side's conditional `_apply_group_offset()`. During temporary
-        # state (boost/block) the output pushes offset-free, but the changeover
-        # and sync are suppressed then anyway (`TemplateCallHandler._block_all_calls`,
-        # no adoption of covered members) — the asymmetry is intentional.
+        # both halves of the template re-apply them before comparing. The group
+        # offset only counts outside a temporary state (boost/block): the pushes
+        # are offset-free then, so the devices hold the raw band.
         member_offset = self._group._temp_offset_map.get(entity_id, 0.0)
-        group_offset = self._group.run_state.group_offset
-        offset = member_offset + group_offset
-        expected_mode, expected_temp = self.expected_mode_for(
-            entity_id, low + offset, high + offset, current_temp, supported_modes
+        group_offset = (
+            0.0 if self._group.run_state.temporary_state_active
+            else self._group.run_state.group_offset
         )
-        return RangeTemplateState(state, low, high, expected_mode, expected_temp)
+        offset = member_offset + group_offset
+        low_with_offset, high_with_offset = low + offset, high + offset
+        expected_mode, expected_temp = self.expected_mode_for(
+            entity_id, low_with_offset, high_with_offset, current_temp, supported_modes
+        )
+        # The bound the device regulates to is its real setpoint, offsets included.
+        # The other bound needs them too: without, it differs from the target on
+        # every event and the same command is sent again.
+        return RangeTemplateState(state, low_with_offset, high_with_offset, expected_mode, expected_temp)
 
     # ------------------------------------------------------------------
     # Output pipeline helpers
@@ -569,16 +572,14 @@ class MemberTemplateManager:
 
         Called from update_members() so it re-runs whenever entity_ids changes
         (e.g. a member becomes available after being unavailable at startup).
-        setdefault-style: skips entities that already have an entry, so it
-        never overwrites a value the TemplateCallHandler has since set.
+        Never overwrites an existing entry — the TemplateCallHandler may have set
+        it since.
 
-        Only HEAT/COOL are seeded, matching the only values the regular write
-        site (_process_range_template) ever stores — a device that reboots
-        mid deadband-action (e.g. physically still `dry`) must not have that
-        transient mode seeded as its "last active" one: the humidity-recovery
-        branch in expected_mode_for() reads this value back verbatim once the
-        action ends, so a seeded `dry` would recover into `dry` again and the
-        device stays stuck until current_temperature next leaves the band.
+        Only HEAT/COOL are seeded, matching what the regular write site
+        (_process_range_template) stores: the humidity-recovery branch in
+        expected_mode_for() reads this value back verbatim, so a transient mode
+        seeded from a device that reboots mid deadband-action (e.g. still `dry`)
+        would recover into `dry` again and leave it stuck.
         """
         template = self._range_template
         if template is None:

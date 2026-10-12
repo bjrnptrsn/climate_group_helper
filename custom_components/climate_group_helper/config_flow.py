@@ -385,10 +385,9 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             # Clean up all master-dependent keys. Gated on `not refresh`, not
             # `advanced_mode`: unlike a plain sensor value (window/presence),
             # which is deliberately left "hibernated" across an Advanced->Simple
-            # round-trip (see test_advanced_mode_toggle_preserves_config), a
-            # removed master must not survive it — it carries active side
-            # effects (MASTER_LOCK sync mode, use_master display) that
-            # would otherwise silently reactivate once Advanced Mode returns.
+            # round-trip, a removed master must not survive it — it carries active
+            # side effects (MASTER_LOCK sync mode, use_master display) that would
+            # otherwise silently reactivate once Advanced Mode returns.
             # An Advanced->Simple downgrade's *final* save has advanced_mode=False
             # (the Simple form has no master field either), so gating this on
             # advanced_mode skipped it on exactly the save meant to run it.
@@ -495,24 +494,16 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                     rule[CONF_ISOLATION_RESTORE_DELAY] = current_config.get(f"isolation_rule_{index}_restore_delay", 0)
                 elif slot_trigger == IsolationTrigger.MEMBER_OFF:
                     # MEMBER_OFF: no sensor/hvac_modes, no delays.
-                    # A rule that was never targeted (still empty as saved) stays
-                    # empty — this trigger reads that as "watch every member", and
-                    # every consumer does the same. Materialising it into the
-                    # members present at save time froze the rule: a member added
-                    # later was silently not covered, while the form kept
-                    # rendering the empty field as "all members".
+                    # An empty entity list reads as "watch every member", so a rule that was
+                    # never targeted stays empty — materialising it into the members present at
+                    # save time would leave a member added later uncovered while the form still
+                    # showed "all members".
                     #
-                    # A rule that WAS targeted (saved with entities) but submits
-                    # empty is the opposite case — whether because its target left
-                    # the group (the render filtered it out before the user ever
-                    # saw the form) or because the user cleared the field by hand.
-                    # The submitted value alone can't tell those apart, since the
-                    # render already filtered the default against valid_members.
-                    # Once targeted, a rule can therefore never silently widen
-                    # back to "all members" through an empty submit — it is
-                    # dropped instead, the same way `apply_config` drops such a
-                    # rule. Selecting every member explicitly is the only way to
-                    # reach "watch every member" from a previously targeted rule.
+                    # A rule that WAS targeted but submits empty is dropped, the same way
+                    # `apply_config` drops it: the render already filtered the default against
+                    # valid_members, so the submit cannot tell a target that left the group from
+                    # a field cleared by hand, and either way it must not silently widen to
+                    # "all members". Selecting every member explicitly is the only way back there.
                     was_targeted = bool(saved_rules_by_slot.get(index, {}).get(CONF_ISOLATION_ENTITIES))
                     if was_targeted and not entities:
                         continue
@@ -702,7 +693,6 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         """Factory for temperature section."""
         master_fields = {}
         if config.get(CONF_MASTER_ENTITY):
-            # master_fields[vol.Optional(CONF_TEMP_USE_MASTER, default=config.get(CONF_TEMP_USE_MASTER, False))] = bool
             master_fields = {
                 vol.Optional(
                     CONF_TEMP_USE_MASTER,
@@ -1108,11 +1098,8 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         seen.add(name)
                         available_presets.append(name)
 
-        # Same reasoning as the isolation rules' preset options: if the member
-        # offering the configured preset is offline while the form renders, the
-        # value stays in the field but vanishes from the options — and a value
-        # outside the options makes HA reject the form on save, locking the user
-        # out of their own settings until the device is back.
+        # As in the isolation rule options: a configured value must stay selectable
+        # while the member offering it is offline, or HA rejects the form on save.
         if configured_value and configured_value not in seen:
             available_presets.append(configured_value)
 
@@ -1421,11 +1408,8 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         if slot_action_hvac_mode not in hvac_mode_options:
             hvac_mode_options = hvac_mode_options + [slot_action_hvac_mode]
         slot_action_preset_mode = slot.get(CONF_ISOLATION_ACTION_PRESET_MODE)
-        # Same reasoning as hvac_mode_options above: if every member is offline
-        # while the form renders, preset_options is empty and a configured
-        # preset would not appear as a selectable option — the selector then
-        # rejects the form on save ("Select a preset mode…"), making an
-        # existing PRESET_MODE rule unsavable until the devices are back online.
+        # Same as above: with every member offline `preset_options` is empty, and a
+        # configured preset would make the selector reject the form on save.
         if slot_action_preset_mode and slot_action_preset_mode not in preset_options:
             preset_options = preset_options + [slot_action_preset_mode]
 
@@ -1555,9 +1539,8 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         # no rule renders empty.
         #
         # Rules without the field fall back to their list position: the migration
-        # assigns one, but this module is also reached before it runs (and from
-        # tests constructing options directly), and dropping such a rule would
-        # blank the form the user is looking at.
+        # assigns one, but this module is also reached before it runs, and dropping
+        # such a rule would blank the form the user is looking at.
         by_slot: dict[int, dict[str, Any]] = {}
         for index, rule in enumerate(saved_rules, start=1):
             by_slot.setdefault(rule.get(CONF_ISOLATION_SLOT, index), rule)

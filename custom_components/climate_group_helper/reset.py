@@ -99,6 +99,10 @@ async def async_reset_group(
         (ATTR_RESET_FALLBACK, reset_fallback, lambda: group.schedule_handler.update_fallback_payload(None, apply=False)),
     ]
 
+    # Read before the abort clears it: only a boost that actually ran leaves
+    # members on its setpoint and needs the restore push at the end.
+    boost_was_running = group.run_state.boost_temperature is not None
+
     succeeded: list[str] = []
     failed: list[str] = []
 
@@ -130,7 +134,7 @@ async def async_reset_group(
     # Final pushes: the boost-abort and offset steps ran without pushing. Independent
     # of each other — a failed offset push must not swallow the boost restore.
     push_offset = reset_offset and ATTR_RESET_OFFSET in succeeded
-    push_boost = reset_boost and ATTR_RESET_BOOST in succeeded
+    push_boost = reset_boost and ATTR_RESET_BOOST in succeeded and boost_was_running
     # The boost restore already carries the offset, so a second push only repeats
     # it. Exceptions: a block (the offset push enforces presence's away offset)
     # and a Range Template (covered members get their own push).

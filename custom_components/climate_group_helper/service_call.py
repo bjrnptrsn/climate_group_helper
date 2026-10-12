@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from abc import ABC
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, Callable, Final
@@ -66,8 +65,8 @@ class SyncTarget:
     Carries no payload of its own — it marks the call as "resolve the payload
     from target_state", which happens per pass in `_generate_calls_from_dict`.
 
-    Its own type rather than None, which reads as "no value" and was routinely
-    mistaken for "send nothing" — the opposite of what it means.
+    Its own type rather than None, which reads as "no value", i.e. "send
+    nothing" — the opposite of what it means.
     """
 
     def __repr__(self) -> str:
@@ -197,22 +196,20 @@ class BaseServiceCallHandler(ABC):
     async def call_debounced(self, data: dict[str, Any] | SyncTarget = SYNC_TARGET) -> None:
         """Debounce and execute a service call.
 
-        A new call never cancels a run already in flight — `_execute_calls` makes
-        real, `blocking=True` service calls that can take seconds, and cancelling
-        mid-batch would abort it after only some of its entities had been sent.
-        Instead incoming tasks are queued in `_pending_queue`, and the run
-        already executing processes them in strict FIFO order once its current pass finishes.
-        Tail collapsing ensures rapid updates for the same attribute set (e.g. slider movements)
-        update the waiting tail entry in-place rather than queueing duplicates.
+        A new call never cancels a run in flight: `_execute_calls` makes real,
+        `blocking=True` service calls that can take seconds, and cancelling
+        mid-batch would leave only some entities served. Tasks are queued in
+        `_pending_queue` instead and the running pass works them off in FIFO
+        order. Rapid updates for the same attribute set (e.g. a slider) collapse
+        into the waiting tail entry in place.
 
-        The Debouncer cannot deliver that payload on its own: it runs its function
-        under `_execute_lock` and drops a trigger arriving while that lock is held,
-        which is correct for an idempotent refresh but not here, where every call
-        carries its own frozen payload.
+        The Debouncer cannot carry the payload itself: it runs its function under
+        `_execute_lock` and drops a trigger arriving while that lock is held —
+        right for an idempotent refresh, wrong where every call carries its own
+        frozen payload.
 
-        `async_cancel_all()` (entity shutdown, blocking-source activation via
-        window/switch/boost override managers) clears the queue and cancels outright — those
-        genuinely want nothing further sent.
+        `async_cancel_all()` (entity shutdown, a blocking source's restore) clears
+        the queue and cancels outright — those want nothing further sent.
         """
         data = self._resolve_virtual_preset(data)
 
@@ -795,15 +792,12 @@ class BaseServiceCallHandler(ABC):
         return False
 
     def _get_parent_id(self) -> str:
-        """Create a unique Parent ID for echo tracking.
+        """Create the Parent ID carried on our service calls for echo tracking.
 
-        Format: "OriginEntityID|Timestamp"
-        - OriginEntityID: The entity that triggered the change (primary, for "Sender Wins" logic)
-        - Timestamp: When the command was sent (secondary, for stale echo detection)
+        It carries the origin entity — the entity the change originated from —
+        which "Sender Wins" compares a reporting member against.
         """
-        origin_entity = self.target_state.last_entity or ""
-        timestamp = str(time.time())
-        return f"{origin_entity}|{timestamp}"
+        return self.target_state.last_entity or ""
 
     def _build_initial_call(self, attr: str, value: Any, entity_ids: list[str]) -> list[dict[str, Any]]:
         """Build a simple initial call dict from attr/value. No feature logic."""
@@ -1343,12 +1337,12 @@ class BaseServiceCallHandler(ABC):
         Preserves upstream kwargs (e.g. hvac_mode from min_temp_off restore).
 
         Side-effect free: the members this pass found out of bounds are collected
-        in `self._pending_oob` instead of being written to run_state here. Call
-        generation must not mark a member OOB before the corresponding OFF/CLAMP
-        call actually went out — `_execute_calls` may still discard the whole
-        batch as stale, which would leave the member excluded from later syncs
-        without ever having been acted on. `_execute_calls` applies the marking
-        once the calls have been sent.
+        in `self._pending_oob_add`/`_pending_oob_discard` instead of being written
+        to run_state here. Call generation must not mark a member OOB before the
+        corresponding OFF/CLAMP call actually went out — `_execute_calls` may
+        still discard the whole batch as stale, which would leave the member
+        excluded from later syncs without ever having been acted on.
+        `_execute_calls` applies the marking once the calls have been sent.
         """
         if self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
             return calls  # No-op when not union strategy
@@ -1445,7 +1439,6 @@ class BaseServiceCallHandler(ABC):
 
         return result
 
-    # Setpoint source for the min_temp_off restore
     def _min_temp_off_restore_value(self) -> float | None:
         """Setpoint the min_temp_off restore branch sends when turning a device on.
 
@@ -1459,12 +1452,10 @@ class BaseServiceCallHandler(ABC):
             return boost_temp
         return self.target_state.temperature
 
-    # Group offset hook
     def _apply_group_offset(self) -> bool:
         """Whether to apply the global group offset. False by default (direct-command handlers)."""
         return False
 
-    # OOB marking write-back, after the calls went out
     def _apply_pending_oob(self, sent_entity_ids: set[str] | None = None) -> None:
         """Write the OOB marking collected during call generation to run_state.
 
@@ -1497,7 +1488,6 @@ class BaseServiceCallHandler(ABC):
         if new_oob != run_state.oob_members:
             self._group.run_state = replace(run_state, oob_members=frozenset(new_oob))
 
-    # Block hook to prevent all service calls
     def _block_all_calls(self, data: dict[str, Any] | SyncTarget = SYNC_TARGET) -> bool:
         """Hook for derived classes to implement custom call blocking logic.
         Returns:
@@ -1505,12 +1495,10 @@ class BaseServiceCallHandler(ABC):
         """
         return False
 
-    # Block hook to prevent service calls to specific attributes
     def _block_call_attr(self, data: dict[str, Any], attr: str) -> bool:
         """Block calls for specific attributes."""
         return self._block_wakeup_calls(data, attr)
 
-    # Wake-up prevention for setpoints the requested mode makes pointless
     def _block_wakeup_calls(self, data: dict[str, Any], attr: str) -> bool:
         """Block calls for specific attributes based on requested HVAC mode.
 
@@ -1534,7 +1522,6 @@ class BaseServiceCallHandler(ABC):
 
         return False
 
-    # Stale call guard hook
     def _is_stale_call(self, call: dict[str, Any]) -> bool:
         """Return True if this call is stale and should be aborted.
 
@@ -1548,12 +1535,10 @@ class BaseServiceCallHandler(ABC):
         """
         return False
 
-    # Block hook for unsynced entities
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:
         """Check if this entity should be skipped. Default: no filtering."""
         return False
 
-    # Partial-sync check behind the unsynced-entity hook
     def _skip_off_member(self, state: State, target_value: Any) -> bool:
         """Return True if this OFF member should be skipped for an "on" target (Partial Sync)."""
         if self.target_state.hvac_mode == HVACMode.OFF:

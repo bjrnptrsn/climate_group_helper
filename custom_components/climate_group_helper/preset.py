@@ -83,14 +83,13 @@ class PresetManager:
     def persisted_runtime_presets(self) -> dict[str, dict[str, Any]]:
         """Return runtime presets in the shape the service accepts them in.
 
-        The two halves are stored apart at runtime, but they have to be
-        persisted together: restoring only the climate payload brings a preset
-        back by name with its suspensions silently gone — the group would report
-        "party" while the window it claims to suspend switches it off again.
+        The two halves are stored apart at runtime but persisted together:
+        restoring only the climate payload would bring a preset back by name with
+        its suspensions silently gone — the group would report "party" while the
+        window it claims to suspend switches it off again.
 
-        Merging them here rather than persisting two attributes keeps the stored
-        shape identical to the service payload, so `restore_runtime_presets()`
-        can split it with the very same code that wrote it.
+        The stored shape equals the service payload, so `restore_runtime_presets()`
+        splits it with the same code that wrote it.
         """
         return {
             name: {**payload, **self._runtime_meta.get(name, {})}

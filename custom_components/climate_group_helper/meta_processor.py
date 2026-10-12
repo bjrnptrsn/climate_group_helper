@@ -130,6 +130,10 @@ class MetaKeyTarget(Protocol):
 
     Structural (no base class): each target already owns the state its key acts
     on. `key` is passed so every target shares one signature and can log it.
+
+    `clear_meta()` is called with `key` already withdrawn from
+    `config_overrides` (`SlotMetaProcessor._cleanup` does it), so the cleanup
+    may rely on its own key being gone.
     """
 
     async def apply_meta(self, key: str, value: Any) -> None: ...
@@ -180,10 +184,10 @@ class MetaProcessResult:
 class MetaKeyOwnership:
     """Tracks which sources claim which meta-key, and what the effective value is.
 
-    Two sources can ask for the same key: a schedule slot and a group preset. The
-    single-owner bookkeeping this replaces could not express that — a preset
-    releasing its keys would clear an override the slot still wants, and a slot
-    ending would drop one the preset still holds.
+    Two sources can ask for the same key: a schedule slot and a group preset.
+    Single-owner bookkeeping cannot express that — a preset releasing its keys
+    would clear an override the slot still wants, and a slot ending would drop
+    one the preset still holds.
 
     The registry decides *whose* value lands in `run_state.config_overrides` and
     when a key is removed from it; the values themselves keep living there, so
@@ -278,8 +282,7 @@ class SlotMetaProcessor:
             await self._release(source, stale)
 
         # Claims are recorded before the first _apply() runs, so a key whose
-        # apply raises is still tracked and gets cleaned up later — the same
-        # reason the previous bookkeeping wrote its markers up front.
+        # apply raises is still tracked and gets cleaned up later.
         applied: list[tuple[str, Any]] = []
         for key, value in values.items():
             previous = self._ownership.last_value(key, source)
@@ -632,7 +635,7 @@ class SlotMetaProcessor:
             await target.apply_meta(key, value)
         else:
             # Shadow-only key: set_config_override() is the whole effect. Logged
-            # because this is the live system's only signal for these keys.
+            # because this is the only trace these keys leave.
             _LOGGER.debug("[%s] Meta-Key apply: %s=%s", self._group.entity_id, key, value)
 
     async def _apply_group_offset(self, value: Any) -> None:
@@ -658,6 +661,11 @@ class SlotMetaProcessor:
         """Execute counter-actions for meta-keys no source claims any more.
 
         Iteration order follows _CLEANUP_ORDER (see comment there for rationale).
+        Each key is withdrawn before its target runs: every cleanup re-reads
+        `config_overrides` (calibration's catch-up, presence/window/isolation
+        re-evaluation), so the withdrawal is the caller's job — a new target
+        cannot forget it. `group_offset` owns its own withdrawal (the slider
+        clears it directly), hence the separate path.
         """
         _LOGGER.debug("[%s] Meta-Key cleanup: %s", self._group.entity_id, keys)
 
@@ -665,6 +673,8 @@ class SlotMetaProcessor:
             if key == META_KEY_GROUP_OFFSET:
                 await self._cleanup_group_offset()
             elif (target := self._target_for(key)) is not None:
+                # Withdraw before the target runs — see the docstring.
+                self._group.run_state = self._group.run_state.clear_config_overrides({key})
                 await target.clear_meta(key)
 
         self._group.run_state = self._group.run_state.clear_config_overrides(keys)

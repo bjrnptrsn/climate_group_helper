@@ -8,7 +8,7 @@ import time
 from dataclasses import fields
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.climate import ATTR_HVAC_MODE, HVACMode
+from homeassistant.components.climate import HVACMode
 from homeassistant.core import Event
 
 from .const import (
@@ -22,7 +22,13 @@ from .const import (
     SYNC_TARGET_ATTRS,
     SyncMode,
 )
-from .state import ClimateState, FilterState, is_available, is_member_change
+from .state import (
+    ClimateState,
+    FilterState,
+    is_available,
+    is_member_change,
+    keep_member_changes,
+)
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -53,10 +59,13 @@ _TRUSTED_CONTEXT_IDS = frozenset(
 # never be MIRROR-adopted — hence the suppression here.
 #
 # That makes this check the *only* thing keeping isolation_restore out of
-# adoption, so it must resolve the context the same way `_is_own_echo()` does —
-# `event.context.id` first, then `origin_event.context.id`. Production HA
-# normally takes the second path, so checking only the first passes the tests
-# and fails on real hardware.
+# adoption, so it must inspect both context paths, the same two `_is_own_echo()`
+# follows — `event.context.id` first, then `origin_event.context.id`. Same
+# paths, not the same guards: `_is_own_echo()` additionally requires a
+# call_service/climate origin, this check follows it unconditionally. That is
+# deliberate — erring looser is the safe direction, since missing the echo is
+# what would let it be adopted. Production HA normally takes the second path, so
+# checking only the first misses the echo.
 _BLOCKING_ECHO_CONTEXT_IDS = frozenset(
     {"window_control", "isolation", "presence", "isolation_restore", "override"}
 )
@@ -165,7 +174,7 @@ class SyncModeHandler:
         6. Sync-mode logic — MIRROR adopts, LOCK reverts, MASTER_LOCK does both.
         7. Enforcement — call_debounced() pushes target_state to out-of-sync members.
 
-        Range-Template-covered members are excluded from all adoption paths (steps 6);
+        Range-Template-covered members are excluded from all adoption paths (step 6);
         their changeover is driven independently by TemplateCallHandler.
         """
 
@@ -182,8 +191,10 @@ class SyncModeHandler:
 
         event = self._group.event
         origin_event = getattr(event.context, "origin_event", None)
-        change_entity_id = self._group.change_state.entity_id
-        change_dict = self._group.change_state.attributes()
+        member_id = self._group.change_state.entity_id
+        deviations = self._group.change_state.attributes()
+        old_state = event.data.get("old_state")
+        new_state = event.data.get("new_state")
         own_echo = self._is_own_echo(event)
 
         if self._is_transient_state_event(event):
@@ -213,20 +224,13 @@ class SyncModeHandler:
                     self._active_sync_tasks.add(task)
                     task.add_done_callback(self._active_sync_tasks.discard)
 
-        if not change_dict:
+        if not deviations:
             return
 
         # Ignore echoes from blocking operations. These side effects
         # (e.g. window_control restore, isolation restore, presence override) are
-        # not external changes.
-        #
-        # Both context paths have to be checked, exactly as `_is_own_echo()` does:
-        # a member may report the change under its own context and link ours only
-        # through `origin_event` — the normal shape in production HA. Checking
-        # `event.context.id` alone made the suppression hold in tests and not in
-        # production, and `isolation_restore` (deliberately absent from
-        # `_TRUSTED_CONTEXT_IDS`, so its echo still reaches the enforcement loop)
-        # depends on this check alone to stay out of MIRROR adoption.
+        # not external changes. Both context paths are checked, as in
+        # `_is_own_echo()` — see `_BLOCKING_ECHO_CONTEXT_IDS`.
         echo_context_id = event.context.id
         if echo_context_id not in _BLOCKING_ECHO_CONTEXT_IDS and origin_event is not None:
             echo_context_id = origin_event.context.id
@@ -251,12 +255,13 @@ class SyncModeHandler:
             if self._group.run_state.boost_temperature is not None:
                 _LOGGER.debug("[%s] Ignoring own-echo side effect during boost", self._group.entity_id)
                 return
-            accepted = self._filter_echo_changes(origin_event, change_dict, change_entity_id)
+            accepted = self._filter_echo_changes(origin_event, deviations, member_id)
+            # Like the fresh-event adoption: a side effect is adopted only when
+            # the event actually changed it, not merely because it deviates.
+            accepted = keep_member_changes(self._group, accepted, member_id, old_state, new_state)
             # The Mirror/Lock split (`sync_attributes`) applies to adopted side
             # effects too: an attribute the user excluded from mirroring must not
-            # slip into target_state through an echo. Without this, MIRROR_LOCK
-            # propagated an unlisted attribute a device changed alongside our
-            # command instead of reverting it.
+            # slip into target_state through an echo.
             if accepted and self.sync_mode in (
                 SyncMode.MIRROR,
                 SyncMode.MIRROR_LOCK,
@@ -267,7 +272,7 @@ class SyncModeHandler:
                 }
             if accepted:
                 _LOGGER.debug("[%s] Adopting side effects: %s", self._group.entity_id, accepted)
-                accepted = self._reverse_offset_temperatures(change_entity_id, accepted)
+                accepted = self._reverse_offset_temperatures(member_id, accepted)
                 # Same manager choice as the fresh-event branch below: an adopted
                 # side effect is an adoption like any other, so ADOPT_ONLY's own
                 # guards (boost, unconditional Last Man Standing) must cover it.
@@ -276,11 +281,11 @@ class SyncModeHandler:
                     if self.sync_mode == SyncMode.ADOPT_ONLY
                     else self.state_manager
                 )
-                manager.update(entity_id=change_entity_id, **accepted)
+                manager.update(entity_id=member_id, **accepted)
             return
 
         # --- Fresh Event (external change) ---
-        _LOGGER.debug("[%s] External change: %s from %s", self._group.entity_id, change_dict, change_entity_id)
+        _LOGGER.debug("[%s] External change: %s from %s", self._group.entity_id, deviations, member_id)
 
         if self.sync_mode == SyncMode.DISABLED:
             return
@@ -288,33 +293,22 @@ class SyncModeHandler:
         # While a member is off, its setpoints are either the placeholder of
         # its own off transition or a deliberate value. The member's own state
         # decides, not the target's mode — a single member switching off keeps
-        # the target on (Last Man Standing).
-        old_state = event.data.get("old_state")
-        new_state = event.data.get("new_state")
+        # the target on (Last Man Standing). The early return also suppresses
+        # enforcement when nothing but off-induced setpoints arrived.
         if old_state is not None and new_state is not None and new_state.state == HVACMode.OFF:
-            for attr in list(change_dict):
+            for attr in list(deviations):
                 if attr in SETPOINT_ATTRS and not is_member_change(
-                    self._group, change_entity_id, attr, old_state, new_state
+                    self._group, member_id, attr, old_state, new_state
                 ):
-                    del change_dict[attr]
-            if not change_dict:
+                    del deviations[attr]
+            if not deviations:
                 _LOGGER.debug("[%s] Ignoring off-induced setpoint changes", self._group.entity_id)
                 return
 
-        # An off member that only changes a setpoint is not switching off again: its
-        # unchanged mode must not reach the adoption, where it counts as an off signal
-        # and partial sync would drop the setpoint with it. change_dict stays whole —
-        # the enforcement below and Last Man Standing still read it.
-        stays_off = (
-            old_state is not None
-            and new_state is not None
-            and old_state.state == new_state.state == HVACMode.OFF
-        )
-        adoptable = {
-            key: value
-            for key, value in change_dict.items()
-            if not (stays_off and key == ATTR_HVAC_MODE)
-        }
+        # Adopt only what this event actually changed (see `keep_member_changes`).
+        # `deviations` itself stays whole — the enforcement below and Last Man
+        # Standing read it.
+        adoptable = keep_member_changes(self._group, deviations, member_id, old_state, new_state)
 
         # 1. Mirror mode: adopt filtered changes into target_state.
         # Guard: skip adoption on reconnect (old_state was unavailable/unknown) — the device
@@ -341,11 +335,11 @@ class SyncModeHandler:
             and not is_covered
         ):
             if filtered := {key: value for key, value in adoptable.items() if filter_dict.get(key)}:
-                filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
+                filtered = self._reverse_offset_temperatures(member_id, filtered)
                 if self.sync_mode == SyncMode.ADOPT_ONLY:
-                    self.adopt_state_manager.update(entity_id=change_entity_id, **filtered)
+                    self.adopt_state_manager.update(entity_id=member_id, **filtered)
                 else:
-                    self._adopt_fresh_change(change_entity_id, filtered)
+                    self._adopt_fresh_change(member_id, filtered)
 
         # 2. Lock mode: only accept "Last Man Standing" OFF (Partial Sync).
         # Covered members excluded — a physically-off template member in the deadband is
@@ -353,13 +347,13 @@ class SyncModeHandler:
         if self.sync_mode in (SyncMode.LOCK, SyncMode.MIRROR_LOCK) and not is_covered:
             if (
                 self._group.config.get(CONF_IGNORE_OFF_MEMBERS_SYNC)
-                and change_dict.get("hvac_mode") == HVACMode.OFF
+                and deviations.get("hvac_mode") == HVACMode.OFF
                 and self.target_state.hvac_mode != HVACMode.OFF
             ):
-                if self.state_manager.update(entity_id=change_entity_id, hvac_mode=HVACMode.OFF):
+                if self.state_manager.update(entity_id=member_id, hvac_mode=HVACMode.OFF):
                     if self._group.run_state.boost_temperature is not None:
                         self._group.boost_override_manager.abort(push=True)
-                    _LOGGER.debug("[%s] Last Man Standing: accepted OFF from %s", self._group.entity_id, change_entity_id)
+                    _LOGGER.debug("[%s] Last Man Standing: accepted OFF from %s", self._group.entity_id, member_id)
 
         # 3. Master/Lock mode: master adopts (MIRROR), non-master reverts (LOCK)
         if self.sync_mode == SyncMode.MASTER_LOCK:
@@ -369,10 +363,10 @@ class SyncModeHandler:
                 _LOGGER.debug("[%s] MASTER_LOCK enforcement skipped (master fallback active)", self._group.entity_id)
                 return
             master_id = self._group._master_entity_id
-            if master_id and change_entity_id == master_id and not is_covered and not is_reconnect:
+            if master_id and member_id == master_id and not is_covered and not is_reconnect:
                 if filtered := {key: value for key, value in adoptable.items() if filter_dict.get(key)}:
-                    filtered = self._reverse_offset_temperatures(change_entity_id, filtered)
-                    self._adopt_fresh_change(change_entity_id, filtered)
+                    filtered = self._reverse_offset_temperatures(member_id, filtered)
+                    self._adopt_fresh_change(member_id, filtered)
             # Non-master changes are enforced (reverted) via call_debounced below
 
         # ADOPT_ONLY is the adoption without the push: the target adopts the
@@ -393,7 +387,7 @@ class SyncModeHandler:
 
     # --- Offset Helpers ---
 
-    def _adopt_fresh_change(self, change_entity_id: str, filtered: dict[str, Any]) -> None:
+    def _adopt_fresh_change(self, member_id: str, filtered: dict[str, Any]) -> None:
         """Adopt a member change, unless a boost runs and suppresses it.
 
         While a boost runs no member report is adopted: a slow device's (possibly
@@ -408,7 +402,7 @@ class SyncModeHandler:
         if was_boost and filtered.get("hvac_mode") != HVACMode.OFF:
             _LOGGER.debug("[%s] Ignoring member report during boost: %s", self._group.entity_id, filtered)
             return
-        if self.state_manager.update(entity_id=change_entity_id, **filtered):
+        if self.state_manager.update(entity_id=member_id, **filtered):
             _LOGGER.debug("[%s] TargetState updated: %s", self._group.entity_id, self.target_state)
             if was_boost:
                 self._group.boost_override_manager.abort(push=True)
@@ -439,12 +433,8 @@ class SyncModeHandler:
 
     @staticmethod
     def _extract_origin_entity(origin_event: Event) -> str:
-        """Extract origin entity from parent_id (format: 'entity_id|timestamp')."""
-        parent_id = origin_event.context.parent_id or ""
-        if "|" in parent_id:
-            origin, _ = parent_id.split("|", 1)
-            return origin
-        return ""
+        """Extract the origin entity from parent_id, set by `_get_parent_id`."""
+        return origin_event.context.parent_id or ""
 
     def _has_relevant_changes(self, event: Event) -> bool:
         """Return True if the event changed at least one ClimateState field.
@@ -485,7 +475,7 @@ class SyncModeHandler:
         """Return True if the event was caused by one of our own service calls.
 
         Two detection paths:
-        1. Direct context ID: test mocks and some HA paths write state with the
+        1. Direct context ID: some HA paths write state with the
            call's context directly (no origin_event chain). Check event.context.id
            against blocking-source IDs that are never external changes.
         2. Deep origin analysis: production HA wraps the state_changed event in an
@@ -504,7 +494,7 @@ class SyncModeHandler:
 
         return False
 
-    def _filter_echo_changes(self, origin_event: Event, change_dict: dict[str, Any], change_entity_id: str | None) -> dict[str, Any]:
+    def _filter_echo_changes(self, origin_event: Event, deviations: dict[str, Any], member_id: str | None) -> dict[str, Any]:
         """Filter echo changes, returning only accepted side effects.
 
         - Ordered attrs that match: Clean Echo -> ignored (already in sync)
@@ -515,11 +505,11 @@ class SyncModeHandler:
         origin = self._extract_origin_entity(origin_event)
         accepted = {}
 
-        for attr, new_value in change_dict.items():
+        for attr, new_value in deviations.items():
             if attr not in service_data:
                 # Side effect: only accept from origin entity ("Sender Wins")
-                if origin and change_entity_id != origin:
-                    _LOGGER.debug("[%s] Side effect rejected: %s != origin %s", self._group.entity_id, change_entity_id, origin)
+                if origin and member_id != origin:
+                    _LOGGER.debug("[%s] Side effect rejected: %s != origin %s", self._group.entity_id, member_id, origin)
                     continue
                 accepted[attr] = new_value
             else:

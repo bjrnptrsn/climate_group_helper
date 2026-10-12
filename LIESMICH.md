@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  <a href="README.md">🇬🇧 English</a> · 🇩🇪 Deutsch
+</p>
+
+<p align="center">
   <strong>Die erweiterte Logikschicht für deine Home-Assistant-Klimageräte.</strong><br>
   Synchronisiere, automatisiere und korrigiere deine Thermostate — komplett über die Oberfläche eingerichtet.
 </p>
@@ -86,7 +90,7 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 - [Verwaltungs-Entitäten (Schalter & Regler)](#verwaltungs-entitäten-schalter--regler)
   - [Hauptschalter](#hauptschalter)
   - [Gruppen-Offset](#gruppen-offset)
-- [Lovelace-Karte](#lovelace-karte)
+- [Dashboard-Karte](#dashboard-karte)
 - [Was die Gruppe über sich selbst berichtet](#was-die-gruppe-über-sich-selbst-berichtet)
 - [Konfigurationsoptionen](#konfigurationsoptionen)
 - [Dienste](#dienste)
@@ -401,7 +405,7 @@ Eine dedizierte `number`-Entität erlaubt dir, eine globale Temperaturverschiebu
 *   **Automatisches Zurücksetzen:** Wird eine Temperatur direkt an der Gruppe gesetzt (über UI oder Dienst), wird der Offset automatisch auf `0` zurückgesetzt.
 *   **Persistenz:** Der Offset-Wert übersteht Home-Assistant-Neustarts.
 
-## Lovelace-Karte
+## Dashboard-Karte
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate-Group-Helper-Karte neben ihrem Editor" width="700"/>
@@ -423,7 +427,7 @@ Repository.
 
 Über die üblichen Klimawerte hinaus veröffentlicht die Gruppe ihren eigenen Zustand als Attribute — was sie gerade beabsichtigt, warum sie handelt oder eben nicht, und wie ihre Geräte dastehen. Du findest sie im Dialog „Mehr Details" unter **Attribute**, kannst sie auf einem Dashboard anzeigen oder in einer Automatisierung abfragen.
 
-Die meisten erklären sich selbst. Diese hier sind es wert, sie zu kennen:
+Die meisten erklären sich selbst. Diese hier sind es wert, sie zu kennen, geordnet nach der Frage, die sie beantworten.
 
 ### Welche Geräte auseinanderlaufen
 
@@ -443,9 +447,9 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 
 ### Warum die Gruppe nicht das tut, was du erwartest
 
-*   **`blocking_sources`** — vorhanden, sobald etwas die Gruppe zurückhält, samt Angabe wodurch: `window`, `presence`, `switch`. Solange dort etwas steht, erreichen Befehle die Geräte nicht. Blockiert nichts, fehlt das Attribut.
+*   **`blocking_sources`** — vorhanden, sobald etwas die Gruppe zurückhält, samt Angabe wodurch: `window`, `presence`, `switch`. Solange dort etwas steht, gibt die Gruppe keine Änderungen an ihre Geräte weiter. Blockiert nichts, fehlt das Attribut.
 *   **`blocking_reason`** — von allem, was dort steht, das, was gerade den Ausschlag gibt, und seit wann (`source` und `since`): Der Hauptschalter geht einem Fenster vor, ein Fenster der Anwesenheitssteuerung. Nach einem Neustart von Home Assistant zählt die Zeit ab dem Neustart. Blockiert nichts, fehlt das Attribut.
-*   **`main_switch_entity_id`** — der Hauptschalter der Gruppe, damit ein Dashboard oder eine Automation ihn findet, ohne seinen Namen raten zu müssen. Nur im erweiterten Modus.
+*   **`main_switch_entity_id`** — der Hauptschalter der Gruppe, damit ein Dashboard oder eine Automation ihn findet, ohne seinen Namen raten zu müssen.
 *   **`isolated_members`** — Geräte, die eine Isolationsregel gerade ausschließt. Sie behalten ihren eigenen Zustand und bleiben aus den Werten der Gruppe heraus.
 *   **`oob_members`** — Geräte, die dem letzten Ziel nicht folgen konnten, weil es außerhalb ihres eigenen Temperaturbereichs liegt.
 *   **`master_entity_id`** — welches Gerät gerade als Master-Entität der Gruppe festgelegt ist. Nur vorhanden, wenn eine konfiguriert ist.
@@ -459,8 +463,6 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 *   **`active_member_count` / `total_member_count`** — wie viele Geräte tatsächlich laufen, von wie vielen konfigurierten.
 
 ### Was gerade in Kraft ist
-
-Alles in dieser Gruppe außer `enabled_features` setzt den erweiterten Modus voraus — ohne ihn gibt es diese Funktionen nicht und damit auch ihre Attribute nicht.
 
 *   **`enabled_features`** — welche Funktionen überhaupt konfiguriert sind (`window`, `presence`, `schedule`, `sync`, `isolation`, `range_template`, `calibration`, `master`), damit ein Dashboard „aus" von „nicht eingerichtet" unterscheiden kann.
 *   **`effective_sync_mode` / `effective_sync_attributes`** — die Sync-Einstellungen, die *jetzt gerade* gelten, inklusive einer vorübergehenden Übersteuerung durch Zeitplan-Slot oder Preset — nicht zwingend das, was die Einstellungsseite zeigt.

@@ -325,16 +325,13 @@ async def async_apply_config(
     # Structured keys: read as a mapping / sequence downstream. A wrong container
     # type survives the whitelist and reaches the options — the offsets one then
     # crashes the options flow on open, so the user cannot undo it through the UI.
-    # Checked after the strips above, so a key the caller's portability flags
-    # discard anyway is not worth an error, and before the rule walk below, which
-    # would otherwise iterate a string character by character.
+    # Checked after the strips above (a key the caller's portability flags discard
+    # anyway is not worth an error) and before the rule walk below, which would
+    # otherwise iterate a string character by character.
     #
-    # The list-shaped keys join them because entity setup reads each of them
-    # without a usable fallback, so a stored null aborts the next reload far from
-    # the call that caused it: CONF_ENTITIES is subscripted outright, the two
-    # range-template lists go through `set(...)`, and the remaining four are
-    # iterated as `for entity_id in config.get(key, [])` — which hands back the stored
-    # None rather than the fallback.
+    # The list-shaped keys join them because entity setup reads each without a
+    # usable fallback (`config.get(key, [])` hands back a stored None), so a
+    # null aborts the next reload far from the call that caused it.
     for key, expected in (
         (CONF_MEMBER_TEMP_OFFSETS, dict),
         (CONF_ISOLATION_RULES, list),

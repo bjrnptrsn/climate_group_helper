@@ -279,20 +279,19 @@ class WindowControlHandler:
     async def clear_meta(self, key: str) -> None:
         """Clean up `window_mode`: re-evaluate against the sensors now.
 
-        Withdraw the key first — `reevaluate()` reads `bypassed` per step.
+        The caller has already withdrawn the key — `reevaluate()` reads
+        `bypassed` per step.
         """
         _LOGGER.debug(
             "[%s] Meta-Key cleanup: window_mode absent → re-evaluating window sensors",
             self._group.entity_id,
         )
-        self._group.run_state = self._group.run_state.clear_config_overrides({key})
         await self.reevaluate()
 
     def _window_control_logic(self) -> tuple[str, float] | None:
-        """This method implements the core logic for window control.
+        """Return `(mode, timer delay)` from the current sensor readings.
 
-        Return the control mode and the timer delay.
-        Return None if no sensors are configured.
+        None if no sensors are configured.
         """
         if not self._room_sensor and not self._zone_sensor:
             return None

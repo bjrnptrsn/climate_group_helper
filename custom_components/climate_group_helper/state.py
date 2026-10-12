@@ -9,7 +9,6 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Self
 
 from homeassistant.components.climate import ATTR_HVAC_MODE, PRESET_NONE, HVACMode
-from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import Event, State
 
 from .const import (
@@ -31,24 +30,16 @@ _LOGGER = logging.getLogger(__name__)
 def available_state(state: State | None) -> State | None:
     """Return `state` if it carries a usable value, else None.
 
-    `unavailable` and `unknown` both mean "nothing to read here": an entity that
-    exists but has not reported yet is as unusable as one that is gone.
-
-    Returning the state rather than a verdict is what lets the read and the
-    check collapse into one statement — and it narrows the type, so the
-    attribute reads that follow are no longer working on an `Optional`:
-
-        if (state := available_state(hass.states.get(x))) is None:
-            return
-        state.attributes.get(...)
-
-    Where only the verdict is wanted, `is_available()` says so directly.
+    `unavailable` and `unknown` both mean "nothing to read here". Returning the
+    state rather than a verdict lets the read and the check collapse into one
+    walrus statement and narrows the type for the reads that follow; where only
+    the verdict is wanted, use `is_available()`.
     """
     if state is None:
         return None
     # Read through `.state` by attribute, not by `isinstance(state, State)`:
-    # state-like stand-ins (the test mocks among them) must be read the same
-    # way, or they are compared as objects and silently count as available.
+    # a state-like object must be read the same way, or it is compared as an
+    # object and silently counts as available.
     return state if getattr(state, "state", state) not in TRANSIENT_STATES else None
 
 
@@ -78,16 +69,20 @@ def _values_match(val1: Any, val2: Any) -> bool:
 
 
 def _member_target_value(group: ClimateGroupHelper, entity_id: str | None, attr: str) -> Any:
-    """The target value an attribute is compared against, member and group offset applied.
+    """The target value an attribute is compared against, as the member was sent it.
 
-    The member reports what it was sent, so it carries both offsets; compared
-    without them, a value equal to the plain target would show no deviation.
-    Shared with `ChangeState.from_event`, so deviation and off-induced checks
-    judge against the same number.
+    The member reports what it was sent, so it carries the member offset and —
+    outside a temporary state — the group offset; compared without them, a value
+    equal to the plain target would show no deviation. During a block or boost
+    the pushes are offset-free, so the group offset stays out. Shared with
+    `ChangeState.from_event`, so deviation and off-induced checks judge against
+    the same number.
     """
     target_val = getattr(group.shared_target_state, attr, None)
     if attr in TEMP_TARGET_ATTRS and target_val is not None:
-        target_val += group._temp_offset_map.get(entity_id, 0.0) + group.run_state.group_offset
+        target_val += group._temp_offset_map.get(entity_id, 0.0)
+        if not group.run_state.temporary_state_active:
+            target_val += group.run_state.group_offset
     return target_val
 
 
@@ -113,20 +108,25 @@ def is_member_change(
 ) -> bool:
     """Whether `attr` is the member's own change in this event.
 
-    Deviation (`new_state` vs target) only asks whether there is something to
-    adopt; whether the member did it is answered here, from the event's own
-    change. Used for events involving `off`; every other event keeps the plain
-    deviation gate.
+    Deviation (`new_state` vs target) only says there is something to adopt;
+    this says whether the member did it. By attribute class:
 
-    While the member is `off`, a setpoint is off-induced — and dropped — when
-    the off-switch carried it (`old_state.state != off`), when the event repeats
-    it unchanged (it deviates from the target but the member did not set it),
-    or when the member fell from the target value onto the placeholder
-    (`old == target`). On
-    `off` -> active, only a setpoint missing in `old_state` counts as changed:
-    a device can suppress a mode, preset or fan while off just as well, and the
-    carried value must not be adopted.
+    - `hvac_mode` lives in the state, never in the attributes.
+    - Fan, preset and swing follow the plain delta — a member switching off can
+      change them in the same event, and that is its own change.
+    - Setpoints: while the member is `off` the reported value is a placeholder,
+      dropped when the off-switch carried it (`old_state.state != off`), when the
+      event repeats it unchanged, or when the member fell from the target value
+      onto it (`old == target`). On `off` -> active, a setpoint missing in
+      `old_state` counts as changed; any other follows the plain delta, so a
+      value merely carried over is not adopted.
     """
+    if attr == ATTR_HVAC_MODE:
+        return old_state.state != new_state.state
+
+    if attr not in SETPOINT_ATTRS:
+        return _attribute_changed_in_event(old_state, new_state, attr)
+
     if new_state.state == HVACMode.OFF:
         if old_state.state != HVACMode.OFF:
             return False
@@ -136,8 +136,31 @@ def is_member_change(
         return not _values_match(old_state.attributes.get(attr), target_val)
 
     if old_state.attributes.get(attr) is None:
-        return attr in SETPOINT_ATTRS and new_state.attributes.get(attr) is not None
+        return new_state.attributes.get(attr) is not None
     return _attribute_changed_in_event(old_state, new_state, attr)
+
+
+def keep_member_changes(
+    group: ClimateGroupHelper,
+    candidates: dict[str, Any],
+    entity_id: str | None,
+    old_state: State | None,
+    new_state: State | None,
+) -> dict[str, Any]:
+    """`candidates` reduced to the attributes the member itself changed.
+
+    Adoption takes the intersection of deviation and change: a member's event
+    carries its full deviation, but only what the member changed itself is its
+    intent. Without `old_state`/`new_state` (first event) there is no delta to
+    judge against, so every candidate passes.
+    """
+    if old_state is None or new_state is None:
+        return candidates
+    return {
+        key: value
+        for key, value in candidates.items()
+        if is_member_change(group, entity_id, key, old_state, new_state)
+    }
 
 
 def other_active_members(group: ClimateGroupHelper, entity_id: str | None) -> list[str]:
@@ -160,39 +183,30 @@ def other_active_members(group: ClimateGroupHelper, entity_id: str | None) -> li
 class RunState:
     """Immutable operational status for the climate group.
 
-    Centralises all factors that restrict controllability and runtime markers:
-    - blocking_sources: set of active blocking reasons (e.g. "window", "switch")
-    - blocking_since: per-source activation timestamp (maintained with
-      blocking_sources in override.py); feeds the `blocking_reason` attribute
-    - blocked: derived property — True if any blocking source is active
-    - isolated_members: per-member isolation (e.g. curtain closed)
-    - oob_members: members currently out-of-bounds (union strategy)
-    - startup_time: monotonic timestamp of initialisation completion (only ever
-      used as an interval, so it must not be affected by wall-clock jumps)
-    - last_active_hvac_mode: cache of last mode other than OFF
-    - schedule_hold_until: absolute deadline of a manual schedule hold; while it
-      is set the main schedule's climate payload is not applied to the members
-    - active_schedule_layer: layer of the last slot read ("main" | "bypass" |
-      "fallback" | "none"); display only, None until the first slot read
+    Centralises the factors that restrict controllability plus runtime markers;
+    the non-obvious fields carry a comment where they are declared.
 
     Updates are performed via dataclasses.replace(), consistent with TargetState.
     """
 
-    active_schedule_layer: str | None = None
+    active_schedule_layer: str | None = None  # layer of the last slot read; display only, None until the first read
     active_slot_title: str | None = None
     active_virtual_preset: str | None = None
     blocking_sources: frozenset[str] = field(default_factory=frozenset)
+    # Per-source start, maintained with blocking_sources in override.py; feeds `blocking_reason`.
     blocking_since: MappingProxyType[str, datetime] = field(default_factory=lambda: MappingProxyType({}))
     boost_temperature: float | None = None
     boost_until: datetime | None = None
+    # Deadline of a manual schedule hold; while set, the main schedule's climate payload is not applied to the members.
     schedule_hold_until: datetime | None = None
     schedule_bypass_claims: MappingProxyType[str, tuple[Any, Any]] = field(default_factory=lambda: MappingProxyType({}))
     config_overrides: MappingProxyType[str, Any] = field(default_factory=lambda: MappingProxyType({}))
     group_offset: float = 0.0
     isolated_members: frozenset[str] = field(default_factory=frozenset)
-    last_active_hvac_mode: str | None = None
+    last_active_hvac_mode: str | None = None  # last mode other than OFF
     master_fallback_active: bool = False
     oob_members: frozenset[str] = field(default_factory=frozenset)
+    # Monotonic timestamp, only ever used as an interval — wall-clock jumps must not affect it.
     startup_time: float | None = None
 
     @property
@@ -318,7 +332,7 @@ class ChangeState(ClimateState):
 
     This is the *deviation* (`new_state` vs target), not the event's own change
     (`old_state` vs `new_state`) — whether the member did it is decided by the
-    caller (`is_member_change()` for events involving `off`).
+    caller (`keep_member_changes()` / `is_member_change()`).
     """
     entity_id: str | None = None
 
@@ -445,25 +459,18 @@ class BaseStateManager:
         return kwargs
 
     def update(self, entity_id: str | None = None, *, source: str | None = None, **kwargs: Any) -> bool:
-        """Update target_state with source tracking.
+        """Update target_state with source tracking; False if the filter blocked it.
 
         Template Method workflow:
         1. Filter via `_filter_update()` (hook)
         2. Resolve virtual group presets (`_resolve_group_preset()`)
         3. Add metadata (source, entity_id, timestamp)
         4. Update the central shared_target_state
-        
-        Args:
-            entity_id: The specific entity that caused the update (optional)
-            source: Explicit source attribution override. Used by restore paths
-                    that must not leave the manager's own SOURCE behind (e.g. a
-                    boost restore attributed as "schedule" so the sticky-override
-                    guard releases the schedule again — a restore means the user
-                    is NOT in control).
-            **kwargs: Attributes to update (hvac_mode, temperature, etc.)
-            
-        Returns:
-            True if update was allowed, False if blocked by filter
+
+        `source` overrides the manager's own SOURCE for restore paths that must
+        not leave it behind (e.g. a boost restore attributed as "schedule" so the
+        sticky-override guard releases the schedule again — a restore means the
+        user is NOT in control).
         """
         # HA may pass entity_id as a list (e.g. from async_set_temperature kwargs) — normalize to str
         if isinstance(entity_id, list):
@@ -603,41 +610,7 @@ class SyncModeStateManager(BaseStateManager):
             return False
 
         # 2. Partial Sync Filter (Last Man Standing)
-        if not self._check_partial_sync(entity_id, kwargs):
-            return False
-
-        # 3. Turn-on filter: a member switched on reports the attributes it
-        #    merely carried; only hvac_mode (the switch-on itself) and
-        #    attributes the event actually changed are adopted.
-        return self._filter_turn_on_attributes(entity_id, kwargs)
-
-    def _filter_turn_on_attributes(self, entity_id: str | None, kwargs: dict[str, Any]) -> bool:
-        """Adopt only the switch-on itself, not the attributes the member carried.
-
-        `kwargs` is the deviation (`new_state` vs target), so a carried value
-        that deviates lands in it too; `is_member_change()` tells the two apart.
-
-        Returns False when nothing is left to adopt.
-        """
-        event = self._group.event
-        if event is None:
-            return True
-        data = event.data
-        if data.get(ATTR_ENTITY_ID) != entity_id:
-            return True
-        old_state = data.get("old_state")
-        new_state = data.get("new_state")
-        if old_state is None or new_state is None:
-            return True
-        if old_state.state != HVACMode.OFF or new_state.state == HVACMode.OFF:
-            return True
-
-        for attr in list(kwargs):
-            if attr == ATTR_HVAC_MODE:
-                continue
-            if not is_member_change(self._group, entity_id, attr, old_state, new_state):
-                del kwargs[attr]
-        return bool(kwargs)
+        return self._check_partial_sync(entity_id, kwargs)
 
 
 class AdoptStateManager(SyncModeStateManager):

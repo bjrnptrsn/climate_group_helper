@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.14.2 - 2026-10-12
+
+### 🐛 Bug Fixes
+
+*   **Range Template Members with an Offset No Longer Skew the Group's Target Range**: A device handled by the Range Template that has a device offset no longer shifts the group's shown upper or lower target bound and is no longer sent the same temperature again on every update.
+
+### ✨ Improvements
+
+*   **Sync Modes Adopt Only What a Device Actually Changed**: In the sync modes that adopt changes made on a device, only the setting the device really changed reaches the group — a value it merely still reports, such as an old temperature next to a fan or preset change, no longer replaces the group's setpoint.
+
 ## 1.14.1 - 2026-10-09
 
 ### 🐛 Bug Fixes

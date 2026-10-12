@@ -84,7 +84,7 @@ class SlotResolver:
       long as `written_value` is never updated without an actual write.
 
     Carries no policy on what to *send* — only the handlers know whether a
-    given run may reach the members (§ handler docstrings).
+    given run may reach the members (see the handlers' `on_slot_change()`).
     """
 
     def __init__(self, group: ClimateGroupHelper) -> None:
@@ -384,7 +384,7 @@ class MainScheduleHandler(BaseScheduleHandler):
         """Read both layers, merge into target_state, send if no bypass is active.
 
         The main handler never sees a bypass end — that is only ever observed
-        by the bypass handler's own event (§ BypassScheduleHandler). A run here
+        by the bypass handler's own event (see `BypassScheduleHandler`). A run here
         during an active bypass records the main in the background and sends
         nothing; the bypass layer owns the members until it lets go.
         """

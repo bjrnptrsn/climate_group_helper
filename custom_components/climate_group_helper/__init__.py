@@ -210,6 +210,17 @@ CARD_JS_URL = "card_js_url"
 _LOGGER = logging.getLogger(__name__)
 
 
+def _bundle_mtime() -> float | None:
+    """Return the card bundle's mtime, or None when it is absent.
+
+    Runs in the executor — a stat is file I/O and must stay off the event loop.
+    """
+    try:
+        return os.path.getmtime(CARD_JS_FILE)
+    except OSError:
+        return None
+
+
 async def _async_register_card(hass: HomeAssistant) -> None:
     """Serve the card bundle and load it in the frontend.
 
@@ -217,17 +228,22 @@ async def _async_register_card(hass: HomeAssistant) -> None:
     or the HTTP/frontend layer is not up (e.g. minimal test setups). The mtime
     query busts the browser cache; a rebuild re-registers the URL.
     """
-    if not CARD_JS_FILE.exists() or getattr(hass, "http", None) is None:
-        _LOGGER.debug("Card bundle/HTTP not available — card not registered")
+    if getattr(hass, "http", None) is None:
+        _LOGGER.debug("HTTP layer not available — card not registered")
         return
 
-    url = f"{CARD_JS_URL_PATH}?v={int(os.path.getmtime(CARD_JS_FILE))}"
+    mtime = await hass.async_add_executor_job(_bundle_mtime)
+    if mtime is None:
+        _LOGGER.debug("Card bundle not built — card not registered")
+        return
+
+    url = f"{CARD_JS_URL_PATH}?v={int(mtime)}"
     data = hass.data.setdefault(DOMAIN, {})
     previous = data.get(CARD_JS_URL)
     if previous == url:
         return
-    # Claim before the first await: config entries set up concurrently, so the
-    # check alone would let several of them register the same card.
+    # Check and claim run together with no await between them, so concurrent
+    # config entries cannot both pass the check and register the same card.
     data[CARD_JS_URL] = url
 
     try:
@@ -288,16 +304,9 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     Five stages: a Soft Reset to v12 for everything older, then v12→v13, v13→v14,
     v14→v15, and v15→v16.
 
-    The Soft Reset combines all historical transformations (v7–v12) into a single pass:
-        - Combine data+options (covers pre-v7 entries)
-        - v7→v8: split ignore_off_members into _sync / _schedule variants;
-                 rename SyncMode "standard" → "disabled"
-        - v8→v9: rewrite WindowControlMode "off"/"on" → "disabled"/"enabled"
-        - v9→v10: wrap presence_sensor str → list; set advanced_mode=True on existing entries
-        - v10→v11: convert range_template_entities list → CONF_RANGE_TEMPLATE_ENABLED bool
-        - v11→v12: wrap flat isolation keys into CONF_ISOLATION_RULES list
-        - Filter out invalid/renamed configuration keys via VALID_CONFIG_KEYS whitelist
-        - Restore defaults for valid keys not present
+    The Soft Reset combines all historical transformations (v7–v12) into a single
+    pass — key renames, value renames, wrapping of flat keys — and then filters
+    against the VALID_CONFIG_KEYS whitelist; each step is commented where it runs.
 
     v12→v13 renames persist_active_schedule → retain_service_changes_schedule.
     The rename has to happen before the whitelist drops the old key.

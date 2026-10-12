@@ -129,4 +129,4 @@ Deshalb kann die Anzeige von dem abweichen, was du eingestellt hast: Hat ein off
 
 **Externe Sensoren** arbeiten unabhängig vom Zielzustand: Sie liefern die Raumtemperatur, und mit eingerichteter Kalibrierung schreibt die Gruppe diesen Wert zurück in deine Thermostate.
 
-Was die Gruppe gerade tut und warum, siehst du in den [Attributen, die die Gruppe meldet](LIESMICH.md#was-die-gruppe-über-sich-selbst-berichtet), oder im Statusbereich der [Lovelace-Karte](LIESMICH.md#lovelace-karte).
+Was die Gruppe gerade tut und warum, siehst du in den [Attributen, die die Gruppe meldet](LIESMICH.md#was-die-gruppe-über-sich-selbst-berichtet), oder im Statusbereich der [Dashboard-Karte](LIESMICH.md#dashboard-karte).

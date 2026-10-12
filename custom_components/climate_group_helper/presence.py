@@ -350,9 +350,9 @@ class PresenceHandler:
     async def clear_meta(self, key: str) -> None:
         """Clean up a presence meta-key: hand the block back to the sensors.
 
-        Withdraw the expiring key first — both paths read `config_overrides`.
+        The caller has already withdrawn the key — both paths below read
+        `config_overrides`.
         """
-        self._group.run_state = self._group.run_state.clear_config_overrides({key})
         if self.mode == PresenceMode.DISABLED or not self.sensors:
             # Only if this key pinned a block. `restore()` pushes target_state
             # unconditionally, and a `disabled` key without presence control never

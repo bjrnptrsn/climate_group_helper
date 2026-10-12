@@ -417,8 +417,7 @@ class MemberIsolationHandler:
         Re-validates the trigger state on entry and between the sequential
         pre-action calls: the sensor may have flipped while the coroutine was
         queued or between awaits — a stale activation must not re-add entities
-        or send OFF commands after the deactivation already won (whichever
-        coroutine runs LAST must not override the current trigger state).
+        or send OFF commands after the deactivation already won.
         """
         if not self._effective_active:
             _LOGGER.debug("[%s] Stale isolation activation skipped (trigger no longer active)", self._group.entity_id)
@@ -626,12 +625,9 @@ class MemberIsolationHandler:
     async def reevaluate(self) -> None:
         """Re-apply the rule if its trigger is still active (slot end, switch on).
 
-        The trigger state is read fresh rather than taken from _trigger_active:
-        the listener does keep that field current during a bypass (only the
-        resulting action is suppressed), but relying on it would tie this method
-        to that detail — a later change gating the listener itself would leave
-        the field stale here, and the failure is silent (a device that quietly
-        stays un-isolated).
+        The trigger state is read fresh rather than taken from _trigger_active,
+        so a later change gating the listener cannot leave this method acting on
+        a stale field — silently, as a device that stays un-isolated.
 
         MEMBER_OFF has nothing to re-apply: its trigger is an event, not a state,
         so the next one arrives on its own.
@@ -861,9 +857,8 @@ class IsolationMetaTarget:
             "[%s] Meta-Key cleanup: isolation_bypass absent → re-evaluating isolation rules",
             self._group.entity_id,
         )
-        # Withdraw the key before re-evaluating: the handlers ask `bypassed` (and
-        # through it config_overrides) on every step.
-        self._group.run_state = self._group.run_state.clear_config_overrides({key})
+        # The caller has already withdrawn the key; the handlers ask `bypassed`
+        # (and through it config_overrides) on every step.
         for handler in self._group.member_isolation_handlers:
             await handler.reevaluate()
 
