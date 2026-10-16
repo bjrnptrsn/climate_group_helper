@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from homeassistant.components.climate import (
@@ -20,7 +21,10 @@ from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant, State, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import (
+    async_track_entity_registry_updated_event,
+    async_track_state_change_event,
+)
 
 from .const import (
     ATTR_SETTINGS_JSON,
@@ -113,12 +117,21 @@ class ClimateGroupHelperBaseSensor(SensorEntity):
         self._attr_should_poll = False
         self._climate_group_entity_id = climate_group_entity_id
         self._climate_group_state: State | None = None
+        self._untrack_callbacks: list[Callable[[], None]] = []
 
     async def async_added_to_hass(self) -> None:
         """Register callbacks."""
         await super().async_added_to_hass()
 
         self._climate_group_state = self.hass.states.get(self._climate_group_entity_id)
+        self._track_group(self._climate_group_entity_id)
+        # One cleanup for whatever is subscribed at the time — a rename swaps the
+        # subscriptions, so registering one per subscription would leave stale ones.
+        self.async_on_remove(self._untrack_group)
+
+    @callback
+    def _track_group(self, group_entity_id: str) -> None:
+        """Follow the group's state and its registry entry under `group_entity_id`."""
 
         @callback
         def state_changed_listener(event: Any) -> None:
@@ -128,11 +141,36 @@ class ClimateGroupHelperBaseSensor(SensorEntity):
             self._climate_group_state = new_state
             self.async_write_ha_state()
 
-        self.async_on_remove(
-            async_track_state_change_event(
-                self.hass, [self._climate_group_entity_id], state_changed_listener
-            )
-        )
+        @callback
+        def registry_updated_listener(event: Any) -> None:
+            """Re-key the subscriptions when the group is renamed."""
+            new_entity_id = event.data.get("entity_id")
+            if event.data.get("action") != "update" or new_entity_id == self._climate_group_entity_id:
+                return
+            self._untrack_group()
+            self._climate_group_entity_id = new_entity_id
+            self._climate_group_state = self.hass.states.get(new_entity_id)
+            self._track_group(new_entity_id)
+            self.async_write_ha_state()
+
+        self._untrack_callbacks = [
+            async_track_state_change_event(self.hass, [group_entity_id], state_changed_listener),
+            async_track_entity_registry_updated_event(
+                self.hass, group_entity_id, registry_updated_listener
+            ),
+        ]
+
+    @callback
+    def _untrack_group(self) -> None:
+        """Drop the current subscriptions."""
+        for unsub in self._untrack_callbacks:
+            unsub()
+        self._untrack_callbacks = []
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Opt in to the in-place rename; the group is followed via the registry event."""
+        super().async_entity_id_changed(old_entity_id)
 
     @property
     def device_info(self) -> dict[str, Any]:  # type: ignore[override]

@@ -127,6 +127,6 @@ The group entity shows **what the devices do**, not what the group wants:
 
 This is why the display can differ from what you set: while an open window has switched the heating off, the group shows off, even though its target is still heat at 21 °C. Right after you change something, the group shows your value for a moment (**UI Grace Period**) before it switches to the devices' readings.
 
-**External sensors** work independently of the target: they provide the room temperature, and with calibration configured, the group writes that value back to your thermostats.
+**External sensors** work independently of the target: they provide the room temperature, and with calibration configured, the group writes it to your thermostats — directly, as a correction against the device's own reading, or scaled, according to the [Calibration Mode](README.md#device-calibration).
 
 To see what the group is doing and why, check the [attributes the group reports](README.md#what-the-group-reports-about-itself) or the status panel of the [dashboard card](README.md#dashboard-card).

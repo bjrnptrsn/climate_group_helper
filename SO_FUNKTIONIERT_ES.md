@@ -127,6 +127,6 @@ Die Gruppen-Entität zeigt, **was die Geräte tun**, nicht was die Gruppe will:
 
 Deshalb kann die Anzeige von dem abweichen, was du eingestellt hast: Hat ein offenes Fenster die Heizung ausgeschaltet, zeigt die Gruppe „aus“, obwohl ihr Zielzustand weiterhin Heizen auf 21 °C ist. Direkt nach einer Änderung zeigt die Gruppe kurz deinen Wert (**UI-Schonfrist**), bevor sie auf die Meldungen der Geräte umschaltet.
 
-**Externe Sensoren** arbeiten unabhängig vom Zielzustand: Sie liefern die Raumtemperatur, und mit eingerichteter Kalibrierung schreibt die Gruppe diesen Wert zurück in deine Thermostate.
+**Externe Sensoren** arbeiten unabhängig vom Zielzustand: Sie liefern die Raumtemperatur, und mit eingerichteter Kalibrierung schreibt die Gruppe sie in deine Thermostate — direkt, als Korrektur gegenüber der eigenen Messung des Geräts oder skaliert, je nach [Kalibrierungs-Modus](LIESMICH.md#geräte-kalibrierung).
 
 Was die Gruppe gerade tut und warum, siehst du in den [Attributen, die die Gruppe meldet](LIESMICH.md#was-die-gruppe-über-sich-selbst-berichtet), oder im Statusbereich der [Dashboard-Karte](LIESMICH.md#dashboard-karte).

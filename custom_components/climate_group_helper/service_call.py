@@ -29,6 +29,7 @@ from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import Context, State
 from homeassistant.helpers.debounce import Debouncer
 
+from . import temperature_attrs as temp_attrs
 from .aggregation import within_tolerance
 from .const import (
     ATTR_SERVICE_MAP,
@@ -1232,9 +1233,10 @@ class BaseServiceCallHandler(ABC):
                 result.append({**call, "entity_ids": native_members})
 
             if low_val is None or high_val is None:
-                if self._group._attr_target_temperature is None:
+                group_target = temp_attrs.read(self._group, temp_attrs.TARGET_TEMPERATURE)
+                if group_target is None:
                     continue
-                target_temp = float(self._group._attr_target_temperature)
+                target_temp = float(group_target)
                 low_val = target_temp - 5
                 high_val = target_temp + 5
                 # Deliberate exception to the StateManager pattern: this is

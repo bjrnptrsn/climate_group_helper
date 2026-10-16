@@ -62,6 +62,7 @@
               "temp_sensors": "Externí Senzory Teploty",
               "temp_update_targets": "Zapsat Externí Teplotu do Entit",
               "temp_calibration_mode": "Režim Kalibrace",
+              "temp_inverted_offset_targets": "Invertované cíle offsetu",
               "calibration_heartbeat": "Kalibrace Heartbeat (min)",
               "calibration_ignore_off": "Ignorovat vypnuté členy",
               "ignore_off_members_temperature": "Vyloučit vypnuté členy z teploty"
@@ -75,6 +76,7 @@
               "temp_sensors": "Použít externí senzory místo údajů od členů. Ty se stanou jediným zdrojem pravdy pro teplotu skupiny.",
               "temp_update_targets": "Zapsat hodnotu externího senzoru do číselných entit (např. offsety kalibrace TRV). Užitečné pro udržení termostatů v obraze o skutečné pokojové teplotě.",
               "temp_calibration_mode": "Absolutní: Odeslat hodnotu přímo. Offset: Odeslat rozdíl (Externí - TRV Interní). Škálované: Odeslat jako celé číslo x100 (např. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Kalibrační entity zařízení, která fungují opačně: vyšší offset způsobí, že zařízení hlásí nižší teplotu. Používá se pouze v režimu Offset.",
               "calibration_heartbeat": "Pravidelně vynutit synchronizaci kalibrace do entit, i když se teplota nezměnila. Nastavte na 0 pro vypnutí.",
               "calibration_ignore_off": "Neposílejte aktualizace kalibrace členům, kteří jsou aktuálně vypnutí.",
               "ignore_off_members_temperature": "Členové, kteří jsou aktuálně vypnuti, budou vyloučeni z výpočtu aktuální a cílové teploty."

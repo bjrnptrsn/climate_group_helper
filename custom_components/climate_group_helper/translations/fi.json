@@ -62,6 +62,7 @@
               "temp_sensors": "Ulkoiset lämpötila-anturit",
               "temp_update_targets": "Kirjoita ulkoinen lämpötila entiteetteihin",
               "temp_calibration_mode": "Kalibrointitila",
+              "temp_inverted_offset_targets": "Käänteiset siirtymäkohteet",
               "calibration_heartbeat": "Kalibroinnin sykäys (min)",
               "calibration_ignore_off": "Ohita pois päältä olevat jäsenet",
               "ignore_off_members_temperature": "Sulje pois päältä olevat jäsenet lämpötilasta"
@@ -75,6 +76,7 @@
               "temp_sensors": "Käytä ulkoisia antureita jäsenten lukemien sijaan. Näistä tulee ryhmän lämpötilan ainoa totuudenlähde.",
               "temp_update_targets": "Kirjoita ulkoisen anturin arvo number-entiteetteihin (esim. TRV-kalibrointisiirtymät). Hyödyllinen pitämään termostaatit tietoisina todellisesta huonelämpötilasta.",
               "temp_calibration_mode": "Absoluuttinen: lähetä arvo suoraan. Siirtymä: lähetä erotus (ulkoinen - TRV sisäinen). Skaalattu: lähetä kokonaislukuna x100 (esim. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Käänteisesti toimivien laitteiden kalibrointientiteetit: suurempi siirtymä saa laitteen ilmoittamaan alhaisemman lämpötilan. Käytössä vain Siirtymä-tilassa.",
               "calibration_heartbeat": "Pakota kalibroinnin synkronointi entiteetteihin ajoittain, vaikka lämpötila ei olisi muuttunut. Aseta 0 poistaaksesi käytöstä.",
               "calibration_ignore_off": "Älä lähetä kalibrointipäivityksiä jäsenille, jotka ovat tällä hetkellä pois päältä.",
               "ignore_off_members_temperature": "Sulje pois nykyisen ja tavoitelämpötilan laskennasta jäsenet, jotka ovat tällä hetkellä pois päältä."

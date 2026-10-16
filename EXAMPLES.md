@@ -330,6 +330,8 @@ action:
 
 A TRV's built-in sensor sits right next to a hot pipe and reads too high. Correct it using a real room sensor.
 
+> **Which mode?** **Absolute** (the default) writes the value unchanged — use it when the target expects the room temperature itself, e.g. a valve's external temperature input (SONOFF TRVZB, Aqara W600). **Offset** writes a correction against the device's own reading — use it for a calibration number, as in the table below. **Scaled** is Danfoss Ally's x100 format.
+
 **Entities:** `climate.living_room_trv`, `sensor.living_room_temperature`, `number.living_room_trv_calibration`
 
 | Setting | Value |
@@ -343,6 +345,22 @@ A TRV's built-in sensor sits right next to a hot pipe and reads too high. Correc
 **Result:** CGH computes the offset between the TRV's internal reading and the external sensor, writes it to the calibration `number` entity, and re-sends it periodically to prevent battery-device timeouts.
 
 > Skip this if your devices are already handled by Better Thermostat or Versatile Thermostat — see Example 13.
+
+**Variant — SONOFF TRVZB with its own Adaptive Mode:**
+
+Newer TRVZB firmware regulates the valve opening itself (*Adaptive Mode* / *Smart Temperature Control*). Leave that regulation to the valve and let CGH supply the room temperature it should use — its external input expects the measured temperature itself, so this is the **Absolute** case from above.
+
+**Entities:** `climate.living_room_trv`, `sensor.living_room_temperature`, `number.living_room_trv_external_temperature_input`
+
+| Setting | Value |
+|---|---|
+| Members | `climate.living_room_trv` |
+| External Temperature Sensors | `sensor.living_room_temperature` |
+| Write External Temp to Entities | `number.living_room_trv_external_temperature_input` |
+| Calibration Mode | Absolute |
+| Calibration Heartbeat | 5 (minutes) |
+
+**Result:** The room temperature is written to the valve's external temperature input, which its Adaptive Mode uses for regulation. Set the valve itself to use the external sensor and enable Adaptive Mode on the device side (Zigbee integration or SONOFF app) — CGH only supplies the value.
 
 ---
 

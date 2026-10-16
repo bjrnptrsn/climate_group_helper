@@ -59,3 +59,6 @@ custom_components/climate_group_helper/www/climate-group-helper-card.js
 # The Python `lib/` rule above is unanchored and would also ignore the card's
 # own `frontend/src/lib/` — keep it tracked.
 !frontend/src/lib/
+
+# State of scripts/ha_watch.py (date of the last run) — local only.
+data/ha_watch_state.json

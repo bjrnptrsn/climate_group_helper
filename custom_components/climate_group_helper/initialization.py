@@ -36,6 +36,7 @@ from homeassistant.const import ATTR_SUPPORTED_FEATURES
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import entity_registry as er
 
+from . import temperature_attrs as temp_attrs
 from .const import (
     ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY,
     ATTR_ACTIVE_SCHEDULE_ENTITY,
@@ -262,12 +263,12 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
         )
 
     # Restore temperature and humidity values
-    group._attr_target_temperature = last_attrs.get(ATTR_TEMPERATURE)
-    group._attr_target_temperature_low = last_attrs.get(ATTR_TARGET_TEMP_LOW)
-    group._attr_target_temperature_high = last_attrs.get(ATTR_TARGET_TEMP_HIGH)
+    temp_attrs.write(group, temp_attrs.TARGET_TEMPERATURE, last_attrs.get(ATTR_TEMPERATURE))
+    temp_attrs.write(group, temp_attrs.TARGET_TEMPERATURE_LOW, last_attrs.get(ATTR_TARGET_TEMP_LOW))
+    temp_attrs.write(group, temp_attrs.TARGET_TEMPERATURE_HIGH, last_attrs.get(ATTR_TARGET_TEMP_HIGH))
     group._attr_target_temperature_step = last_attrs.get(ATTR_TARGET_TEMP_STEP)
     group._attr_target_humidity = last_attrs.get(ATTR_HUMIDITY)
-    group._attr_current_temperature = last_attrs.get(ATTR_CURRENT_TEMPERATURE)
+    temp_attrs.write(group, temp_attrs.CURRENT_TEMPERATURE, last_attrs.get(ATTR_CURRENT_TEMPERATURE))
     group._attr_current_humidity = last_attrs.get(ATTR_CURRENT_HUMIDITY)
     group._attr_min_temp = last_attrs.get(ATTR_MIN_TEMP, DEFAULT_MIN_TEMP)
     group._attr_max_temp = last_attrs.get(ATTR_MAX_TEMP, DEFAULT_MAX_TEMP)

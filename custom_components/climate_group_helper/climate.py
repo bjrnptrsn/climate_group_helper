@@ -35,6 +35,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.restore_state import RestoreEntity
 
+from . import temperature_attrs as temp_attrs
 from .aggregation import Aggregator
 from .calibration import CalibrationHandler
 from .const import (
@@ -72,6 +73,7 @@ from .const import (
     CONF_RETRY_ATTEMPTS,
     CONF_RETRY_DELAY,
     CONF_TEMP_CURRENT_AVG,
+    CONF_TEMP_INVERTED_OFFSET_TARGETS,
     CONF_TEMP_SENSORS,
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
@@ -235,6 +237,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.member_command_lock = asyncio.Lock()
         self.temp_sensor_entity_ids = _get_adv(CONF_TEMP_SENSORS, [])
         self.temp_update_target_entity_ids = _get_adv(CONF_TEMP_UPDATE_TARGETS, [])
+        self.temp_inverted_offset_target_entity_ids = _get_adv(CONF_TEMP_INVERTED_OFFSET_TARGETS, [])
         self.humidity_sensor_entity_ids = _get_adv(CONF_HUMIDITY_SENSORS, [])
         self.humidity_update_target_entity_ids = _get_adv(CONF_HUMIDITY_UPDATE_TARGETS, [])
         self._expose_member_entities: bool = _get_adv(CONF_EXPOSE_MEMBER_ENTITIES, False)
@@ -349,18 +352,18 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         # Attributes
         self._attr_supported_features = DEFAULT_SUPPORTED_FEATURES
-        self._attr_temperature_unit = hass.config.units.temperature_unit
+        temp_attrs.write(self, temp_attrs.TEMPERATURE_UNIT, hass.config.units.temperature_unit)
 
         self._attr_available = False
         self._attr_assumed_state = True
 
         self._current_hvac_modes: list[str] = []
 
-        self._attr_current_temperature = None
-        self._attr_target_temperature = None
+        temp_attrs.write(self, temp_attrs.CURRENT_TEMPERATURE, None)
+        temp_attrs.write(self, temp_attrs.TARGET_TEMPERATURE, None)
         self._attr_target_temperature_step = None
-        self._attr_target_temperature_low = None
-        self._attr_target_temperature_high = None
+        temp_attrs.write(self, temp_attrs.TARGET_TEMPERATURE_LOW, None)
+        temp_attrs.write(self, temp_attrs.TARGET_TEMPERATURE_HIGH, None)
         self._attr_min_temp = DEFAULT_MIN_TEMP
         self._attr_max_temp = DEFAULT_MAX_TEMP
         self._attr_current_humidity = None
@@ -568,6 +571,15 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
     async def async_service_apply_config(self, **options: Any) -> None:
         """Handle apply_config service call."""
         await async_apply_config(self, **options)
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Opt in to the in-place rename; nothing here is keyed on the group's own ID.
+
+        The sensors follow the rename through the registry event, which also
+        fires on Home Assistant versions that remove and re-add the group.
+        """
+        super().async_entity_id_changed(old_entity_id)
 
     async def async_will_remove_from_hass(self) -> None:
         """Handle removal."""

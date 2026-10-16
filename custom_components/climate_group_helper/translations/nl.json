@@ -62,6 +62,7 @@
               "temp_sensors": "Externe Temperatuursensoren",
               "temp_update_targets": "Schrijf Externe Temp naar Entiteiten",
               "temp_calibration_mode": "Kalibratiemodus",
+              "temp_inverted_offset_targets": "Omgekeerde offset-doelen",
               "calibration_heartbeat": "Kalibratie Hartslag (min)",
               "calibration_ignore_off": "Uitgeschakelde leden negeren",
               "ignore_off_members_temperature": "Uitgeschakelde leden uitsluiten van temperatuur"
@@ -75,6 +76,7 @@
               "temp_sensors": "Gebruik externe sensoren in plaats van metingen van leden. Deze worden de enige bron van waarheid voor de temperatuur van de groep.",
               "temp_update_targets": "Schrijf de waarde van de externe sensor naar nummerentiteiten (bijv. TRV kalibratie-offsets). Handig om thermostaten bewust te houden van de werkelijke kamertemperatuur.",
               "temp_calibration_mode": "Absoluut: Verzend waarde direct. Offset: Verzend verschil (Extern - TRV Intern). Geschaald: Verzend als geheel getal x100 (bijv. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Kalibratie-entiteiten van apparaten die omgekeerd werken: een hogere offset laat het apparaat een lagere temperatuur melden. Wordt alleen gebruikt in de Offset-modus.",
               "calibration_heartbeat": "Forceer periodiek kalibratiesynchronisatie naar entiteiten, zelfs als de temperatuur niet is gewijzigd. Stel in op 0 om uit te schakelen.",
               "calibration_ignore_off": "Stuur geen kalibratie-updates naar leden die momenteel uitgeschakeld zijn.",
               "ignore_off_members_temperature": "Leden die momenteel uitgeschakeld zijn, worden uitgesloten van de berekening van de huidige en doeltemperatuur."

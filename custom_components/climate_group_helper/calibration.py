@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from homeassistant.components.climate import ATTR_CURRENT_TEMPERATURE, HVACMode
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
-from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.event import async_track_time_interval
 
+from . import temperature_attrs as temp_attrs
 from .const import (
     CONF_CALIBRATION_HEARTBEAT,
     CONF_CALIBRATION_IGNORE_OFF,
@@ -196,7 +197,7 @@ class CalibrationHandler:
 
         if domain == "temperature":
             entity_ids = self._group.temp_update_target_entity_ids
-            value = self._group._attr_current_temperature
+            value = temp_attrs.read(self._group, temp_attrs.CURRENT_TEMPERATURE)
             mode = self._temp_calibration_mode
         elif domain == "humidity":
             entity_ids = self._group.humidity_update_target_entity_ids
@@ -228,9 +229,16 @@ class CalibrationHandler:
             elif event_entity_id not in self._group.humidity_sensor_entity_ids:
                 return
 
-        valid_states, _ = self._group.aggregator._get_valid_member_states(entity_ids)
+        # Skip missing or `unavailable` targets only; `unknown` means no value
+        # reported yet, not unreachable — the write is what fills it.
+        target_states = [
+            state
+            for entity_id in entity_ids
+            if (state := self._hass.states.get(entity_id)) is not None
+            and state.state != STATE_UNAVAILABLE
+        ]
 
-        for target_state in valid_states:
+        for target_state in target_states:
             # Resolve the climate member paired with this calibration target (may be None)
             member_id = self._target_member_map.get(target_state.entity_id)
             member_state = self._hass.states.get(member_id) if member_id else None
@@ -257,7 +265,13 @@ class CalibrationHandler:
                             curr_offset = float(target_state.state)
                         except (ValueError, TypeError):
                             curr_offset = 0.0
-                        target_val = value - (ref_temp - curr_offset)
+                        if target_state.entity_id in self._group.temp_inverted_offset_target_entity_ids:
+                            # The device reports `raw - offset`, so the raw reading
+                            # is `reported + offset` and the offset to write is
+                            # `raw - value`.
+                            target_val = (ref_temp + curr_offset) - value
+                        else:
+                            target_val = value - (ref_temp - curr_offset)
                     elif mode == CalibrationMode.SCALED:
                         target_val = int(round(value * 100))
 

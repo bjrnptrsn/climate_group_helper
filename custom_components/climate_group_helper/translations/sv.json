@@ -62,6 +62,7 @@
               "temp_sensors": "Externa Temperatursensorer",
               "temp_update_targets": "Skriv Extern Temp till Entiteter",
               "temp_calibration_mode": "Kalibreringsläge",
+              "temp_inverted_offset_targets": "Inverterade offsetmål",
               "calibration_heartbeat": "Kalibrerings-Heartbeat (min)",
               "calibration_ignore_off": "Ignorera avstängda medlemmar",
               "ignore_off_members_temperature": "Uteslut avstängda medlemmar från temperatur"
@@ -75,6 +76,7 @@
               "temp_sensors": "Använd externa sensorer istället för medlemsavläsningar. Dessa blir den enda sanningen för gruppens temperatur.",
               "temp_update_targets": "Skriv det externa sensorvärdet till nummerentiteter (t.ex. TRV kalibrering offset). Användbart för att hålla termostater medvetna om faktisk rumstemperatur.",
               "temp_calibration_mode": "Absolut: Skicka värde direkt. Offset: Skicka skillnad (Extern - TRV Intern). Skalad: Skicka som heltal x100 (t.ex. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Kalibreringsentiteter för enheter som fungerar omvänt: en högre offset gör att enheten rapporterar en lägre temperatur. Används bara i Offset-läge.",
               "calibration_heartbeat": "Tvinga periodiskt kalibreringssynkronisering till entiteter även om temperaturen inte har ändrats. Ställ in på 0 för att inaktivera.",
               "calibration_ignore_off": "Skicka inte kalibreringsuppdateringar till medlemmar som för närvarande är avstängda.",
               "ignore_off_members_temperature": "Medlemmar som för närvarande är avstängda utesluts från beräkningen av aktuell och måltemperatur."

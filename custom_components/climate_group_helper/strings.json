@@ -62,6 +62,7 @@
               "temp_sensors": "External Temperature Sensors",
               "temp_update_targets": "Write External Temp to Entities",
               "temp_calibration_mode": "Calibration Mode",
+              "temp_inverted_offset_targets": "Inverted Offset Targets",
               "calibration_heartbeat": "Calibration Heartbeat (min)",
               "calibration_ignore_off": "Ignore Off Members",
               "ignore_off_members_temperature": "Exclude Off Members from Temperature"
@@ -75,6 +76,7 @@
               "temp_sensors": "Use external sensors instead of member readings. These become the sole source of truth for the group's temperature.",
               "temp_update_targets": "Write the external sensor value to number entities (e.g. TRV calibration offsets). Useful for keeping thermostats aware of actual room temperature.",
               "temp_calibration_mode": "Absolute: Send value directly. Offset: Send delta (External - TRV Internal). Scaled: Send as Integer x100 (e.g. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Calibration entities of devices that work the opposite way: a higher offset makes them report a lower temperature. Only used in Offset mode.",
               "calibration_heartbeat": "Periodically force-sync calibration to entities even if temperature hasn't changed. Set to 0 to disable.",
               "calibration_ignore_off": "Do not send calibration updates to members that are currently off.",
               "ignore_off_members_temperature": "Exclude members that are currently off from current and target temperature calculations."

@@ -62,6 +62,7 @@
               "temp_sensors": "Sensori Temperatura Esterni",
               "temp_update_targets": "Scrivi Temp Esterna su Entità",
               "temp_calibration_mode": "Modalità di Calibrazione",
+              "temp_inverted_offset_targets": "Destinazioni offset invertito",
               "calibration_heartbeat": "Heartbeat di Calibrazione (min)",
               "calibration_ignore_off": "Ignora membri spenti",
               "ignore_off_members_temperature": "Escludi membri spenti dalla temperatura"
@@ -75,6 +76,7 @@
               "temp_sensors": "Usa sensori esterni invece delle letture dei membri. Questi diventano l'unica fonte di verità per la temperatura del gruppo.",
               "temp_update_targets": "Scrivi il valore del sensore esterno su entità numeriche (es. offset calibrazione TRV). Utile per mantenere i termostati consapevoli della temperatura reale della stanza.",
               "temp_calibration_mode": "Assoluto: Invia valore diretto. Offset: Invia differenza (Esterno - TRV Interno). Scalato: Invia come intero x100 (es. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Entità di calibrazione di dispositivi che funzionano al contrario: un offset più alto fa riportare al dispositivo una temperatura più bassa. Usato solo in modalità Offset.",
               "calibration_heartbeat": "Forza periodicamente la sincronizzazione della calibrazione alle entità anche se la temperatura non è cambiata. Imposta a 0 per disabilitare.",
               "calibration_ignore_off": "Non inviare aggiornamenti di calibrazione ai membri attualmente spenti.",
               "ignore_off_members_temperature": "I membri attualmente spenti verranno esclusi dai calcoli della temperatura attuale e target."

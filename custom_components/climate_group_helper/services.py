@@ -60,6 +60,7 @@ from .const import (
     CONF_SYNC_MODE,
     CONF_TEMP_CALIBRATION_MODE,
     CONF_TEMP_CURRENT_AVG,
+    CONF_TEMP_INVERTED_OFFSET_TARGETS,
     CONF_TEMP_SENSORS,
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_UPDATE_TARGETS,
@@ -329,9 +330,11 @@ async def async_apply_config(
     # anyway is not worth an error) and before the rule walk below, which would
     # otherwise iterate a string character by character.
     #
-    # The list-shaped keys join them because entity setup reads each without a
-    # usable fallback (`config.get(key, [])` hands back a stored None), so a
-    # null aborts the next reload far from the call that caused it.
+    # The list-shaped keys join them because each is read without a usable
+    # fallback (`config.get(key, [])` hands back a stored None): entity setup
+    # iterates the others, so a null aborts the next reload far from the call
+    # that caused it; the inverted calibration targets are only tested for
+    # membership on every offset write, where a null raises a TypeError.
     for key, expected in (
         (CONF_MEMBER_TEMP_OFFSETS, dict),
         (CONF_ISOLATION_RULES, list),
@@ -343,6 +346,7 @@ async def async_apply_config(
         (CONF_PRESENCE_SENSOR, list),
         (CONF_PRESENCE_ZONE, list),
         (CONF_TEMP_UPDATE_TARGETS, list),
+        (CONF_TEMP_INVERTED_OFFSET_TARGETS, list),
         (CONF_HUMIDITY_UPDATE_TARGETS, list),
     ):
         if key in filtered and not isinstance(filtered[key], expected):

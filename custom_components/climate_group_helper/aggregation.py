@@ -11,7 +11,7 @@ produces silently wrong values, not a crash:
 
 K1  Calibration runs AFTER `_apply_temperature()` / `_apply_humidity()`.
     `CalibrationHandler.update()` takes no value argument; it reads
-    `_attr_current_temperature`, `_attr_current_humidity` and `_member_temp_avg`
+    the current temperature, `_attr_current_humidity` and `_member_temp_avg`
     back off the entity (`calibration.py`). Calling it before the apply
     calibrates against the previous cycle — in OFFSET mode with a wrong
     reference temperature.
@@ -84,6 +84,7 @@ from homeassistant.const import (
 from homeassistant.core import Event, State, callback
 from homeassistant.helpers.event import async_call_later
 
+from . import temperature_attrs as temp_attrs
 from .const import (
     DEFAULT_SUPPORTED_FEATURES,
     FLOAT_TOLERANCE,
@@ -516,10 +517,11 @@ class Aggregator:
     def _apply_temperature(self, result: TemperatureResult) -> None:
         """Write the computed temperature values to the entity."""
         self._group._member_temp_avg = result.member_temp_avg
-        self._group._attr_current_temperature = result.current_temperature
-        self._group._attr_target_temperature = result.target_temperature
-        self._group._attr_target_temperature_low = result.target_temperature_low
-        self._group._attr_target_temperature_high = result.target_temperature_high
+        group = self._group
+        temp_attrs.write(group, temp_attrs.CURRENT_TEMPERATURE, result.current_temperature)
+        temp_attrs.write(group, temp_attrs.TARGET_TEMPERATURE, result.target_temperature)
+        temp_attrs.write(group, temp_attrs.TARGET_TEMPERATURE_LOW, result.target_temperature_low)
+        temp_attrs.write(group, temp_attrs.TARGET_TEMPERATURE_HIGH, result.target_temperature_high)
         self._group._attr_target_temperature_step = result.target_temperature_step
         self._group._attr_min_temp = result.min_temp
         self._group._attr_max_temp = result.max_temp
@@ -671,9 +673,9 @@ class Aggregator:
             return
         snapshot = CurrentState(
             hvac_mode=self._group._attr_hvac_mode,
-            temperature=self._group._attr_target_temperature,
-            target_temp_low=self._group._attr_target_temperature_low,
-            target_temp_high=self._group._attr_target_temperature_high,
+            temperature=temp_attrs.read(self._group, temp_attrs.TARGET_TEMPERATURE),
+            target_temp_low=temp_attrs.read(self._group, temp_attrs.TARGET_TEMPERATURE_LOW),
+            target_temp_high=temp_attrs.read(self._group, temp_attrs.TARGET_TEMPERATURE_HIGH),
             humidity=self._group._attr_target_humidity,
             preset_mode=self._group._attr_preset_mode,
             fan_mode=self._group._attr_fan_mode,
@@ -820,7 +822,9 @@ class Aggregator:
         current_hvac_actions = list(find_state_attributes(self.states, ATTR_HVAC_ACTION))
         self._group._attr_hvac_action = self._determine_hvac_action(current_hvac_actions)
 
-        self._group._attr_temperature_unit = self._group.hass.config.units.temperature_unit
+        temp_attrs.write(
+            self._group, temp_attrs.TEMPERATURE_UNIT, self._group.hass.config.units.temperature_unit
+        )
 
         # Compute → apply → side effect, bundled per domain. The calibration call
         # must run AFTER the apply (K1, see the module docstring).

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -84,6 +84,13 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
             if last.state == STATE_OFF:
                 _LOGGER.debug("[%s] Restoring control switch OFF state", self._group.entity_id)
                 await self.override_manager.activate()
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Follow an in-place rename: the group publishes this entity's ID."""
+        super().async_entity_id_changed(old_entity_id)
+        self._group.main_switch_entity_id = self.entity_id
+        self._group.async_defer_or_update_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
         """Deregister the state-push callback."""

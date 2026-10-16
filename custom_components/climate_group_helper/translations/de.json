@@ -62,6 +62,7 @@
               "temp_sensors": "Externer Temperatursensor",
               "temp_update_targets": "Schreibe externe Temp. in Entitäten",
               "temp_calibration_mode": "Kalibrierungs-Modus",
+              "temp_inverted_offset_targets": "Invertierte Offset-Ziele",
               "calibration_heartbeat": "Kalibrierungs-Heartbeat (min)",
               "calibration_ignore_off": "Ausgeschaltete Mitglieder ignorieren",
               "ignore_off_members_temperature": "Ausgeschaltete Mitglieder von Temperatur ausschließen"
@@ -75,6 +76,7 @@
               "temp_sensors": "Verwende externe Sensoren anstelle der Mitgliederwerte. Diese werden zur einzigen Wahrheitsquelle für die Temperatur der Gruppe.",
               "temp_update_targets": "Schreibe den Wert des externen Sensors in Nummern-Entitäten (z.B. TRV-Kalibrierung). Nützlich, um Thermostate über die tatsächliche Raumtemperatur zu informieren.",
               "temp_calibration_mode": "Absolut: Wert direkt senden. Offset: Differenz senden (Extern - TRV Intern). Skaliert: Sende als Integer x100 (z.B. 21,5 -> 2150).",
+              "temp_inverted_offset_targets": "Kalibrierungs-Entitäten von Geräten, die umgekehrt arbeiten: Ein höherer Offset lässt das Gerät eine niedrigere Temperatur melden. Wird nur im Offset-Modus verwendet.",
               "calibration_heartbeat": "Erzwinge periodisch die Synchronisierung der Kalibrierung, auch wenn sich die Temperatur nicht geändert hat. Setze auf 0, um zu deaktivieren.",
               "calibration_ignore_off": "Sende keine Kalibrierungs-Updates an Mitglieder, die derzeit ausgeschaltet sind.",
               "ignore_off_members_temperature": "Mitglieder, die aktuell ausgeschaltet sind, werden bei der Berechnung der aktuellen und Zieltemperatur nicht berücksichtigt."

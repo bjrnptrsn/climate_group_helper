@@ -145,6 +145,7 @@ Nutze **mehrere externe Sensoren** für Temperatur und Luftfeuchtigkeit, um Mitg
 Schreibe den externen Sensorwert zurück in deine TRVs, um deren interne Temperaturmessung zu korrigieren.
 
 *   **Modi:** Absolut (Standard), Offset (Delta-Berechnung) und Skaliert (x100 für Danfoss Ally).
+*   **Invertierter Offset:** Für Geräte, die bei einem höheren Offset eine *niedrigere* Temperatur melden, wählst du sie unter **Invertierte Offset-Ziele** aus — der Offset wird dann mit umgekehrtem Vorzeichen geschrieben.
 *   **Heartbeat:** Sendet den Kalibrierungswert periodisch erneut, um Sensor-Timeouts bei Zigbee-Geräten zu vermeiden.
 *   **Ausgeschaltete Mitglieder ignorieren:** Verhindert das Senden von Kalibrierungs-Updates an TRVs, die aktuell `aus` sind, und schont so den Akku bei drahtlosen Geräten.
 
@@ -523,12 +524,13 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 | **Zieltemperatur Präzision** / **Ziel-Feuchtigkeit Präzision** | Rundet an Geräte gesendete Zielwerte (z. B. 0,5° oder 1°). |
 | **Schreibe externe Temp. in Entitäten** / **Schreibe externe Feuchtigkeit in Entitäten** | Schreibt den berechneten Wert in Number-Entitäten. |
 | **Kalibrierungs-Modus** | Wie der Wert gesendet wird: **Absolut** (Standard), **Offset** (Delta) oder **Skaliert** (x100). |
+| **Invertierte Offset-Ziele** | *(Nur im Offset-Modus)* Wähle die Geräte aus, die umgekehrt arbeiten — ein höherer Offset lässt sie eine niedrigere Temperatur melden. Die Liste bietet die Geräte an, die unter **Schreibe externe Temp. in Entitäten** schon gespeichert sind — speichere diese also zuerst. |
 | **Kalibrierungs-Heartbeat** | Sendet Kalibrierungswerte periodisch erneut (in Minuten). Hilft, Timeouts bei Geräten zu vermeiden, die häufige Updates erwarten. |
 | **Ausgeschaltete Mitglieder ignorieren** | Verhindert das Senden von Kalibrierungs-Updates an aktuell `aus` geschaltete Geräte und schont so den Akku bei drahtlosen Sensoren und TRVs. |
 | **Ausgeschaltete Mitglieder von Temperatur ausschließen** | Schließt aktuell `aus` geschaltete Mitglieder von Temperaturberechnungen aus (sowohl aktuell als auch Ziel). Verhindert, dass ein kalter, ausgeschalteter Heizkörper den angezeigten Durchschnitt nach unten zieht. |
 | **Min. Temp bei 'Aus'** | Erzwingt eine Mindesttemperatur (z. B. 5 °C), selbst wenn die Gruppe `aus` ist. Stellt sicher, dass Ventile für den Frostschutz vollständig schließen (essentiell für TRVs, die im `aus`-Modus nicht vollständig schließen). |
 
-Externe Sensoren werden automatisch über das Home-Assistant-Geräteregister mit den internen Sensoren des TRVs verknüpft — dadurch ist der Kalibrierungs-Modus Offset präzise.
+Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assistant-Geräteregister automatisch dem Gruppenmitglied auf demselben Gerät zugeordnet; der Offset wird dann gegen die eigene Messung dieses Geräts berechnet (ohne Zuordnung gilt der Durchschnitt der Gruppe).
 
 ### Sync-Modus
 

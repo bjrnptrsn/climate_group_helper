@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.15.0 - 2026-10-16
+
+### ✨ Improvements
+
+*   **Prepared for Home Assistant 2026.11**: The group's temperatures are ready for the renamed climate attributes in Home Assistant 2026.11.
+
+*   **Calibration for Devices That Work the Opposite Way**: Devices whose offset lowers the reported temperature when raised can now be selected as **Inverted Offset Targets**, so Offset mode calibrates them in the right direction.
+
+### 🐛 Bug Fixes
+
+*   **Temperature and Humidity Sensors Keep Working After the Group Is Renamed**: Renaming the climate group in Home Assistant no longer leaves its temperature and humidity sensors stuck on their last value.
+
+*   **External Temperature Reaches Calibration Targets Showing `unknown`**: Targets such as a thermostat's external temperature input are now written like any other calibration target.
+
 ## 1.14.2 - 2026-10-12
 
 ### 🐛 Bug Fixes

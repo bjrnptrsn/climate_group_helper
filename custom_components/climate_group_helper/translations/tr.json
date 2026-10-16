@@ -62,6 +62,7 @@
               "temp_sensors": "Harici Sıcaklık Sensörleri",
               "temp_update_targets": "Harici Sıcaklığı Varlıklara Yaz",
               "temp_calibration_mode": "Kalibrasyon Modu",
+              "temp_inverted_offset_targets": "Ters ofset hedefleri",
               "calibration_heartbeat": "Kalibrasyon Nabzı (dk)",
               "calibration_ignore_off": "Kapalı Üyeleri Yoksay",
               "ignore_off_members_temperature": "Kapalı Üyeleri Sıcaklıktan Hariç Tut"
@@ -75,6 +76,7 @@
               "temp_sensors": "Üye okumaları yerine harici sensörler kullanın. Bunlar grubun sıcaklığı için tek doğruluk kaynağı olur.",
               "temp_update_targets": "Harici sensör değerini number varlıklarına yazın (örn. TRV kalibrasyon ofsetleri). Termostatları gerçek oda sıcaklığından haberdar tutmak için kullanışlıdır.",
               "temp_calibration_mode": "Mutlak: değeri doğrudan gönder. Ofset: farkı gönder (Harici - TRV Dahili). Ölçekli: Tam sayı x100 olarak gönder (örn. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Ters çalışan cihazların kalibrasyon varlıkları: daha yüksek ofset cihazın daha düşük sıcaklık bildirmesine neden olur. Yalnızca Ofset modunda kullanılır.",
               "calibration_heartbeat": "Sıcaklık değişmese bile kalibrasyonu periyodik olarak varlıklara zorla senkronize edin. Devre dışı bırakmak için 0 olarak ayarlayın.",
               "calibration_ignore_off": "Şu anda kapalı olan üyelere kalibrasyon güncellemeleri gönderme.",
               "ignore_off_members_temperature": "Şu anda kapalı olan üyeleri mevcut ve hedef sıcaklık hesaplamalarından hariç tutun."

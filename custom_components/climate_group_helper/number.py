@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.number import NumberEntity, NumberMode, RestoreNumber
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, META_KEY_GROUP_OFFSET
@@ -138,6 +138,8 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         
         # Register this entity ID in the group so status.py doesn't have to guess
         self._group.offset_entity_id = self.entity_id
+        # Publish the attribute now — a quiet group writes no state on its own.
+        self._group.async_defer_or_update_ha_state()
         _LOGGER.debug("[%s] Registered offset entity: '%s'", self._group.entity_id, self.entity_id)
 
         self._group.offset_set_callback = self._set_offset
@@ -148,6 +150,13 @@ class OffsetNumber(RestoreNumber, NumberEntity):
                 if (restored := clean_offset(last.native_value, self._group.entity_id)) is not None:
                     self._group.run_state = replace(self._group.run_state, group_offset=restored)
                     _LOGGER.debug("[%s] Restored group offset: %s", self._group.entity_id, restored)
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Follow an in-place rename: the group publishes this entity's ID."""
+        super().async_entity_id_changed(old_entity_id)
+        self._group.offset_entity_id = self.entity_id
+        self._group.async_defer_or_update_ha_state()
 
     async def async_will_remove_from_hass(self) -> None:
         """Deregister the offset callback and entity ID."""

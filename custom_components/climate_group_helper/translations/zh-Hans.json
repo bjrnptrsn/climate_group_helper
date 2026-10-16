@@ -62,6 +62,7 @@
               "temp_sensors": "外部温度传感器",
               "temp_update_targets": "将外部温度写入实体",
               "temp_calibration_mode": "校准模式",
+              "temp_inverted_offset_targets": "反向偏移目标",
               "calibration_heartbeat": "校准心跳 (分钟)",
               "calibration_ignore_off": "忽略已关闭的成员",
               "ignore_off_members_temperature": "从温度中排除已关闭的成员"
@@ -75,6 +76,7 @@
               "temp_sensors": "使用外部传感器代替成员读数。这将成为组温度的唯一真实来源。",
               "temp_update_targets": "将外部传感器值写入数字实体 (例如 TRV 校准偏移)。用于保持恒温器了解实际室温。",
               "temp_calibration_mode": "绝对: 直接发送值。偏移: 发送差值 (外部 - TRV 内部)。 缩放: 发送为整数 x100 (例如 21.5 -> 2150)。",
+              "temp_inverted_offset_targets": "反向工作设备的校准实体：偏移量越高，设备上报的温度越低。仅在偏移模式下使用。",
               "calibration_heartbeat": "定期强制将校准同步到实体，即使温度未更改。设置为 0 以禁用。",
               "calibration_ignore_off": "不要向当前处于关闭状态的成员发送校准更新。",
               "ignore_off_members_temperature": "当前已关闭的成员将被排除在当前温度和目标温度的计算之外。"

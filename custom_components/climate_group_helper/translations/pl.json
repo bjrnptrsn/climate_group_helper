@@ -62,6 +62,7 @@
               "temp_sensors": "Zewnętrzne Czujniki Temperatury",
               "temp_update_targets": "Zapisz Zewnętrzną Temp do Encji",
               "temp_calibration_mode": "Tryb Kalibracji",
+              "temp_inverted_offset_targets": "Odwrócone cele offsetu",
               "calibration_heartbeat": "Puls Kalibracji (min)",
               "calibration_ignore_off": "Ignoruj wyłączone elementy",
               "ignore_off_members_temperature": "Wyklucz wyłączonych członków z temperatury"
@@ -75,6 +76,7 @@
               "temp_sensors": "Użyj czujników zewnętrznych zamiast odczytów członków. Stają się one jedynym źródłem prawdy dla temperatury grupy.",
               "temp_update_targets": "Zapisz wartość czujnika zewnętrznego do encji liczbowych (np. offsety kalibracji TRV). Przydatne, aby termostaty znały rzeczywistą temperaturę w pomieszczeniu.",
               "temp_calibration_mode": "Absolutny: Wyślij wartość bezpośrednio. Offset: Wyślij różnicę (Zewnętrzna - TRV Wewnętrzna). Skalowany: Wyślij jako liczbę całkowitą x100 (np. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Encje kalibracji urządzeń działających odwrotnie: wyższy offset powoduje, że urządzenie raportuje niższą temperaturę. Używane tylko w trybie Offset.",
               "calibration_heartbeat": "Okresowo wymuszaj synchronizację kalibracji do encji, nawet jeśli temperatura się nie zmieniła. Ustaw na 0, aby wyłączyć.",
               "calibration_ignore_off": "Nie wysyłaj aktualizacji kalibracji do elementów, które są obecnie wyłączone.",
               "ignore_off_members_temperature": "Członkowie, którzy są obecnie wyłączeni, zostaną wykluczeni z obliczeń aktualnej i docelowej temperatury."

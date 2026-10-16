@@ -330,6 +330,8 @@ action:
 
 Der eingebaute Sensor eines TRVs sitzt direkt neben einem heißen Rohr und misst zu hoch. Korrigiere das mit einem echten Raumsensor.
 
+> **Welcher Modus?** **Absolut** (der Standard) schreibt den Wert unverändert — richtig, wenn das Ziel die Raumtemperatur selbst erwartet, z. B. der externe Temperatur-Eingang eines Ventils (SONOFF TRVZB, Aqara W600). **Offset** schreibt eine Korrektur gegenüber der eigenen Messung des Geräts — richtig für eine Kalibrier-Nummer, wie in der Tabelle unten. **Skaliert** ist Danfoss Allys x100-Format.
+
 **Entitäten:** `climate.living_room_trv`, `sensor.living_room_temperature`, `number.living_room_trv_calibration`
 
 | Einstellung | Wert |
@@ -343,6 +345,22 @@ Der eingebaute Sensor eines TRVs sitzt direkt neben einem heißen Rohr und misst
 **Ergebnis:** CGH berechnet den Offset zwischen der internen Messung des TRVs und dem externen Sensor, schreibt ihn in die Kalibrierungs-`number`-Entität und sendet ihn periodisch erneut, um Timeouts bei batteriebetriebenen Geräten zu vermeiden.
 
 > Überspringe dies, wenn deine Geräte bereits von Better Thermostat oder Versatile Thermostat gehandhabt werden — siehe Beispiel 13.
+
+**Variante — SONOFF TRVZB mit eigenem Adaptive Mode:**
+
+Neuere TRVZB-Firmware regelt die Ventilöffnung selbst (*Adaptive Mode* / *Smart Temperature Control*). Lass diese Regelung beim Ventil und lass CGH nur die Raumtemperatur liefern, die es nutzen soll — sein externer Eingang erwartet die gemessene Temperatur selbst, also der **Absolut**-Fall von oben.
+
+**Entitäten:** `climate.living_room_trv`, `sensor.living_room_temperature`, `number.living_room_trv_external_temperature_input`
+
+| Einstellung | Wert |
+|---|---|
+| Mitglieder | `climate.living_room_trv` |
+| Externer Temperatursensor | `sensor.living_room_temperature` |
+| Schreibe externe Temp. in Entitäten | `number.living_room_trv_external_temperature_input` |
+| Kalibrierungs-Modus | Absolut |
+| Kalibrierungs-Heartbeat | 5 (Minuten) |
+
+**Ergebnis:** Die Raumtemperatur wird in den externen Temperatur-Eingang des Ventils geschrieben; der Adaptive Mode des Ventils nutzt sie für die Regelung. Stelle das Ventil auf der Geräteseite auf den externen Sensor um und aktiviere den Adaptive Mode (Zigbee-Integration oder SONOFF-App) — CGH liefert nur den Wert.
 
 ---
 

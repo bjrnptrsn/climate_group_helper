@@ -106,6 +106,7 @@ from .const import (
     CONF_SYNC_MODE,
     CONF_TEMP_CALIBRATION_MODE,
     CONF_TEMP_CURRENT_AVG,
+    CONF_TEMP_INVERTED_OFFSET_TARGETS,
     CONF_TEMP_SENSORS,
     CONF_TEMP_TARGET_AVG,
     CONF_TEMP_TARGET_ROUND,
@@ -408,6 +409,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
         # Temperature/Humidity Calibration logic
         if not current_config.get(CONF_TEMP_SENSORS) and advanced_mode:
             current_config.pop(CONF_TEMP_UPDATE_TARGETS, None)
+            current_config.pop(CONF_TEMP_INVERTED_OFFSET_TARGETS, None)
         if not current_config.get(CONF_HUMIDITY_SENSORS) and advanced_mode:
             current_config.pop(CONF_HUMIDITY_UPDATE_TARGETS, None)
 
@@ -689,6 +691,15 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             )
         }
 
+    def _entity_options(self, entity_ids: list[str]) -> list[dict[str, str]]:
+        """Dropdown options labelled "Friendly Name (entity_id)"."""
+        options = []
+        for entity_id in entity_ids:
+            state = self.hass.states.get(entity_id)
+            name = state.attributes.get("friendly_name", entity_id) if state else entity_id
+            options.append({"value": entity_id, "label": f"{name} ({entity_id})"})
+        return options
+
     def _section_factory_temperature(self, config: dict[str, Any]) -> dict[str, Any]:
         """Factory for temperature section."""
         master_fields = {}
@@ -702,6 +713,9 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
 
         advanced_fields = {}
         if config.get(CONF_ADVANCED_MODE, False):
+            # Offered from the saved update targets: a value outside the options
+            # makes HA reject the whole form, so the default is cut to them too.
+            update_targets = config.get(CONF_TEMP_UPDATE_TARGETS, [])
             advanced_fields = {
                 vol.Optional(
                     CONF_MIN_TEMP_OFF, default=config.get(CONF_MIN_TEMP_OFF, False)
@@ -727,6 +741,20 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         options=[opt.value for opt in CalibrationMode],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                         translation_key="temp_calibration_mode",
+                    )
+                ),
+                vol.Optional(
+                    CONF_TEMP_INVERTED_OFFSET_TARGETS,
+                    default=[
+                        entity_id
+                        for entity_id in config.get(CONF_TEMP_INVERTED_OFFSET_TARGETS, [])
+                        if entity_id in update_targets
+                    ],
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=self._entity_options(update_targets),  # type: ignore[typeddict-item]
+                        multiple=True,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
                 vol.Optional(

@@ -145,6 +145,7 @@ Use **multiple external sensors** for temperature and humidity to override membe
 Write the external sensor value back to your TRVs to fix their internal temperature reading.
 
 *   **Modes:** Absolute (Standard), Offset (Delta calculation), and Scaled (x100 for Danfoss Ally).
+*   **Inverted Offset:** For devices where a higher offset makes them report a *lower* temperature, select them under **Inverted Offset Targets** — the offset is then written with the opposite sign.
 *   **Heartbeat:** Periodically re-sends the calibration value to prevent sensor timeouts on Zigbee devices.
 *   **Ignore Off Members:** Prevents sending calibration updates to TRVs that are currently turned `off`, preserving battery life on wireless devices.
 
@@ -521,12 +522,13 @@ When everything agrees, it is empty. Two details make it trustworthy:
 | **Target Temperature Precision** / **Target Humidity Precision** | Round target values sent to devices (e.g. 0.5° or 1°). |
 | **Write External Temp to Entities** / **Write External Humidity to Entities** | Write the calculated value to number entities. |
 | **Calibration Mode** | How the value is sent: **Absolute** (Standard), **Offset** (Delta), or **Scaled** (x100). |
+| **Inverted Offset Targets** | *(Offset mode only)* Select the devices that work the opposite way — a higher offset makes them report a lower temperature. The list offers the devices already saved under **Write External Temp to Entities**, so save those first. |
 | **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
 | **Ignore Off Members** | Prevents sending calibration updates to devices that are currently `off`, preserving battery life on wireless sensors and TRVs. |
 | **Exclude Off Members from Temperature** | Exclude members that are currently `off` from temperature calculations (both current and target). Prevents a cold, switched-off radiator from dragging down the displayed average. |
 | **Minimum Temperature when Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). |
 
-External sensors are linked to the TRV's internal sensors automatically, through the Home Assistant device registry — this is what makes the Offset calibration mode precise.
+In Offset mode, each entity you write to is matched automatically — through the Home Assistant device registry — to the group member on the same device, so the offset is calculated against that device's own reading (without a match, the group's average is used).
 
 ### Sync Mode
 
