@@ -16,7 +16,7 @@
     <!-- 1 Hauptschalter -->
     <rect x="80" y="30" width="470" height="62" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
     <text x="100" y="56" font-size="16" font-weight="700">Hauptschalter aus</text>
-    <text x="100" y="78" font-size="13" fill="#57606a">Alle Geräte aus — auch isolierte.</text>
+    <text x="100" y="78" font-size="13" fill="#57606a">Seine Aktion: aus, feste Temperatur oder Handbetrieb.</text>
 
     <!-- 2 Fenster -->
     <rect x="80" y="104" width="470" height="62" rx="10" fill="#fff8c5" stroke="#bf8700" stroke-width="2"/>
@@ -57,10 +57,10 @@
     <text x="596" y="278" font-size="15" font-weight="700">Isolierte Geräte</text>
     <text x="596" y="300" font-size="12" fill="#57606a">Bleiben außen vor, solange</text>
     <text x="596" y="316" font-size="12" fill="#57606a">ihre Isolationsregel gilt.</text>
-    <text x="596" y="340" font-size="12" fill="#57606a">Nur der Hauptschalter</text>
-    <text x="596" y="356" font-size="12" fill="#57606a">erreicht sie noch. Endet</text>
-    <text x="596" y="372" font-size="12" fill="#57606a">die Regel, gehören sie</text>
-    <text x="596" y="388" font-size="12" fill="#57606a">wieder zur Gruppe und</text>
-    <text x="596" y="404" font-size="12" fill="#57606a">folgen ihr wie die anderen.</text>
+    <text x="596" y="340" font-size="12" fill="#57606a">Der Hauptschalter hebt</text>
+    <text x="596" y="356" font-size="12" fill="#57606a">beim Ausschalten jede</text>
+    <text x="596" y="372" font-size="12" fill="#57606a">Isolation auf. Endet die</text>
+    <text x="596" y="388" font-size="12" fill="#57606a">Regel, gehören sie wieder</text>
+    <text x="596" y="404" font-size="12" fill="#57606a">zur Gruppe wie die anderen.</text>
   </g>
 </svg>

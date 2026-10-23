@@ -52,20 +52,20 @@ From top to bottom, the first one that applies decides what the devices get:
 
 | Rule | What the devices get | Changes to the target meanwhile | When it ends |
 |---|---|---|---|
-| **Main Switch off** | Off, all of them. | Held back. | The target is sent again. |
+| **Main Switch off** | Its action: off for all of them (default), a fixed temperature, or nothing at all — the devices are released for manual control. | Held back. | The target is sent again. |
 | **Window open** | Off, or the window temperature. | Held back, unless **Adopt Manual Changes** lets them through for later — that works only while the window is the only active rule. | The target is sent again. |
 | **Nobody home** | The away action: off, an offset, a fixed temperature or a preset. | Held back. | The target is sent again. |
 | **Boost** | The boost temperature, for the time you asked for. | A direct command to the group ends the boost, and so does a device's `off` when the Sync Mode would mirror that `off` anyway. Other device changes are ignored while a boost runs. | The target is sent again, including the schedule slot that is current by then. |
 
 The first three are **blocks**. A few things are worth knowing about them:
 
-- **They are enforced, not only started.** A device that deviates is set back to what the block demands — with **Turn Off** that is off, with **Set Temperature** the window temperature.
+- **They are enforced, not only started.** A device that deviates is set back to what the block demands — with **Turn Off** that is off, with **Set Temperature** the window or Main Switch temperature. The one exception is a Main Switch set to **Release Devices** (manual control): it sends nothing and corrects nothing.
 - **The schedule keeps running in the background.** A slot change during a block updates the target. The devices get it once the block ends.
 - **Turning the group off always gets through.**
 - **When one block ends while another is still active,** the other one takes over, and the target waits until all of them are gone.
 - **A boost does not start during a block**, and a block starting ends a running boost.
 
-**Isolated devices** are a separate case. While their isolation rule applies, they are left out of the group entirely: out of the readings, out of the commands, and out of window and presence control. Only the Main Switch still reaches them. When the rule ends, they rejoin the group.
+**Isolated devices** are a separate case. While their isolation rule applies, they are left out of the group entirely: out of the readings, out of the commands, and out of window and presence control. When the rule ends, they rejoin the group. The Main Switch outranks isolation too: turning it off lifts every isolation, no isolation rule acts while it is off, and when it comes back on each rule decides anew.
 
 ---
 
@@ -80,7 +80,8 @@ The target is the same for the whole group. On the way to each device, it is adj
 - **Group Offset** shifts every device up or down, without changing the target underneath. It is paused while a block or a boost is active. It does not apply to what you set on the group yourself: those commands arrive exactly as given, and setting a temperature on the group resets the Group Offset to 0.
 - **Member Offsets** shift individual devices, e.g. a bedroom that should always run a degree cooler.
 - **Device limits** *(Union only)*: a device that cannot reach the temperature is turned off or set to its nearest limit (**Out-of-Bounds Action**). A device that does not support the mode is left alone or turned off (**Unsupported HVAC Mode Action**).
-- **Member Template** turns a heat/cool range into plain heat or cool for devices that only have a single setpoint.
+- **Range Template** turns a heat/cool range into plain heat or cool for devices that only have a single setpoint.
+- **Off Template** turns a heater that has no off mode off by setting it to heat at its own minimum temperature.
 - **Minimum Temperature when Off** sends a device's lowest temperature when turning it off, for valves that don't close fully.
 
 Which devices get a command:
@@ -110,7 +111,8 @@ Some cases don't follow the Sync Mode:
 
 - **While a block is active,** the block decides: the device is set back to what the block demands (see above).
 - **Isolated devices** are left alone.
-- **Devices covered by the Member Template** always follow the group's range.
+- **Devices covered by the Range Template** always follow the group's range.
+- **Heaters without an off mode** (with the **Off Template**): turning one down to its minimum temperature counts as switching it off, also for the cases above and below.
 - **With Respect Member Off State (Sync),** a device you turn off is left off, and its off is not passed on to the others. If it is the last device still running, the whole group turns off.
 - **Right after the group sent a command to that device,** a change you make directly at the device within about five seconds is not taken over. Home Assistant counts the device's reports as the answer to that command for this long, so a value that differs from the one the group just sent is ignored and the group keeps its own value. If you need your value, wait a few seconds and set it again.
 - **A temperature you set on a switched-off device** is ignored on some devices: while off, they show the same value as the group, so the first change there cannot be told apart from the switch-off itself. Switch the device on first and set the temperature afterwards.
@@ -125,7 +127,7 @@ The group entity shows **what the devices do**, not what the group wants:
 - **Target temperature** is calculated the same way from the devices' setpoints, or taken from the master device with **Use Master Target Temperature** (or **Use Master Target Humidity**). With **Correct member offset** (on by default), Member Offsets are taken out first, so a bedroom running a degree cooler doesn't pull the value down.
 - **Mode** is combined from the devices' modes as set by the **HVAC Mode Strategy**.
 
-This is why the display can differ from what you set: while an open window has switched the heating off, the group shows off, even though its target is still heat at 21 °C. Right after you change something, the group shows your value for a moment (**UI Grace Period**) before it switches to the devices' readings.
+This is why the display can differ from what you set: while an open window has switched the heating off, the group shows off, even though its target is still heat at 21 °C. With the **Off Template**, a heater standing on heat at its minimum temperature counts as off too — also when a frost-protection slot put it there, so the group can show off while its target is heat. Right after you change something, the group shows your value for a moment (**Optimistic UI Grace Period**) before it switches to the devices' readings.
 
 **External sensors** work independently of the target: they provide the room temperature, and with calibration configured, the group writes it to your thermostats — directly, as a correction against the device's own reading, or scaled, according to the [Calibration Mode](README.md#device-calibration).
 

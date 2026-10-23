@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
@@ -16,32 +15,13 @@ from .const import (
     ATTR_RESET_OFFSET,
     ATTR_RESET_PRESETS,
     ATTR_RESET_SCHEDULE,
-    META_KEY_GROUP_OFFSET,
 )
-from .number import async_push_group_offset
+from .number import async_push_group_offset, async_reset_group_offset
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
 
 _LOGGER = logging.getLogger(__name__)
-
-
-async def _async_reset_offset(group: ClimateGroupHelper) -> None:
-    """Clear the group offset and the schedule's ownership marker for it.
-
-    `offset_set_callback` is the complete path — it writes `run_state` *and*
-    pulls the Number entity along, so the slider shows the reset. The direct
-    write is the fallback for a group without that entity.
-    """
-    if group.offset_set_callback:
-        await group.offset_set_callback(0.0)
-    else:
-        group.run_state = replace(group.run_state, group_offset=0.0)
-
-    if META_KEY_GROUP_OFFSET in group.run_state.config_overrides:
-        group.run_state = group.run_state.clear_config_overrides({META_KEY_GROUP_OFFSET})
-
-    group.async_defer_or_update_ha_state()
 
 
 def _reset_schedule(group: ClimateGroupHelper) -> Awaitable[None] | None:
@@ -93,7 +73,7 @@ async def async_reset_group(
     steps: list[tuple[str, bool, Callable[[], Awaitable[None] | None]]] = [
         (ATTR_RESET_BOOST, reset_boost, lambda: group.boost_override_manager.abort(push=False)),
         (ATTR_RESET_PRESETS, reset_presets, lambda: group.preset_manager.async_update_runtime_presets(None)),
-        (ATTR_RESET_OFFSET, reset_offset, lambda: _async_reset_offset(group)),
+        (ATTR_RESET_OFFSET, reset_offset, lambda: async_reset_group_offset(group)),
         (ATTR_RESET_SCHEDULE, reset_schedule, lambda: _reset_schedule(group)),
         (ATTR_RESET_BYPASS, reset_bypass, lambda: group.schedule_bypass_handler.update_bypass_entity(None, apply=False)),
         (ATTR_RESET_FALLBACK, reset_fallback, lambda: group.schedule_handler.update_fallback_payload(None, apply=False)),
@@ -142,7 +122,7 @@ async def async_reset_group(
         push_offset
         and push_boost
         and not group.run_state.blocking_sources
-        and group.member_template_manager.range_template is None
+        and group.range_template_manager.range_template is None
     ):
         push_offset = False
     if push_offset:

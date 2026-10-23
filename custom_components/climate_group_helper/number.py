@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.number import NumberEntity, NumberMode, RestoreNumber
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, META_KEY_GROUP_OFFSET
@@ -57,6 +58,25 @@ def clean_offset(value: Any, entity_id: str) -> float | None:
     return clamped
 
 
+async def async_reset_group_offset(group: ClimateGroupHelper) -> None:
+    """Clear the group offset and the schedule's ownership marker for it.
+
+    Sends nothing — the callers decide whether a push follows. The offset
+    entity's callback is the complete path: it writes `run_state` *and* pulls
+    the slider along. The direct write is the fallback for a group without
+    that entity (disabled by the user).
+    """
+    if group.offset_set_callback:
+        await group.offset_set_callback(0.0)
+    else:
+        group.run_state = replace(group.run_state, group_offset=0.0)
+
+    if META_KEY_GROUP_OFFSET in group.run_state.config_overrides:
+        group.run_state = group.run_state.clear_config_overrides({META_KEY_GROUP_OFFSET})
+
+    group.async_defer_or_update_ha_state()
+
+
 async def async_push_group_offset(group: ClimateGroupHelper) -> None:
     """Push the current group offset to the members.
 
@@ -77,7 +97,7 @@ async def async_push_group_offset(group: ClimateGroupHelper) -> None:
         # owned by the template handler, which alone drives their changeover).
         # Without this second push the covered devices keep their old setpoint
         # until an unrelated member event happens to trigger one.
-        if group.member_template_manager.range_template is not None:
+        if group.range_template_manager.range_template is not None:
             await group.template_call_handler.call_debounced()
     else:
         _LOGGER.debug(
@@ -128,7 +148,7 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         self._attr_unique_id = f"{group.unique_id}_group_offset"
 
     @property
-    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
+    def device_info(self) -> DeviceInfo:
         """Attach this entity to the same device as the climate group."""
         return self._group.device_info
 
@@ -143,6 +163,10 @@ class OffsetNumber(RestoreNumber, NumberEntity):
         _LOGGER.debug("[%s] Registered offset entity: '%s'", self._group.entity_id, self.entity_id)
 
         self._group.offset_set_callback = self._set_offset
+        # A slot or preset applied during the climate setup owns the offset;
+        # the persisted value predates it.
+        if META_KEY_GROUP_OFFSET in self._group.run_state.config_overrides:
+            return
         if (last := await self.async_get_last_number_data()) is not None:
             if last.native_value is not None:
                 # Clamped like any other write: a persisted value can predate the

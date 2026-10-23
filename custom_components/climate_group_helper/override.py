@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import ATTR_HVAC_MODE, ATTR_HVAC_MODES, HVACMode
 from homeassistant.const import ATTR_TEMPERATURE
-from homeassistant.core import callback
+from homeassistant.core import State, callback
 from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
@@ -18,12 +18,16 @@ from .const import (
     CONF_PRESENCE_AWAY_OFFSET,
     CONF_PRESENCE_AWAY_PRESET,
     CONF_PRESENCE_AWAY_TEMPERATURE,
+    CONF_SWITCH_ACTION,
+    CONF_SWITCH_TEMPERATURE,
     CONF_WINDOW_ACTION,
     CONF_WINDOW_TEMPERATURE,
     PresenceAction,
+    SwitchAction,
     WindowControlAction,
 )
 from .isolation import drop_all_claims, reevaluate_all
+from .member_template import setpoint_reaches
 from .state import available_state
 
 if TYPE_CHECKING:
@@ -252,7 +256,7 @@ class BoostOverrideManager(BaseOverrideManager):
         feature, so the physical state has to decide for them.
         """
         state = self._group.aggregator.read_member_state(entity_id)
-        if state is not None and self._group.member_template_manager.is_covered_state(state):
+        if state is not None and self._group.range_template_manager.is_covered_state(state):
             return self._group.hass.states.get(entity_id)
         return state
 
@@ -302,14 +306,38 @@ class BoostOverrideManager(BaseOverrideManager):
 class SwitchOverrideManager(BaseOverrideManager):
     """Manages the switch blocking source (main switch).
 
-    The main switch is the master: activating it ALWAYS sends OFF to all members
-    (no state guard — a stale or unreported member state must never suppress the
-    OFF command). The UI switch and the schedule meta-key `turn_off` are equal,
-    interchangeable triggers for the same block — either one can activate or
-    release it, whichever acts last wins.
+    The main switch is the master. Its configured action decides what the
+    members get while it is off: OFF, a fixed setpoint, or nothing at all
+    (release — the group lets go of the devices). Whatever it sends goes out
+    unconditionally (no state guard — a stale or unreported member state must
+    never suppress it). The UI switch and the schedule meta-key `turn_off` are
+    equal, interchangeable triggers for the same block — either one can activate
+    or release it, whichever acts last wins.
     """
 
     OVERRIDE_NAME = "switch"
+
+    def __init__(self, group: ClimateGroupHelper) -> None:
+        super().__init__(group)
+        self._switch_action = group.config.get(CONF_SWITCH_ACTION, SwitchAction.OFF)
+        self._switch_temperature: float | None = group.config.get(CONF_SWITCH_TEMPERATURE)
+
+    def _active_data(self) -> dict[str, Any] | None:
+        """Return the payload the block sends, or None when it releases the members.
+
+        The setpoint goes out without a mode, like the window's: it shifts the
+        setpoint of running devices and leaves an OFF device off.
+        """
+        if self._switch_action == SwitchAction.RELEASE:
+            return None
+        if self._switch_action == SwitchAction.TEMPERATURE:
+            if self._switch_temperature is not None:
+                return {"temperature": self._switch_temperature}
+            _LOGGER.warning(
+                "[%s] Main switch action is TEMPERATURE but no switch_temperature configured — falling back to OFF",
+                self._group.entity_id,
+            )
+        return {"hvac_mode": HVACMode.OFF}
 
     @property
     def call_handler(self) -> SwitchCallHandler:  # type: ignore[override]
@@ -330,19 +358,24 @@ class SwitchOverrideManager(BaseOverrideManager):
             self._group.switch_state_callback()
 
     async def activate(self) -> None:
-        """Add 'switch' to blocking_sources, abort boost, push members OFF.
+        """Add 'switch' to blocking_sources, abort boost, push the action's payload.
 
-        OFF is sent unconditionally — regardless of what members currently
-        report — so the master switch is guaranteed to reach every device.
+        The payload is sent unconditionally — regardless of what members
+        currently report — so the master switch is guaranteed to reach every
+        device. The release action sends nothing.
 
-        Isolation is reset like the boost: the group-wide OFF is what an
-        isolation wanted for its device anyway, and `restore()` decides anew.
+        Isolation is reset like the boost, and `restore()` decides anew. While
+        the block stands, the switch takes precedence over every rule.
         """
         self._group.boost_override_manager.abort(push=False)
         drop_all_claims(self._group)
         self._block()
         self._notify_switch_entity()
-        await self.call_handler.call_immediate({"hvac_mode": HVACMode.OFF})
+        # The persisted `blocking_sources` attribute restores the block after a
+        # restart; without this write it would depend on a member echo.
+        self._group.async_defer_or_update_ha_state()
+        if (payload := self._active_data()) is not None:
+            await self.call_handler.call_immediate(payload)
 
     async def restore(self) -> None:
         """Remove 'switch' from blocking_sources; restore members if no other block.
@@ -352,6 +385,7 @@ class SwitchOverrideManager(BaseOverrideManager):
         """
         self._unblock()
         self._notify_switch_entity()
+        self._group.async_defer_or_update_ha_state()
         # Cancel our own pending debounced enforce call — it carries a stale payload
         # that must not land after the restore or the cascade re-assert.
         await self.enforce_call_handler.async_cancel_all()
@@ -364,14 +398,17 @@ class SwitchOverrideManager(BaseOverrideManager):
         await reevaluate_all(self._group)
 
     async def enforce_override(self) -> None:
-        """Push OFF to deviating members when switch block is active.
+        """Push the action's payload to deviating members when switch block is active.
 
         Uses SwitchEnforceCallHandler (bypasses blocking_sources, respects isolated_members).
+        The release action corrects nothing — the members are left alone.
         """
         if "switch" not in self._group.run_state.blocking_sources:
             return
+        if (payload := self._active_data()) is None:
+            return
         _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
-        await self.enforce_call_handler.call_debounced({"hvac_mode": HVACMode.OFF})
+        await self.enforce_call_handler.call_debounced(payload)
 
 
 class WindowOverrideManager(BaseOverrideManager):
@@ -430,12 +467,12 @@ class WindowOverrideManager(BaseOverrideManager):
         """Push the active window override state to deviating members.
 
         Only runs when 'window' is in blocking_sources — SwitchOverrideManager
-        handles its own enforcement (always OFF via SwitchCallHandler).
+        handles its own enforcement.
         Uses WindowControlCallHandler (bypasses blocking_sources, respects isolated_members).
         """
         if "window" not in self._group.run_state.blocking_sources:
             return
-        # Switch takes precedence — SwitchOverrideManager already sends OFF to all members.
+        # Switch takes precedence — SwitchOverrideManager enforces its own action.
         if "switch" in self._group.run_state.blocking_sources:
             return
         _LOGGER.debug("[%s] Enforcing '%s' block on deviating members", self._group.entity_id, self.OVERRIDE_NAME)
@@ -474,6 +511,26 @@ class PresenceOverrideManager(BaseOverrideManager):
         """
         resolved = self._group.preset_manager.resolve_preset(self._active_data() or {})
         return isinstance(resolved, dict) and resolved.get(ATTR_HVAC_MODE) == HVACMode.OFF
+
+    def away_payload_parks(self, state: State) -> bool:
+        """Return True if the away payload's setpoint parked this member (Off Template).
+
+        A setpoint down to the member's own min_temp puts a parkable member on
+        heat + min_temp, which reads as `off`: the group owns that `off`, as in
+        `away_payload_switches_members_off`. Compared is what the member was
+        sent — the setpoint plus its member offset; the group offset is
+        suspended under the block.
+        """
+        manager = self._group.off_template_manager
+        if not manager.is_parkable(state):
+            return False
+        resolved = self._group.preset_manager.resolve_preset(self._active_data() or {})
+        temperature = resolved.get(ATTR_TEMPERATURE) if isinstance(resolved, dict) else None
+        if temperature is None:
+            return False
+        temperature = float(temperature) + self._group._temp_offset_map.get(state.entity_id, 0.0)
+        park = manager.park_setpoint(state)
+        return temperature <= park or setpoint_reaches(state.attributes, temperature, park)
 
     def _active_data(self) -> dict[str, Any] | None:
         """Compute the away payload against the current target_state at call time.

@@ -68,7 +68,7 @@
               "ignore_off_members_temperature": "从温度中排除已关闭的成员"
             },
             "data_description": {
-              "temp_target_avg": "组如何计算要发送给成员的目标设定值。",
+              "temp_target_avg": "群组如何汇总成员的目标温度设定值。",
               "temp_use_master": "将主设备的设定值显示为群组的目标温度，而不是计算成员平均值。主设备不可用时回退到平均值。仅影响群组状态的显示方式 — 不会控制或同步成员（如需控制/同步请使用同步模式：Master/Lock）。",
               "temp_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
               "temp_current_avg": "组如何汇总成员的传感器读数。",
@@ -94,7 +94,7 @@
               "humidity_update_targets": "将外部湿度写入实体"
             },
             "data_description": {
-              "humidity_target_avg": "组如何计算要发送给成员的目标设定值。",
+              "humidity_target_avg": "群组如何汇总成员的目标湿度设定值。",
               "humidity_use_master": "将主设备的设定值显示为群组的目标湿度，而不是计算成员平均值。主设备不可用时回退到平均值。仅影响群组状态的显示方式 — 不会控制或同步成员（如需控制/同步请使用同步模式：Master/Lock）。",
               "humidity_target_round": "仅适用于发送到设备的值，不适用于当前/显示的值。",
               "humidity_current_avg": "组如何汇总成员的传感器读数。",
@@ -111,7 +111,7 @@
               "ignore_off_members_sync": "尊重成员关闭状态（同步）"
             },
             "data_description": {
-              "sync_mode": "当成员在组外更改时该怎么办。禁用：忽略。镜像：镜像更改。锁定：恢复更改。镜像/锁定：镜像所选，恢复未选。大师/锁定：镜像大师，恢复其他。仅采纳：采纳更改但不向其他成员传递。",
+              "sync_mode": "当成员在组外更改时该怎么办。禁用：忽略。镜像：镜像更改。锁定：恢复更改。镜像/锁定：镜像所选，恢复未选。主控/锁定：镜像主控，恢复其他。仅采纳：采纳更改但不向其他成员传递。",
               "sync_attributes": "定义同步模式作用于哪些属性。所选和未选属性的处理方式（镜像、恢复或忽略）取决于所选模式。",
               "ignore_off_members_sync": "手动关闭的成员将被忽略。它们的状态既不会被镜像也不会被恢复。注意：直接群组命令始终会到达所有成员。"
             }
@@ -131,15 +131,15 @@
               "close_delay": "关闭延迟 (秒)"
             },
             "data_description": {
-              "window_mode": "基于传感器启用组。窗口打开时 HVAC 设置为 'off'。",
+              "window_mode": "当受监控的窗户打开时，暂停供暖或降低温度。",
               "window_adopt_manual_changes": "保留窗户打开期间所做的更改，并在窗户关闭后应用。在此之前，执行开窗动作。",
               "window_action": "窗户打开时的动作：完全关闭或设置为特定温度（例如防冻保护）。",
               "window_temperature": "选择“设置温度”动作时的目标温度。",
-              "room_sensor": "(可选) 房间窗户/门的二进制传感器。",
-              "zone_sensor": "(可选) 区域/楼层的窗户/门的二进制传感器。区域传感器必须包含房间传感器。",
-              "room_open_delay": "房间窗口打开后的等待时间。",
-              "zone_open_delay": "区域窗口打开后的等待时间。",
-              "close_delay": "窗口关闭后的恢复等待时间。"
+              "room_sensor": "（可选）房间窗户/门的二进制传感器、input_boolean 或窗帘/门盖 (cover) 实体。",
+              "zone_sensor": "（可选）区域/楼层窗户/门的二进制传感器、input_boolean 或窗帘/门盖 (cover) 实体。区域传感器必须包含房间传感器。",
+              "room_open_delay": "房间窗户打开后，触发开窗动作前的等待时间。",
+              "zone_open_delay": "区域窗户打开后，触发开窗动作前的等待时间。",
+              "close_delay": "所有窗户关闭后，恢复之前状态前的等待时间。"
             }
           },
           "presence_section": {
@@ -192,14 +192,14 @@
           },
           "presets_section": {
             "name": "群组预设",
-            "description": "为群组定义自己命名的预设（例如 eco、guest、ventilate）。选择某个预设会将其属性一次性应用到所有成员。群组预设会覆盖成员自身的同名预设。",
+            "description": "为群组定义自己命名的预设（例如 eco、guest、ventilate）。选择某个预设会将其属性一次性应用到所有成员。群组预设会覆盖成员自身的同名预设。通过 set_group_preset 服务设置的运行时预设会添加到此处填写的预设之上，并优先于同名预设。",
             "data": {
               "group_presets": "群组预设 (YAML)",
               "retain_service_changes_presets": "保留通过服务所做的更改（预设）"
             },
             "data_description": {
               "group_presets": "以 YAML 编写的预设：每个预设使用自由选择的名称，并附上要应用的属性（temperature、hvac_mode、fan_mode、swing_mode）。预设仅应用其中列出的属性。格式和可直接复制的示例请参见文档。",
-              "retain_service_changes_presets": "重启后保留通过服务创建或更新的预设。否则将重置为配置的预设。"
+              "retain_service_changes_presets": "重启后保留通过 set_group_preset 服务设置的运行时预设。否则群组仅以此处填写的预设启动。"
             }
           },
           "temp_offsets_section": {
@@ -214,7 +214,7 @@
           },
           "isolation_section": {
             "name": "成员隔离",
-            "description": "当二进制传感器激活时，临时隔离特定成员（如窗帘后的暖气片）。隔离的成员将被关闭并从组计算中排除。",
+            "description": "在触发器激活期间临时隔离特定成员。被隔离的成员将执行隔离动作（默认为关闭），并从群组计算中排除。",
             "data": {
               "isolation_rule_count": "规则数量",
               "isolation_rule_1_entities": "要隔离的实体",
@@ -230,7 +230,7 @@
             "data_description": {
               "isolation_rule_count": "显示多少条独立的隔离规则。更改后保存，以显示或隐藏额外的规则槽。",
               "isolation_rule_1_entities": "触发器激活时需要隔离的群组成员。",
-              "isolation_rule_1_trigger": "选择触发隔离的方式：二进制传感器或群组的特定HVAC模式。",
+              "isolation_rule_1_trigger": "选择触发隔离的条件：二进制传感器、群组的特定 HVAC 模式，或手动关闭的成员。",
               "isolation_rule_1_sensor": "（传感器触发）当传感器为ON时触发隔离的二进制传感器。",
               "isolation_rule_1_hvac_modes": "（HVAC模式触发）当群组目标模式为其中之一时，隔离将激活。",
               "isolation_rule_1_activate_delay": "（仅限传感器/HVAC模式触发）触发器激活后到隔离成员之前的等待时间。",
@@ -256,7 +256,7 @@
             },
             "data_description": {
               "isolation_rule_2_entities": "触发器激活时需要隔离的群组成员。",
-              "isolation_rule_2_trigger": "选择触发隔离的方式：二进制传感器或群组的特定HVAC模式。",
+              "isolation_rule_2_trigger": "选择触发隔离的条件：二进制传感器、群组的特定 HVAC 模式，或手动关闭的成员。",
               "isolation_rule_2_sensor": "（传感器触发）当传感器为ON时触发隔离的二进制传感器。",
               "isolation_rule_2_hvac_modes": "（HVAC模式触发）当群组目标模式为其中之一时，隔离将激活。",
               "isolation_rule_2_activate_delay": "（仅限传感器/HVAC模式触发）触发器激活后到隔离成员之前的等待时间。",
@@ -282,7 +282,7 @@
             },
             "data_description": {
               "isolation_rule_3_entities": "触发器激活时需要隔离的群组成员。",
-              "isolation_rule_3_trigger": "选择触发隔离的方式：二进制传感器或群组的特定HVAC模式。",
+              "isolation_rule_3_trigger": "选择触发隔离的条件：二进制传感器、群组的特定 HVAC 模式，或手动关闭的成员。",
               "isolation_rule_3_sensor": "（传感器触发）当传感器为ON时触发隔离的二进制传感器。",
               "isolation_rule_3_hvac_modes": "（HVAC模式触发）当群组目标模式为其中之一时，隔离将激活。",
               "isolation_rule_3_activate_delay": "（仅限传感器/HVAC模式触发）触发器激活后到隔离成员之前的等待时间。",
@@ -308,7 +308,7 @@
             },
             "data_description": {
               "isolation_rule_4_entities": "触发器激活时需要隔离的群组成员。",
-              "isolation_rule_4_trigger": "选择触发隔离的方式：二进制传感器或群组的特定HVAC模式。",
+              "isolation_rule_4_trigger": "选择触发隔离的条件：二进制传感器、群组的特定 HVAC 模式，或手动关闭的成员。",
               "isolation_rule_4_sensor": "（传感器触发）当传感器为ON时触发隔离的二进制传感器。",
               "isolation_rule_4_hvac_modes": "（HVAC模式触发）当群组目标模式为其中之一时，隔离将激活。",
               "isolation_rule_4_activate_delay": "（仅限传感器/HVAC模式触发）触发器激活后到隔离成员之前的等待时间。",
@@ -320,7 +320,7 @@
           },
           "member_template_section": {
             "name": "成员模板",
-            "description": "将单设定点成员渲染为虚拟冷暖范围实体。群组助手根据每个成员的当前温度，将范围命令转换为适当的物理冷暖命令。",
+            "description": "以成员设备本身不提供的功能来呈现成员。范围模板：单设定点成员作为制热/制冷范围设备运行——范围命令会根据每个成员的当前温度转换为制热或制冷。关闭模板：没有关闭模式的加热器通过以其自身最低温度制热来关闭。",
             "data": {
               "range_template_enabled": "启用范围模板",
               "range_template_deadband_action": "死区动作",
@@ -330,7 +330,8 @@
               "range_template_humidity_enabled": "死区内除湿",
               "range_template_humidity_action": "湿度动作",
               "range_template_humidity_hysteresis": "湿度滞后",
-              "range_template_humidity_deactivation_delay": "停止延迟"
+              "range_template_humidity_deactivation_delay": "停止延迟",
+              "off_template_enabled": "启用关闭模板"
             },
             "data_description": {
               "range_template_enabled": "自动将所有单设定点成员（不支持原生制热/制冷）呈现为虚拟范围模式设备。",
@@ -341,13 +342,16 @@
               "range_template_humidity_enabled": "在目标温度范围内，若当前湿度超过目标湿度，则切换至湿度动作。",
               "range_template_humidity_action": "死区内当前湿度超过目标湿度时执行的动作。",
               "range_template_humidity_hysteresis": "目标湿度周围的施密特触发滞后带，防止频繁启停。",
-              "range_template_humidity_deactivation_delay": "湿度降至阈值以下后停止湿度动作的延迟时间。"
+              "range_template_humidity_deactivation_delay": "湿度降至阈值以下后停止湿度动作的延迟时间。",
+              "off_template_enabled": "没有关闭模式的加热器在群组关闭时会被设置为以其自身最低温度制热。处于最低温度的加热器随后被视为已关闭。对于具有关闭模式的设备，请改用“关闭时的最低温度”。"
             }
           },
           "advanced_section": {
             "name": "高级设置",
-            "description": "微调命令时间和重试行为。切换诊断属性和配置传感器。",
+            "description": "选择主开关关闭期间的行为。微调命令时间和重试行为。切换诊断属性和配置传感器。",
             "data": {
+              "switch_action": "主开关动作",
+              "switch_temperature": "主开关温度",
               "debounce_delay": "防抖延迟 (秒)",
               "retry_attempts": "重试次数",
               "retry_delay": "重试延迟 (秒)",
@@ -356,9 +360,11 @@
               "grace_period": "乐观 UI 缓冲期（秒）",
               "expose_smart_sensors": "公开智能传感器",
               "expose_member_entities": "公开成员列表",
-              "expose_config": "显示配置 (调试)"
+              "expose_config": "公开配置传感器"
             },
             "data_description": {
+              "switch_action": "主开关关闭期间设备会收到什么：关闭、设置温度（固定设定值，例如防冻保护——只更改运行中设备的设定温度），或释放设备（群组不再干预设备，由你直接控制）。",
+              "switch_temperature": "选择“设置温度”动作时的目标温度。",
               "debounce_delay": "发送命令前的等待时间。较高的值可防止滑动控制时出现“连发”命令。",
               "retry_attempts": "如果设备未响应，重新发送命令的次数。设置为 0 以禁用。",
               "retry_delay": "重试尝试之间的暂停。给设备一点恢复时间可以提高可靠性。",
@@ -366,8 +372,8 @@
               "member_command_delay": "向各成员发送命令之间的暂停时间。当同时控制多个设备导致网络或网关过载时（例如红外发射器、部分 Zigbee 协调器），此设置会有所帮助。设为 0 可禁用。",
               "grace_period": "群组在切换到成员平均值之前显示已发送值的时长。防止慢速设备（Cloud 网关、Zigbee）回显旧状态时的 UI 闪烁。设置为 0 可禁用。",
               "expose_smart_sensors": "为群组的温度和湿度创建额外的传感器实体（用于图表）。",
-              "expose_member_entities": "创建一个列出所有成员实体 ID 的属性。",
-              "expose_config": "将所有配置值添加到实体属性中。用于调试。"
+              "expose_member_entities": "添加包含所有成员的 'entity_id' 属性，以便更多信息对话框显示成员列表。",
+              "expose_config": "创建一个诊断传感器 (sensor.*_configuration)，将可移植设置作为 JSON 属性公开。便于通过自动化在群组之间复制设置。"
             }
           }
         },
@@ -381,13 +387,14 @@
       "no_entities": "组中必须至少保留一个空调设备。",
       "master_not_in_members": "主实体必须是群组成员。",
       "master_refresh_notice": "已添加主实体。新选项可用。",
-      "master_options_notice": "新的主实体选项",
+      "master_options_notice": "此部分提供了主实体的新选项。",
       "isolation_all_selected": "至少一个成员必须保留在隔离之外。",
       "isolation_entity_overlap": "每个成员只能出现在一条隔离规则中。",
       "isolation_action_preset_required": "请为隔离动作选择一个预设模式。",
       "isolation_sensor_required": "请为隔离规则选择一个传感器，或将其触发器设为已禁用。",
       "isolation_hvac_modes_required": "请为隔离规则至少选择一个模式，或将其触发器设为已禁用。",
       "window_temperature_required": "请设置开窗温度，或更改开窗动作。",
+      "switch_temperature_required": "请设置主开关温度，或更改主开关动作。",
       "presence_action_value_required": "请为所选的离开动作设置数值，或更改该动作。",
       "schedule_fallback_payload_invalid": "后备计划有效负载中的 YAML 格式无效。必须是有效的键值映射。",
       "group_presets_invalid": "群组预设中的 YAML 格式无效。必须是有效的键值映射。",
@@ -401,15 +408,15 @@
   "selector": {
     "hvac_mode_strategy": {
       "options": {
-        "normal": "正常 (民主)",
-        "off_priority": "关闭优先 (主开关)",
-        "auto": "自动 (智能)"
+        "normal": "正常 – 群组采用成员中最常见的模式",
+        "off_priority": "关闭优先 – 如果任一成员关闭，则整个群组显示为关闭",
+        "auto": "自动 – 在“正常”与“关闭优先”之间智能切换"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "交集 (安全模式 - 共同功能)",
-        "union": "并集 (高级用户 - 所有功能)"
+        "intersection": "交集 – 仅支持所有成员都具备的功能",
+        "union": "并集 – 支持任一成员具备的所有功能"
       }
     },
     "temp_target_avg": {
@@ -505,6 +512,13 @@
       "options": {
         "off": "关闭",
         "temperature": "设置温度"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "关闭",
+        "temperature": "设置温度",
+        "release": "释放设备"
       }
     },
     "union_out_of_bounds_action": {
@@ -628,32 +642,6 @@
     }
   },
   "services": {
-    "set_temperature": {
-      "name": "设置温度",
-      "description": "设置整个组的目标温度。",
-      "fields": {
-        "entity_id": {
-          "name": "空调组",
-          "description": "要控制的组。"
-        },
-        "temperature": {
-          "name": "目标温度",
-          "description": "所需的温度。"
-        },
-        "target_temp_high": {
-          "name": "目标高",
-          "description": "加热/冷却模式的上限。"
-        },
-        "target_temp_low": {
-          "name": "目标低",
-          "description": "加热/冷却模式的下限。"
-        },
-        "hvac_mode": {
-          "name": "HVAC 模式",
-          "description": "可选更改模式。"
-        }
-      }
-    },
     "set_schedule_entity": {
       "name": "设置日程实体",
       "description": "在运行时切换活动的日程或日历实体。如果省略或设置为 null，群组将恢复为配置的默认实体并重新应用当前时段。",
@@ -686,11 +674,11 @@
     },
     "set_group_preset": {
       "name": "设置群组预设",
-      "description": "在运行时创建、更新或清除虚拟群组预设。留空以重置。",
+      "description": "设置、更改或移除群组的运行时预设。它们添加到群组设置中的配置预设之上，并优先于同名预设。",
       "fields": {
         "payload": {
           "name": "有效负载",
-          "description": "群组预设（YAML 或映射格式）。留空以重置。格式和示例请参见文档。"
+          "description": "要设置的运行时预设（YAML 或映射格式）。设为 null 或空的预设将被移除；空的 payload 会移除所有运行时预设。格式和示例请参见文档。"
         }
       }
     },
@@ -764,23 +752,9 @@
         },
         "presets": {
           "name": "组预设",
-          "description": "清除运行时组预设并恢复配置的预设。"
+          "description": "移除所有运行时预设。配置预设保持不变。"
         }
       }
-    }
-  },
-  "issues": {
-    "member_unavailable": {
-      "title": "成员设备不可用",
-      "description": "{group_name} 中的一个或多个设备离线。组将继续使用现有设备工作。\n\n不可用: {unavailable_entities}"
-    },
-    "no_members_available": {
-      "title": "无可用成员",
-      "description": "组 {group_name} 没有活动成员，实际上处于离线状态。\n\n检查: {member_entities}"
-    },
-    "conflicting_features": {
-      "title": "功能冲突",
-      "description": "组 {group_name} 的成员具有不同的功能。功能可能仅限于所有成员都支持的部分。\n\n冲突: {conflicting_entities}"
     }
   },
   "device_automation": {

@@ -41,6 +41,7 @@ from .const import (
     ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY,
     ATTR_ACTIVE_SCHEDULE_ENTITY,
     ATTR_ACTIVE_VIRTUAL_PRESET,
+    ATTR_BLOCKING_SOURCES,
     ATTR_GROUP_OFFSET,
     ATTR_ISOLATED_MEMBERS,
     ATTR_LAST_ACTIVE_HVAC_MODE,
@@ -66,6 +67,7 @@ from .const import (
     SUPPORTED_FEATURES,
     IsolationTrigger,
 )
+from .member_template import is_off_template_or_physical
 from .number import clean_offset
 from .payload import normalize_yaml_bool_modes
 from .state import ClimateState
@@ -197,6 +199,63 @@ def warn_missing_entities(
                 entity_id,
                 key,
             )
+
+
+def release_stale_isolation(group: ClimateGroupHelper) -> None:
+    """Release an isolation no rule holds any more (startup).
+
+    A restored isolation whose trigger ended while Home Assistant was down (a
+    sensor that switched back, a member switched on again) has no transition
+    left to release it. Run twice: right after `restore_state()`, so the
+    member is free before the startup pushes (bypass, window, presence) — and
+    again after every rule's `async_setup()`, for a sensor that reads off only
+    in between (its listener subscribes too late for that change).
+
+    Only when every rule reads the member as certainly not held. That also
+    rules out every valid claim: at startup a continuous trigger claims only
+    what it reads as held, MEMBER_OFF only a member that is off (unknown). A
+    trigger still unknown (sensor not loaded, unavailable) keeps it; its first
+    definite reading decides later. No push.
+    """
+    handlers = group.member_isolation_handlers
+    # Per rule first: a claim its own trigger reads as ended goes even while
+    # another rule still holds the member — left behind, it would count as a
+    # foreign claim and block that rule's later release.
+    for handler in handlers:
+        handler._claims -= {
+            entity_id for entity_id in handler._claims if handler.trigger_reading(entity_id) is False
+        }
+    stale = {
+        entity_id
+        for entity_id in group.run_state.isolated_members
+        if all(handler.trigger_reading(entity_id) is False for handler in handlers)
+    }
+    if not stale:
+        return
+    _LOGGER.debug("[%s] Releasing isolation no rule holds: %s", group.entity_id, sorted(stale))
+    group.run_state = replace(
+        group.run_state, isolated_members=group.run_state.isolated_members - stale
+    )
+
+
+def should_restore_switch_block(group: ClimateGroupHelper, last_state: State | None) -> bool:
+    """Return True if the group was persisted with its main switch off.
+
+    Read from the group's own `blocking_sources` attribute. An `unknown` group
+    state counts too: the attribute is computed from run_state, so it is
+    reliable whatever mode the group reported. An `unavailable` state carries
+    none. A block without a usable switch entity could never be released again.
+    """
+    if last_state is None:
+        return False
+    saved_sources = last_state.attributes.get(ATTR_BLOCKING_SOURCES)
+    if not isinstance(saved_sources, list) or "switch" not in saved_sources:
+        return False
+    registry = er.async_get(group.hass)
+    entity_id = registry.async_get_entity_id("switch", DOMAIN, f"{group.unique_id}_control_switch")
+    if entity_id is None or (entry := registry.async_get(entity_id)) is None:
+        return False
+    return not entry.disabled
 
 
 def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
@@ -450,7 +509,7 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
             )
             # Claims are runtime state and start empty after a restart, so every
             # rule is seeded from what was persisted. A continuous trigger can be
-            # read back directly (`covers_actively()` asks the sensor / target
+            # read back directly (`trigger_reading()` asks the sensor / target
             # mode), which is what its own setup will do moments later.
             for handler in group.member_isolation_handlers:
                 if handler._trigger == IsolationTrigger.MEMBER_OFF:
@@ -458,7 +517,7 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
                 handler._claims.update(
                     entity_id
                     for entity_id in valid_isolated
-                    if handler.covers_actively(entity_id)
+                    if handler.trigger_reading(entity_id) is True
                 )
 
             # A MEMBER_OFF rule builds its claims from events, of which there are
@@ -475,13 +534,14 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
                     if watch_list and entity_id not in watch_list:
                         continue
                     if any(
-                        other.covers_actively(entity_id)
+                        other.trigger_reading(entity_id) is True
                         for other in group.member_isolation_handlers
                     ):
                         continue
-                    state = group.hass.states.get(entity_id)
-                    if state and state.state == HVACMode.OFF:
+                    state = group.aggregator.read_member_state(entity_id)
+                    if is_off_template_or_physical(state):
                         handler._claims.add(entity_id)
+
             _LOGGER.debug(
                 "[%s] Restored isolated members: %s", group.entity_id, valid_isolated
             )

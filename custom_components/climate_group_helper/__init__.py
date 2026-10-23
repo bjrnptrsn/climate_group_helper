@@ -51,6 +51,7 @@ from .const import (
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
+    CONF_OFF_TEMPLATE_ENABLED,
     CONF_PRESENCE_ACTION,
     CONF_PRESENCE_AWAY_DELAY,
     CONF_PRESENCE_AWAY_OFFSET,
@@ -79,6 +80,8 @@ from .const import (
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_FALLBACK_PAYLOAD,
     CONF_SCHEDULE_HOLD_DURATION,
+    CONF_SWITCH_ACTION,
+    CONF_SWITCH_TEMPERATURE,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
     CONF_TEMP_CALIBRATION_MODE,
@@ -147,6 +150,9 @@ VALID_CONFIG_KEYS = {
     CONF_IGNORE_OFF_MEMBERS_SCHEDULE,
     # Temperature aggregation options
     CONF_IGNORE_OFF_MEMBERS_TEMPERATURE,
+    # Main switch options
+    CONF_SWITCH_ACTION,
+    CONF_SWITCH_TEMPERATURE,
     # Window control options
     CONF_WINDOW_MODE,
     CONF_WINDOW_ADOPT_MANUAL_CHANGES,
@@ -183,6 +189,7 @@ VALID_CONFIG_KEYS = {
     CONF_EXPOSE_MEMBER_ENTITIES,
     CONF_EXPAND_SECTIONS,
     CONF_RANGE_TEMPLATE_ENABLED,
+    CONF_OFF_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_CONDITIONAL,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
     CONF_RANGE_TEMPLATE_HEAT_ENTITIES,
@@ -283,14 +290,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register the bundled Lovelace card (once per build; no-op without a bundle).
     await _async_register_card(hass)
 
-    # Set up climate and sensor first — climate.async_setup_entry stores the group
-    # reference in hass.data, which switch.async_setup_entry depends on.
-    await hass.config_entries.async_forward_entry_setups(entry, [Platform.CLIMATE, Platform.SENSOR])
+    # Climate alone first: switch and number need the group's reference in
+    # hass.data, sensor needs its entity registry entry. Platforms forwarded
+    # together set up concurrently, in no guaranteed order.
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.CLIMATE])
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.CLIMATE)
-    hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SENSOR)
 
-    # Set up switch and number after climate so the group reference is guaranteed to exist.
-    await hass.config_entries.async_forward_entry_setups(entry, [Platform.SWITCH, Platform.NUMBER])
+    await hass.config_entries.async_forward_entry_setups(
+        entry, [Platform.SENSOR, Platform.SWITCH, Platform.NUMBER]
+    )
+    hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SENSOR)
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.SWITCH)
     hass.data[DOMAIN][entry.entry_id][SETUP_PLATFORMS].add(Platform.NUMBER)
 

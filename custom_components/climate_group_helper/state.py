@@ -458,7 +458,7 @@ class BaseStateManager:
 
         return kwargs
 
-    def update(self, entity_id: str | None = None, *, source: str | None = None, **kwargs: Any) -> bool:
+    def update(self, entity_id: str | None = None, **kwargs: Any) -> bool:
         """Update target_state with source tracking; False if the filter blocked it.
 
         Template Method workflow:
@@ -466,11 +466,6 @@ class BaseStateManager:
         2. Resolve virtual group presets (`_resolve_group_preset()`)
         3. Add metadata (source, entity_id, timestamp)
         4. Update the central shared_target_state
-
-        `source` overrides the manager's own SOURCE for restore paths that must
-        not leave it behind (e.g. a boost restore attributed as "schedule" so the
-        sticky-override guard releases the schedule again — a restore means the
-        user is NOT in control).
         """
         # HA may pass entity_id as a list (e.g. from async_set_temperature kwargs) — normalize to str
         if isinstance(entity_id, list):
@@ -483,9 +478,7 @@ class BaseStateManager:
 
         # Inject source metadata (source, entity, timestamp)
         context = self._group._context
-        if source is not None:
-            kwargs["last_source"] = source
-        elif self.SOURCE == "group" and bool(context and context.user_id and not context.parent_id):
+        if self.SOURCE == "group" and bool(context and context.user_id and not context.parent_id):
             kwargs["last_source"] = "ui"
         else:
             kwargs["last_source"] = self.SOURCE
@@ -506,7 +499,7 @@ class BaseStateManager:
         # a device, so no member event follows to drive the aggregation — the
         # only other place the humidity condition is evaluated.
         if "humidity" in kwargs:
-            self._group.member_template_manager.check_humidity(
+            self._group.range_template_manager.check_humidity(
                 self._group._attr_current_humidity, kwargs["humidity"]
             )
 

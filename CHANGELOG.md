@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.16.0 - 2026-10-23
+
+### ✨ Improvements
+
+*   **Choose What the Main Switch Does**: Besides turning everything off, the Main Switch can now hold a fixed temperature such as frost protection, or release the devices for manual control without the group stepping in.
+
+*   **Off Template for Heaters without an Off Mode**: Heaters that have no off mode can now be turned off with the group — they are set to heat at their own minimum temperature and count as off while they stand there.
+
+### 🐛 Bug Fixes
+
+*   **Main Switch Off No Longer Wakes the Devices After a Restart**: With the Main Switch off, the schedule no longer briefly turns the devices back on while Home Assistant starts up.
+
+*   **Off Is Only Offered When a Device Can Turn Off**: A group whose devices have no off mode no longer offers Off, which previously did nothing.
+
+*   **Thermostats with a Single Mode Receive Their Temperature Again**: Devices that only offer Heat, such as the Shelly BLU TRV, now get the temperature from presets, schedule slots and window restores instead of nothing at all.
+
+*   **Isolated Devices Are Released After a Restart When Their Trigger Ended**: A device whose isolation sensor switched back while Home Assistant was down no longer stays isolated indefinitely.
+
+*   **Failed Commands Name the Device and the Error**: The warning for a command a device rejected now names the devices, the command and the error, instead of ending empty.
+
 ## 1.15.0 - 2026-10-16
 
 ### ✨ Improvements

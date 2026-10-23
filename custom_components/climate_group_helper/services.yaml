@@ -51,7 +51,7 @@ set_schedule_fallback_payload:
 
 set_group_preset:
   name: Set Group Preset
-  description: Sets, updates, or clears virtual group presets at runtime. Set to null or empty to reset.
+  description: Sets, changes, or removes the group's runtime presets. They add to the config presets from the group settings and take precedence over one of the same name.
   target:
     entity:
       integration: climate_group_helper
@@ -59,7 +59,7 @@ set_group_preset:
   fields:
     payload:
       name: Payload
-      description: "The group presets as YAML or mapping. Set to null or empty to reset. See the documentation for the format and examples."
+      description: "The runtime presets to set, as YAML or mapping. A preset set to null or empty is removed; an empty payload removes all runtime presets. See the documentation for the format and examples."
       selector:
         object:
       required: false
@@ -196,7 +196,7 @@ reset:
       required: false
     presets:
       name: Group Presets
-      description: Clears runtime group presets and restores configured presets.
+      description: Removes all runtime presets. The config presets stay as they are.
       selector:
         boolean:
       default: false

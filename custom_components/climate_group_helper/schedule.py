@@ -392,12 +392,20 @@ class MainScheduleHandler(BaseScheduleHandler):
             ctx = await self._read_slots()
             self._publish_active_layer(ctx)
             record = self.slot_resolver.record(ctx)
-            # The hold defers only the climate payload: `_read_slots()` has
-            # already run the meta-keys and `record()` its claim bookkeeping.
+            # The hold defers only the main slot's own climate payload:
+            # `_read_slots()` has already run the meta-keys and `record()` its
+            # claim bookkeeping. With the bypass inactive, `record()` released
+            # every claim — that release is not the main's, and dropped here it
+            # is lost with the claims gone. A running bypass owns the members:
+            # nothing of it goes out from here.
             if self._hold_active:
                 _LOGGER.debug(
                     "[%s] Slot climate deferred — manual hold active", self._group.entity_id
                 )
+                if not ctx.bypass_active:
+                    released = {attr: value for attr, value in record.items() if attr not in ctx.main_payload}
+                    self._update_state(released)
+                    await self._call_members(released or None)
                 return
             self._update_state(record)
             if not ctx.bypass_active:

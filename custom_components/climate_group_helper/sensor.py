@@ -19,6 +19,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant, State, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.event import (
@@ -35,6 +36,7 @@ from .const import (
     DOMAIN,
     IDENTITY_KEYS,
 )
+from .device import group_device_info, group_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,7 +70,7 @@ async def async_setup_entry(
                 _LOGGER.debug("[%s] Removed disabled sensor %s", config_entry.title, entity_id)
     else:
         # Create each sensor only if the group exposes that value, external sensors are configured,
-        # or we cannot yet determine (group not yet in state machine on first setup).
+        # or we cannot yet determine (the group has no state to judge by).
         group_state = hass.states.get(climate_group_entity_id)
         has_temp = (
             bool(config_entry.options.get(CONF_TEMP_SENSORS))
@@ -173,13 +175,9 @@ class ClimateGroupHelperBaseSensor(SensorEntity):
         super().async_entity_id_changed(old_entity_id)
 
     @property
-    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
+    def device_info(self) -> DeviceInfo:
         """Return the device info."""
-        return {
-            "identifiers": {(DOMAIN, self.config_entry.unique_id)},
-            "name": self.config_entry.title,
-            "manufacturer": "Climate Group Helper",
-        }
+        return group_device_info(self.config_entry.unique_id, group_name(self.config_entry))
 
 
 class ClimateGroupHelperTemperatureSensor(ClimateGroupHelperBaseSensor):
@@ -265,13 +263,9 @@ class ClimateGroupHelperConfigurationSensor(SensorEntity):
         self._attr_unique_id = f"{config_entry.unique_id}_configuration"
 
     @property
-    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
+    def device_info(self) -> DeviceInfo:
         """Return the device info."""
-        return {
-            "identifiers": {(DOMAIN, self.config_entry.unique_id)},
-            "name": self.config_entry.title,
-            "manufacturer": "Climate Group Helper",
-        }
+        return group_device_info(self.config_entry.unique_id, group_name(self.config_entry))
 
     @property
     def native_value(self) -> int:

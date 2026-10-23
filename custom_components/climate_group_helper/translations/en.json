@@ -68,7 +68,7 @@
               "ignore_off_members_temperature": "Exclude Off Members from Temperature"
             },
             "data_description": {
-              "temp_target_avg": "How the group calculates the target setpoint to send to its members.",
+              "temp_target_avg": "How the group summarizes the target setpoints of its members.",
               "temp_use_master": "Display the master entity's setpoint as the group's target temperature instead of the member average. Falls back to averaging if the master is unavailable. Affects only how the group state is displayed — it does not control or synchronize members (use Sync Mode: Master/Lock for that).",
               "temp_target_round": "Only applies to values sent to devices, not to current/displayed values.",
               "temp_current_avg": "How the group summarizes sensor readings from its members.",
@@ -94,7 +94,7 @@
               "humidity_update_targets": "Write External Humidity to Entities"
             },
             "data_description": {
-              "humidity_target_avg": "How the group calculates the target setpoint to send to its members.",
+              "humidity_target_avg": "How the group summarizes the target humidity setpoints of its members.",
               "humidity_use_master": "Display the master entity's setpoint as the group's target humidity instead of the member average. Falls back to averaging if the master is unavailable. Affects only how the group state is displayed — it does not control or synchronize members (use Sync Mode: Master/Lock for that).",
               "humidity_target_round": "Only applies to values sent to devices, not to current/displayed values.",
               "humidity_current_avg": "How the group summarizes sensor readings from its members.",
@@ -131,15 +131,15 @@
               "close_delay": "Close Delay (seconds)"
             },
             "data_description": {
-              "window_mode": "Enable or disable climate group based on window/door sensors. When enabled, HVAC mode sets to 'off' when windows open and restores to the previous state when closed.",
+              "window_mode": "Pause heating or lower the temperature when a monitored window opens.",
               "window_adopt_manual_changes": "Keep changes made while windows are open and apply them once they close. Until then, the Window Open Action applies.",
               "window_action": "What to do when window opens: Turn Off completely or set a specific Temperature (e.g. frost protection).",
               "window_temperature": "Target temperature to set when 'Temperature' action is selected.",
-              "room_sensor": "(Optional) Binary sensor for the room's own window/door.",
-              "zone_sensor": "(Optional) Binary sensor for windows/doors in the zone/floor. Zone sensor must include room sensor.",
-              "room_open_delay": "Time to wait after room window opens before turning off heating.",
-              "zone_open_delay": "Time to wait after zone window opens before turning off heating.",
-              "close_delay": "Time to wait after all windows close before restoring heating."
+              "room_sensor": "(Optional) Binary sensor, input_boolean, or cover entity for the room's own window/door.",
+              "zone_sensor": "(Optional) Binary sensor, input_boolean, or cover entity for windows/doors in the zone/floor. Zone sensor must include room sensor.",
+              "room_open_delay": "Time to wait after room window opens before triggering the window action.",
+              "zone_open_delay": "Time to wait after zone window opens before triggering the window action.",
+              "close_delay": "Time to wait after all windows close before restoring the previous state."
             }
           },
           "presence_section": {
@@ -192,14 +192,14 @@
           },
           "presets_section": {
             "name": "Group Presets",
-            "description": "Define custom named presets for the group (e.g. eco, guest, ventilate). Selecting one applies its attributes to all members at once. A group preset overrides a member's own preset of the same name.",
+            "description": "Define custom named presets for the group (e.g. eco, guest, ventilate). Selecting one applies its attributes to all members at once. A group preset overrides a member's own preset of the same name. Runtime presets set via the set_group_preset service add to the presets entered here and take precedence over one of the same name.",
             "data": {
               "group_presets": "Group Presets (YAML)",
               "retain_service_changes_presets": "Retain Changes Made via Service (Presets)"
             },
             "data_description": {
               "group_presets": "Your presets in YAML: a freely chosen name per preset, each with the attributes it should apply (temperature, hvac_mode, fan_mode, swing_mode). A preset applies only the attributes it lists. See the documentation for the format and ready-to-copy examples.",
-              "retain_service_changes_presets": "Keep presets created or updated via service after a restart. Otherwise they reset to the configured presets."
+              "retain_service_changes_presets": "Keep the runtime presets set via the set_group_preset service across a restart. Without this, the group starts with the presets entered here alone."
             }
           },
           "temp_offsets_section": {
@@ -214,7 +214,7 @@
           },
           "isolation_section": {
             "name": "Member Isolation",
-            "description": "Temporarily isolate specific members when a trigger is active. Isolated members are turned off and excluded from group calculations.",
+            "description": "Temporarily isolate specific members while a trigger is active. Isolated members receive the isolation action (Off by default) and are excluded from group calculations.",
             "data": {
               "isolation_rule_count": "Number of Rules",
               "isolation_rule_1_entities": "Entities to Isolate",
@@ -230,7 +230,7 @@
             "data_description": {
               "isolation_rule_count": "How many independent isolation rules to show. Save after changing to reveal or hide additional rule slots.",
               "isolation_rule_1_entities": "Group members to isolate when the trigger is active.",
-              "isolation_rule_1_trigger": "Choose what activates the isolation: a binary sensor or a specific HVAC mode of the group.",
+              "isolation_rule_1_trigger": "Choose what activates the isolation: a binary sensor, a specific HVAC mode of the group, or a member turned off manually.",
               "isolation_rule_1_sensor": "(Sensor trigger) Binary sensor that triggers isolation when ON.",
               "isolation_rule_1_hvac_modes": "(HVAC mode trigger) Isolation activates when the group's target mode is one of these.",
               "isolation_rule_1_activate_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger activates before isolating members.",
@@ -256,7 +256,7 @@
             },
             "data_description": {
               "isolation_rule_2_entities": "Group members to isolate when the trigger is active.",
-              "isolation_rule_2_trigger": "Choose what activates the isolation: a binary sensor or a specific HVAC mode of the group.",
+              "isolation_rule_2_trigger": "Choose what activates the isolation: a binary sensor, a specific HVAC mode of the group, or a member turned off manually.",
               "isolation_rule_2_sensor": "(Sensor trigger) Binary sensor that triggers isolation when ON.",
               "isolation_rule_2_hvac_modes": "(HVAC mode trigger) Isolation activates when the group's target mode is one of these.",
               "isolation_rule_2_activate_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger activates before isolating members.",
@@ -282,7 +282,7 @@
             },
             "data_description": {
               "isolation_rule_3_entities": "Group members to isolate when the trigger is active.",
-              "isolation_rule_3_trigger": "Choose what activates the isolation: a binary sensor or a specific HVAC mode of the group.",
+              "isolation_rule_3_trigger": "Choose what activates the isolation: a binary sensor, a specific HVAC mode of the group, or a member turned off manually.",
               "isolation_rule_3_sensor": "(Sensor trigger) Binary sensor that triggers isolation when ON.",
               "isolation_rule_3_hvac_modes": "(HVAC mode trigger) Isolation activates when the group's target mode is one of these.",
               "isolation_rule_3_activate_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger activates before isolating members.",
@@ -308,7 +308,7 @@
             },
             "data_description": {
               "isolation_rule_4_entities": "Group members to isolate when the trigger is active.",
-              "isolation_rule_4_trigger": "Choose what activates the isolation: a binary sensor or a specific HVAC mode of the group.",
+              "isolation_rule_4_trigger": "Choose what activates the isolation: a binary sensor, a specific HVAC mode of the group, or a member turned off manually.",
               "isolation_rule_4_sensor": "(Sensor trigger) Binary sensor that triggers isolation when ON.",
               "isolation_rule_4_hvac_modes": "(HVAC mode trigger) Isolation activates when the group's target mode is one of these.",
               "isolation_rule_4_activate_delay": "(Sensor / HVAC Mode trigger only) Time to wait after the trigger activates before isolating members.",
@@ -320,7 +320,7 @@
           },
           "member_template_section": {
             "name": "Member Template",
-            "description": "Render single-setpoint members as virtual heat/cool range entities. The group helper translates range commands into appropriate physical heat/cool commands based on each member's current temperature.",
+            "description": "Render members with capabilities their device does not offer natively. Range Template: single-setpoint members act as heat/cool range devices — range commands become heat or cool depending on each member's current temperature. Off Template: heaters without an off mode are turned off by setting them to heat at their own minimum temperature.",
             "data": {
               "range_template_enabled": "Enable Range Template",
               "range_template_deadband_action": "Deadband Action",
@@ -330,7 +330,8 @@
               "range_template_humidity_enabled": "Dehumidify in Deadband",
               "range_template_humidity_action": "Humidity Action",
               "range_template_humidity_hysteresis": "Humidity Hysteresis",
-              "range_template_humidity_deactivation_delay": "Deactivation Delay"
+              "range_template_humidity_deactivation_delay": "Deactivation Delay",
+              "off_template_enabled": "Enable Off Template"
             },
             "data_description": {
               "range_template_enabled": "Automatically render all single-setpoint members (without native heat/cool) as virtual range-mode devices.",
@@ -341,13 +342,16 @@
               "range_template_humidity_enabled": "When inside the target temperature range, switch to the humidity action if current humidity exceeds the target humidity.",
               "range_template_humidity_action": "Action to perform when current humidity exceeds the target humidity while inside the deadband.",
               "range_template_humidity_hysteresis": "Schmitt-trigger hysteresis band around target humidity to prevent rapid cycling.",
-              "range_template_humidity_deactivation_delay": "Delay before deactivating the humidity action after humidity falls below the threshold."
+              "range_template_humidity_deactivation_delay": "Delay before deactivating the humidity action after humidity falls below the threshold.",
+              "off_template_enabled": "Heaters without an off mode are set to heat at their own minimum temperature when the group turns off. A heater standing at its minimum temperature then counts as off. For devices with an off mode, use 'Minimum Temperature when Off' instead."
             }
           },
           "advanced_section": {
             "name": "Advanced Settings",
-            "description": "Fine-tune command timings and retry behavior. Toggle diagnostic attributes and configuration sensors.",
+            "description": "Choose what the main switch does while it is off. Fine-tune command timings and retry behavior. Toggle diagnostic attributes and configuration sensors.",
             "data": {
+              "switch_action": "Main Switch Action",
+              "switch_temperature": "Main Switch Temperature",
               "debounce_delay": "Debounce Delay (seconds)",
               "retry_attempts": "Retry Attempts",
               "retry_delay": "Retry Delay (seconds)",
@@ -359,6 +363,8 @@
               "expose_config": "Expose Configuration Sensor"
             },
             "data_description": {
+              "switch_action": "What the devices get while the main switch is off: Turn Off, Set Temperature (a fixed setpoint, e.g. frost protection — it only changes the setpoint of running devices), or Release Devices (the group leaves the devices alone and you control them directly).",
+              "switch_temperature": "Target temperature to set when the 'Set Temperature' action is selected.",
               "debounce_delay": "Time to wait before sending commands. Higher values prevent 'rapid-fire' commands when sliding controls, but feel slower.",
               "retry_attempts": "How many times to resend a command if a device doesn't respond. Set to 0 to disable.",
               "retry_delay": "Pause between retry attempts. Giving devices a moment to recover can improve reliability.",
@@ -366,7 +372,7 @@
               "member_command_delay": "Pause between commands to each individual member. Helps when commanding several devices at once overloads your network or bridge (e.g. IR blasters, some Zigbee coordinators). Set to 0 to disable.",
               "grace_period": "How long the group shows the commanded value before switching to the member average. Prevents UI flicker when slow devices (Cloud bridges, Zigbee) echo their old state back. Set to 0 to disable.",
               "expose_smart_sensors": "Creates extra sensor entities for the group's temperature and humidity (useful for graphs).",
-              "expose_member_entities": "Creates an attribute listing all member entity IDs.",
+              "expose_member_entities": "Adds the 'entity_id' attribute listing all members so the more-info dialog displays the member list.",
               "expose_config": "Creates a diagnostic sensor (sensor.*_configuration) that exposes portable settings as a JSON attribute. Useful for copying settings between groups via automations."
             }
           }
@@ -381,17 +387,18 @@
       "no_entities": "At least one climate device must remain in the group.",
       "master_not_in_members": "The master entity must be a member of the group.",
       "master_refresh_notice": "Master Entity added. New options available.",
-      "master_options_notice": "New Master entity option",
+      "master_options_notice": "New options for the Master Entity are available in this section.",
       "isolation_all_selected": "At least one member must remain outside isolation.",
       "isolation_entity_overlap": "Each member can only appear in one isolation rule.",
       "isolation_action_preset_required": "Select a preset mode for the isolation action.",
       "isolation_sensor_required": "Select a sensor for the isolation rule, or set its trigger to Disabled.",
       "isolation_hvac_modes_required": "Select at least one mode for the isolation rule, or set its trigger to Disabled.",
       "window_temperature_required": "Set a window temperature, or change the window action.",
+      "switch_temperature_required": "Set a main switch temperature, or change the main switch action.",
       "presence_action_value_required": "Set a value for the selected away action, or change the action.",
       "schedule_fallback_payload_invalid": "Invalid YAML format in fallback schedule payload. Must be a valid key-value mapping.",
       "group_presets_invalid": "Invalid YAML format in Group Presets. Must be a valid key-value mapping.",
-      "preset_name_collision_notice": "One or more virtual presets share names with native member presets. The virtual definition will override them.",
+      "preset_name_collision_notice": "One or more group presets share names with native member presets. The group definition will override them.",
       "sensor_loop_protection": "Cannot use a Climate Group Helper entity as an external sensor or calibration target — this would create a feedback loop."
     },
     "abort": {
@@ -505,6 +512,13 @@
       "options": {
         "off": "Turn Off",
         "temperature": "Set Temperature"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "Turn Off",
+        "temperature": "Set Temperature",
+        "release": "Release Devices"
       }
     },
     "union_out_of_bounds_action": {
@@ -628,32 +642,6 @@
     }
   },
   "services": {
-    "set_temperature": {
-      "name": "Set Temperature",
-      "description": "Set the target temperature for the entire group.",
-      "fields": {
-        "entity_id": {
-          "name": "Climate Group",
-          "description": "The group to control."
-        },
-        "temperature": {
-          "name": "Target Temperature",
-          "description": "The desired temperature."
-        },
-        "target_temp_high": {
-          "name": "Target High",
-          "description": "Upper limit for heat/cool mode."
-        },
-        "target_temp_low": {
-          "name": "Target Low",
-          "description": "Lower limit for heat/cool mode."
-        },
-        "hvac_mode": {
-          "name": "HVAC Mode",
-          "description": "Optionally change the mode."
-        }
-      }
-    },
     "set_schedule_entity": {
       "name": "Set Schedule Entity",
       "description": "Switch the active schedule or calendar entity at runtime. If omitted or set to null, the group reverts to its configured default and re-applies the current slot.",
@@ -686,11 +674,11 @@
     },
     "set_group_preset": {
       "name": "Set Group Preset",
-      "description": "Sets, updates, or clears virtual group presets at runtime. Set to null or empty to reset.",
+      "description": "Sets, changes, or removes the group's runtime presets. They add to the config presets from the group settings and take precedence over one of the same name.",
       "fields": {
         "payload": {
           "name": "Payload",
-          "description": "The group presets as YAML or mapping. Set to null or empty to reset. See the documentation for the format and examples."
+          "description": "The runtime presets to set, as YAML or mapping. A preset set to null or empty is removed; an empty payload removes all runtime presets. See the documentation for the format and examples."
         }
       }
     },
@@ -764,23 +752,9 @@
         },
         "presets": {
           "name": "Group Presets",
-          "description": "Clears runtime group presets and restores configured presets."
+          "description": "Removes all runtime presets. The config presets stay as they are."
         }
       }
-    }
-  },
-  "issues": {
-    "member_unavailable": {
-      "title": "Member Device Unavailable",
-      "description": "One or more devices in {group_name} are offline. The group will keep working with what it has.\n\nUnavailable: {unavailable_entities}"
-    },
-    "no_members_available": {
-      "title": "No Members Available",
-      "description": "Group {group_name} has no active members and is effectively offline.\n\nCheck: {member_entities}"
-    },
-    "conflicting_features": {
-      "title": "Feature Conflicts",
-      "description": "Group {group_name} has members with different features. Functionality might be limited to what everyone supports.\n\nConflicting: {conflicting_entities}"
     }
   },
   "device_automation": {

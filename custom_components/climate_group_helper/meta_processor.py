@@ -491,6 +491,11 @@ class SlotMetaProcessor:
         Warnings are emitted here, so every rejection tells the user which value
         was unusable and what the key expects.
         """
+        # Only reached from the bypass-content check — process() handles and
+        # warns about turn_off itself, so no second warning here.
+        if key == META_KEY_TURN_OFF:
+            return value if isinstance(value, bool) else None
+
         if key == META_KEY_PRESENCE_MODE:
             if value not in (META_VALUE_DISABLED, META_VALUE_AWAY):
                 _LOGGER.warning(

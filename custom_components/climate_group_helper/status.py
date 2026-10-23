@@ -45,6 +45,7 @@ from .const import (
     ATTR_LAST_CHANGED,
     ATTR_LAST_ENTITY,
     ATTR_LAST_SOURCE,
+    ATTR_MAIN_SWITCH_ACTION,
     ATTR_MAIN_SWITCH_ENTITY_ID,
     ATTR_MASTER_ENTITY_ID,
     ATTR_MASTER_FALLBACK_ACTIVE,
@@ -63,10 +64,12 @@ from .const import (
     ATTR_TOTAL_MEMBER_COUNT,
     CONF_PRESENCE_MODE,
     CONF_PRESENCE_SENSOR,
+    CONF_SWITCH_ACTION,
     CONF_WINDOW_MODE,
     FLOAT_TOLERANCE,
     IsolationTrigger,
     PresenceMode,
+    SwitchAction,
     SyncMode,
     WindowControlMode,
 )
@@ -119,7 +122,7 @@ def _compute_member_divergence(group: ClimateGroupHelper) -> dict[str, dict[str,
     # 1. HVAC Mode (via display_mode so template-covered members report heat_cool)
     hvac_modes: dict[str, str] = {}
     for state in states:
-        mode = group.member_template_manager.display_mode(state)
+        mode = group.range_template_manager.display_mode(state)
         if mode is not None:
             hvac_modes[state.entity_id] = mode
     if len(hvac_modes) >= 2 and len(set(hvac_modes.values())) > 1:
@@ -205,6 +208,9 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         attrs[ATTR_MASTER_ENTITY_ID] = group._master_entity_id
     if group.main_switch_entity_id:
         attrs[ATTR_MAIN_SWITCH_ENTITY_ID] = group.main_switch_entity_id
+        # Tells a dashboard whether "switch" in blocking_sources means off,
+        # a fixed setpoint, or released devices.
+        attrs[ATTR_MAIN_SWITCH_ACTION] = group.config.get(CONF_SWITCH_ACTION, SwitchAction.OFF)
 
     # --- Source information ---
     if target.last_source:
@@ -282,7 +288,7 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         for handler in group.member_isolation_handlers
     ):
         features.append("isolation")
-    if group.member_template_manager.range_template is not None:
+    if group.range_template_manager.range_template is not None:
         features.append("range_template")
     if group.advanced_mode and (
         group.temp_update_target_entity_ids or group.humidity_update_target_entity_ids

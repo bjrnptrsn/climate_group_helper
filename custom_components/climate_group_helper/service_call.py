@@ -51,6 +51,7 @@ from .const import (
     UnionOutOfBoundsAction,
     UnsupportedHvacAction,
 )
+from .number import async_reset_group_offset
 from .state import FilterState, available_state, other_active_members
 
 if TYPE_CHECKING:
@@ -285,6 +286,7 @@ class BaseServiceCallHandler(ABC):
             # the members that actually received a command — never one whose call
             # raised before it reached the device.
             sent_entity_ids: set[str] = set()
+            current_call: dict[str, Any] | None = None
             try:
                 # Drop a previous attempt's pending marking — this generation
                 # re-evaluates every member against the current states.
@@ -304,7 +306,7 @@ class BaseServiceCallHandler(ABC):
                     # nothing would carry the new mode into the group's state.
                     # Narrow, because this exit runs constantly.
                     if (
-                        self._group.member_template_manager.range_template is not None
+                        self._group.range_template_manager.range_template is not None
                         and self._group.shared_target_state.hvac_mode is not None
                         and self._group.hvac_mode != self._group.shared_target_state.hvac_mode
                     ):
@@ -326,6 +328,7 @@ class BaseServiceCallHandler(ABC):
                 # entered fresh on each attempt).
                 async with self._group.member_command_scope():
                     for index, call in enumerate(calls):
+                        current_call = call
                         service = call["service"]
                         service_data = {ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
 
@@ -369,6 +372,7 @@ class BaseServiceCallHandler(ABC):
                         )
 
                 # The calls went out — only now may the OOB marking be applied.
+                current_call = None
                 self._apply_pending_oob()
 
                 await self._after_call_trigger(data)
@@ -377,8 +381,24 @@ class BaseServiceCallHandler(ABC):
                 error_msg = str(error)
                 if "not_valid_hvac_mode" in error_msg:
                     _LOGGER.debug("[%s] Call attempt (%d/%d) skipped (not supported): %s", self._group.entity_id, attempt + 1, attempts, error_msg)
+                elif current_call is None:
+                    # Raised outside a member call (building the calls, or the
+                    # bookkeeping after them): a fault of our own, so the
+                    # traceback is the useful part.
+                    _LOGGER.warning(
+                        "[%s] Call attempt (%d/%d) failed outside a member call: %s: %s",
+                        self._group.entity_id, attempt + 1, attempts, type(error).__name__, error_msg,
+                        exc_info=True,
+                    )
                 else:
-                    _LOGGER.warning("[%s] Call attempt (%d/%d) failed: %s", self._group.entity_id, attempt + 1, attempts, error)
+                    # A device or its integration rejected the call. Many of those
+                    # exceptions carry no message (e.g. NotImplementedError), so the
+                    # type and the call itself are what identify it.
+                    _LOGGER.warning(
+                        "[%s] Call attempt (%d/%d) failed: %s: %s — '%s' to %s with %s",
+                        self._group.entity_id, attempt + 1, attempts, type(error).__name__, error_msg,
+                        current_call["service"], current_call["entity_ids"], current_call["kwargs"],
+                    )
                 # Calls that already went out before the exception still acted on
                 # their members — keep their OOB marking (restricted to the sent
                 # entities) so the next sync does not re-drive them as if they
@@ -427,6 +447,8 @@ class BaseServiceCallHandler(ABC):
 
             if attr == ATTR_HVAC_MODE:
                 raw = self._append_turn_on_calls(raw, data)
+            elif attr == ATTR_TEMPERATURE:
+                raw = self._off_template_hold_setpoints(raw, data)
 
             if raw:
                 calls.extend(self._run_pipeline(raw))
@@ -458,14 +480,20 @@ class BaseServiceCallHandler(ABC):
         Every stage has the signature `list[dict] -> list[dict]` and passes
         non-applicable calls through unchanged. Order matters: offsets stack
         additively, the range template needs the offset-applied values, and the
-        OOB guard must see the final numbers — it is always last.
+        OOB guard must see the final numbers — it is the last stage that checks
+        values. The off template comes after it: OFF calls arise in three
+        earlier stages, and its park setpoint is the device's own limit. The
+        single-mode filter runs last, so it sees every `set_hvac_mode` an
+        earlier stage created.
         """
         processed = self._process_unsupported_hvac(raw_calls)
         processed = self._process_min_temp_off(processed)
         processed = self._process_member_offset(processed)
         processed = self._process_group_offset(processed)
         processed = self._process_range_template(processed)
-        return self._process_oob_guard(processed)
+        processed = self._process_oob_guard(processed)
+        processed = self._process_off_template(processed)
+        return self._process_single_mode(processed)
 
     def _build_temperature_range_initial_calls(
         self, data: dict[str, Any], filter_attrs: dict[str, bool] | None = None
@@ -546,7 +574,7 @@ class BaseServiceCallHandler(ABC):
         the bound the group *does* hold would never reach the members. Only the
         completed bound is marked — the commanded one must stay checkable.
         """
-        template = self._group.member_template_manager.range_template
+        template = self._group.range_template_manager.range_template
         group_low = group_band[ATTR_TARGET_TEMP_LOW]
         group_high = group_band[ATTR_TARGET_TEMP_HIGH]
 
@@ -607,18 +635,19 @@ class BaseServiceCallHandler(ABC):
         """
         return value
 
-    def _get_target_value_with_offset(self, attr: str, value: Any = None) -> Any:  # noqa: ARG002
-        """Read from target_state, with group_offset applied for temperature attributes.
+    def _restore_target_value(self, attr: str) -> Any:
+        """Group target as a restore sends it — shifted exactly when the pipeline shifts it.
 
-        Rounding is unconditional, also at offset 0.0: devices round to one
-        decimal themselves, so an unrounded target diffs against the value they
-        report back and fires a redundant call on every resync. Do not make it
-        conditional to match the call path.
+        Reads `_apply_group_offset()` so the diff target and the sent value
+        follow the same condition; there is deliberately no variant without it.
 
-        `value` is unused — handlers routing here always want the group target.
+        Once the offset applies, rounding is unconditional, also at offset 0.0:
+        devices round to one decimal themselves, so an unrounded target diffs
+        against the value they report back and fires a redundant call on every
+        resync. Do not make it conditional to match the call path.
         """
         raw = getattr(self.target_state, attr, None)
-        if raw is not None and attr in TEMP_TARGET_ATTRS:
+        if raw is not None and attr in TEMP_TARGET_ATTRS and self._apply_group_offset():
             return round(float(raw) + self._group.run_state.group_offset, 1)
         return raw
 
@@ -766,7 +795,7 @@ class BaseServiceCallHandler(ABC):
                 if within_tolerance(current_value, effective_target):
                     continue
             if attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH):
-                if self._group.member_template_manager.setpoint_in_reach(state, current_value, effective_target):
+                if self._group.range_template_manager.setpoint_in_reach(state, current_value, effective_target):
                     continue
 
             if current_value != effective_target:
@@ -1015,7 +1044,7 @@ class BaseServiceCallHandler(ABC):
                 state = available_state(self._group.aggregator.read_member_state(entity_id))
                 if state is None or state.state != HVACMode.OFF:
                     continue
-                if self._group.member_template_manager.is_covered_state(state):
+                if self._group.range_template_manager.is_covered_state(state):
                     continue
                 if hvac_mode == HVACMode.HEAT_COOL:
                     if (
@@ -1186,7 +1215,7 @@ class BaseServiceCallHandler(ABC):
         ATTR_HVAC_MODE]` so `_is_stale_call` does not discard them as
         deviations from `target_state`.
         """
-        template = self._group.member_template_manager.range_template
+        template = self._group.range_template_manager.range_template
         if template is None:
             return calls
 
@@ -1225,7 +1254,7 @@ class BaseServiceCallHandler(ABC):
             # one-sided command caches only its own bound, so the other one
             # must still come from target_state (e.g. adopted via MIRROR)
             # instead of falling through to the +/-5 seed below.
-            low_val, high_val = self._group.member_template_manager.resolve_range()
+            low_val, high_val = self._group.range_template_manager.resolve_range()
 
             # Native members keep the original payload in a separate call.
             native_members = [entity_id for entity_id in entity_ids if entity_id not in template_members]
@@ -1233,12 +1262,22 @@ class BaseServiceCallHandler(ABC):
                 result.append({**call, "entity_ids": native_members})
 
             if low_val is None or high_val is None:
-                group_target = temp_attrs.read(self._group, temp_attrs.TARGET_TEMPERATURE)
-                if group_target is None:
-                    continue
-                target_temp = float(group_target)
-                low_val = target_temp - 5
-                high_val = target_temp + 5
+                # Seed only the missing bound — a known one is the user's. With
+                # one bound known the other sits the default band width away.
+                if low_val is None and high_val is None:
+                    group_target = temp_attrs.read(self._group, temp_attrs.TARGET_TEMPERATURE)
+                    if group_target is None:
+                        continue
+                    seeded = {
+                        ATTR_TARGET_TEMP_LOW: float(group_target) - 5,
+                        ATTR_TARGET_TEMP_HIGH: float(group_target) + 5,
+                    }
+                elif low_val is None:
+                    seeded = {ATTR_TARGET_TEMP_LOW: high_val - 10}
+                else:
+                    seeded = {ATTR_TARGET_TEMP_HIGH: low_val + 10}
+                low_val = seeded.get(ATTR_TARGET_TEMP_LOW, low_val)
+                high_val = seeded.get(ATTR_TARGET_TEMP_HIGH, high_val)
                 # Deliberate exception to the StateManager pattern: this is
                 # pipeline-internal band seeding, not a source-attributable event — there is
                 # no meaningful "last_source" for it, so it bypasses StateManager.update()
@@ -1246,10 +1285,7 @@ class BaseServiceCallHandler(ABC):
                 # last_entity/last_timestamp (those keep reflecting the actual command that
                 # triggered this call). Idempotent: the seed lands in target_state, and a
                 # retry resolves it from there via resolve_range() instead of seeding again.
-                self._group.shared_target_state = self._group.shared_target_state.update(
-                    target_temp_low=low_val,
-                    target_temp_high=high_val,
-                )
+                self._group.shared_target_state = self._group.shared_target_state.update(**seeded)
 
             # Bucket per-member translations by (service, kwargs) so identical
             # decisions ship as a single call.
@@ -1264,7 +1300,7 @@ class BaseServiceCallHandler(ABC):
                 state = self._hass.states.get(entity_id)
                 if not state:
                     continue
-                current_temp = self._group.member_template_manager._read_current_temp(state)
+                current_temp = self._group.range_template_manager._read_current_temp(state)
                 supported_modes = state.attributes.get(ATTR_HVAC_MODES)
                 # The raw band (cache / target_state) carries no offsets — re-apply
                 # the member's per-entity offset and the handler's group offset so
@@ -1273,7 +1309,7 @@ class BaseServiceCallHandler(ABC):
                 member_offset = self._group._temp_offset_map.get(entity_id, 0.0)
                 group_offset = self._group.run_state.group_offset if self._apply_group_offset() else 0.0
                 offset = member_offset + group_offset
-                expected_mode, expected_temp = self._group.member_template_manager.expected_mode_for(
+                expected_mode, expected_temp = self._group.range_template_manager.expected_mode_for(
                     entity_id, low_val + offset, high_val + offset, current_temp, supported_modes
                 )
 
@@ -1283,7 +1319,7 @@ class BaseServiceCallHandler(ABC):
                     # edge, or a moved band leaves it heating/cooling towards the
                     # old one. A role-forbidden mode is left alone.
                     edges = {HVACMode.HEAT: low_val + offset, HVACMode.COOL: high_val + offset}
-                    if state.state not in edges or not self._group.member_template_manager.mode_allowed(
+                    if state.state not in edges or not self._group.range_template_manager.mode_allowed(
                         state.state, supported_modes, entity_id
                     ):
                         continue
@@ -1440,6 +1476,148 @@ class BaseServiceCallHandler(ABC):
                 })
 
         return result
+
+    def _process_off_template(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Off Template: park heaters without `off` on heat + their own min_temp.
+
+        Decided per member from its physical state:
+        - Any call carrying `hvac_mode: off` (`set_hvac_mode`, or the
+          `set_temperature` of `min_temp_off`): see `_off_template_park()`.
+        - `set_hvac_mode: heat` skips a parked member — it physically heats
+          already, only a setpoint brings it back. Checked on the service:
+          a range translation's `set_temperature` carries `heat` too, and
+          dropping it would lose its setpoint.
+        """
+        manager = self._group.off_template_manager
+        if not manager.enabled:
+            return calls
+
+        result: list[dict[str, Any]] = []
+        for call in calls:
+            hvac_mode = call["kwargs"].get(ATTR_HVAC_MODE)
+            if hvac_mode == HVACMode.OFF:
+                result.extend(self._off_template_park(call))
+            elif hvac_mode == HVACMode.HEAT and call["service"] == SERVICE_SET_HVAC_MODE:
+                result.append({
+                    **call,
+                    "entity_ids": [
+                        entity_id for entity_id in call["entity_ids"]
+                        if not manager.is_parked(self._hass.states.get(entity_id))
+                    ],
+                })
+            else:
+                result.append(call)
+        return [call for call in result if call["entity_ids"]]
+
+    def _process_single_mode(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Drop `set_hvac_mode` for a member whose only mode it already runs.
+
+        Such a member cannot change its mode, so the call changes nothing —
+        and some integrations offer a single mode without a way to set it, so
+        the call raises and the rest of the batch never goes out. Judged on
+        the physical state: a template's rendered mode list is not the
+        device's. Here, not in the entity selection: the turn-on setpoint is
+        derived from the mode call's members before the pipeline runs.
+        """
+        result: list[dict[str, Any]] = []
+        for call in calls:
+            hvac_mode = call["kwargs"].get(ATTR_HVAC_MODE)
+            if hvac_mode is None or call["service"] != SERVICE_SET_HVAC_MODE:
+                result.append(call)
+                continue
+            entity_ids = []
+            for entity_id in call["entity_ids"]:
+                state = available_state(self._hass.states.get(entity_id))
+                modes = (state.attributes.get(ATTR_HVAC_MODES) or []) if state is not None else []
+                if state is not None and state.state == hvac_mode and len(modes) == 1 and modes[0] == hvac_mode:
+                    continue
+                entity_ids.append(entity_id)
+            if entity_ids:
+                result.append({**call, "entity_ids": entity_ids})
+        return result
+
+    def _off_template_park(self, call: dict[str, Any]) -> list[dict[str, Any]]:
+        """Split an OFF call into the members that take it and the parked ones.
+
+        A parkable member gets `set_hvac_mode: heat` unless it heats already,
+        then `set_temperature(min_temp)` without a mode (many integrations
+        ignore one there) unless it is parked already. A member reporting
+        `off` physically gets nothing. Members with a native `off` — or no
+        mode list at all — keep the original call; any other member has no
+        way to turn off and gets nothing.
+
+        The park calls mark what they send as `injected`, or the staleness
+        check would discard `heat` against the target `off`. To still be
+        discarded once a newer command overtakes them, they carry the OFF
+        they replace as `guard_hvac_mode` — beside `kwargs`, so it is never
+        sent.
+        """
+        manager = self._group.off_template_manager
+        keep_ids: list[str] = []
+        heat_ids: list[str] = []
+        park_by_value: dict[float, list[str]] = {}
+        for entity_id in call["entity_ids"]:
+            state = available_state(self._hass.states.get(entity_id))
+            if state is None:
+                keep_ids.append(entity_id)
+            elif manager.is_parkable(state):
+                if state.state == HVACMode.OFF:
+                    continue
+                if state.state != HVACMode.HEAT:
+                    heat_ids.append(entity_id)
+                if not manager.is_parked(state):
+                    park_by_value.setdefault(manager.park_setpoint(state), []).append(entity_id)
+            elif not (modes := state.attributes.get(ATTR_HVAC_MODES)) or HVACMode.OFF in modes:
+                keep_ids.append(entity_id)
+
+        guard = {} if ATTR_HVAC_MODE in call.get("injected", []) else {"guard_hvac_mode": HVACMode.OFF}
+        result = [{**call, "entity_ids": keep_ids}]
+        if heat_ids:
+            result.append({
+                "service": SERVICE_SET_HVAC_MODE,
+                "kwargs": {ATTR_HVAC_MODE: HVACMode.HEAT},
+                "entity_ids": heat_ids,
+                "injected": [ATTR_HVAC_MODE],
+                **guard,
+            })
+        for value, entity_ids in park_by_value.items():
+            result.append({
+                "service": SERVICE_SET_TEMPERATURE,
+                "kwargs": {ATTR_TEMPERATURE: value},
+                "entity_ids": entity_ids,
+                "injected": [ATTR_TEMPERATURE],
+                **guard,
+            })
+        return result
+
+    def _off_template_hold_setpoints(self, calls: list[dict[str, Any]], data: dict[str, Any]) -> list[dict[str, Any]]:
+        """Keep parkable members out of a setpoint call while the group is off.
+
+        A setpoint un-parks such a member, which wakes it — where the same call
+        leaves a device with a native `off` off. The value stays in the target
+        and arrives on switch-on. A payload that switches on (the boost) passes.
+
+        Bound to the group target, not to the device: a member a slot put on
+        its min_temp must still receive the next slot without a mode.
+        """
+        manager = self._group.off_template_manager
+        if (
+            not manager.enabled
+            or self.target_state.hvac_mode != HVACMode.OFF
+            or data.get(ATTR_HVAC_MODE) not in (None, HVACMode.OFF)
+        ):
+            return calls
+        result = [
+            {
+                **call,
+                "entity_ids": [
+                    entity_id for entity_id in call["entity_ids"]
+                    if not manager.is_parkable(self._hass.states.get(entity_id))
+                ],
+            }
+            for call in calls
+        ]
+        return [call for call in result if call["entity_ids"]]
 
     def _min_temp_off_restore_value(self) -> float | None:
         """Setpoint the min_temp_off restore branch sends when turning a device on.
@@ -1641,6 +1819,8 @@ class ClimateCallHandler(BaseServiceCallHandler):
         Injected attributes (listed in call['injected']) are excluded from the
         staleness check — their values intentionally deviate from target_state.
         """
+        if (guard := call.get("guard_hvac_mode")) is not None and self.target_state.hvac_mode != guard:
+            return True
         target = self.target_state.to_dict()
         skip_attrs = set(call.get("injected", []))
         offset_attrs = set(call.get("member_offset_applied", []))
@@ -1688,9 +1868,8 @@ class ClimateCallHandler(BaseServiceCallHandler):
             effective is not SYNC_TARGET
             and effective
             and temp_attrs & set(effective)
-            and self._group.offset_set_callback
         ):
-            await self._group.offset_set_callback(0.0)
+            await async_reset_group_offset(self._group)
 
 
 class SyncCallHandler(BaseServiceCallHandler):
@@ -1736,9 +1915,7 @@ class SyncCallHandler(BaseServiceCallHandler):
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Read from target_state with group_offset applied for temperature attributes."""
-        if self._apply_group_offset():
-            return self._get_target_value_with_offset(attr, value)
-        return getattr(self.target_state, attr, None)
+        return self._restore_target_value(attr)
 
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
         """Apply Partial Sync (skip OFF members) AND exclude template-covered members.
@@ -1749,7 +1926,7 @@ class SyncCallHandler(BaseServiceCallHandler):
         active. UI/Schedule/Boost/Template handlers do NOT override this hook, so
         legitimate heat_cool commands still reach covered members.
         """
-        if self._group.member_template_manager.is_covered_state(state):
+        if self._group.range_template_manager.is_covered_state(state):
             return True
         if not self._group.config.get(CONF_IGNORE_OFF_MEMBERS_SYNC):
             return False
@@ -1790,10 +1967,9 @@ class WindowControlCallHandler(BaseServiceCallHandler):
         return entity_id in self._group.run_state.isolated_members
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
-        # No block left: read target_state+offset so diff-check sees the same value members have.
         # While any block stands, use the value as-is — either the explicit window
         # payload, or a cascade restore whose target is sent unshifted (below).
-        return self._get_target_value_with_offset(attr, value) if not self._group.run_state.blocking_sources else value
+        return value if self._group.run_state.blocking_sources else self._restore_target_value(attr)
 
     def _apply_group_offset(self) -> bool:
         # Offset stays suspended while any block stands — this must match the
@@ -1821,10 +1997,9 @@ class PresenceCallHandler(BaseServiceCallHandler):
         return entity_id in self._group.run_state.isolated_members
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
-        # No block left: read target_state+offset so diff-check sees the same value members have.
         # While any block stands, use the value as-is — either the explicit away
         # payload, or a cascade restore whose target is sent unshifted (below).
-        return self._get_target_value_with_offset(attr, value) if not self._group.run_state.blocking_sources else value
+        return value if self._group.run_state.blocking_sources else self._restore_target_value(attr)
 
     def _apply_group_offset(self) -> bool:
         # Offset stays suspended while any block stands — this must match the
@@ -1837,7 +2012,8 @@ class PresenceCallHandler(BaseServiceCallHandler):
         """Leave a member the user switched off alone, per configured phase.
 
         Does not apply when the away payload switches the members off itself
-        (`away_payload_switches_members_off`): then the group owns that `off` and
+        (`away_payload_switches_members_off`), or parks this member through the
+        Off Template (`away_payload_parks`): then the group owns that `off` and
         must wake it on return — the state alone cannot tell a user's off from
         the group's.
 
@@ -1851,7 +2027,8 @@ class PresenceCallHandler(BaseServiceCallHandler):
         all-off group with no way back on; presence never does, so an all-off
         group is the user's own doing and stays off.
         """
-        if self._group.presence_override_manager.away_payload_switches_members_off:
+        presence_manager = self._group.presence_override_manager
+        if presence_manager.away_payload_switches_members_off or presence_manager.away_payload_parks(state):
             return False
 
         mode = self._group.config.get(CONF_IGNORE_OFF_MEMBERS_PRESENCE, PresenceOffRespect.DISABLED)
@@ -1882,9 +2059,7 @@ class ScheduleCallHandler(BaseServiceCallHandler):
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Read from target_state with group_offset applied for temperature attributes."""
-        if self._apply_group_offset():
-            return self._get_target_value_with_offset(attr, value)
-        return getattr(self.target_state, attr, None)
+        return self._restore_target_value(attr)
 
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
         """Apply Partial Sync: skip OFF members if CONF_IGNORE_OFF_MEMBERS_SCHEDULE is set."""
@@ -1909,10 +2084,11 @@ class ScheduleCallHandler(BaseServiceCallHandler):
 
 
 class SwitchCallHandler(BaseServiceCallHandler):
-    """Call handler for Main Switch operations (OFF / restore).
+    """Call handler for Main Switch operations (switch action / restore).
 
-    Bypasses all blocking — switch is the master on/off and must always
-    reach all members regardless of blocking_sources or isolated_members.
+    Bypasses all blocking — when the switch action sends a payload, it reaches
+    every member regardless of blocking_sources or isolated_members. The
+    release action sends nothing.
     """
 
     CONTEXT_ID = "switch"
@@ -1928,9 +2104,14 @@ class SwitchCallHandler(BaseServiceCallHandler):
         """Bypass all blocking — switch commands always reach every member."""
         return False
 
+    def _get_target_value(self, attr: str, value: Any = None) -> Any:
+        # While any block stands, use the value as-is — either the switch action
+        # payload, or a restore whose target is sent unshifted (below).
+        return value if self._group.run_state.blocking_sources else self._restore_target_value(attr)
+
     def _apply_group_offset(self) -> bool:
-        # Offset stays suspended while any block stands: the switch-OFF payload
-        # {"hvac_mode": "off"} must not be shifted, and a restore that still has
+        # Offset stays suspended while any block stands: the switch payload (OFF
+        # or a fixed setpoint) must not be shifted, and a restore that still has
         # another block behind it sends the plain target.
         return not self._group.run_state.blocking_sources
 
@@ -1938,9 +2119,10 @@ class SwitchCallHandler(BaseServiceCallHandler):
 class SwitchEnforceCallHandler(BaseServiceCallHandler):
     """Call handler for Switch enforcement (deviating member correction).
 
-    Bypass profile: ignores run_state.blocked, respects isolated_members.
-    Isolated members were deliberately turned OFF — enforcement must not
-    overwrite that. Distinct from SwitchCallHandler, which bypasses everything.
+    Bypass profile: ignores run_state.blocked, respects isolated_members — a
+    safeguard only: the main switch lifts every isolation when it turns off and
+    no rule isolates while it stays off, so the set is empty here. Distinct from
+    SwitchCallHandler, which bypasses everything.
     """
 
     CONTEXT_ID = "switch_enforce"
@@ -1978,10 +2160,9 @@ class OverrideCallHandler(BaseServiceCallHandler):
         super().__init__(group)
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
-        """Use explicit passed value if available, otherwise read from target_state."""
-        if value is not None:
-            return value
-        return getattr(self.target_state, attr, None)
+        # While the boost runs, the call is its activation payload; otherwise it
+        # is the restore (abort, expiry, reset clear the boost before sending).
+        return value if self._group.run_state.boost_temperature is not None else self._restore_target_value(attr)
 
     def _read_capability_state(self, entity_id: str):
         """While a boost runs, covered members are judged like the boost judges them
@@ -2028,13 +2209,11 @@ class TemplateCallHandler(BaseServiceCallHandler):
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Read from target_state with group_offset applied for temperature attributes."""
-        if self._apply_group_offset():
-            return self._get_target_value_with_offset(attr, value)
-        return getattr(self.target_state, attr, None)
+        return self._restore_target_value(attr)
 
     def _block_unsynced_entity(self, attr: str, target_value: Any, state: State) -> bool:  # noqa: ARG002
         """Address ONLY template-covered members — skip everything else."""
-        return not self._group.member_template_manager.is_covered_state(state)
+        return not self._group.range_template_manager.is_covered_state(state)
 
     def _block_all_calls(self, data: dict[str, Any] | SyncTarget = SYNC_TARGET) -> bool:  # noqa: ARG002
         """Suppress changeover while a temporary state is active."""

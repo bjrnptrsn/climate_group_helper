@@ -87,6 +87,10 @@ CONF_IGNORE_OFF_MEMBERS_SYNC = "ignore_off_members_sync"
 CONF_SYNC_ATTRS = "sync_attributes"
 CONF_SYNC_MODE = "sync_mode"
 
+# Main Switch
+CONF_SWITCH_ACTION = "switch_action"
+CONF_SWITCH_TEMPERATURE = "switch_temperature"
+
 # Window Control
 CONF_CLOSE_DELAY = "close_delay"
 CONF_ROOM_OPEN_DELAY = "room_open_delay"
@@ -158,6 +162,7 @@ CONF_FORCE_RETRY = "force_retry"
 CONF_GRACE_PERIOD = "grace_period"
 CONF_MEMBER_COMMAND_DELAY = "member_command_delay"
 CONF_MIN_TEMP_OFF = "min_temp_off"
+CONF_OFF_TEMPLATE_ENABLED = "off_template_enabled"
 CONF_RANGE_TEMPLATE_COOL_ENTITIES = "range_template_cool_entities"
 CONF_RANGE_TEMPLATE_DEADBAND_ACTION = "range_template_deadband_action"
 CONF_RANGE_TEMPLATE_ENABLED = "range_template_enabled"
@@ -276,6 +281,14 @@ class WindowControlAction(StrEnum):
     TEMPERATURE = "temperature"
 
 
+class SwitchAction(StrEnum):
+    """What the main switch does while it is off."""
+
+    OFF = "off"
+    TEMPERATURE = "temperature"
+    RELEASE = "release"
+
+
 class RangeTemplateDeadbandAction(StrEnum):
     """Physical action when a range-template member is inside the deadband."""
 
@@ -381,6 +394,7 @@ ATTR_CONFIG_OVERRIDES = "config_overrides"
 ATTR_CURRENT_HVAC_MODES = "current_hvac_modes"
 ATTR_GROUP_OFFSET = "group_offset"
 ATTR_OFFSET_ENTITY_ID = "offset_entity_id"
+ATTR_MAIN_SWITCH_ACTION = "main_switch_action"
 ATTR_MAIN_SWITCH_ENTITY_ID = "main_switch_entity_id"
 ATTR_ISOLATED_MEMBERS = "isolated_members"
 ATTR_LAST_ACTIVE_HVAC_MODE = "last_active_hvac_mode"

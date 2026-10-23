@@ -68,7 +68,7 @@
               "ignore_off_members_temperature": "Wyklucz wyłączonych członków z temperatury"
             },
             "data_description": {
-              "temp_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
+              "temp_target_avg": "Jak grupa podsumowuje docelowe temperatury swoich członków.",
               "temp_use_master": "Wyświetla wartość zadaną urządzenia głównego jako docelową temperaturę grupy zamiast średniej członków. Powraca do średniej, jeśli urządzenie główne jest niedostępne. Wpływa tylko na sposób wyświetlania stanu grupy — nie steruje ani nie synchronizuje członków (użyj Trybu synchronizacji: Master/Lock w tym celu).",
               "temp_target_round": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
               "temp_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
@@ -94,7 +94,7 @@
               "humidity_update_targets": "Zapisz Zewnętrzną Wilgotność do Encji"
             },
             "data_description": {
-              "humidity_target_avg": "Jak grupa oblicza punkt nastawy do wysłania do swoich członków.",
+              "humidity_target_avg": "Jak grupa podsumowuje docelową wilgotność swoich członków.",
               "humidity_use_master": "Wyświetla wartość zadaną urządzenia głównego jako docelową wilgotność grupy zamiast średniej członków. Powraca do średniej, jeśli urządzenie główne jest niedostępne. Wpływa tylko na sposób wyświetlania stanu grupy — nie steruje ani nie synchronizuje członków (użyj Trybu synchronizacji: Master/Lock w tym celu).",
               "humidity_target_round": "Dotyczy tylko wartości wysyłanych do urządzeń, a nie wartości obecnych/wyświetlanych.",
               "humidity_current_avg": "Jak grupa podsumowuje odczyty czujników od swoich członków.",
@@ -111,8 +111,8 @@
               "ignore_off_members_sync": "Respektuj stan WYŁ członków (Synchronizacja)"
             },
             "data_description": {
-              "sync_mode": "Co zrobić, gdy członek zmieni się poza grupą. Disabled: ignoruj. Mirror: lustrzane odbicie. Lock: cofnij zmiany. Mirror/Lock: lustrzane wybrane, cofnij niewybrane. Master/Lock: lustrzane master, cofnij inne. Tylko przejmij: przejmij zmiany bez przenoszenia ich dalej.",
-              "sync_attributes": "Definiuje, na które atrybuty wpływa tryb synchronizacji. Obsługa wybranych i niewybranych atrybutów (Mirror, Revert lub Ignore) zależy od wybranego trybu.",
+              "sync_mode": "Co zrobić, gdy członek zostanie zmieniony poza grupą. Wyłączone: ignoruj. Lustro: powielaj zmiany. Blokada: cofaj zmiany. Lustro/Blokada: powielaj wybrane atrybuty, cofaj niewybrane. Master/Blokada: powielaj jednostkę główną, cofaj pozostałe. Tylko przejmij: przejmij zmiany bez przekazywania ich dalej.",
+              "sync_attributes": "Określa, na które atrybuty działa tryb synchronizacji. Sposób obsługi wybranych i niewybranych atrybutów (powielanie, cofanie lub ignorowanie) zależy od wybranego trybu.",
               "ignore_off_members_sync": "Ręcznie wyłączeni członkowie są pozostawiani w spokoju. Ich stan nie jest ani odzwierciedlany, ani cofany. Uwaga: bezpośrednie polecenia grupowe zawsze docierają do wszystkich."
             }
           },
@@ -131,15 +131,15 @@
               "close_delay": "Opóźnienie Zamknięcia (s)"
             },
             "data_description": {
-              "window_mode": "Włącz grupę na podstawie czujników. HVAC ustawia się na 'off', gdy okna są otwarte.",
+              "window_mode": "Wstrzymuje ogrzewanie lub obniża temperaturę po otwarciu monitorowanego okna.",
               "window_adopt_manual_changes": "Zachowaj zmiany wprowadzone przy otwartych oknach i zastosuj je po ich zamknięciu. Do tego czasu obowiązuje akcja po otwarciu okna.",
               "window_action": "Co zrobić po otwarciu okna: Wyłącz całkowicie lub ustaw określoną temperaturę (np. ochronę przed mrozem).",
               "window_temperature": "Temperatura docelowa, gdy wybrana jest akcja 'Ustaw temperaturę'.",
-              "room_sensor": "(Opcjonalnie) Czujnik binarny dla okna/drzwi w pokoju.",
-              "zone_sensor": "(Opcjonalnie) Czujnik binarny dla okien/drzwi w strefie/piętrze. Czujnik strefy musi obejmować czujnik pokoju.",
-              "room_open_delay": "Czas oczekiwania po otwarciu okna w pokoju.",
-              "zone_open_delay": "Czas oczekiwania po otwarciu okna w strefie.",
-              "close_delay": "Czas oczekiwania po zamknięciu okien."
+              "room_sensor": "(Opcjonalnie) Czujnik binarny, pomocnik (input_boolean) lub encja rolety (cover) dla okna/drzwi w pokoju.",
+              "zone_sensor": "(Opcjonalnie) Czujnik binarny, pomocnik (input_boolean) lub encja rolety (cover) dla okien/drzwi w strefie/na piętrze. Czujnik strefy musi obejmować czujnik pokoju.",
+              "room_open_delay": "Czas oczekiwania po otwarciu okna w pokoju przed uruchomieniem akcji okna.",
+              "zone_open_delay": "Czas oczekiwania po otwarciu okna w strefie przed uruchomieniem akcji okna.",
+              "close_delay": "Czas oczekiwania po zamknięciu wszystkich okien przed przywróceniem poprzedniego stanu."
             }
           },
           "presence_section": {
@@ -192,14 +192,14 @@
           },
           "presets_section": {
             "name": "Wstępne ustawienia grupy",
-            "description": "Zdefiniuj własne nazwane presety dla grupy (np. eco, guest, ventilate). Wybranie presetu stosuje jego atrybuty jednocześnie do wszystkich członków. Preset grupy ma pierwszeństwo przed presetem członka o tej samej nazwie.",
+            "description": "Zdefiniuj własne nazwane presety dla grupy (np. eco, guest, ventilate). Wybranie presetu stosuje jego atrybuty jednocześnie do wszystkich członków. Preset grupy ma pierwszeństwo przed presetem członka o tej samej nazwie. Profile czasu działania ustawione usługą set_group_preset są dodawane do profili wprowadzonych tutaj i mają pierwszeństwo przed profilem o tej samej nazwie.",
             "data": {
               "group_presets": "Wstępne ustawienia grupy (YAML)",
               "retain_service_changes_presets": "Zachowaj zmiany wprowadzone przez usługę (Profile)"
             },
             "data_description": {
               "group_presets": "Twoje presety w YAML: dowolnie wybrana nazwa każdego presetu wraz z atrybutami, które ma zastosować (temperature, hvac_mode, fan_mode, swing_mode). Preset stosuje tylko te atrybuty, które wymienia. Format i gotowe przykłady znajdziesz w dokumentacji.",
-              "retain_service_changes_presets": "Zachowuje profile utworzone lub zaktualizowane przez usługę po restarcie. W przeciwnym razie przywracane są skonfigurowane profile."
+              "retain_service_changes_presets": "Zachowuje po restarcie profile czasu działania ustawione usługą set_group_preset. Bez tej opcji grupa startuje tylko z profilami wprowadzonymi tutaj."
             }
           },
           "temp_offsets_section": {
@@ -214,7 +214,7 @@
           },
           "isolation_section": {
             "name": "Izolacja członków",
-            "description": "Tymczasowo izoluj określonych członków (np. grzejniki za zasłonami) gdy czujnik binarny jest aktywny.",
+            "description": "Tymczasowo izoluj wybranych członków, gdy wyzwalacz jest aktywny. Odizolowani członkowie otrzymują akcję izolacji (domyślnie Wył.) i są wykluczani z obliczeń grupy.",
             "data": {
               "isolation_rule_count": "Liczba reguł",
               "isolation_rule_1_entities": "Encje do izolacji",
@@ -230,7 +230,7 @@
             "data_description": {
               "isolation_rule_count": "Ile niezależnych reguł izolacji wyświetlać. Zapisz po zmianie, aby wyświetlić lub ukryć dodatkowe sloty reguł.",
               "isolation_rule_1_entities": "Członkowie grupy, którzy zostaną odizolowani, gdy wyzwalacz jest aktywny.",
-              "isolation_rule_1_trigger": "Wybierz, co aktywuje izolację: czujnik binarny lub określony tryb HVAC grupy.",
+              "isolation_rule_1_trigger": "Wybierz, co aktywuje izolację: czujnik binarny, określony tryb HVAC grupy lub ręcznie wyłączony członek.",
               "isolation_rule_1_sensor": "(Wyzwalacz czujnika) Czujnik binarny wyzwalający izolację przy stanie ON.",
               "isolation_rule_1_hvac_modes": "(Wyzwalacz trybu HVAC) Izolacja aktywuje się, gdy docelowy tryb grupy jest jednym z tych.",
               "isolation_rule_1_activate_delay": "(Tylko wyzwalacz czujnika/trybu HVAC) Czas oczekiwania po aktywacji wyzwalacza przed izolacją członków.",
@@ -256,7 +256,7 @@
             },
             "data_description": {
               "isolation_rule_2_entities": "Członkowie grupy, którzy zostaną odizolowani, gdy wyzwalacz jest aktywny.",
-              "isolation_rule_2_trigger": "Wybierz, co aktywuje izolację: czujnik binarny lub określony tryb HVAC grupy.",
+              "isolation_rule_2_trigger": "Wybierz, co aktywuje izolację: czujnik binarny, określony tryb HVAC grupy lub ręcznie wyłączony członek.",
               "isolation_rule_2_sensor": "(Wyzwalacz czujnika) Czujnik binarny wyzwalający izolację przy stanie ON.",
               "isolation_rule_2_hvac_modes": "(Wyzwalacz trybu HVAC) Izolacja aktywuje się, gdy docelowy tryb grupy jest jednym z tych.",
               "isolation_rule_2_activate_delay": "(Tylko wyzwalacz czujnika/trybu HVAC) Czas oczekiwania po aktywacji wyzwalacza przed izolacją członków.",
@@ -282,7 +282,7 @@
             },
             "data_description": {
               "isolation_rule_3_entities": "Członkowie grupy, którzy zostaną odizolowani, gdy wyzwalacz jest aktywny.",
-              "isolation_rule_3_trigger": "Wybierz, co aktywuje izolację: czujnik binarny lub określony tryb HVAC grupy.",
+              "isolation_rule_3_trigger": "Wybierz, co aktywuje izolację: czujnik binarny, określony tryb HVAC grupy lub ręcznie wyłączony członek.",
               "isolation_rule_3_sensor": "(Wyzwalacz czujnika) Czujnik binarny wyzwalający izolację przy stanie ON.",
               "isolation_rule_3_hvac_modes": "(Wyzwalacz trybu HVAC) Izolacja aktywuje się, gdy docelowy tryb grupy jest jednym z tych.",
               "isolation_rule_3_activate_delay": "(Tylko wyzwalacz czujnika/trybu HVAC) Czas oczekiwania po aktywacji wyzwalacza przed izolacją członków.",
@@ -308,7 +308,7 @@
             },
             "data_description": {
               "isolation_rule_4_entities": "Członkowie grupy, którzy zostaną odizolowani, gdy wyzwalacz jest aktywny.",
-              "isolation_rule_4_trigger": "Wybierz, co aktywuje izolację: czujnik binarny lub określony tryb HVAC grupy.",
+              "isolation_rule_4_trigger": "Wybierz, co aktywuje izolację: czujnik binarny, określony tryb HVAC grupy lub ręcznie wyłączony członek.",
               "isolation_rule_4_sensor": "(Wyzwalacz czujnika) Czujnik binarny wyzwalający izolację przy stanie ON.",
               "isolation_rule_4_hvac_modes": "(Wyzwalacz trybu HVAC) Izolacja aktywuje się, gdy docelowy tryb grupy jest jednym z tych.",
               "isolation_rule_4_activate_delay": "(Tylko wyzwalacz czujnika/trybu HVAC) Czas oczekiwania po aktywacji wyzwalacza przed izolacją członków.",
@@ -320,7 +320,7 @@
           },
           "member_template_section": {
             "name": "Szablon elementu",
-            "description": "Renderuje elementy z jednym punktem nastawy jako wirtualne encje zakresu ciepło/chłód. Group Helper tłumaczy polecenia zakresu na odpowiednie fizyczne polecenia ciepło/chłód na podstawie aktualnej temperatury każdego elementu.",
+            "description": "Przedstawia elementy z funkcjami, których ich urządzenie natywnie nie oferuje. Szablon zakresu: elementy z jedną wartością zadaną działają jak urządzenia z zakresem grzania/chłodzenia — polecenia zakresu stają się grzaniem lub chłodzeniem zależnie od aktualnej temperatury elementu. Szablon wyłączenia: grzejniki bez trybu wyłączenia są wyłączane przez ustawienie grzania z ich własną temperaturą minimalną.",
             "data": {
               "range_template_enabled": "Włącz szablon zakresu",
               "range_template_deadband_action": "Akcja w martwej strefie",
@@ -330,7 +330,8 @@
               "range_template_humidity_enabled": "Osuszanie w strefie nieczułości",
               "range_template_humidity_action": "Działanie wilgotności",
               "range_template_humidity_hysteresis": "Histereza wilgotności",
-              "range_template_humidity_deactivation_delay": "Opóźnienie dezaktywacji"
+              "range_template_humidity_deactivation_delay": "Opóźnienie dezaktywacji",
+              "off_template_enabled": "Włącz szablon wyłączenia"
             },
             "data_description": {
               "range_template_enabled": "Automatycznie renderuje wszystkich członków z jednym punktem nastawy (bez natywnego ogrzewania/chłodzenia) jako wirtualne urządzenia w trybie zakresu.",
@@ -341,13 +342,16 @@
               "range_template_humidity_enabled": "W docelowym zakresie temperatur przełącz na działanie wilgotności, jeśli wilgotność przekroczy wartość docelową.",
               "range_template_humidity_action": "Działanie wykonywane, gdy bieżąca wilgotność przekracza docelową w strefie nieczułości.",
               "range_template_humidity_hysteresis": "Pasmo histerezy przerzutnika Schmitta wokół wilgotności docelowej, aby zapobiec częstemu przełączaniu.",
-              "range_template_humidity_deactivation_delay": "Opóźnienie przed dezaktywacją działania wilgotności po spadku poniżej progu."
+              "range_template_humidity_deactivation_delay": "Opóźnienie przed dezaktywacją działania wilgotności po spadku poniżej progu.",
+              "off_template_enabled": "Grzejniki bez trybu wyłączenia są po wyłączeniu grupy ustawiane na grzanie z ich własną temperaturą minimalną. Grzejnik ustawiony na swoją temperaturę minimalną jest wtedy traktowany jako wyłączony. Dla urządzeń z trybem wyłączenia użyj zamiast tego 'Minimalna temperatura po wyłączeniu'."
             }
           },
           "advanced_section": {
             "name": "Ustawienia zaawansowane",
-            "description": "Dostosuj czasy poleceń i zachowanie ponawiania. Przełączaj atrybuty diagnostyczne i czujniki konfiguracji.",
+            "description": "Wybierz, co robi przełącznik główny, gdy jest wyłączony. Dostosuj czasy poleceń i zachowanie ponawiania. Przełączaj atrybuty diagnostyczne i czujniki konfiguracji.",
             "data": {
+              "switch_action": "Akcja przełącznika głównego",
+              "switch_temperature": "Temperatura przełącznika głównego",
               "debounce_delay": "Opóźnienie Debounce (sekundy)",
               "retry_attempts": "Próby Ponowienia",
               "retry_delay": "Opóźnienie Ponowienia (sekundy)",
@@ -356,9 +360,11 @@
               "grace_period": "Optymistyczny okres przejścia UI (sekundy)",
               "expose_smart_sensors": "Pokaż Inteligentne Czujniki",
               "expose_member_entities": "Pokaż Listę Członków",
-              "expose_config": "Pokaż konfigurację (Debug)"
+              "expose_config": "Udostępnij sensor konfiguracji"
             },
             "data_description": {
+              "switch_action": "Co otrzymują urządzenia, gdy przełącznik główny jest wyłączony: Wyłącz, Ustaw temperaturę (stała wartość zadana, np. ochrona przed mrozem – zmienia tylko wartość zadaną pracujących urządzeń) lub Zwolnij urządzenia (grupa zostawia urządzenia w spokoju, a ty sterujesz nimi bezpośrednio).",
+              "switch_temperature": "Temperatura docelowa, gdy wybrana jest akcja 'Ustaw temperaturę'.",
               "debounce_delay": "Czas oczekiwania przed wysłaniem poleceń. Wyższe wartości zapobiegają poleceniom typu 'szybki ogień' podczas przesuwania suwaków.",
               "retry_attempts": "Ile razy ponownie wysłać polecenie, jeśli urządzenie nie odpowiada. Ustaw na 0, aby wyłączyć.",
               "retry_delay": "Pauza między próbami. Danie urządzeniom chwili na odzyskanie sprawności może poprawić niezawodność.",
@@ -366,8 +372,8 @@
               "member_command_delay": "Przerwa między poleceniami wysyłanymi do poszczególnych członków. Przydatne, gdy jednoczesne sterowanie wieloma urządzeniami przeciąża sieć lub bramkę (np. nadajniki IR, niektóre koordynatory Zigbee). Ustaw 0, aby wyłączyć.",
               "grace_period": "Jak długo grupa wyświetla wysłaną wartość przed przełączeniem na średnią członków. Zapobiega migotaniu UI, gdy wolne urządzenia (mosty Cloud, Zigbee) odsyłają swój stary stan. Ustaw na 0, aby wyłączyć.",
               "expose_smart_sensors": "Tworzy dodatkowe encje czujników dla temperatury i wilgotności grupy (przydatne do wykresów).",
-              "expose_member_entities": "Tworzy atrybut wymieniający wszystkie ID encji członkowskich.",
-              "expose_config": "Dodaje wszystkie wartości konfiguracji do atrybutów encji. Przydatne do debugowania."
+              "expose_member_entities": "Dodaje atrybut 'entity_id' z listą wszystkich członków, dzięki czemu okno szczegółów wyświetla listę członków.",
+              "expose_config": "Tworzy sensor diagnostyczny (sensor.*_configuration), który udostępnia przenośne ustawienia jako atrybut JSON. Przydatne do kopiowania ustawień między grupami za pomocą automatyzacji."
             }
           }
         },
@@ -381,13 +387,14 @@
       "no_entities": "Co najmniej jedno urządzenie klimatyczne musi pozostać w grupie.",
       "master_not_in_members": "Jednostka nadrzędna musi być członkiem grupy.",
       "master_refresh_notice": "Dodano encję nadrzędną (Master). Dostępne nowe opcje.",
-      "master_options_notice": "Nowa opcja encji nadrzędnej",
+      "master_options_notice": "W tej sekcji dostępne są nowe opcje dla encji głównej (Master).",
       "isolation_all_selected": "Co najmniej jeden członek musi pozostać poza izolacją.",
       "isolation_entity_overlap": "Każdy członek może znajdować się tylko w jednej regule izolacji.",
       "isolation_action_preset_required": "Wybierz tryb wstępny dla akcji izolacji.",
       "isolation_sensor_required": "Wybierz czujnik dla reguły izolacji lub ustaw jej wyzwalacz na Wyłączony.",
       "isolation_hvac_modes_required": "Wybierz co najmniej jeden tryb dla reguły izolacji lub ustaw jej wyzwalacz na Wyłączony.",
       "window_temperature_required": "Ustaw temperaturę przy otwartym oknie lub zmień akcję okna.",
+      "switch_temperature_required": "Ustaw temperaturę przełącznika głównego lub zmień jego akcję.",
       "presence_action_value_required": "Ustaw wartość dla wybranej akcji nieobecności lub zmień akcję.",
       "schedule_fallback_payload_invalid": "Nieprawidłowy format YAML w zapasowych danych harmonogramu. Musi to być prawidłowe mapowanie klucz-wartość.",
       "group_presets_invalid": "Nieprawidłowy format YAML w ustawieniach wstępnych grupy. Musi być prawidłowym mapowaniem klucz-wartość.",
@@ -401,15 +408,15 @@
   "selector": {
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normalny (Demokratyczny)",
-        "off_priority": "Priorytet Wyłączenia (Główny Wyłącznik)",
-        "auto": "Auto (Inteligentny)"
+        "normal": "Normalny – Grupa przyjmuje najczęstszy tryb członków",
+        "off_priority": "Priorytet Wył. – Jeśli którykolwiek członek jest wyłączony, cała grupa jest wyłączona",
+        "auto": "Auto – Inteligentne przełączanie między trybem Normalnym a Priorytetem Wył."
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Część Wspólna (Tryb Bezpieczny - Wspólne Funkcje)",
-        "union": "Suma (Zaawansowany - Wszystkie Funkcje)"
+        "intersection": "Część wspólna – Obsługuj tylko funkcje dostępne u WSZYSTKICH członków",
+        "union": "Suma – Obsługuj wszystkie funkcje dostępne u KTÓREGOKOLWIEK członka"
       }
     },
     "temp_target_avg": {
@@ -505,6 +512,13 @@
       "options": {
         "off": "Wyłącz",
         "temperature": "Ustaw temperaturę"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "Wyłącz",
+        "temperature": "Ustaw temperaturę",
+        "release": "Zwolnij urządzenia"
       }
     },
     "union_out_of_bounds_action": {
@@ -628,32 +642,6 @@
     }
   },
   "services": {
-    "set_temperature": {
-      "name": "Ustaw Temperaturę",
-      "description": "Ustaw temperaturę docelową dla całej grupy.",
-      "fields": {
-        "entity_id": {
-          "name": "Grupa Klimatyczna",
-          "description": "Grupa do sterowania."
-        },
-        "temperature": {
-          "name": "Temperatura Docelowa",
-          "description": "Pożądana temperatura."
-        },
-        "target_temp_high": {
-          "name": "Cel Wysoki",
-          "description": "Górny limit dla trybu ogrzewania/chłodzenia."
-        },
-        "target_temp_low": {
-          "name": "Cel Niski",
-          "description": "Dolny limit dla trybu ogrzewania/chłodzenia."
-        },
-        "hvac_mode": {
-          "name": "Tryb HVAC",
-          "description": "Opcjonalnie zmień tryb."
-        }
-      }
-    },
     "set_schedule_entity": {
       "name": "Ustaw encję harmonogramu",
       "description": "Przełącza aktywną encję harmonogramu lub kalendarza w czasie działania. Jeśli pominięto lub ustawiono na null, grupa powraca do skonfigurowanej domyślnej encji i ponownie stosuje bieżący slot.",
@@ -686,11 +674,11 @@
     },
     "set_group_preset": {
       "name": "Ustaw profil grupy",
-      "description": "Tworzy, aktualizuje lub czyści wirtualne profile grupy w czasie wykonywania. Pozostaw puste, aby zresetować.",
+      "description": "Ustawia, zmienia lub usuwa profile czasu działania grupy. Są dodawane do profili konfiguracji z ustawień grupy i mają pierwszeństwo przed profilem o tej samej nazwie.",
       "fields": {
         "payload": {
           "name": "Ładunek",
-          "description": "Profile grupy jako YAML lub mapowanie. Pozostaw puste, aby zresetować. Zobacz dokumentację, aby zapoznać się z formatem i przykładami."
+          "description": "Profile czasu działania do ustawienia, jako YAML lub mapowanie. Profil ustawiony na null lub pusty zostaje usunięty; pusty payload usuwa wszystkie profile czasu działania. Zobacz dokumentację, aby zapoznać się z formatem i przykładami."
         }
       }
     },
@@ -764,23 +752,9 @@
         },
         "presets": {
           "name": "Profile grupy",
-          "description": "Czyści profile grupy utworzone w czasie działania i przywraca skonfigurowane profile."
+          "description": "Usuwa wszystkie profile czasu działania. Profile konfiguracji pozostają bez zmian."
         }
       }
-    }
-  },
-  "issues": {
-    "member_unavailable": {
-      "title": "Urządzenie Członkowskie Niedostępne",
-      "description": "Jeden lub więcej urządzeń w {group_name} jest offline. Grupa będzie nadal działać z tym, co ma.\n\nNiedostępne: {unavailable_entities}"
-    },
-    "no_members_available": {
-      "title": "Brak Dostępnych Członków",
-      "description": "Grupa {group_name} nie ma aktywnych członków i jest faktycznie offline.\n\nSprawdź: {member_entities}"
-    },
-    "conflicting_features": {
-      "title": "Konflikt Funkcji",
-      "description": "Grupa {group_name} ma członków z różnymi funkcjami. Funkcjonalność może być ograniczona do tego, co obsługują wszyscy.\n\nKonflikty: {conflicting_entities}"
     }
   },
   "device_automation": {

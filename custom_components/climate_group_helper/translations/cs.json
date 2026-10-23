@@ -68,7 +68,7 @@
               "ignore_off_members_temperature": "Vyloučit vypnuté členy z teploty"
             },
             "data_description": {
-              "temp_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
+              "temp_target_avg": "Jak skupina shrnuje cílové teploty svých členů.",
               "temp_use_master": "Zobrazí hodnotu hlavního zařízení jako cílovou teplotu skupiny místo průměru členů. Při nedostupnosti se vrátí k průměrování. Ovlivňuje pouze zobrazení stavu skupiny — neřídí ani nesynchronizuje členy (pro to použijte Režim synchronizace: Master/Lock).",
               "temp_target_round": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
               "temp_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
@@ -94,7 +94,7 @@
               "humidity_update_targets": "Zapsat Externí Vlhkost do Entit"
             },
             "data_description": {
-              "humidity_target_avg": "Jak skupina vypočítává požadovanou hodnotu k odeslání svým členům.",
+              "humidity_target_avg": "Jak skupina shrnuje cílové vlhkosti svých členů.",
               "humidity_use_master": "Zobrazí hodnotu hlavního zařízení jako cílovou vlhkost skupiny místo průměru členů. Při nedostupnosti se vrátí k průměrování. Ovlivňuje pouze zobrazení stavu skupiny — neřídí ani nesynchronizuje členy (pro to použijte Režim synchronizace: Master/Lock).",
               "humidity_target_round": "Platí pouze pro hodnoty odesílané do zařízení, nikoli pro aktuální/zobrazené hodnoty.",
               "humidity_current_avg": "Jak skupina sumarizuje údaje ze senzorů svých členů.",
@@ -111,8 +111,8 @@
               "ignore_off_members_sync": "Respektovat stav Vypnuto členů (Synchronizace)"
             },
             "data_description": {
-              "sync_mode": "Co dělat, když se člen změní mimo skupinu. Disabled: ignorovat. Mirror: zrcadlit změny. Lock: vrátit změny. Mirror/Lock: zrcadlit vybrané, vrátit nevybrané. Master/Lock: zrcadlit master, vrátit ostatní. Pouze převzít: převzít změny bez přenosu.",
-              "sync_attributes": "Definuje, na které atributy se režim synchronizace vztahuje. Zpracování vybraných a nevybraných atributů (Mirror, Revert nebo Ignore) závisí na zvoleném režimu.",
+              "sync_mode": "Co dělat, když se člen změní mimo skupinu. Vypnuto: ignorovat. Mirror: zrcadlit změny. Lock: vrátit změny. Mirror/Lock: zrcadlit vybrané atributy, vrátit nevybrané. Master/Lock: zrcadlit master, vrátit ostatní. Pouze převzít: převzít změny bez jejich předání dál.",
+              "sync_attributes": "Určuje, na které atributy se režim synchronizace vztahuje. Způsob zpracování vybraných a nevybraných atributů (zrcadlit, vrátit nebo ignorovat) závisí na zvoleném režimu.",
               "ignore_off_members_sync": "Ručně vypnutí členové jsou ponecháni na pokoji. Jejich stav se nezrcadlí ani nevrací. Poznámka: přímé skupinové příkazy vždy zasáhnou všechny členy."
             }
           },
@@ -131,15 +131,15 @@
               "close_delay": "Zpoždění zavření (s)"
             },
             "data_description": {
-              "window_mode": "Povolit nebo zakázat skupinu podle senzorů oken. Pokud je aktivní, režim HVAC se nastaví na 'off', když jsou okna otevřená.",
+              "window_mode": "Pozastaví vytápění nebo sníží teplotu, jakmile se otevře sledované okno.",
               "window_adopt_manual_changes": "Změny provedené při otevřených oknech si zapamatovat a použít po jejich zavření. Do té doby platí akce při otevření okna.",
               "window_action": "Co dělat při otevření okna: Úplně vypnout nebo nastavit konkrétní teplotu (např. protimrazová ochrana).",
               "window_temperature": "Cílová teplota při výběru akce 'Nastavit teplotu'.",
-              "room_sensor": "(Volitelně) Binární senzor pro okno/dveře v místnosti.",
-              "zone_sensor": "(Volitelně) Binární senzor pro okna/dveře v zóně/podlaží. Senzor zóny musí zahrnovat senzor místnosti.",
-              "room_open_delay": "Doba čekání po otevření okna v místnosti před vypnutím.",
-              "zone_open_delay": "Doba čekání po otevření okna v zóně před vypnutím.",
-              "close_delay": "Doba čekání po zavření všech oken před obnovením vytápění."
+              "room_sensor": "(Volitelně) Binární senzor, pomocník (input_boolean) nebo entita clony (cover) pro okno/dveře v místnosti.",
+              "zone_sensor": "(Volitelně) Binární senzor, pomocník (input_boolean) nebo entita clony (cover) pro okna/dveře v zóně nebo patře. Senzor zóny musí zahrnovat senzor místnosti.",
+              "room_open_delay": "Doba čekání po otevření okna v místnosti před spuštěním akce okna.",
+              "zone_open_delay": "Doba čekání po otevření okna v zóně před spuštěním akce okna.",
+              "close_delay": "Doba čekání po zavření všech oken před obnovením předchozího stavu."
             }
           },
           "presence_section": {
@@ -192,14 +192,14 @@
           },
           "presets_section": {
             "name": "Předvolby skupiny",
-            "description": "Definujte vlastní pojmenované předvolby pro skupinu (např. eco, guest, ventilate). Výběrem předvolby se její atributy použijí najednou na všechny členy. Skupinová předvolba přepíše stejnojmennou předvolbu člena.",
+            "description": "Definujte vlastní pojmenované předvolby pro skupinu (např. eco, guest, ventilate). Výběrem předvolby se její atributy použijí najednou na všechny členy. Skupinová předvolba přepíše stejnojmennou předvolbu člena. Předvolby za běhu nastavené službou set_group_preset se přidávají k zde zadaným předvolbám a mají přednost před stejnojmennou.",
             "data": {
               "group_presets": "Předvolby skupiny (YAML)",
               "retain_service_changes_presets": "Zachovat změny provedené službou (Předvolby)"
             },
             "data_description": {
               "group_presets": "Vaše předvolby ve formátu YAML: libovolně zvolený název u každé předvolby, vždy s atributy, které má použít (temperature, hvac_mode, fan_mode, swing_mode). Předvolba použije pouze atributy, které uvádí. Formát a hotové příklady najdete v dokumentaci.",
-              "retain_service_changes_presets": "Zachová předvolby vytvořené nebo upravené službou i po restartu. Jinak se obnoví na nakonfigurované předvolby."
+              "retain_service_changes_presets": "Zachová předvolby za běhu nastavené službou set_group_preset i po restartu. Bez této volby skupina začíná pouze se zde zadanými předvolbami."
             }
           },
           "temp_offsets_section": {
@@ -214,7 +214,7 @@
           },
           "isolation_section": {
             "name": "Izolace členů",
-            "description": "Dočasně izolujte konkrétní členy (např. radiátory za závěsy) když je binární senzor aktivní.",
+            "description": "Dočasně izoluje vybrané členy, dokud je spouštěč aktivní. Izolovaní členové obdrží izolační akci (ve výchozím stavu Vypnuto) a jsou vyloučeni z výpočtů skupiny.",
             "data": {
               "isolation_rule_count": "Počet pravidel",
               "isolation_rule_1_entities": "Entity k izolaci",
@@ -230,7 +230,7 @@
             "data_description": {
               "isolation_rule_count": "Kolik nezávislých izolačních pravidel se zobrazí. Po změně uložte, aby se další sloty pravidel zobrazily nebo skryly.",
               "isolation_rule_1_entities": "Členové skupiny, kteří budou izolováni, když je spouštěč aktivní.",
-              "isolation_rule_1_trigger": "Zvolte, co aktivuje izolaci: binární senzor nebo konkrétní režim HVAC skupiny.",
+              "isolation_rule_1_trigger": "Zvolte, co aktivuje izolaci: binární senzor, konkrétní režim HVAC skupiny nebo ručně vypnutý člen.",
               "isolation_rule_1_sensor": "(Spouštěč senzoru) Binární senzor, který spustí izolaci při stavu ON.",
               "isolation_rule_1_hvac_modes": "(Spouštěč HVAC režimu) Izolace se aktivuje, když je cílový režim skupiny jedním z těchto.",
               "isolation_rule_1_activate_delay": "(Pouze spouštěč senzoru / HVAC režimu) Čekací doba po aktivaci spouštěče před izolací členů.",
@@ -256,7 +256,7 @@
             },
             "data_description": {
               "isolation_rule_2_entities": "Členové skupiny, kteří budou izolováni, když je spouštěč aktivní.",
-              "isolation_rule_2_trigger": "Zvolte, co aktivuje izolaci: binární senzor nebo konkrétní režim HVAC skupiny.",
+              "isolation_rule_2_trigger": "Zvolte, co aktivuje izolaci: binární senzor, konkrétní režim HVAC skupiny nebo ručně vypnutý člen.",
               "isolation_rule_2_sensor": "(Spouštěč senzoru) Binární senzor, který spustí izolaci při stavu ON.",
               "isolation_rule_2_hvac_modes": "(Spouštěč HVAC režimu) Izolace se aktivuje, když je cílový režim skupiny jedním z těchto.",
               "isolation_rule_2_activate_delay": "(Pouze spouštěč senzoru / HVAC režimu) Čekací doba po aktivaci spouštěče před izolací členů.",
@@ -282,7 +282,7 @@
             },
             "data_description": {
               "isolation_rule_3_entities": "Členové skupiny, kteří budou izolováni, když je spouštěč aktivní.",
-              "isolation_rule_3_trigger": "Zvolte, co aktivuje izolaci: binární senzor nebo konkrétní režim HVAC skupiny.",
+              "isolation_rule_3_trigger": "Zvolte, co aktivuje izolaci: binární senzor, konkrétní režim HVAC skupiny nebo ručně vypnutý člen.",
               "isolation_rule_3_sensor": "(Spouštěč senzoru) Binární senzor, který spustí izolaci při stavu ON.",
               "isolation_rule_3_hvac_modes": "(Spouštěč HVAC režimu) Izolace se aktivuje, když je cílový režim skupiny jedním z těchto.",
               "isolation_rule_3_activate_delay": "(Pouze spouštěč senzoru / HVAC režimu) Čekací doba po aktivaci spouštěče před izolací členů.",
@@ -308,7 +308,7 @@
             },
             "data_description": {
               "isolation_rule_4_entities": "Členové skupiny, kteří budou izolováni, když je spouštěč aktivní.",
-              "isolation_rule_4_trigger": "Zvolte, co aktivuje izolaci: binární senzor nebo konkrétní režim HVAC skupiny.",
+              "isolation_rule_4_trigger": "Zvolte, co aktivuje izolaci: binární senzor, konkrétní režim HVAC skupiny nebo ručně vypnutý člen.",
               "isolation_rule_4_sensor": "(Spouštěč senzoru) Binární senzor, který spustí izolaci při stavu ON.",
               "isolation_rule_4_hvac_modes": "(Spouštěč HVAC režimu) Izolace se aktivuje, když je cílový režim skupiny jedním z těchto.",
               "isolation_rule_4_activate_delay": "(Pouze spouštěč senzoru / HVAC režimu) Čekací doba po aktivaci spouštěče před izolací členů.",
@@ -320,7 +320,7 @@
           },
           "member_template_section": {
             "name": "Šablona člena",
-            "description": "Vykresluje členy s jedním žádaným bodem jako virtuální entity s rozsahem teplo/chlad. Group Helper překládá příkazy rozsahu na odpovídající fyzické příkazy teplo/chlad podle aktuální teploty každého člena.",
+            "description": "Zobrazuje členy se schopnostmi, které jejich zařízení nativně nenabízí. Šablona rozsahu: členové s jedním cílovým bodem fungují jako zařízení s rozsahem topení/chlazení — příkazy rozsahu se podle aktuální teploty člena převádějí na topení nebo chlazení. Šablona vypnutí: topidla bez režimu vypnutí se vypínají přepnutím na topení na vlastní minimální teplotu.",
             "data": {
               "range_template_enabled": "Povolit šablonu rozsahu",
               "range_template_deadband_action": "Akce v mrtvém pásmu",
@@ -330,7 +330,8 @@
               "range_template_humidity_enabled": "Odvlhčovat v mrtvém pásmu",
               "range_template_humidity_action": "Akce vlhkosti",
               "range_template_humidity_hysteresis": "Hystereze vlhkosti",
-              "range_template_humidity_deactivation_delay": "Zpoždění deaktivace"
+              "range_template_humidity_deactivation_delay": "Zpoždění deaktivace",
+              "off_template_enabled": "Povolit šablonu vypnutí"
             },
             "data_description": {
               "range_template_enabled": "Automaticky zobrazuje všechny členy s jedním nastavením (bez nativního heat/cool) jako virtuální zařízení v režimu rozsahu.",
@@ -341,13 +342,16 @@
               "range_template_humidity_enabled": "V cílovém teplotním rozsahu přepne na akci vlhkosti, pokud vlhkost překročí cílovou hodnotu.",
               "range_template_humidity_action": "Akce, která se provede, když aktuální vlhkost v mrtvém pásmu překročí cílovou vlhkost.",
               "range_template_humidity_hysteresis": "Hysterezní pásmo Schmittova klopného obvodu kolem cílové vlhkosti pro zabránění častému spínání.",
-              "range_template_humidity_deactivation_delay": "Zpoždění před deaktivací akce vlhkosti po poklesu pod prahovou hodnotu."
+              "range_template_humidity_deactivation_delay": "Zpoždění před deaktivací akce vlhkosti po poklesu pod prahovou hodnotu.",
+              "off_template_enabled": "Topidla bez režimu vypnutí se při vypnutí skupiny přepnou na topení na vlastní minimální teplotu. Topidlo na své minimální teplotě se pak považuje za vypnuté. Pro zařízení s režimem vypnutí použijte místo toho 'Minimální teplota při vypnutí'."
             }
           },
           "advanced_section": {
             "name": "Pokročilá nastavení",
-            "description": "Doladění časování příkazů a pokusů o opakování. Přepínání diagnostických atributů a konfiguračních senzorů.",
+            "description": "Zvolte, co hlavní přepínač dělá, když je vypnutý. Doladění časování příkazů a pokusů o opakování. Přepínání diagnostických atributů a konfiguračních senzorů.",
             "data": {
+              "switch_action": "Akce hlavního přepínače",
+              "switch_temperature": "Teplota hlavního přepínače",
               "debounce_delay": "Zpoždění Debounce (sekundy)",
               "retry_attempts": "Pokusy o Opakování",
               "retry_delay": "Zpoždění Opakování (sekundy)",
@@ -356,9 +360,11 @@
               "grace_period": "Optimistická doba přechodu UI (sekundy)",
               "expose_smart_sensors": "Zvolte zda vytvořit senzorové entity",
               "expose_member_entities": "Zvolte zda zobrazit seznam členů",
-              "expose_config": "Zobrazit konfiguraci (Ladění)"
+              "expose_config": "Zobrazit konfigurační senzor"
             },
             "data_description": {
+              "switch_action": "Co zařízení dostanou, když je hlavní přepínač vypnutý: Vypnout, Nastavit teplotu (pevná teplota, např. ochrana proti mrazu – mění pouze nastavenou teplotu běžících zařízení) nebo Uvolnit zařízení (skupina nechá zařízení být a ovládáte je přímo).",
+              "switch_temperature": "Cílová teplota při výběru akce 'Nastavit teplotu'.",
               "debounce_delay": "Doba čekání před odesláním příkazů. Vyšší hodnoty zabraňují 'rychlopalným' příkazům při posouvání ovládacích prvků.",
               "retry_attempts": "Kolikrát znovu odeslat příkaz, pokud zařízení neodpovídá. Nastavte na 0 pro vypnutí.",
               "retry_delay": "Pauza mezi pokusy. Dát zařízením chvilku na zotavení může zlepšit spolehlivost.",
@@ -366,8 +372,8 @@
               "member_command_delay": "Pauza mezi příkazy jednotlivým členům. Pomáhá, když současné ovládání více zařízení přetíží síť nebo bránu (např. IR vysílače, některé Zigbee koordinátory). Nastavte na 0 pro vypnutí.",
               "grace_period": "Jak dlouho skupina zobrazuje zadanou hodnotu před přepnutím na průměr členů. Zabraňuje blikání UI, když pomalá zařízení (Cloud bridges, Zigbee) hlásí zpět svůj starý stav. Nastavte na 0 pro vypnutí.",
               "expose_smart_sensors": "Vytvoří další entity senzorů pro teplotu a vlhkost skupiny (užitečné pro grafy).",
-              "expose_member_entities": "Vytvoří atribut se seznamem všech ID entit členů.",
-              "expose_config": "Přidá všechny konfigurační hodnoty do atributů entity. Užitečné pro ladění."
+              "expose_member_entities": "Přidá atribut 'entity_id' se seznamem všech členů, aby dialog dalších informací zobrazoval seznam členů.",
+              "expose_config": "Vytvoří diagnostický senzor (sensor.*_configuration), který zpřístupní přenositelná nastavení jako atribut JSON. Užitečné pro kopírování nastavení mezi skupinami pomocí automatizací."
             }
           }
         },
@@ -381,13 +387,14 @@
       "no_entities": "Alespoň jedno klimatické zařízení musí ve skupině zůstat.",
       "master_not_in_members": "Hlavní entita musí být členem skupiny.",
       "master_refresh_notice": "Hlavní entita (Master) přidána. Dostupné nové možnosti.",
-      "master_options_notice": "Nová možnost Hlavní entity",
+      "master_options_notice": "V této sekci jsou k dispozici nové možnosti pro hlavní entitu (Master).",
       "isolation_all_selected": "Alespoň jeden člen musí zůstat mimo izolaci.",
       "isolation_entity_overlap": "Každý člen může být pouze v jednom izolačním pravidle.",
       "isolation_action_preset_required": "Vyberte přednastavený režim pro izolační akci.",
       "isolation_sensor_required": "Vyberte senzor pro izolační pravidlo nebo nastavte jeho spouštěč na Zakázáno.",
       "isolation_hvac_modes_required": "Vyberte alespoň jeden režim pro izolační pravidlo nebo nastavte jeho spouštěč na Zakázáno.",
       "window_temperature_required": "Nastavte teplotu při otevřeném okně nebo změňte akci okna.",
+      "switch_temperature_required": "Nastavte teplotu hlavního přepínače nebo změňte jeho akci.",
       "presence_action_value_required": "Nastavte hodnotu pro vybranou akci nepřítomnosti nebo změňte akci.",
       "schedule_fallback_payload_invalid": "Neplatný formát YAML v náhradním payloadu plánu. Musí to být platné mapování klíč-hodnota.",
       "group_presets_invalid": "Neplatný formát YAML v předvolbách skupiny. Musí se jednat o platné mapování klíč-hodnota.",
@@ -401,15 +408,15 @@
   "selector": {
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normální (Demokratický)",
-        "off_priority": "Vypnout Prioritu (Hlavní Vypínač)",
-        "auto": "Auto (Chytrý)"
+        "normal": "Normální – Skupina převezme nejčastější režim členů",
+        "off_priority": "Priorita vypnutí – Pokud je některý člen vypnutý, celá skupina je vypnutá",
+        "auto": "Auto – Chytré přepínání mezi normálním režimem a prioritou vypnutí"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Průnik (Bezpečný Režim - Společné Funkce)",
-        "union": "Sjednocení (Pokročilý Uživatel - Všechny Funkce)"
+        "intersection": "Průnik – Podporovat pouze funkce, které mají VŠICHNI členové",
+        "union": "Sjednocení – Podporovat všechny funkce přítomné u KTERÉHOKOLI člena"
       }
     },
     "temp_target_avg": {
@@ -505,6 +512,13 @@
       "options": {
         "off": "Vypnout",
         "temperature": "Nastavit teplotu"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "Vypnout",
+        "temperature": "Nastavit teplotu",
+        "release": "Uvolnit zařízení"
       }
     },
     "union_out_of_bounds_action": {
@@ -628,32 +642,6 @@
     }
   },
   "services": {
-    "set_temperature": {
-      "name": "Nastavit Teplotu",
-      "description": "Nastavit cílovou teplotu pro celou skupinu.",
-      "fields": {
-        "entity_id": {
-          "name": "Klimatická Skupina",
-          "description": "Skupina k ovládání."
-        },
-        "temperature": {
-          "name": "Cílová Teplota",
-          "description": "Požadovaná teplota."
-        },
-        "target_temp_high": {
-          "name": "Cíl Vysoký",
-          "description": "Horní limit pro režim topení/chlazení."
-        },
-        "target_temp_low": {
-          "name": "Cíl Nízký",
-          "description": "Dolní limit pro režim topení/chlazení."
-        },
-        "hvac_mode": {
-          "name": "Režim HVAC",
-          "description": "Volitelně změnit režim."
-        }
-      }
-    },
     "set_schedule_entity": {
       "name": "Nastavit entitu plánu",
       "description": "Přepne aktivní entitu rozvrhu nebo kalendáře za běhu. Pokud je vynecháno nebo nastaveno na null, skupina se vrátí k výchozí nakonfigurované entitě a znovu použije aktuální slot.",
@@ -686,11 +674,11 @@
     },
     "set_group_preset": {
       "name": "Nastavit předvolbu skupiny",
-      "description": "Vytvoří, aktualizuje nebo vymaže virtuální předvolby skupiny za běhu. Nechte prázdné pro reset.",
+      "description": "Nastaví, změní nebo odstraní předvolby skupiny za běhu. Přidávají se k předvolbám z konfigurace v nastavení skupiny a mají přednost před stejnojmennou.",
       "fields": {
         "payload": {
           "name": "Datová část",
-          "description": "Předvolby skupiny jako YAML nebo mapování. Nechte prázdné pro reset. Formát a příklady viz dokumentace."
+          "description": "Předvolby za běhu, které se mají nastavit, jako YAML nebo mapování. Předvolba nastavená na null nebo prázdná se odstraní; prázdný payload odstraní všechny předvolby za běhu. Formát a příklady viz dokumentace."
         }
       }
     },
@@ -764,23 +752,9 @@
         },
         "presets": {
           "name": "Předvolby skupiny",
-          "description": "Vymaže předvolby vytvořené za běhu a obnoví nakonfigurované předvolby."
+          "description": "Odstraní všechny předvolby za běhu. Předvolby z konfigurace zůstanou beze změny."
         }
       }
-    }
-  },
-  "issues": {
-    "member_unavailable": {
-      "title": "Členské Zařízení Nedostupné",
-      "description": "Jedno nebo více zařízení v {group_name} je offline. Skupina bude nadále fungovat s tím, co má.\n\nNedostupné: {unavailable_entities}"
-    },
-    "no_members_available": {
-      "title": "Žádní Členové Dostupní",
-      "description": "Skupina {group_name} nemá žádné aktivní členy a je fakticky offline.\n\nZkontrolujte: {member_entities}"
-    },
-    "conflicting_features": {
-      "title": "Konflikt Funkcí",
-      "description": "Skupina {group_name} má členy s různými funkcemi. Funkčnost může být omezena na to, co podporují všichni.\n\nKonflikty: {conflicting_entities}"
     }
   },
   "device_automation": {

@@ -1,9 +1,11 @@
 """Main Switch platform for Climate Group Helper.
 
 Provides a master on/off switch for each climate group:
-- OFF: group is forced to hvac_mode=off, target_state preserved
+- OFF: group blocked, target_state preserved; the configured action sends OFF,
+  a fixed setpoint, or nothing (release)
 - ON: group restored to target_state
-- Persists state across restarts via RestoreEntity
+- Persists across restarts through the group's own `blocking_sources`
+  attribute; RestoreEntity remains as a fallback
 """
 from __future__ import annotations
 
@@ -14,6 +16,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -62,7 +65,7 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         return self._group.switch_override_manager
 
     @property
-    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
+    def device_info(self) -> DeviceInfo:
         """Return the device info (same device as the ClimateGroupHelper)."""
         return self._group.device_info
 
@@ -77,9 +80,13 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         # Publish the attribute now — a quiet group writes no state on its own.
         self._group.async_defer_or_update_ha_state()
 
-        # Only an explicit "off" restores the block. A restored unavailable/unknown
-        # state (unclean shutdown) carries no user intent — treating it as "off"
-        # would turn the whole group off on the next restart.
+        # The climate entity restores the block itself, before its startup slot.
+        # This is the fallback for a group state persisted without the block —
+        # it was only written on a member echo before every switch change was
+        # published. Only an explicit "off" counts: a restored unavailable/unknown
+        # switch state (unclean shutdown) carries no user intent.
+        if "switch" in self._group.run_state.blocking_sources:
+            return
         if (last := await self.async_get_last_state()) is not None:
             if last.state == STATE_OFF:
                 _LOGGER.debug("[%s] Restoring control switch OFF state", self._group.entity_id)
@@ -110,7 +117,7 @@ class ControlSwitch(SwitchEntity, RestoreEntity):
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn switch OFF → force group to hvac_mode=off."""
+        """Turn switch OFF → block the group and apply the configured action."""
         _LOGGER.debug("[%s] Main switch turned OFF — blocking group", self._group.entity_id)
         await self.override_manager.activate()
         self.async_write_ha_state()

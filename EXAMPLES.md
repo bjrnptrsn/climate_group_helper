@@ -2,12 +2,12 @@
 
 Real-world scenarios, ordered by complexity. Each example describes the situation, then lists **only the settings that matter** — everything else stays at its default.
 
-> All examples beyond the Basic tier require **Advanced Mode: on**.
+> All examples beyond the Basic tier require **Advanced Features: on**.
 
-- [Basic](#basic) — no Advanced Mode needed, works out of the box
+- [Basic](#basic) — no Advanced Features needed, works out of the box
   - [1. Target Temperature Precision](#1-target-temperature-precision)
   - [2. HVAC Mode Strategy: Auto](#2-hvac-mode-strategy-auto)
-- [Advanced](#advanced) — the setups most users end up with, all require Advanced Mode: on
+- [Advanced](#advanced) — the setups most users end up with, all require Advanced Features: on
   - [3. Multi-Room House with a Weekly Schedule](#3-multi-room-house-with-a-weekly-schedule)
   - [4. Single Thermostat with Window Control](#4-single-thermostat-with-window-control)
   - [5. Window Control with a Cover (Roller Shutter)](#5-window-control-with-a-cover-roller-shutter)
@@ -35,6 +35,7 @@ Real-world scenarios, ordered by complexity. Each example describes the situatio
   - [26. Dehumidify While the Room Sits at Temperature](#26-dehumidify-while-the-room-sits-at-temperature)
   - [27. IR-Controlled Air Conditioners That Overload the Bridge](#27-ir-controlled-air-conditioners-that-overload-the-bridge)
   - [28. Union Group with a Shortened Mode List](#28-union-group-with-a-shortened-mode-list)
+  - [29. Radiator Thermostats Without an Off Mode](#29-radiator-thermostats-without-an-off-mode)
 
 ---
 
@@ -219,7 +220,7 @@ Adjusting something the active preset defines (here: the temperature) returns th
 
 If you name a group preset the same as one a member device already offers (e.g. both call it `eco`), the group's own definition wins and the device's version is never sent. The settings page warns you when you save, so you can rename one of them if that wasn't intended.
 
-> **Tip:** Presets can also be created, updated or removed at runtime from an automation — see Example 10.
+> **Tip:** An automation can also set presets, as runtime presets alongside the config presets above — see Example 10.
 
 ---
 
@@ -243,7 +244,7 @@ Configure the `generic_thermostat`'s away/home presets with the temperatures you
 
 ### 10. Setpoints from a Dashboard Slider
 
-Keep the temperatures in a preset and let an automation write them, so the values can come from anywhere in Home Assistant — an `input_number` on your dashboard, a calculated sensor, a price forecast. The group's settings stay untouched.
+Keep the temperatures in a runtime preset that an automation writes, so the values can come from anywhere in Home Assistant — an `input_number` on your dashboard, a calculated sensor, a price forecast. How runtime presets relate to the presets in the group's settings is explained in [README § Group Presets](README.md#group-presets).
 
 **Entities:** the group, plus `input_number.comfort_temperature` as the slider
 
@@ -451,7 +452,7 @@ hvac_mode: heat
 temperature: 20.0
 ```
 
-**Result:** `turn_off: true` blocks the group exactly like turning the Main Switch off — all members turn off and stay blocked. `turn_off` is a one-shot trigger, not a state tied to the slot: it stays active until a later slot explicitly sets `turn_off: false` again, so the slot that should end the shutdown must set it explicitly.
+**Result:** `turn_off: true` blocks the group exactly like turning the Main Switch off — with the default action **Turn Off** all members turn off and stay blocked. If **Main Switch Action** is set to **Set Temperature** or **Release Devices**, that action applies here too. `turn_off` is a one-shot trigger, not a state tied to the slot: it stays active until a later slot explicitly sets `turn_off: false` again, so the slot that should end the shutdown must set it explicitly.
 
 ---
 
@@ -590,7 +591,7 @@ A room has a heat-only radiator (Wiser) and a heat/cool AC (Daikin/Faikin). The 
 |---|---|
 | Members | `climate.wiser_radiator`, `climate.daikin_ac` |
 | Feature Strategy | Union |
-| Unsupported HVAC Mode Action | Off |
+| Unsupported HVAC Mode Action | Turn Off |
 | Sync Mode | Disabled |
 | Member Isolation | on |
 | **Isolation Rule 1** | Trigger: HVAC Mode `heat` → Isolate `climate.daikin_ac` (Set HVAC Mode `off`) |
@@ -615,6 +616,8 @@ Water-based underfloor heating has no `off` mode — it only supports `heat`. Wh
 
 **Result:** Switching the group to `cool` isolates the floor heating into a low, safe preset instead of sending it an unsupported `off`. Switching back to `heat` restores it to the group.
 
+When the whole group is turned off, the floor loop keeps heating on its own — with the **Off Template** (see [29](#29-radiator-thermostats-without-an-off-mode)) it is set to heat at its minimum temperature instead, which on floor heating usually means holding a low but noticeable temperature.
+
 ---
 
 ### 21. Union Group with Out-of-Bounds Devices
@@ -627,7 +630,7 @@ Mixing devices with different temperature ranges — a low-range TRV and an AC w
 |---|---|
 | Members | `climate.trv`, `climate.ac` |
 | Feature Strategy | Union |
-| Out-of-Bounds Action | Off |
+| Out-of-Bounds Action | Turn Off |
 
 **Result:** Target set to 14 °C → the AC can't reach it (min 16 °C) and turns off; the TRV keeps heating. Target set to 22 °C → both are within range and stay active.
 
@@ -661,7 +664,7 @@ An HRV (heat recovery ventilator) with heat/cool/auto acts as the "conductor". S
 | Master Entity | `climate.hrv` |
 | Sync Mode | Master/Lock |
 | Feature Strategy | Union |
-| Unsupported HVAC Mode Action | Off |
+| Unsupported HVAC Mode Action | Turn Off |
 
 **Result:** The HRV drives the group's `hvac_mode`. When it enters `cool` (manually or via `auto`), the floor zones — which don't support `cool` — are automatically turned off via Union's unsupported-mode handling. Switching the HRV back to `heat` restores them.
 
@@ -770,7 +773,7 @@ Both units can also dry and run as fan only. Union offers every mode a member re
 |---|---|
 | Members | `climate.living_ac`, `climate.bedroom_ac` |
 | Feature Strategy | Union |
-| Unsupported HVAC Mode Action | Off |
+| Unsupported HVAC Mode Action | Turn Off |
 
 The group offers the modes its members report, so you shorten the list on the members. Home Assistant's own `customize` replaces the mode list an entity reports; the group's union then follows the shortened lists. Add it to `configuration.yaml` and restart Home Assistant:
 
@@ -794,10 +797,27 @@ Only modes the device really has belong in the list — the group treats it as t
 
 ---
 
+### 29. Radiator Thermostats Without an Off Mode
+
+Some radiator thermostats only offer Heat — there is no off mode to switch to. Turning the group off does nothing for them: they keep heating, also when a window opens, the Main Switch goes off or a schedule slot sets `hvac_mode: off`.
+
+**Entities:** `climate.kitchen_trv`, `climate.hallway_trv` (heat only, minimum temperature 5 °C)
+
+| Setting | Value |
+|---|---|
+| Members | `climate.kitchen_trv`, `climate.hallway_trv` |
+| Enable Off Template | on |
+
+**Result:** The group now offers Off. Whatever turns it off — you, the Main Switch, an open window, absence or a schedule slot — sets each thermostat to heat at its own minimum temperature, and the group shows it as off. Turning the group back on sends the target temperature again. A temperature you set while the group is off is kept and arrives once the group is turned back on.
+
+A thermostat standing at its minimum temperature counts as off no matter how it got there — a frost-protection slot at 5 °C makes the group show off as well. Devices that have a real off mode are switched off as usual; for them, **Minimum Temperature when Off** is the matching option.
+
+---
+
 ## Tips
 
 - **Start simple:** get basic grouping working first (just Members, no other settings), then layer on features one at a time.
-- **Advanced Mode:** toggle it on in the group's configuration to unlock everything beyond Basic-tier settings — every example past the Basic section needs it.
+- **Advanced Features:** toggle it on in the group's configuration to unlock everything beyond Basic-tier settings — every example past the Basic section needs it.
 - **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted and mirrored to peers; use `Adopt Only` if member changes should update the group target without touching other devices; use `Mirror` with limited **Sync Attributes** when only some attributes should sync and the rest be left alone (Example 22).
 - **Blocking priority:** Main Switch > Window Control > Presence Control — if several are active at once, only the highest-ranked one's action is sent to members.
 - **Schedule + Boost:** Boost outranks the schedule. Schedule slot changes still run in the background during a boost.

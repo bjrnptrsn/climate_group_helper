@@ -28,13 +28,13 @@
   🎯 <b>Eigene Presets festlegen</b>, die die ganze Gruppe auf einmal einstellen.<br>
   🔥 <b>Temperatur boosten</b> für eine Weile, danach automatisch zurück.<br>
   🚧 <b>Einzelne Geräte isolieren</b>, solange eine Bedingung zutrifft.<br>
-  🧩 <b>Einen Heiz-/Kühlbereich ergänzen</b> für Einzel-Sollwert-Geräte mit der Bereichsvorlage.<br>
+  🧩 <b>Heiz-/Kühlbereich oder Aus-Modus ergänzen</b> für Geräte, denen er fehlt, mit der Mitglieder-Vorlage.<br>
   ➕ <b>Die ganze Gruppe verschieben</b> mit einem einzigen Offset.<br>
   🎛️ <b>Dashboard-Karte inklusive</b> — zeigt, was die Gruppe gerade tut.
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_simple.png" alt="Climate Group Helper Simple Configuration Options Overview" height="350"/>
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate-Group-Helper-Karte neben ihrem Editor" width="600"/>
 </p>
 
 ---
@@ -54,7 +54,7 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 
 | Schritt | Aktion |
 | :--- | :--- |
-| **1. Installieren** | Über **HACS** hinzufügen und Home Assistant neu starten. |
+| **1. Installieren** | Über **HACS** hinzufügen und Home Assistant neu starten. <br> [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bjrnptrsn&repository=climate_group_helper&category=integration) |
 | **2. Hinzufügen** | Gehe zu *Einstellungen → Geräte & Dienste → Helfer → Helfer erstellen*. |
 | **3. Einrichten** | Gib deiner Gruppe einen Namen und wähle deine Thermostate (TRVs, Klimaanlagen, Heizungen — beliebig gemischt). |
 | **4. Fertig!** | Du hast jetzt eine einzige Entität, die alles steuert. <br> *Tipp: Aktiviere **Erweiterte Funktionen** in den Optionen, um alle Features freizuschalten.* |
@@ -65,6 +65,15 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/setup_flow.png" alt="Configure Climate Group Helper" width="400"/>
 </p>
+
+<details>
+<summary>Manuelle Installation (ohne HACS)</summary>
+
+1. Lade das [neueste Release](https://github.com/bjrnptrsn/climate_group_helper/releases) herunter.
+2. Kopiere `custom_components/climate_group_helper` in deinen `custom_components`-Ordner.
+3. **Home Assistant neu starten**.
+
+</details>
 
 ---
 
@@ -95,13 +104,11 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 - [Konfigurationsoptionen](#konfigurationsoptionen)
 - [Dienste](#dienste)
 - [Sicherung & Migration](#sicherung--migration)
-- [Installation](#installation)
-- [Einrichtung](#einrichtung)
 - [Fehlerbehebung](#fehlerbehebung)
 
 ## Kernkonzept: Die einheitliche Grundlage
 
-Der Climate Group Helper bietet eine robuste "Single Source of Truth" für deine Klimageräte. Er erstellt eine einheitliche Verwaltungsschicht, die dafür sorgt, dass deine Geräte als ein zusammenhängendes System zusammenarbeiten und gleichzeitig präzise Raumzustände liefern.
+Der Climate Group Helper bietet eine zentrale, verlässliche Steuerung für deine Klimageräte. Er erstellt eine einheitliche Verwaltungsschicht, die dafür sorgt, dass deine Geräte als ein zusammenhängendes System zusammenarbeiten und gleichzeitig präzise Raumzustände liefern.
 
 > [!TIP]
 > **Wie spielen die Funktionen zusammen?** [SO_FUNKTIONIERT_ES.md](SO_FUNKTIONIERT_ES.md) zeigt, wer entscheidet, was deine Geräte tun, was Vorrang hat, und warum die Gruppe manchmal etwas anderes anzeigt, als du eingestellt hast.
@@ -114,6 +121,10 @@ Diese Funktionen sind standardmäßig aktiv und bieten ein optimiertes "Plug & P
 *   **Intelligente Zustands-Aggregation:** Die Gruppe berechnet den **Durchschnitt** der Mitgliedswerte, um den tatsächlichen Raumzustand darzustellen (Mittelwert, Median, Minimum oder Maximum).
 *   **HVAC-Strategie:** Intelligente Logik zur Bestimmung des Gruppenzustands (Normal, Aus-Priorität oder Auto).
 *   **Präzision & Rundung:** Zieltemperaturen auf gerätekompatible Schritte runden (0,5° oder 1°), um Kompatibilität mit jeder Hardware sicherzustellen.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_simple.png" alt="Climate Group Helper Simple Configuration Options Overview" width="400"/>
+</p>
 
 ---
 
@@ -130,11 +141,11 @@ Schöpfe das volle Potenzial deines Klimasystems aus. Diese speziellen Funktione
 
 ### Master-Entität
 
-Bestimme ein einzelnes Klima-Mitglied als **Referenzpunkt** oder **Anführer** der Gruppe. Er wird im Abschnitt **Mitglieder & Modi** festgelegt und erfordert den **Erweiterten Modus** — einmal gesetzt, schaltet er zusätzliche Optionen in mehreren Abschnitten frei (Sync-Modus, Fenstersteuerung sowie Temperatur-/Feuchtigkeits-Mittelung).
+Bestimme ein einzelnes Klima-Mitglied als **Referenzpunkt** oder **Anführer** der Gruppe. Er wird im Abschnitt **Mitglieder & Modi** festgelegt und erfordert **Erweiterte Funktionen** — einmal gesetzt, schaltet er zusätzliche Optionen in mehreren Abschnitten frei (Sync-Modus, Fenstersteuerung sowie Temperatur-/Feuchtigkeits-Mittelung).
 
 *   **Zentralisierte Zielanzeige:** Zeigt die Zieleinstellungen des Masters (Temperatur, Luftfeuchtigkeit) als angezeigtes Ziel der Gruppe an, statt berechneter Durchschnitte über alle Mitglieder. Dies betrifft nur die Anzeige des Gruppenzustands — es steuert oder synchronisiert keine Mitglieder (nutze dafür **Sync-Modus: Master/Lock**).
 *   **Hierarchische Synchronisation (Master/Lock):** Aktiviert einen "Folge dem Anführer"-Sync-Modus. Änderungen am Master werden an alle Mitglieder gespiegelt; Änderungen an anderen Geräten werden für die ausgewählten **Sync-Attribute** zurückgesetzt, unausgewählte werden ignoriert.
-*   **Intelligente Fenstersteuerung:** Wenn aktiviert, aktualisieren nur manuelle Anpassungen am Master den Zielzustand, während Fenster geöffnet sind. Änderungen an anderen Geräten bleiben ignoriert.
+*   **Intelligente Fenstersteuerung:** Wenn aktiviert, aktualisieren nur manuelle Anpassungen am Master den Zielzustand, während Fenster geöffnet sind — vorausgesetzt, ein Sync-Modus ist aktiv, der Geräteänderungen übernimmt, etwa Master/Lock. Änderungen an anderen Geräten bleiben ignoriert.
 
 ### Externe Sensoren
 
@@ -171,7 +182,7 @@ Steuert, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z. B. üb
 
 * **Sync-Attribute**
 
-  Mit Sync-Attributen kannst du bestimmte Attribute wie `hvac_mode`, `temperature`, `preset_mode` für die Synchronisation auswählen. Die Bedeutung ausgewählter oder nicht ausgewählter Attribute hängt vom **Sync-Modus** ab:
+  Mit Sync-Attributen kannst du bestimmte Attribute wie HVAC-Modus, Zieltemperatur oder Preset-Modus für die Synchronisation auswählen. Die Bedeutung ausgewählter oder nicht ausgewählter Attribute hängt vom **Sync-Modus** ab:
 
   | Modus | Rolle der **Sync-Attribute** |
   |---|---|
@@ -185,7 +196,7 @@ Steuert, was passiert, wenn ein Mitgliedsgerät direkt geändert wird (z. B. üb
 
 ### Fenstersteuerung
 
-Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn Fenster oder Türen geöffnet werden, und stellt den vorherigen Zustand beim Schließen wieder her. Während Fenster geöffnet sind, werden manuelle Änderungen blockiert. Unterstützt Binärsensoren, `input_boolean`-Helfer und Rollladen-/Fensterentitäten (Cover).
+Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn Fenster oder Türen geöffnet werden, und stellt den vorherigen Zustand beim Schließen wieder her. Während Fenster geöffnet sind, werden manuelle Änderungen zurückgehalten. Unterstützt Binärsensoren, `input_boolean`-Helfer und Rollladen-/Fensterentitäten (Cover).
 
 *   **Raum- + Zonensensoren:** Kombiniert einen schnell reagierenden Raumsensor mit einem langsam reagierenden Zonensensor (z. B. für eine ganze Etage). Der Raum ist Teil der Zone: Werden beide genutzt, **muss der Zonensensor den Raumsensor enthalten** (nimm den Raumsensor in die Zonen-Gruppe auf). Sonst gelten die eingestellten Verzögerungen nicht mehr.
 *   **Konfigurierbare Verzögerungen:** Lege eigene Reaktionszeiten für Öffnen und Schließen fest.
@@ -193,11 +204,11 @@ Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn
 *   **Manuelle Änderungen übernehmen:** Was mit Änderungen passiert, die bei offenem Fenster gemacht werden. Sie werden nie sofort angewendet — bis die Fenster schließen, gilt die Aktion bei offenem Fenster.
     *   **Aus:** Änderungen werden verworfen.
     *   **Alle:** Änderungen werden gemerkt und beim Schließen der Fenster angewendet. Änderungen direkt an einem Gerät werden nur gemerkt, wenn ein Sync-Modus aktiv ist, der sie übernimmt.
-    *   **Nur Master:** *(Erfordert Master-Entität)* Nur Änderungen am Master-Gerät werden gemerkt. Änderungen an der Gruppe selbst werden verworfen.
+    *   **Nur Master:** *(Erfordert Master-Entität)* Nur Änderungen am Master-Gerät werden gemerkt — und nur, wenn ein Sync-Modus aktiv ist, der sie übernimmt, etwa Master/Lock. Änderungen an der Gruppe selbst werden verworfen.
 
 ### Anwesenheitssteuerung
 
-Verwaltet Klimaeinstellungen basierend auf Raumanwesenheit. Wähle einen oder mehrere Trigger (Binärsensor, `input_boolean`, calendar, Geräte-Tracker oder Person), optional beschränkt auf bestimmte **Zonen** (z. B. um nur auszulösen, wenn sich jemand tatsächlich "zu Hause" befindet). Konfiguriere Verzögerungen und Fallback-Aktionen für den Fall, dass der Raum leer wird. Die Gruppe gilt als belegt, wenn **irgendein** Sensor Anwesenheit meldet.
+Verwaltet Klimaeinstellungen basierend auf Raumanwesenheit. Wähle einen oder mehrere Trigger (`binary_sensor`, `input_boolean`, `calendar`, `device_tracker` oder `person`), optional beschränkt auf bestimmte **Zonen** (z. B. um nur auszulösen, wenn sich jemand tatsächlich "zu Hause" befindet). Konfiguriere Verzögerungen und Fallback-Aktionen für den Fall, dass der Raum leer wird. Die Gruppe gilt als belegt, wenn **irgendein** Sensor Anwesenheit meldet.
 
 *   **Ausschalten:** Mitglieder werden `aus` geschaltet, während Abwesenheit erkannt wird (Standard).
 *   **Abwesenheits-Offset:** Die Zieltemperatur wird um einen festen Offset reduziert (z. B. −2 °C). Der Offset wird relativ zur *aktuellen Zieltemperatur* der Gruppe angewendet. Ändert sich ein Zeitplan während der Abwesenheit, wird der Offset automatisch auf den neuen geplanten Wert erneut angewendet.
@@ -278,7 +289,7 @@ Du kannst Attribute weglassen, die du nicht brauchst — verwende z. B. nur `hva
 | `group_offset` | Float −5,0 … 5,0 | `group_offset: 1.5` | Setzt vorübergehend den **Gruppen-Offset** für die Dauer des Zeitblocks. Bewegst du den Offset-Regler manuell, während dieser Zeitblock aktiv ist, übernimmt dein Wert die Kontrolle und das Zurücksetzen am Zeitblock-Ende wird übersprungen. |
 | `sync_mode` | `disabled`, `lock`, `mirror`, `mirror_lock`, `master_lock`, `adopt_only` | `sync_mode: disabled` | Überschreibt vorübergehend den konfigurierten **Sync-Modus** für die Dauer des Zeitblocks. Nützlich für Zeitblöcke, in denen Mitglieder in Ruhe gelassen werden sollen (z. B. ein "Schlaf"-Zeitblock, in dem manuelle Anpassungen erlaubt sind). |
 | `sync_attributes` | Beliebige Teilmenge von: `hvac_mode`, `temperature`, `target_temp_low`, `target_temp_high`, `humidity`, `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode` | `sync_attributes: [hvac_mode]` | Überschreibt vorübergehend, welche **Sync-Attribute** für die Dauer des Zeitblocks synchronisiert werden. Nützlich für Zeitblöcke, in denen nur der Modus synchronisiert, aber die Temperatur den Mitgliedern selbst überlassen werden soll. Wird bei Zeitblock-Ende auf die konfigurierten Sync-Attribute zurückgesetzt. |
-| `turn_off` | `true` / `false` | `turn_off: true` | Expliziter Zwei-Zustands-Auslöser: `true` schaltet alle Mitglieder aus (entspricht dem Ausschalten des **Hauptschalters**). `false` stellt alle Mitglieder wieder her (entspricht dem Wiedereinschalten des **Hauptschalters**). Ein Zeitblock ohne `turn_off` hat keine Auswirkung auf den aktuellen Zustand. Der Hauptschalter und dieser Meta-Key sind gleichwertige, austauschbare Steuerungen für dieselbe Sperre — wer zuletzt handelt, gewinnt. Du kannst also den Hauptschalter jederzeit in der UI wieder einschalten, auch während ein `turn_off: true`-Zeitblock aktiv ist, und ein späterer `turn_off: false`-Zeitblock löst ebenso eine Sperre, die du manuell über den Hauptschalter gesetzt hast. |
+| `turn_off` | `true` / `false` | `turn_off: true` | Expliziter Zwei-Zustands-Auslöser: `true` sperrt die Gruppe mit der eingestellten **Aktion des Hauptschalters** (entspricht dem Ausschalten des **Hauptschalters**). `false` stellt alle Mitglieder wieder her (entspricht dem Wiedereinschalten des **Hauptschalters**). Ein Zeitblock ohne `turn_off` hat keine Auswirkung auf den aktuellen Zustand. Der Hauptschalter und dieser Meta-Key sind gleichwertige, austauschbare Steuerungen für dieselbe Sperre — wer zuletzt handelt, gewinnt. Du kannst also den Hauptschalter jederzeit in der UI wieder einschalten, auch während ein `turn_off: true`-Zeitblock aktiv ist, und ein späterer `turn_off: false`-Zeitblock löst ebenso eine Sperre, die du manuell über den Hauptschalter gesetzt hast. |
 | `window_mode` | `disabled` | `window_mode: disabled` | Pausiert die **Fenstersteuerung** für die Dauer des Zeitblocks — ein offenes Fenster schaltet die Heizung nicht mehr aus. Steht ein Fenster beim Start des Zeitblocks bereits offen, geht die Heizung wieder an. |
 | `presence_mode` | `disabled`, `away` | `presence_mode: disabled` | Pausiert die **Anwesenheitssteuerung** für die Dauer des Zeitblocks. `disabled` lässt die Heizung laufen, unabhängig davon, was die Sensoren melden (Gäste, Vorheizen); `away` erzwingt für den gesamten Zeitblock das Abwesenheitsverhalten, ebenfalls unabhängig von den Sensoren (Urlaub). |
 | `calibration_mode` | `disabled` | `calibration_mode: disabled` | Pausiert die **Kalibrierung** für die Dauer des Zeitblocks — es werden keine Kalibrierwerte an die Geräte geschrieben. Am Zeitblock-Ende wird der aktuelle Wert einmal geschrieben, damit die Geräte wieder aktuell sind. |
@@ -286,9 +297,10 @@ Du kannst Attribute weglassen, die du nicht brauchst — verwende z. B. nur `hva
 
 Die letzten vier Schlüssel **pausieren** eine Funktion, sie schalten nie eine ein.
 Eine in den Einstellungen ausgeschaltete Funktion hat nichts laufen, was ein
-Zeitblock übernehmen könnte — deshalb ist `disabled` der einzige Wert, den sie
-akzeptieren, abgesehen von `away`, das das Abwesenheitsverhalten erzwingt statt
-etwas zu erschaffen. Endet ein Zeitblock, werden die Sensoren frisch gelesen und
+Zeitblock übernehmen könnte — deshalb nimmt keiner von ihnen einen Wert, der etwas
+einschaltet: `window_mode`, `presence_mode` und `calibration_mode` akzeptieren
+`disabled` — dazu `away`, das das Abwesenheitsverhalten erzwingt statt etwas zu
+erschaffen —, und `isolation_bypass` nennt die Regeln, die pausieren. Endet ein Zeitblock, werden die Sensoren frisch gelesen und
 übernehmen wieder in beide Richtungen: ein weiterhin offenes Fenster schaltet die
 Heizung erneut aus, ein weiterhin leerer Raum startet das Abwesenheitsverhalten.
 
@@ -321,6 +333,8 @@ Um die Gruppe außerhalb der aktiven Zeitblöcke abzuschalten, setze hier `hvac_
 
 Definiere eigene benannte Presets für die Gruppe — z. B. `eco`, `guest` oder `ventilate` — jedes davon einer Reihe von Climate-Attributen (Solltemperatur, HVAC-Modus, Lüfterstufe, Schwenkmodus) in YAML zugeordnet. Wählst du eines dieser Presets aus, werden seine Attribute sofort auf die Gruppe und alle Mitglieder angewendet — genauso, als würdest du die Temperatur oder den HVAC-Modus direkt ändern. Das ist eine schlanke Alternative zum Master-Preset-Muster für Gruppen, die keine eigene Master-Entität benötigen.
 
+Presets lassen sich an zwei Stellen festlegen. **Konfigurations-Presets** trägst du in den Einstellungen der Gruppe ein; sie bleiben, wie sie sind, bis du sie dort änderst. **Laufzeit-Presets** setzt der Dienst `climate_group_helper.set_group_preset` — aus einer Automatisierung oder einem Skript — und sie lassen sich jederzeit ändern, ohne die Einstellungen anzufassen. Beide verwenden dasselbe YAML-Format wie unten gezeigt; wie die beiden zusammenspielen, steht am Ende dieses Abschnitts.
+
 **Beispiel (Gruppen-Presets Konfiguration):**
 ```yaml
 eco:
@@ -352,6 +366,13 @@ wellness:
 *   **Wollen ein Zeitblock und ein Preset dasselbe, gewinnt das Preset**, und der Wert des Zeitblocks kommt zurück, sobald du das Preset verlässt. Das gilt in beide Richtungen: Endet der Zeitblock, hebt das nicht auf, was das Preset angefordert hat.
 *   **`turn_off` ist der einzige Schlüssel, den Presets nicht nutzen können** — Presets setzen Temperaturen und Modi; der Hauptschalter bleibt dir und dem Zeitplan vorbehalten.
 
+**Konfigurations- und Laufzeit-Presets zusammen.** Die Gruppe bietet die Presets aus beiden Stellen in einer Liste an, und ein ausgewähltes Preset verhält sich gleich, egal wo es festgelegt wurde. Jede Stelle behält aber ihre eigenen Presets. Die Einstellungsseite zeigt nur die Konfigurations-Presets. Der Dienst ändert nur Laufzeit-Presets und lässt die Konfigurations-Presets unberührt. Die aktuell gesetzten Laufzeit-Presets stehen im Attribut `runtime_group_presets` der Gruppe.
+
+Legen beide Stellen ein Preset mit demselben Namen fest, tritt das Laufzeit-Preset an seine Stelle. Ein Beispiel: Die Einstellungen legen `comfort` mit 21 °C fest, und ein Dienstaufruf setzt `comfort` auf 22 °C. Wählst du nun `comfort`, gelten 22 °C (ist es bereits ausgewählt, stellt die Gruppe sofort um), während die Einstellungsseite weiterhin 21 °C zeigt. Entfernst du `comfort` per Dienst, gelten wieder die 21 °C aus den Einstellungen — ist es ausgewählt, ebenfalls sofort.
+
+*   **Neustart:** Laufzeit-Presets bleiben über einen Home-Assistant-Neustart nur erhalten, wenn **Per Dienst geänderte Werte beibehalten (Presets)** aktiviert ist. Ohne diese Option startet die Gruppe nur mit ihren Konfigurations-Presets.
+*   **Zurücksetzen:** `climate_group_helper.reset` mit `presets` entfernt alle Laufzeit-Presets auf einmal und lässt die Konfigurations-Presets unverändert.
+
 ### Mitglieder-Offsets
 
 Wende dauerhafte individuelle Offsets (±20 °C) auf jedes Gruppenmitglied an, um physische Raumunterschiede auszugleichen. Die Gruppe berücksichtigt diese Offsets intelligent bei Mittelung und Synchronisation: Ist die Gruppe z. B. auf 21 °C gesetzt, erhält ein Schlafzimmer mit −1 °C-Offset 20 °C, während das Wohnzimmer (+0,5 °C) 21,5 °C erhält. Deine logische Einstellung bleibt konsistent bei 21 °C über alle Gruppenoberflächen hinweg.
@@ -368,7 +389,7 @@ Du kannst **bis zu 4 unabhängige Isolationsregeln** pro Gruppe definieren, jede
 *   **HVAC-Modus:** Isolation aktiviert sich, wenn der Zielmodus der Gruppe mit einer konfigurierten Menge übereinstimmt (z. B. Heizkörper isolieren, wenn auf `cool` gewechselt wird).
 *   **Mitglied aus:** Isoliert einzelne Mitglieder automatisch, wenn sie manuell `aus` geschaltet werden. Die Wiederherstellung erfolgt, sobald das Gerät wieder `ein` geschaltet wird.
 *   **Konfigurierbare Verzögerungen:** Lege eigene Reaktionszeiten für Aktivierung und Wiederherstellung fest (nur bei Sensor- und HVAC-Modus-Auslösern).
-*   **Isolieraktion:** Wähle, welcher Befehl gesendet wird, wenn ein Mitglied isoliert wird. Standard ist `hvac_mode: off`. Für Geräte ohne echten Aus-Modus (z. B. KNX-Fußbodenheizung) verwende stattdessen `preset_mode`, um ein sicheres Standby-Preset zu setzen (z. B. `building_protection`).
+*   **Isolationsaktion:** Wähle, welcher Befehl gesendet wird, wenn ein Mitglied isoliert wird. Standard ist, den HVAC-Modus auf aus zu setzen. Für Geräte ohne echten Aus-Modus (z. B. KNX-Fußbodenheizung) verwende stattdessen **Preset-Modus setzen**, um ein sicheres Standby-Preset zu setzen (z. B. `building_protection`).
 
 ### Mitglieder-Vorlage
 
@@ -388,16 +409,34 @@ Eine **Mitglieder-Vorlage** umhüllt einzelne Gruppenmitglieder mit einem virtue
 *   **Bedingtes Heizen/Kühlen:** Optional bietet die Gruppe **Heizen/Kühlen** und die Bereichssteuerung nur an, solange mindestens ein erreichbares Mitglied heizen und eines kühlen kann — nützlich, wenn eine saisonale Klimaanlage offline ist.
 *   **Erfasste Geräte folgen der Gruppe:** Ein von Hand geänderter Modus oder Sollwert an einem erfassten Gerät wird auf das zurückgesetzt, was der Bereich verlangt, unabhängig vom Sync-Modus — um ihn zu ändern, änderst du den Bereich der Gruppe.
 
+#### Aus-Vorlage
+
+Manche Heizgeräte — darunter viele Heizkörperthermostate — haben gar keinen Aus-Modus. Von sich aus ignorieren sie jedes „aus“ der Gruppe und heizen weiter: wenn du die Gruppe ausschaltest, beim Hauptschalter, bei offenem Fenster, bei Abwesenheit oder in einem Zeitplan-Slot mit „aus“. Mit der **Aus-Vorlage** (**Aus-Vorlage aktivieren**) schaltet die Gruppe ein solches Heizgerät aus, indem sie es auf Heizen mit seiner eigenen Minimaltemperatur stellt — auch aus Auto, Lüften oder Trocknen.
+
+*   **Minimaltemperatur heißt aus.** Ein Heizgerät, das auf Heizen mit seiner Minimaltemperatur steht, wird als aus angezeigt und behandelt, egal wie es dorthin kam. Auch ein Zeitplan-Slot für Frostschutz auf der Minimaltemperatur oder eine so niedrige Fenster- oder Abwesenheitstemperatur stellt es „aus“: Die Gruppe zeigt dann „aus“, und die Optionen, die ausgeschaltete Geräte in Ruhe lassen, gelten auch für dieses Gerät. Das gilt nicht, solange die Gruppe über die Bereichsvorlage in Heizen/Kühlen läuft.
+*   **Hohe Minimaltemperaturen:** Bei einem Gerät mit hoher Minimaltemperatur (etwa einer Fußbodenheizung) heißt „aus“, diese Minimaltemperatur zu halten.
+*   **Änderungen im Aus:** Eine Temperatur, die du bei ausgeschalteter Gruppe einstellst, bleibt gespeichert und kommt beim Einschalten an — sofort gesendet würde sie das Heizgerät wecken.
+*   **Temperaturanzeige:** Werden ausgeschaltete Geräte aus der Temperatur der Gruppe herausgenommen, gilt das auch für diese Heizgeräte (nicht im Heizen/Kühlen über die Bereichsvorlage).
+*   **Nur Heizgeräte:** Geräte, die kühlen können, sind nicht erfasst. Geräte mit Aus-Modus werden wie gewohnt ausgeschaltet — für sie ist **Min. Temp bei 'Aus'** die passende Option.
+*   **„Aus“ im Angebot:** Die Gruppe bietet **Aus** nur an, wenn mindestens eines ihrer Geräte ausschalten kann. Eine Gruppe nur aus Heizgeräten ohne Aus-Modus bietet es an, sobald diese Option aktiv ist.
+
 ## Verwaltungs-Entitäten (Schalter & Regler)
 
 Neben der Haupt-Klima-Entität erstellt die Integration zusätzliche Helfer-Entitäten, die direkte Steuerungspunkte für deine Dashboards und Automationen bieten.
 
 ### Hauptschalter
 
-Eine dedizierte `switch`-Entität fungiert als **zentraler Ein-/Aus-Schalter** für die gesamte Gruppe. Nützlich für die Sommermonate, längere Abwesenheiten oder jede Situation, in der du die Gruppe komplett deaktivieren möchtest, ohne deine Zeitpläne oder Zieleinstellungen anzufassen. Während der Schalter `aus` ist, werden alle manuellen und automatisierten Befehle blockiert.
+Eine dedizierte `switch`-Entität fungiert als **zentraler Ein-/Aus-Schalter** für die gesamte Gruppe. Nutze ihn für die Sommermonate, längere Abwesenheiten, Frostschutz oder immer dann, wenn ein Raum vorübergehend im Handbetrieb direkt an den Thermostaten bedient werden soll, ohne dass du deine Zeitpläne oder Zieleinstellungen anfassen musst. Während der Schalter `aus` ist, ruht die gesamte Gruppen-Automatik — Zeitplan, Fenster- und Anwesenheitssteuerung, Sync, Boost und Isolationsregeln pausieren, und Befehle an die Gruppe selbst werden zurückgehalten (Ausschalten kommt weiterhin durch).
 
-*   **Schalter AUS:** Schaltet sofort alle Mitglieder `aus` und bricht einen aktiven Boost ab. Die Gruppe bleibt blockiert, bis der Schalter wieder eingeschaltet wird.
-*   **Schalter EIN:** Hebt die Sperre auf und stellt alle Mitglieder auf den aktuellen Zielzustand der Gruppe wieder her.
+Was bei ausgeschaltetem Schalter mit den Geräten passiert, legt die **Aktion des Hauptschalters** fest (Erweiterte Einstellungen):
+
+*   **Ausschalten** (Standard): Alle Mitglieder werden ausgeschaltet und bleiben aus.
+*   **Temperatur setzen:** Alle Mitglieder werden auf einen festen Sollwert (**Zieltemperatur des Hauptschalters**) gesetzt und dort gehalten, z. B. als Frostschutz. Geändert wird nur der Sollwert, nicht die Betriebsart: Ein ausgeschaltetes Gerät bleibt in der Regel aus, und ein kühlendes Gerät würde auf diesen Wert kühlen — die Option ist also für Heizgruppen gedacht. Geräte, die statt eines einzelnen Sollwerts nur einen Temperaturbereich unterstützen, werden nicht angesprochen.
+*   **Geräte freigeben:** Gibt die Geräte für den Handbetrieb frei — die Gruppe sendet keine Befehle und greift nicht ein, sodass du sie direkt am Thermostat bedienst, als wären sie nicht gruppiert. Die Sensor-Kalibrierung läuft weiter, und ein explizites Ausschalten der Gruppe erreicht weiterhin alle Mitglieder.
+
+*   **Schalter AUS:** Führt die gewählte Aktion aus, bricht einen aktiven Boost ab und hebt alle Geräte-Isolationen auf. Solange der Schalter aus ist, greifen keine Isolationsregeln. Die Gruppe bleibt blockiert, bis der Schalter wieder eingeschaltet wird.
+*   **Schalter EIN:** Hebt die Sperre auf und stellt alle Mitglieder auf den aktuellen Zielzustand der Gruppe wieder her — einschließlich des Zeitblocks, der in diesem Moment aktiv ist. Danach werden die Isolationsregeln neu ausgewertet.
+*   **Neustart:** Der Schalterzustand bleibt über einen Neustart von Home Assistant hinweg erhalten; der Zeitplan greift beim Hochfahren nicht ein.
 
 ### Gruppen-Offset
 
@@ -407,10 +446,6 @@ Eine dedizierte `number`-Entität erlaubt dir, eine globale Temperaturverschiebu
 *   **Persistenz:** Der Offset-Wert übersteht Home-Assistant-Neustarts.
 
 ## Dashboard-Karte
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate-Group-Helper-Karte neben ihrem Editor" width="700"/>
-</p>
 
 Die Integration bringt eine eigene Dashboard-Karte mit. Füge sie wie jede andere
 Karte hinzu — sie erscheint im Karten-Picker als **Climate Group Helper Card**
@@ -451,6 +486,7 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 *   **`blocking_sources`** — vorhanden, sobald etwas die Gruppe zurückhält, samt Angabe wodurch: `window`, `presence`, `switch`. Solange dort etwas steht, gibt die Gruppe keine Änderungen an ihre Geräte weiter. Blockiert nichts, fehlt das Attribut.
 *   **`blocking_reason`** — von allem, was dort steht, das, was gerade den Ausschlag gibt, und seit wann (`source` und `since`): Der Hauptschalter geht einem Fenster vor, ein Fenster der Anwesenheitssteuerung. Nach einem Neustart von Home Assistant zählt die Zeit ab dem Neustart. Blockiert nichts, fehlt das Attribut.
 *   **`main_switch_entity_id`** — der Hauptschalter der Gruppe, damit ein Dashboard oder eine Automation ihn findet, ohne seinen Namen raten zu müssen.
+*   **`main_switch_action`** — wie sich der Hauptschalter im ausgeschalteten Zustand verhält: `off`, `temperature` oder `release`. Wird zusammen mit `main_switch_entity_id` bereitgestellt.
 *   **`isolated_members`** — Geräte, die eine Isolationsregel gerade ausschließt. Sie behalten ihren eigenen Zustand und bleiben aus den Werten der Gruppe heraus.
 *   **`oob_members`** — Geräte, die dem letzten Ziel nicht folgen konnten, weil es außerhalb ihres eigenen Temperaturbereichs liegt.
 *   **`master_entity_id`** — welches Gerät gerade als Master-Entität der Gruppe festgelegt ist. Nur vorhanden, wenn eine konfiguriert ist.
@@ -470,6 +506,7 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 *   **`config_overrides`** — die Pausen-Schlüssel, die ein Slot oder Preset gerade anwendet.
 *   **`active_schedule_slot_title`** — der Titel des laufenden Kalendereintrags, wenn ein Kalender den Zeitplan steuert.
 *   **`active_virtual_preset`** — das aktive Gruppen-Preset, falls eines gewählt ist.
+*   **`runtime_group_presets`** — die aktuell per Dienst gesetzten Laufzeit-Presets mit ihren Werten. Fehlt, wenn keine gesetzt sind.
 *   **`boost_temperature` / `boost_until`** — Sollwert und Endzeit eines laufenden Boosts.
 *   **`schedule_hold_until`** — wann eine manuelle Änderung aufhört zu halten und der Zeitplan wieder übernimmt. Fehlt, wenn nichts hält.
 
@@ -493,26 +530,26 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 | **Aus-Priorität** | Gruppe zeigt `aus`, wenn *irgendein* Gerät aus ist. |
 | **Auto** | Basierend auf dem Zielmodus der Gruppe: Verhält sich wie **Normal**, während das Ziel `aus` ist (Gruppe zeigt erst `aus`, wenn jedes Mitglied aus ist), und wie **Aus-Priorität**, während das Ziel ein aktiver Modus ist (Gruppe zeigt diesen Modus erst, wenn jedes Mitglied `aus` verlassen hat). Nützlich für externe Automationen, die den gemeldeten Modus der Gruppe brauchen, um zu bestätigen, dass ein Befehl bei jedem Mitglied vollständig angekommen ist, bevor er als abgeschlossen gilt. |
 
-### Feature-Strategie
+### Funktionsstrategie
 
 | Strategie | Verhalten |
 |----------|----------|
 | **Schnittmenge** | Funktionen (z. B. Lüfter), die von *allen* Geräten unterstützt werden. Sicherer Modus. Der Temperaturbereich ist das schmalste gemeinsame Fenster über alle Mitglieder. |
-| **Union** | Funktionen, die von *irgendeinem* Gerät unterstützt werden. Der Temperaturbereich umfasst den vollen Bereich über alle Mitglieder (breitestes Min/Max). Fällt eine Zieltemperatur außerhalb des von einem Mitglied unterstützten Bereichs, greift die konfigurierte **Aktion außerhalb des Bereichs**. |
+| **Union** | Funktionen, die von *irgendeinem* Gerät unterstützt werden. Der Temperaturbereich umfasst den vollen Bereich über alle Mitglieder (breitestes Min/Max). Fällt eine Zieltemperatur außerhalb des von einem Mitglied unterstützten Bereichs, greift die konfigurierte **Außerhalb-Bereich-Aktion**. |
 
-### Aktion außerhalb des Bereichs *(nur Union)*
+### Außerhalb-Bereich-Aktion *(nur Union)*
 
 | Aktion | Verhalten |
 |--------|-------------|
-| **Aus (Standard)** | Mitglied wird `aus` geschaltet, wenn die Zieltemperatur außerhalb seines unterstützten Bereichs liegt. Wird automatisch wiederhergestellt, sobald das Ziel wieder im Bereich liegt. |
-| **Klemmen** | Mitglied wird auf seinen nächstgelegenen unterstützten Grenzwert gesetzt (`min_temp` oder `max_temp`). |
+| **Ausschalten (Standard)** | Mitglied wird `aus` geschaltet, wenn die Zieltemperatur außerhalb seines unterstützten Bereichs liegt. Wird automatisch wiederhergestellt, sobald das Ziel wieder im Bereich liegt. |
+| **Auf Grenzwert begrenzen** | Mitglied wird auf seinen nächstgelegenen unterstützten Grenzwert gesetzt (`min_temp` oder `max_temp`). |
 
-### Aktion bei nicht unterstütztem Modus *(nur Union)*
+### Aktion bei nicht unterstütztem HVAC-Modus *(nur Union)*
 
 | Aktion | Verhalten |
 |--------|-------------|
 | **Ignorieren (Standard)** | Mitglied bleibt in seinem aktuellen Modus, wenn es den Zielmodus nicht unterstützt. |
-| **Aus** | Mitglied wird `aus` geschaltet, wenn es den Zielmodus nicht unterstützt (z. B. Klimaanlage beim Heizen). |
+| **Ausschalten** | Mitglied wird `aus` geschaltet, wenn es den Zielmodus nicht unterstützt (z. B. Klimaanlage beim Heizen). |
 
 ### Temperatur- & Feuchtigkeitseinstellungen
 
@@ -528,7 +565,7 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 | **Kalibrierungs-Heartbeat** | Sendet Kalibrierungswerte periodisch erneut (in Minuten). Hilft, Timeouts bei Geräten zu vermeiden, die häufige Updates erwarten. |
 | **Ausgeschaltete Mitglieder ignorieren** | Verhindert das Senden von Kalibrierungs-Updates an aktuell `aus` geschaltete Geräte und schont so den Akku bei drahtlosen Sensoren und TRVs. |
 | **Ausgeschaltete Mitglieder von Temperatur ausschließen** | Schließt aktuell `aus` geschaltete Mitglieder von Temperaturberechnungen aus (sowohl aktuell als auch Ziel). Verhindert, dass ein kalter, ausgeschalteter Heizkörper den angezeigten Durchschnitt nach unten zieht. |
-| **Min. Temp bei 'Aus'** | Erzwingt eine Mindesttemperatur (z. B. 5 °C), selbst wenn die Gruppe `aus` ist. Stellt sicher, dass Ventile für den Frostschutz vollständig schließen (essentiell für TRVs, die im `aus`-Modus nicht vollständig schließen). |
+| **Min. Temp bei 'Aus'** | Erzwingt eine Mindesttemperatur (z. B. 5 °C), selbst wenn die Gruppe `aus` ist. Stellt sicher, dass Ventile für den Frostschutz vollständig schließen (essentiell für TRVs, die im `aus`-Modus nicht vollständig schließen). Für Geräte ohne Aus-Modus siehe [Aus-Vorlage](#aus-vorlage). |
 
 Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assistant-Geräteregister automatisch dem Gruppenmitglied auf demselben Gerät zugeordnet; der Offset wird dann gegen die eigene Messung dieses Geräts berechnet (ohne Zuordnung gilt der Durchschnitt der Gruppe).
 
@@ -557,7 +594,7 @@ Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assi
 | Option | Beschreibung |
 |--------|-------------|
 | **Präsenzmodus** | **Deaktiviert** (Standard) oder **Aktiviert**. |
-| **Präsenz-Trigger** | Eine oder mehrere Entitäten, die Raumanwesenheit melden (binary_sensor, `input_boolean`, calendar, device_tracker oder person). Jeder `on`- oder `home`-Zustand gilt als anwesend; `not_home` und `away` gelten als abwesend. Die Gruppe gilt als belegt, wenn **irgendein** Sensor Anwesenheit meldet. |
+| **Präsenz-Trigger** | Eine oder mehrere Entitäten, die Raumanwesenheit melden (`binary_sensor`, `input_boolean`, `calendar`, `device_tracker` oder `person`). Jeder `on`- oder `home`-Zustand gilt als anwesend; `not_home` und `away` gelten als abwesend. Die Gruppe gilt als belegt, wenn **irgendein** Sensor Anwesenheit meldet. |
 | **Anwesenheitszone** | *(Optional)* Eine oder mehrere `zone`-Entitäten. Ist konfiguriert, zählt ein person/device_tracker-Sensor nur als anwesend, wenn er sich in einer der ausgewählten Zonen befindet. Leer lassen, um jeden Nicht-Away-Zustand als anwesend zu behandeln. |
 | **Abwesenheits-Aktion** | Die Fallback-Aktion bei erkannter Abwesenheit: **Ausschalten**, **Abwesenheits-Versatz**, **Abwesenheits-Temperatur** oder **Abwesenheits-Preset**. |
 | **Abwesenheits-Temperaturversatz** | *(Aktion Abwesenheits-Versatz)* Offset vom aktuellen Ziel bei Abwesenheit (z. B. `−2,0 °C` oder `+2,0 °C`). |
@@ -582,8 +619,8 @@ Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assi
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Gruppen-Presets (YAML)** | Definiert benannte Presets für die Gruppe als YAML-Mapping, jedes mit einer eigenen Reihe von Climate-Attributen (z. B. `eco:` mit `temperature: 18.0` und `hvac_mode: heat`). Die Auswahl eines Presets wendet seine Attribute auf die Gruppe und alle Mitglieder an. Stimmt ein Name mit einem Preset überein, das ein Mitgliedsgerät bereits nativ anbietet, warnt die Einstellungsseite und die eigene Definition der Gruppe wird verwendet. |
-| **Per Dienst geänderte Werte beibehalten (Presets)** | Behält per Dienst angelegte oder geänderte Presets nach einem Neustart bei. Andernfalls werden sie auf die konfigurierten Presets zurückgesetzt. |
+| **Gruppen-Presets (YAML)** | Definiert die Konfigurations-Presets der Gruppe als YAML-Mapping, jedes mit einer eigenen Reihe von Climate-Attributen (z. B. `eco:` mit `temperature: 18.0` und `hvac_mode: heat`). Die Auswahl eines Presets wendet seine Attribute auf die Gruppe und alle Mitglieder an. Stimmt ein Name mit einem Preset überein, das ein Mitgliedsgerät bereits nativ anbietet, warnt die Einstellungsseite und die eigene Definition der Gruppe wird verwendet. |
+| **Per Dienst geänderte Werte beibehalten (Presets)** | Behält die Laufzeit-Presets über einen Neustart. Ohne diese Option startet die Gruppe nur mit ihren Konfigurations-Presets. Siehe [Gruppen-Presets](#gruppen-presets). |
 
 ### Mitglieder-Offsets
 
@@ -603,9 +640,9 @@ Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assi
 | **HVAC-Modus-Trigger** | *(HVAC-Modus-Trigger)* Die Gruppenmodi, die die Isolation aktivieren. |
 | **Aktivierungsverzögerung** | Wartezeit nach Aktivierung des Auslösers, bevor Mitglieder isoliert werden. |
 | **Wiederherstellungsverzögerung** | Wartezeit nach Deaktivierung des Auslösers, bevor Mitglieder wiederhergestellt werden. |
-| **Isolieraktion** | Was an das Mitglied gesendet wird, wenn die Isolation aktiviert: **HVAC-Modus setzen** (Standard: `off`) oder **Preset-Modus setzen** (z. B. `building_protection` für Fußbodenheizung ohne echten Aus-Modus). |
+| **Isolationsaktion** | Was an das Mitglied gesendet wird, wenn die Isolation aktiviert: **HVAC-Modus setzen** (Standard: `off`) oder **Preset-Modus setzen** (z. B. `building_protection` für Fußbodenheizung ohne echten Aus-Modus). |
 | **HVAC-Modus** | *(Aktion HVAC-Modus)* Der HVAC-Modus, der beim isolierten Mitglied gesetzt wird (Standard: `off`). |
-| **Preset-Modus** | *(Aktion Preset-Modus)* Das Preset, das beim isolierten Mitglied gesetzt wird. Fällt auf `hvac_mode: off` zurück, wenn das Preset vom Gerät nicht unterstützt wird. |
+| **Preset-Modus** | *(Aktion Preset-Modus)* Das Preset, das beim isolierten Mitglied gesetzt wird. Wird das Preset vom Gerät nicht unterstützt, wird das Mitglied stattdessen ausgeschaltet. |
 
 ### Mitglieder-Vorlage
 
@@ -618,6 +655,7 @@ Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assi
 | **Feuchtigkeits-Aktion** | Physische Aktion bei Überschreitung des Feuchtigkeitsschwellwerts im Totband: **Trocknen** (Standard) oder **Nur Lüftung**. |
 | **Feuchtigkeits-Hysterese** | Symmetrisches Hystereseband um die Zielfeuchtigkeit zur Vermeidung schnellen Taktens (Standard: 3,0%). |
 | **Deaktivierungsverzögerung** | Verzögerung, bevor die Feuchtigkeits-Aktion nach Unterschreiten des Schwellwerts wieder beendet wird (Standard: 0s). Aktivierung erfolgt sofort — wie beim Verlassen des Temperaturbandes wird das Reagieren auf zu hohe Feuchtigkeit nicht künstlich verzögert. |
+| **Aus-Vorlage aktivieren** | Heizgeräte ohne Aus-Modus werden beim Ausschalten der Gruppe auf Heizen mit ihrer eigenen Minimaltemperatur gestellt und gelten dort als aus. Siehe [Aus-Vorlage](#aus-vorlage). |
 
 ### Erweiterte Einstellungen
 
@@ -629,7 +667,9 @@ Befehle zeitlich zu strecken, statt sie alle gleichzeitig zu senden.
 
 | Option | Beschreibung |
 |--------|-------------|
-| **Entprellverzögerung** | Wartezeit vor dem Senden von Befehlen. Höhere Werte verhindern 'Schnellfeuer'-Befehle beim Verschieben von Reglern, fühlen sich aber langsamer an (Standard: 0,3s). |
+| **Aktion des Hauptschalters** | Verhalten bei ausgeschaltetem Hauptschalter: **Ausschalten** (Standard), **Temperatur setzen** (z. B. Frostschutz) oder **Geräte freigeben** (Handbetrieb direkt an den Geräten) — siehe [Hauptschalter](#hauptschalter). |
+| **Zieltemperatur des Hauptschalters** | Der Sollwert für **Temperatur setzen**, z. B. 6 °C als Frostschutz. |
+| **Entprellverzögerung** | Kurze Wartezeit vor dem Senden von Befehlen. Höhere Werte verhindern unnötig viele Einzelbefehle beim Verstellen eines Schiebereglers, verzögern aber die Reaktion leicht (Standard: 0,3s). |
 | **Wiederholungsversuche** | Anzahl der Wiederholungen bei fehlgeschlagenem Befehl. |
 | **Wiederholungsverzögerung** | Zeit zwischen Wiederholungen (z. B. 1,0s). |
 | **Wiederholung erzwingen** | Sendet Befehle immer an alle Mitglieder, auch wenn sie bereits den Zielzustand melden. Nützlich für IR-basierte Klimaanlagen oder andere Geräte, die ihren Zustand nach Erhalt eines Befehls möglicherweise nicht zuverlässig aktualisieren. |
@@ -637,7 +677,7 @@ Befehle zeitlich zu strecken, statt sie alle gleichzeitig zu senden.
 | **Optimistische UI-Übergangszeit** | Dauer (Sekunden), für die die Gruppe den befohlenen Wert sofort nach einer UI-Aktion anzeigt, bevor langsame Mitgliedsgeräte ihren Zustand zurückmelden (Standard: 3,0 s). Verhindert visuelles Flackern im Dashboard. Gilt für alle Attribute: HVAC-Modus, Temperatur, Luftfeuchtigkeit, Lüfter-/Preset-/Schwenk-Modi. |
 | **Smarte Sensoren bereitstellen** | Erstellt zusätzliche Temperatur- und Feuchtigkeits-Sensor-Entitäten, die den aktuellen aggregierten Zustand der Gruppe widerspiegeln (nützlich für Verlaufsgraphen und Dashboards). |
 | **Mitgliederliste bereitstellen** | Fügt das Attribut `entity_id` mit der Liste aller Mitglieds-Entitäts-IDs hinzu, sodass Home Assistants More-Info-Dialog die native Mitgliederliste anzeigt (ermöglicht außerdem `expand()`-Templates). |
-| **Konfiguration anzeigen (Debug)** | Erstellt eine diagnostische Konfigurations-Sensor-Entität (`sensor.*_configuration`), die einen portablen JSON-Schnappschuss aller Gruppeneinstellungen unter dem Attribut `settings_json` enthält. |
+| **Konfigurations-Sensor bereitstellen** | Erstellt eine diagnostische Konfigurations-Sensor-Entität (`sensor.*_configuration`), die einen portablen JSON-Schnappschuss aller Gruppeneinstellungen unter dem Attribut `settings_json` enthält. |
 | **Alle Sektionen standardmäßig aufklappen** | Hält standardmäßig alle Konfigurationsabschnitte im Optionsdialog aufgeklappt. |
 
 ## Dienste
@@ -650,14 +690,14 @@ Setzt die Gruppe vorübergehend für eine feste Dauer auf eine Zieltemperatur. L
 
 | Feld | Erforderlich | Beschreibung |
 |-------|----------|-------------|
-| `hvac_mode` | Nein | Der Modus, in dem der Boost läuft: `heat`, `cool`, `dry` oder `fan_only`. Standard: der aktuelle Modus der Gruppe — eine `aus`-Gruppe wacht in ihrem letzten aktiven Modus auf; die Modi ohne Einzel-Sollwert fallen auf `heat` zurück. |
+| `hvac_mode` | Nein | Der Modus, in dem der Boost läuft: `heat`, `cool`, `dry` oder `fan_only`. Standard: der aktuelle Modus der Gruppe — eine ausgeschaltete Gruppe startet in ihrem letzten aktiven Modus; die Modi ohne Einzel-Sollwert fallen auf `heat` zurück. |
 | `temperature` | Nein* | Absolute Zieltemperatur während des Boosts (z. B. `24.0`). |
 | `temperature_offset` | Nein* | Relativer Offset, der zur aktuellen Zieltemperatur addiert wird (z. B. `+3.0` oder `−2.0`). |
 | `duration` | **Ja** | Dauer in Minuten (Minimum 1). |
 
 *\*Entweder `temperature` oder `temperature_offset` muss angegeben werden. Ein Offset braucht den eigenen Einzel-Sollwert der Gruppe als Basis — er wird abgelehnt (mit dem Hinweis, `temperature` zu verwenden), wenn der Boost auf `heat` zurückfällt oder in einem abweichenden Modus läuft.*
 
-Der Boost läuft immer in einem Modus, der einen Einzel-Sollwert trägt; der Modus selbst geht nur dann an die Geräte, wenn er vom Gruppen-Modus abweicht. Mit der Funktionsstrategie **Union** erreicht der Boost nur Mitglieder, die diesen Modus anbieten; mit **Schnittmenge** wird er wie jeder andere Gruppenbefehl gesendet. Kann kein Mitglied den Boost aufnehmen, meldet der Dienst einen Fehler — es wird nichts gesetzt und kein Countdown gestartet. Dasselbe gilt, während eine Gruppensperre (wie ein offenes Fenster) aktiv ist.
+Der Boost läuft immer in einem Modus, der einen Einzel-Sollwert trägt; der Modus selbst geht nur dann an die Geräte, wenn er vom Gruppen-Modus abweicht. Mit der Funktionsstrategie **Union** erreicht der Boost nur Mitglieder, die diesen Modus anbieten; mit **Schnittmenge** wird er wie jeder andere Gruppenbefehl gesendet. Kann kein Mitglied den Boost ausführen, meldet der Dienst einen Fehler — es wird nichts gesetzt und kein Countdown gestartet. Dasselbe gilt, während eine Gruppensperre (wie ein offenes Fenster) aktiv ist.
 
 Manuelle Änderungen (direkte Gruppenbefehle) brechen den Boost sofort ab. Eine Änderung direkt am Gerät nicht — während eines Boosts werden Meldungen der Mitglieder ignoriert (die verspätete Bestätigung des Boost-Sollwerts durch ein langsames Gerät ist von einer manuellen Änderung nicht unterscheidbar), und der Boost stellt beim Ende den vorherigen Zustand wieder her. Ein `aus` eines Mitglieds beendet den Boost genau dort, wo der Sync-Modus es übernehmen würde: in den Mirror-Modi ohne **Respektiere Aus-Status der Mitglieder (Sync)** das `aus` jedes einzelnen Mitglieds, mit der Option nur das des letzten laufenden; bei **Master/Lock** nur das des Masters; bei **Lock** nur das des letzten laufenden Mitglieds mit der Option; bei **Nur übernehmen** oder deaktiviertem Sync nie. Lock-Durchsetzung bricht den Boost nicht ab. Ein Boost rangiert **über** dem Zeitplan und der Bypass-Ebene: Zeitplan-Zeitblock-Änderungen und Bypass-Aktivierungen laufen im Hintergrund weiter, ohne die geboostete Temperatur anzufassen, und alles wird erneut angewendet, sobald der Boost endet. Schaltet der Zeitplan die Gruppe während eines Boosts aus, hält der Boost die Mitglieder in ihrem letzten aktiven Modus am Laufen.
 
@@ -716,7 +756,7 @@ Setzt temporäre Überschreibungen und den Runtime-Zustand auf die konfigurierte
 | `schedule` | Nein | Setzt die aktive Zeitplan-Entität auf den konfigurierten Standardzeitplan zurück und beendet eine manuelle Haltezeit, sodass der aktuelle Zeitblock sofort gilt. |
 | `bypass` | Nein | Setzt die aktive Bypass-Entität auf den konfigurierten Standard zurück und nimmt Bypass-Anpassungen zurück. |
 | `fallback` | Nein | Setzt den Fallback-Payload des Zeitplans auf den konfigurierten Standard zurück. |
-| `presets` | Nein | Löscht zur Laufzeit erstellte Voreinstellungen und stellt konfigurierte Voreinstellungen wieder her. |
+| `presets` | Nein | Entfernt alle Laufzeit-Presets. Die Konfigurations-Presets bleiben unverändert. |
 
 Setze mindestens einen Bereich auf `true` oder nutze `everything: true`, um alles zurückzusetzen. Ein Aufruf ohne jede Auswahl wird abgelehnt.
 
@@ -758,7 +798,7 @@ data:
   schedule_bypass_entity: calendar.holiday_schedule
 ```
 
-Wird dieser Dienst ohne Entität aufgerufen, wird der Bypass-Zeitplan gelöscht und der aktuelle Zeitplan-Zeitblock sofort erneut angewendet.
+Wird dieser Dienst ohne Entität aufgerufen, kehrt die Gruppe zu ihrer konfigurierten Bypass-Entität zurück — oder zu keiner, wenn keine konfiguriert ist — und der aktuelle Zeitplan-Zeitblock wird sofort erneut angewendet.
 
 ### `climate_group_helper.set_schedule_fallback_payload`
 
@@ -783,15 +823,15 @@ data:
 
 ### `climate_group_helper.set_group_preset`
 
-Erstellt, aktualisiert oder entfernt virtuelle Gruppen-Presets zur Laufzeit, ohne die Gruppeneinstellungen öffnen zu müssen. Nützlich für dynamische Automatisierungen, temporäre Gäste-Modi oder Party-Sollwerte. Wenn „Per Dienst geänderte Werte beibehalten (Presets)“ aktiviert ist, bleiben über diesen Dienst angelegte oder geänderte Presets auch nach einem Home Assistant Neustart erhalten.
+Erstellt, ändert oder entfernt die Laufzeit-Presets der Gruppe (siehe [Gruppen-Presets](#gruppen-presets)). Ein Aufruf ändert nur die Presets, die er nennt; alle anderen bleiben, wie sie sind. Wenn „Per Dienst geänderte Werte beibehalten (Presets)“ aktiviert ist, bleiben die Laufzeit-Presets auch nach einem Home-Assistant-Neustart erhalten.
 
-Aktualisierst du genau das Preset, das gerade auf der Gruppe ausgewählt ist, werden dessen neue Werte sofort angewendet. Bei jedem anderen Preset ändert sich nur die hinterlegte Definition.
+Änderst du genau das Preset, das gerade auf der Gruppe ausgewählt ist, werden dessen neue Werte sofort angewendet. Bei jedem anderen Preset ändert sich nur seine Definition.
 
 **Dienst-Felder:**
 
 | Feld | Erforderlich | Beschreibung |
 |-------|----------|-------------|
-| `payload` | Nein | Die Gruppen-Presets im selben YAML- oder Mapping-Format wie in den Gruppeneinstellungen (z. B. `party:` mit `temperature: 23.0`). Wird ein einzelnes Preset auf leer oder `null` gesetzt, wird nur dieses Preset entfernt. Wird `payload` weggelassen oder leer übergeben, werden alle Runtime-Presets entfernt (und auf die konfigurierten Presets zurückgesetzt). |
+| `payload` | Nein | Die zu setzenden Laufzeit-Presets im selben YAML- oder Mapping-Format wie die Konfigurations-Presets (z. B. `party:` mit `temperature: 23.0`). Wird ein einzelnes Preset auf leer oder `null` gesetzt, wird nur dieses Laufzeit-Preset entfernt. Wird `payload` weggelassen oder leer übergeben, werden alle Laufzeit-Presets entfernt. |
 
 **Beispiel — Presets hinzufügen oder aktualisieren:**
 ```yaml
@@ -841,7 +881,7 @@ Standardmäßig werden nur Logikeinstellungen übertragen (Sync-Modi, Fensterste
 
 Die Integration bietet eingebaute Möglichkeiten, deine Logikeinstellungen zu sichern, wiederherzustellen und zu klonen.
 
-*   **Konfigurations-Sensor:** Aktiviere **Konfigurations-Sensor anzeigen** (Erweiterte Einstellungen), um eine diagnostische `sensor`-Entität zu erstellen. Ihr Attribut `settings_json` enthält einen portablen Schnappschuss aller Logikeinstellungen.
+*   **Konfigurations-Sensor:** Aktiviere **Konfigurations-Sensor bereitstellen** (Erweiterte Einstellungen), um eine diagnostische `sensor`-Entität zu erstellen. Ihr Attribut `settings_json` enthält einen portablen Schnappschuss aller Logikeinstellungen.
 *   **Diagnose-Download:** Klicke direkt im Panel **Geräteinfo** (oder über das ⋮-Menü der Integration) auf **Diagnose herunterladen**.
 
 **Beispiel — Einstellungen von einer Gruppe in eine andere kopieren:**
@@ -857,27 +897,6 @@ data:
   include_member_list: false
   include_entity_selectors: false
 ```
-
-## Installation
-
-### Über HACS (Empfohlen)
-1. Öffne **HACS**.
-2. Suche nach **Climate Group Helper**.
-3. Klicke auf **Herunterladen**
-4. **Home Assistant neu starten**.
-
-### Manuell
-1. Lade das [neueste Release](https://github.com/bjrnptrsn/climate_group_helper/releases) herunter.
-2. Kopiere `custom_components/climate_group_helper` in deinen `custom_components`-Ordner.
-3. **Home Assistant neu starten**.
-
-## Einrichtung
-
-1. Gehe zu **Einstellungen** > **Geräte & Dienste** > **Helfer**.
-2. Klicke auf **+ Helfer erstellen** > **Climate Group Helper**.
-3. Folge dem Konfigurationsdialog, um deine Entitäten hinzuzufügen.
-
-**Um alle Funktionen freizuschalten:** Öffne das **Konfiguration**-Menü der Gruppe und aktiviere **Erweiterter Modus** in den allgemeinen Einstellungen. Dies zeigt alle kategoriespezifischen Optionen an.
 
 ## Fehlerbehebung
 

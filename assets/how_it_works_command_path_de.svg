@@ -52,8 +52,8 @@
 
   <g fill="#1f2328" font-size="13">
     <text x="36" y="202" font-weight="600">Der Zielzustand selbst ändert sich unterwegs nie — jedes Gerät bekommt nur seinen Anteil davon.</text>
-    <text x="36" y="230" fill="#57606a">Außerdem unterwegs, wo eingerichtet: Die Mitglieder-Vorlage macht aus einem Heiz-/Kühlbereich</text>
-    <text x="36" y="248" fill="#57606a">Heizen oder Kühlen, „Min. Temperatur bei Aus“ macht aus „aus“ die niedrigste Temperatur des</text>
-    <text x="36" y="266" fill="#57606a">Geräts, und die Verzögerung zwischen Mitglieder-Befehlen verteilt die Befehle zeitlich.</text>
+    <text x="36" y="230" fill="#57606a">Außerdem unterwegs, wo eingerichtet: Die Bereichsvorlage macht aus einem Heiz-/Kühlbereich</text>
+    <text x="36" y="248" fill="#57606a">Heizen oder Kühlen, Aus-Vorlage und „Min. Temp bei 'Aus'“ machen aus „aus“ die niedrigste</text>
+    <text x="36" y="266" fill="#57606a">Temperatur des Geräts, und die Verzögerung zwischen Mitglieder-Befehlen verteilt sie zeitlich.</text>
   </g>
 </svg>

@@ -68,7 +68,7 @@
               "ignore_off_members_temperature": "Ekskluder avslåtte medlemmer fra temperatur"
             },
             "data_description": {
-              "temp_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
+              "temp_target_avg": "Hvordan gruppen oppsummerer medlemmenes måltemperaturer.",
               "temp_use_master": "Viser masterenhetens målverdi som gruppens måltemperatur i stedet for medlemsgjennomsnittet. Faller tilbake til gjennomsnitt hvis masterenheten er utilgjengelig. Påvirker kun hvordan gruppestatus vises — den styrer eller synkroniserer ikke medlemmer (bruk Synkroniseringsmodus: Master/Lock for det).",
               "temp_target_round": "Gjelder kun verdier sendt til enheter, ikke nåværende/visningsverdier.",
               "temp_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
@@ -94,7 +94,7 @@
               "humidity_update_targets": "Skriv ekstern fuktighet til entiteter"
             },
             "data_description": {
-              "humidity_target_avg": "Hvordan gruppen beregner målverdien som skal sendes til medlemmene.",
+              "humidity_target_avg": "Hvordan gruppen oppsummerer medlemmenes målfuktigheter.",
               "humidity_use_master": "Viser masterenhetens målverdi som gruppens målfuktighet i stedet for medlemsgjennomsnittet. Faller tilbake til gjennomsnitt hvis masterenheten er utilgjengelig. Påvirker kun hvordan gruppestatus vises — den styrer eller synkroniserer ikke medlemmer (bruk Synkroniseringsmodus: Master/Lock for det).",
               "humidity_target_round": "Gjelder kun verdier sendt til enheter, ikke nåværende/visningsverdier.",
               "humidity_current_avg": "Hvordan gruppen oppsummerer sensoravlesninger fra medlemmene.",
@@ -111,8 +111,8 @@
               "ignore_off_members_sync": "Respekter medlemmers AV-tilstand (Synk)"
             },
             "data_description": {
-              "sync_mode": "Hva som skal gjøres når et medlem endres utenfor gruppen. Disabled: ignorer. Mirror: speile endringer. Lock: tilbakestill endringer. Mirror/Lock: speile valgte, tilbakestill ikke-valgte. Master/Lock: speile master, tilbakestill andre. Bare overta: overta endringer uten å videreføre dem.",
-              "sync_attributes": "Definerer hvilke attributter synkroniseringsmodusen virker på. Håndteringen av valgte og ikke-valgte attributter (Mirror, Revert eller Ignore) avhenger av valgt modus.",
+              "sync_mode": "Hva som skal gjøres når et medlem endres utenfor gruppen. Deaktivert: ignorer. Mirror: speil endringer. Lock: tilbakestill endringer. Mirror/Lock: speil valgte, tilbakestill ikke-valgte. Master/Lock: speil master, tilbakestill andre. Bare overta: overta endringer uten å videreføre dem.",
+              "sync_attributes": "Definerer hvilke attributter synkroniseringsmodusen virker på. Håndteringen av valgte og ikke-valgte attributter (speile, tilbakestille eller ignorere) avhenger av valgt modus.",
               "ignore_off_members_sync": "Manuelt avstengte medlemmer blir latt være i fred. Deres tilstand blir verken speilet eller tilbakestilt. Merk: direkte gruppekommandoer når alltid alle medlemmer."
             }
           },
@@ -131,15 +131,15 @@
               "close_delay": "Forsinkelse Lukking (s)"
             },
             "data_description": {
-              "window_mode": "Aktiver gruppe basert på vindussensorer. HVAC settes til 'off' ved åpne vinduer.",
+              "window_mode": "Setter oppvarming på pause eller senker temperaturen når et overvåket vindu åpnes.",
               "window_adopt_manual_changes": "Behold endringer gjort mens vinduer er åpne, og bruk dem når de lukkes. Inntil da gjelder handlingen ved åpent vindu.",
               "window_action": "Hva som skal skje når et vindu åpnes: Slå av helt eller sett en bestemt temperatur (f.eks. frostsikring).",
               "window_temperature": "Måltemperatur når 'Sett temperatur' er valgt.",
-              "room_sensor": "(Valgfri) Binærsensor for rommets egen vindu/dør.",
-              "zone_sensor": "(Valgfri) Binærsensor for vinduer/dører i sonen/etasjen. Sone-sensor skal inkludere rom-sensor.",
-              "room_open_delay": "Ventetid etter åpning av romvindu.",
-              "zone_open_delay": "Ventetid etter åpning av sonevindu.",
-              "close_delay": "Ventetid etter lukking av vinduer."
+              "room_sensor": "(Valgfri) Binærsensor, input_boolean eller cover-entitet for rommets eget vindu/dør.",
+              "zone_sensor": "(Valgfri) Binærsensor, input_boolean eller cover-entitet for vinduer/dører i sonen/etasjen. Sonesensoren må inkludere romsensoren.",
+              "room_open_delay": "Ventetid etter åpning av romvindu før vindushandlingen utløses.",
+              "zone_open_delay": "Ventetid etter åpning av sonevindu før vindushandlingen utløses.",
+              "close_delay": "Ventetid etter at alle vinduer er lukket før forrige tilstand gjenopprettes."
             }
           },
           "presence_section": {
@@ -192,14 +192,14 @@
           },
           "presets_section": {
             "name": "Gruppeforhåndsinnstillinger",
-            "description": "Definer dine egne navngitte forhåndsinnstillinger for gruppen (f.eks. eco, guest, ventilate). Når du velger en, brukes attributtene på alle medlemmer samtidig. En gruppeforhåndsinnstilling overstyrer et medlems egen forhåndsinnstilling med samme navn.",
+            "description": "Definer dine egne navngitte forhåndsinnstillinger for gruppen (f.eks. eco, guest, ventilate). Når du velger en, brukes attributtene på alle medlemmer samtidig. En gruppeforhåndsinnstilling overstyrer et medlems egen forhåndsinnstilling med samme navn. Kjøretidsforhåndsinnstillinger satt via tjenesten set_group_preset kommer i tillegg til forhåndsinnstillingene som legges inn her, og har forrang foran en med samme navn.",
             "data": {
               "group_presets": "Gruppeforhåndsinnstillinger (YAML)",
               "retain_service_changes_presets": "Behold endringer gjort via tjeneste (Forhåndsinnstillinger)"
             },
             "data_description": {
               "group_presets": "Forhåndsinnstillingene dine i YAML: et fritt valgt navn per forhåndsinnstilling, hver med attributtene den skal bruke (temperature, hvac_mode, fan_mode, swing_mode). En forhåndsinnstilling bruker bare attributtene den lister opp. Se dokumentasjonen for formatet og ferdige eksempler.",
-              "retain_service_changes_presets": "Beholder forhåndsinnstillinger opprettet eller oppdatert via tjeneste etter en omstart. Ellers tilbakestilles de til de konfigurerte forhåndsinnstillingene."
+              "retain_service_changes_presets": "Beholder kjøretidsforhåndsinnstillingene satt via tjenesten set_group_preset etter en omstart. Uten dette starter gruppen bare med forhåndsinnstillingene som er lagt inn her."
             }
           },
           "temp_offsets_section": {
@@ -214,7 +214,7 @@
           },
           "isolation_section": {
             "name": "Medlemsisolering",
-            "description": "Isoler midlertidig spesifikke medlemmer (f.eks. radiatorer bak gardiner) når en binær sensor er aktiv.",
+            "description": "Isoler midlertidig spesifikke medlemmer mens en utløser er aktiv. Isolerte medlemmer mottar isoleringshandlingen (Av som standard) og utelukkes fra gruppeberegninger.",
             "data": {
               "isolation_rule_count": "Antall regler",
               "isolation_rule_1_entities": "Enheter som skal isoleres",
@@ -230,7 +230,7 @@
             "data_description": {
               "isolation_rule_count": "Hvor mange uavhengige isolasjonsregler som vises. Lagre etter endring for å vise eller skjule ekstra regelspor.",
               "isolation_rule_1_entities": "Gruppemedlemmer som isoleres når triggeren er aktiv.",
-              "isolation_rule_1_trigger": "Velg hva som aktiverer isolasjon: en binær sensor eller en bestemt HVAC-modus for gruppen.",
+              "isolation_rule_1_trigger": "Velg hva som aktiverer isolasjon: en binær sensor, en bestemt HVAC-modus for gruppen eller et manuelt avslått medlem.",
               "isolation_rule_1_sensor": "(Sensortrigger) Binær sensor som utløser isolasjon ved ON.",
               "isolation_rule_1_hvac_modes": "(HVAC-modus-trigger) Isolasjon aktiveres når gruppens målmodus er en av disse.",
               "isolation_rule_1_activate_delay": "(Kun sensor-/HVAC-modus-trigger) Ventetid etter at triggeren aktiveres, før medlemmer isoleres.",
@@ -256,7 +256,7 @@
             },
             "data_description": {
               "isolation_rule_2_entities": "Gruppemedlemmer som isoleres når triggeren er aktiv.",
-              "isolation_rule_2_trigger": "Velg hva som aktiverer isolasjon: en binær sensor eller en bestemt HVAC-modus for gruppen.",
+              "isolation_rule_2_trigger": "Velg hva som aktiverer isolasjon: en binær sensor, en bestemt HVAC-modus for gruppen eller et manuelt avslått medlem.",
               "isolation_rule_2_sensor": "(Sensortrigger) Binær sensor som utløser isolasjon ved ON.",
               "isolation_rule_2_hvac_modes": "(HVAC-modus-trigger) Isolasjon aktiveres når gruppens målmodus er en av disse.",
               "isolation_rule_2_activate_delay": "(Kun sensor-/HVAC-modus-trigger) Ventetid etter at triggeren aktiveres, før medlemmer isoleres.",
@@ -282,7 +282,7 @@
             },
             "data_description": {
               "isolation_rule_3_entities": "Gruppemedlemmer som isoleres når triggeren er aktiv.",
-              "isolation_rule_3_trigger": "Velg hva som aktiverer isolasjon: en binær sensor eller en bestemt HVAC-modus for gruppen.",
+              "isolation_rule_3_trigger": "Velg hva som aktiverer isolasjon: en binær sensor, en bestemt HVAC-modus for gruppen eller et manuelt avslått medlem.",
               "isolation_rule_3_sensor": "(Sensortrigger) Binær sensor som utløser isolasjon ved ON.",
               "isolation_rule_3_hvac_modes": "(HVAC-modus-trigger) Isolasjon aktiveres når gruppens målmodus er en av disse.",
               "isolation_rule_3_activate_delay": "(Kun sensor-/HVAC-modus-trigger) Ventetid etter at triggeren aktiveres, før medlemmer isoleres.",
@@ -308,7 +308,7 @@
             },
             "data_description": {
               "isolation_rule_4_entities": "Gruppemedlemmer som isoleres når triggeren er aktiv.",
-              "isolation_rule_4_trigger": "Velg hva som aktiverer isolasjon: en binær sensor eller en bestemt HVAC-modus for gruppen.",
+              "isolation_rule_4_trigger": "Velg hva som aktiverer isolasjon: en binær sensor, en bestemt HVAC-modus for gruppen eller et manuelt avslått medlem.",
               "isolation_rule_4_sensor": "(Sensortrigger) Binær sensor som utløser isolasjon ved ON.",
               "isolation_rule_4_hvac_modes": "(HVAC-modus-trigger) Isolasjon aktiveres når gruppens målmodus er en av disse.",
               "isolation_rule_4_activate_delay": "(Kun sensor-/HVAC-modus-trigger) Ventetid etter at triggeren aktiveres, før medlemmer isoleres.",
@@ -320,7 +320,7 @@
           },
           "member_template_section": {
             "name": "Medlemsmal",
-            "description": "Gjengir enkelt-settpunkt-medlemmer som virtuelle varme/kjøl-rekkevidde-enheter. Group Helper oversetter rekkevidde-kommandoer til passende fysiske varme/kjøl-kommandoer basert på hvert medlems nåværende temperatur.",
+            "description": "Viser medlemmer med funksjoner enheten deres ikke tilbyr selv. Områdemal: medlemmer med ett settpunkt fungerer som varme/kjøle-områdeenheter — områdekommandoer blir til oppvarming eller kjøling ut fra medlemmets nåværende temperatur. Av-mal: varmeovner uten av-modus slås av ved å settes til oppvarming på sin egen minimumstemperatur.",
             "data": {
               "range_template_enabled": "Aktiver områdemal",
               "range_template_deadband_action": "Deadband-handling",
@@ -330,7 +330,8 @@
               "range_template_humidity_enabled": "Avfukt i dødgang",
               "range_template_humidity_action": "Fuktighetshandling",
               "range_template_humidity_hysteresis": "Fuktighetshysterese",
-              "range_template_humidity_deactivation_delay": "Deaktiveringsforsinkelse"
+              "range_template_humidity_deactivation_delay": "Deaktiveringsforsinkelse",
+              "off_template_enabled": "Aktiver av-mal"
             },
             "data_description": {
               "range_template_enabled": "Gjengir automatisk alle enkelt-settpunkt-medlemmer (uten native varme/kjøling) som virtuelle områdeenheter.",
@@ -341,13 +342,16 @@
               "range_template_humidity_enabled": "Når innenfor måltemperaturområdet, bytt til fuktighetshandlingen hvis fuktigheten overstiger målfuktigheten.",
               "range_template_humidity_action": "Handling som utføres når gjeldende fuktighet overstiger målfuktigheten i dødgangen.",
               "range_template_humidity_hysteresis": "Schmitt-utløser hysteresebånd rundt målfuktighet for å hindre rask veksling.",
-              "range_template_humidity_deactivation_delay": "Forsinkelse før deaktivering av fuktighetshandlingen etter fall under terskelen."
+              "range_template_humidity_deactivation_delay": "Forsinkelse før deaktivering av fuktighetshandlingen etter fall under terskelen.",
+              "off_template_enabled": "Varmeovner uten av-modus settes til oppvarming på sin egen minimumstemperatur når gruppen slås av. En varmeovn på sin minimumstemperatur regnes da som av. For enheter med av-modus, bruk i stedet 'Minimumstemperatur når av'."
             }
           },
           "advanced_section": {
             "name": "Avanserte innstillinger",
-            "description": "Finjuster kommandotiming og gjenopprettingsatferd. Bytt mellom diagnoseattributter og konfigurasjonssensorer.",
+            "description": "Velg hva hovedbryteren gjør mens den er av. Finjuster kommandotiming og gjenopprettingsatferd. Bytt mellom diagnoseattributter og konfigurasjonssensorer.",
             "data": {
+              "switch_action": "Hovedbryterens handling",
+              "switch_temperature": "Hovedbryterens temperatur",
               "debounce_delay": "Debounce forsinkelse (sekunder)",
               "retry_attempts": "Forsøk på nytt",
               "retry_delay": "Forsinkelse ved nytt forsøk (sekunder)",
@@ -356,9 +360,11 @@
               "grace_period": "Optimistisk UI-overgangsperiode (sekunder)",
               "expose_smart_sensors": "Vis smarte sensorer",
               "expose_member_entities": "Vis medlemsliste",
-              "expose_config": "Vis konfigurasjon (Feilsøking)"
+              "expose_config": "Vis konfigurasjonssensor"
             },
             "data_description": {
+              "switch_action": "Hva enhetene får mens hovedbryteren er av: Slå av, Sett temperatur (et fast settpunkt, f.eks. frostbeskyttelse – endrer bare settpunktet for enheter som går) eller Frigi enheter (gruppen lar enhetene være i fred, og du styrer dem direkte).",
+              "switch_temperature": "Måltemperatur når 'Sett temperatur' er valgt.",
               "debounce_delay": "Ventetid før sending av kommandoer. Høyere verdier forhindrer 'raske' kommandoer når du skyver kontrollene.",
               "retry_attempts": "Hvor mange ganger en kommando skal sendes på nytt hvis en enhet ikke svarer. Sett til 0 for å deaktivere.",
               "retry_delay": "Pause mellom forsøk. Å gi enheter et øyeblikk til å komme seg kan forbedre påliteligheten.",
@@ -366,8 +372,8 @@
               "member_command_delay": "Pause mellom kommandoer til hvert enkelt medlem. Hjelper når styring av flere enheter samtidig overbelaster nettverket eller broen (f.eks. IR-blastere, enkelte Zigbee-koordinatorer). Sett til 0 for å deaktivere.",
               "grace_period": "Hvor lenge gruppen viser den sendte verdien før den bytter til medlemsgjennomsnittet. Forhindrer UI-flimmer når trege enheter (Cloud-broer, Zigbee) sender tilbake sin gamle tilstand. Sett til 0 for å deaktivere.",
               "expose_smart_sensors": "Oppretter ekstra sensorentiteter for gruppens temperatur og luftfuktighet (nyttig for grafer).",
-              "expose_member_entities": "Oppretter en attributt som lister alle medlemsenhets-ID-er.",
-              "expose_config": "Legger til alle konfigurasjonsverdier i entitetens attributter. Nyttig for feilsøking."
+              "expose_member_entities": "Legger til attributtet 'entity_id' som lister opp alle medlemmer, slik at mer-info-dialogen viser medlemslisten.",
+              "expose_config": "Oppretter en diagnostisk sensor (sensor.*_configuration) som eksponerer flyttbare innstillinger som et JSON-attributt. Nyttig for å kopiere innstillinger mellom grupper via automatiseringer."
             }
           }
         },
@@ -381,13 +387,14 @@
       "no_entities": "Minst én klimaenhet må være igjen i gruppen.",
       "master_not_in_members": "Hovedenheten må være et medlem av gruppen.",
       "master_refresh_notice": "Master-enhet lagt til. Nye alternativer tilgjengelig.",
-      "master_options_notice": "Nytt valg for master-enhet",
+      "master_options_notice": "Nye alternativer for master-enheten er tilgjengelige i denne delen.",
       "isolation_all_selected": "Minst ett medlem må forbli utenfor isolasjonen.",
       "isolation_entity_overlap": "Hvert medlem kan bare forekomme i én isolasjonsregel.",
       "isolation_action_preset_required": "Velg en forhåndsdefinert modus for isoleringshandlingen.",
       "isolation_sensor_required": "Velg en sensor for isoleringsregelen, eller sett utløseren til Deaktivert.",
       "isolation_hvac_modes_required": "Velg minst én modus for isoleringsregelen, eller sett utløseren til Deaktivert.",
       "window_temperature_required": "Angi en vindustemperatur, eller endre vindushandlingen.",
+      "switch_temperature_required": "Angi en temperatur for hovedbryteren, eller endre handlingen.",
       "presence_action_value_required": "Angi en verdi for den valgte fraværshandlingen, eller endre handlingen.",
       "schedule_fallback_payload_invalid": "Ugyldig YAML-format i reserve-nyttelast for tidsplan. Må være en gyldig nøkkel-verdi-tilordning.",
       "group_presets_invalid": "Ugyldig YAML-format i gruppeforhåndsinnstillinger. Må være en gyldig nøkkel-verdi-tilordning.",
@@ -401,15 +408,15 @@
   "selector": {
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normal (Demokratisk)",
-        "off_priority": "Av-prioritet (Hovedbryter)",
-        "auto": "Auto (Smart)"
+        "normal": "Normal – Gruppen overtar den vanligste modusen blant medlemmene",
+        "off_priority": "Av-prioritet – Hvis et medlem er av, er hele gruppen av",
+        "auto": "Auto – Smart veksling mellom Normal og Av-prioritet"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Snitt (Sikker modus - Felles funksjoner)",
-        "union": "Union (Avansert bruker - Alle funksjoner)"
+        "intersection": "Snitt – Støtt bare funksjoner som ALLE medlemmer har",
+        "union": "Union – Støtt alle funksjoner som finnes på ET HVILKET SOM HELST medlem"
       }
     },
     "temp_target_avg": {
@@ -505,6 +512,13 @@
       "options": {
         "off": "Slå av",
         "temperature": "Sett temperatur"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "Slå av",
+        "temperature": "Sett temperatur",
+        "release": "Frigi enheter"
       }
     },
     "union_out_of_bounds_action": {
@@ -628,32 +642,6 @@
     }
   },
   "services": {
-    "set_temperature": {
-      "name": "Angi temperatur",
-      "description": "Angi måltemperaturen for hele gruppen.",
-      "fields": {
-        "entity_id": {
-          "name": "Klimagruppe",
-          "description": "Gruppen som skal kontrolleres."
-        },
-        "temperature": {
-          "name": "Måltemperatur",
-          "description": "Ønsket temperatur."
-        },
-        "target_temp_high": {
-          "name": "Mål Høy",
-          "description": "Øvre grense for varme/kjøle-modus."
-        },
-        "target_temp_low": {
-          "name": "Mål Lav",
-          "description": "Nedre grense for varme/kjøle-modus."
-        },
-        "hvac_mode": {
-          "name": "HVAC-modus",
-          "description": "Endre modus valgfritt."
-        }
-      }
-    },
     "set_schedule_entity": {
       "name": "Angi tidsplan-enhet",
       "description": "Bytter den aktive tidsplan- eller kalenderenheten ved kjøretid. Hvis utelatt eller satt til null, går gruppen tilbake til sin konfigurerte standardenhet og anvender gjeldende slot på nytt.",
@@ -686,11 +674,11 @@
     },
     "set_group_preset": {
       "name": "Angi gruppeforhåndsinnstilling",
-      "description": "Oppretter, oppdaterer eller fjerner virtuelle gruppeforhåndsinnstillinger under kjøring. La stå tomt for å tilbakestille.",
+      "description": "Setter, endrer eller fjerner gruppens kjøretidsforhåndsinnstillinger. De kommer i tillegg til konfigurasjonsforhåndsinnstillingene fra gruppeinnstillingene og har forrang foran en med samme navn.",
       "fields": {
         "payload": {
           "name": "Nyttelast",
-          "description": "Gruppeforhåndsinnstillingene som YAML eller tilordning. La stå tomt for å tilbakestille. Se dokumentasjonen for format og eksempler."
+          "description": "Kjøretidsforhåndsinnstillingene som skal settes, som YAML eller tilordning. En forhåndsinnstilling satt til null eller tom fjernes; en tom payload fjerner alle kjøretidsforhåndsinnstillinger. Se dokumentasjonen for format og eksempler."
         }
       }
     },
@@ -764,23 +752,9 @@
         },
         "presets": {
           "name": "Gruppeforhåndsinnstillinger",
-          "description": "Sletter kjøretidsforhåndsinnstillinger og gjenoppretter konfigurerte forhåndsinnstillinger."
+          "description": "Fjerner alle kjøretidsforhåndsinnstillinger. Konfigurasjonsforhåndsinnstillingene forblir uendret."
         }
       }
-    }
-  },
-  "issues": {
-    "member_unavailable": {
-      "title": "Medlemsenhet utilgjengelig",
-      "description": "En eller flere enheter i {group_name} er offline. Gruppen vil fortsette å fungere med det den har.\n\nUtilgjengelig: {unavailable_entities}"
-    },
-    "no_members_available": {
-      "title": "Ingen medlemmer tilgjengelig",
-      "description": "Gruppen {group_name} har ingen aktive medlemmer og er effektivt offline.\n\nSjekk: {member_entities}"
-    },
-    "conflicting_features": {
-      "title": "Funksjonskonflikter",
-      "description": "Gruppen {group_name} har medlemmer med forskjellige funksjoner. Funksjonalitet kan være begrenset til det alle støtter.\n\nKonflikter: {conflicting_entities}"
     }
   },
   "device_automation": {

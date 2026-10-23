@@ -6,7 +6,7 @@ import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Callable
 
-from homeassistant.components.climate import ATTR_CURRENT_TEMPERATURE, HVACMode
+from homeassistant.components.climate import ATTR_CURRENT_TEMPERATURE
 from homeassistant.components.number import DOMAIN as NUMBER_DOMAIN
 from homeassistant.const import ATTR_ENTITY_ID, STATE_UNAVAILABLE
 from homeassistant.core import callback
@@ -24,6 +24,7 @@ from .const import (
     META_VALUE_DISABLED,
     CalibrationMode,
 )
+from .member_template import is_off_template_or_physical
 from .state import is_available
 
 if TYPE_CHECKING:
@@ -168,12 +169,12 @@ class CalibrationHandler:
         if member_id in self._group.run_state.isolated_members:
             return "isolated"
 
-        member_state = self._hass.states.get(member_id)
+        member_state = self._group.aggregator.read_member_state(member_id)
         if member_state is None:
             return None
         if not is_available(member_state):
             return "unavailable"
-        if self._ignore_off and member_state.state == HVACMode.OFF:
+        if self._ignore_off and is_off_template_or_physical(member_state):
             return "OFF (Battery Saver)"
         return None
 

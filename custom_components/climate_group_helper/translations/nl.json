@@ -68,7 +68,7 @@
               "ignore_off_members_temperature": "Uitgeschakelde leden uitsluiten van temperatuur"
             },
             "data_description": {
-              "temp_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
+              "temp_target_avg": "Hoe de groep de doeltemperaturen van haar leden samenvat.",
               "temp_use_master": "Toont het instelpunt van de masterentiteit als de doeltemperatuur van de groep in plaats van het lidgemiddelde. Valt terug op gemiddelde indien de masterentiteit niet beschikbaar is. Beïnvloedt alleen hoe de groepsstatus wordt weergegeven — het bestuurt of synchroniseert de leden niet (gebruik daarvoor Synchronisatiemodus: Master/Lock).",
               "temp_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
               "temp_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
@@ -94,7 +94,7 @@
               "humidity_update_targets": "Schrijf Externe Luchtvochtigheid naar Entiteiten"
             },
             "data_description": {
-              "humidity_target_avg": "Hoe de groep het instelpunt berekent om naar zijn leden te sturen.",
+              "humidity_target_avg": "Hoe de groep de doelvochtigheden van haar leden samenvat.",
               "humidity_use_master": "Toont het instelpunt van de masterentiteit als de doelvochtigheid van de groep in plaats van het lidgemiddelde. Valt terug op gemiddelde indien de masterentiteit niet beschikbaar is. Beïnvloedt alleen hoe de groepsstatus wordt weergegeven — het bestuurt of synchroniseert de leden niet (gebruik daarvoor Synchronisatiemodus: Master/Lock).",
               "humidity_target_round": "Geldt alleen voor waarden die naar apparaten worden gestuurd, niet voor huidige/weergegeven waarden.",
               "humidity_current_avg": "Hoe de groep sensorwaarden van zijn leden samenvat.",
@@ -111,8 +111,8 @@
               "ignore_off_members_sync": "Respecteer de UIT-status van leden (Synchronisatie)"
             },
             "data_description": {
-              "sync_mode": "Wat te doen als een lid buiten de groep wordt gewijzigd. Disabled: negeren. Mirror: wijzigingen spiegelen. Lock: wijzigingen herstellen. Mirror/Lock: geselecteerde spiegelen, niet-geselecteerde herstellen. Master/Lock: master spiegelen, andere herstellen. Alleen overnemen: wijzigingen overnemen zonder ze door te voeren.",
-              "sync_attributes": "Bepaalt op welke attributen de synchronisatiemodus werkt. De verwerking van geselecteerde en niet-geselecteerde attributen (Mirror, Revert of Ignore) hangt af van de gekozen modus.",
+              "sync_mode": "Wat te doen wanneer een lid buiten de groep om wordt gewijzigd. Uitgeschakeld: negeren. Spiegelen: wijzigingen overnemen. Vergrendelen: wijzigingen terugdraaien. Spiegelen/Vergrendelen: geselecteerde attributen spiegelen, overige terugdraaien. Master/Vergrendelen: master spiegelen, andere terugdraaien. Alleen overnemen: wijzigingen overnemen zonder ze door te geven.",
+              "sync_attributes": "Bepaalt op welke attributen de synchronisatiemodus werkt. De behandeling van geselecteerde en niet-geselecteerde attributen (spiegelen, terugdraaien of negeren) hangt af van de gekozen modus.",
               "ignore_off_members_sync": "Handmatig uitgeschakelde leden worden met rust gelaten. Hun status wordt niet gespiegelt of herstelt. Opmerking: directe groepsopdrachten bereiken altijd alle leden."
             }
           },
@@ -131,15 +131,15 @@
               "close_delay": "Vertraging Sluiten (s)"
             },
             "data_description": {
-              "window_mode": "Schakel groep in/uit op basis van sensoren. HVAC gaat naar 'off' als ramen open zijn.",
+              "window_mode": "Pauzeert het verwarmen of verlaagt de temperatuur zodra een bewaakt raam wordt geopend.",
               "window_adopt_manual_changes": "Wijzigingen die bij open ramen worden gedaan bewaren en toepassen zodra de ramen sluiten. Tot dan geldt de actie bij open raam.",
               "window_action": "Wat te doen als een raam opent: Volledig uitschakelen of een specifieke temperatuur instellen (bijv. vorstbeveiliging).",
               "window_temperature": "Doeltemperatuur wanneer de actie 'Temperatuur instellen' is geselecteerd.",
-              "room_sensor": "(Optioneel) Binaire sensor voor het raam/deur van de kamer.",
-              "zone_sensor": "(Optioneel) Binaire sensor voor ramen/deuren in de zone/verdieping. Zone-sensor moet kamer-sensor bevatten.",
-              "room_open_delay": "Wachttijd na openen kamerraam.",
-              "zone_open_delay": "Wachttijd na openen zoneraam.",
-              "close_delay": "Wachttijd na sluiten ramen voor herstel."
+              "room_sensor": "(Optioneel) Binaire sensor, input_boolean of cover-entiteit voor het raam/de deur van de kamer.",
+              "zone_sensor": "(Optioneel) Binaire sensor, input_boolean of cover-entiteit voor ramen/deuren in de zone/verdieping. De zonesensor moet de kamersensor bevatten.",
+              "room_open_delay": "Wachttijd na het openen van het kamerraam voordat de raamactie wordt geactiveerd.",
+              "zone_open_delay": "Wachttijd na het openen van het zoneraam voordat de raamactie wordt geactiveerd.",
+              "close_delay": "Wachttijd na het sluiten van alle ramen voordat de vorige status wordt hersteld."
             }
           },
           "presence_section": {
@@ -192,14 +192,14 @@
           },
           "presets_section": {
             "name": "Groepsvoorinstellingen",
-            "description": "Definieer je eigen benoemde presets voor de groep (bijv. eco, guest, ventilate). Als je er een selecteert, worden de attributen in één keer op alle leden toegepast. Een groepspreset gaat vóór een gelijknamige preset van een lid.",
+            "description": "Definieer je eigen benoemde presets voor de groep (bijv. eco, guest, ventilate). Als je er een selecteert, worden de attributen in één keer op alle leden toegepast. Een groepspreset gaat vóór een gelijknamige preset van een lid. Runtime-voorinstellingen die via de service set_group_preset worden ingesteld, komen bij de hier ingevoerde voorinstellingen en gaan vóór een gelijknamige.",
             "data": {
               "group_presets": "Groepsvoorinstellingen (YAML)",
               "retain_service_changes_presets": "Wijzigingen via service behouden (Voorinstellingen)"
             },
             "data_description": {
               "group_presets": "Je presets in YAML: een vrij gekozen naam per preset, elk met de attributen die het moet toepassen (temperature, hvac_mode, fan_mode, swing_mode). Een preset past alleen de attributen toe die het vermeldt. Zie de documentatie voor het formaat en kant-en-klare voorbeelden.",
-              "retain_service_changes_presets": "Behoudt voorinstellingen die via service zijn gemaakt of bijgewerkt na een herstart. Anders worden ze teruggezet naar de geconfigureerde voorinstellingen."
+              "retain_service_changes_presets": "Behoudt de via de service set_group_preset ingestelde runtime-voorinstellingen na een herstart. Zonder deze optie start de groep alleen met de hier ingevoerde voorinstellingen."
             }
           },
           "temp_offsets_section": {
@@ -214,7 +214,7 @@
           },
           "isolation_section": {
             "name": "Ledenisolatie",
-            "description": "Isoleer specifieke leden tijdelijk (bijv. radiatoren achter gordijnen) wanneer een binaire sensor actief is.",
+            "description": "Isoleer tijdelijk specifieke leden zolang een trigger actief is. Geïsoleerde leden krijgen de isolatieactie (standaard Uit) en worden uitgesloten van groepsberekeningen.",
             "data": {
               "isolation_rule_count": "Aantal regels",
               "isolation_rule_1_entities": "Te isoleren entiteiten",
@@ -230,7 +230,7 @@
             "data_description": {
               "isolation_rule_count": "Hoeveel onafhankelijke isolatieregels te tonen. Opslaan na wijziging om extra regelslots te tonen of te verbergen.",
               "isolation_rule_1_entities": "Groepsleden die worden geïsoleerd wanneer de trigger actief is.",
-              "isolation_rule_1_trigger": "Kies wat de isolatie activeert: een binaire sensor of een specifieke HVAC-modus van de groep.",
+              "isolation_rule_1_trigger": "Kies wat de isolatie activeert: een binaire sensor, een specifieke HVAC-modus van de groep of een handmatig uitgeschakeld lid.",
               "isolation_rule_1_sensor": "(Sensortrigger) Binaire sensor die isolatie activeert bij ON.",
               "isolation_rule_1_hvac_modes": "(HVAC-modus trigger) Isolatie activeert wanneer de doelmodus van de groep een van deze is.",
               "isolation_rule_1_activate_delay": "(Alleen sensor-/HVAC-modus trigger) Wachttijd nadat de trigger activeert voordat leden worden geïsoleerd.",
@@ -256,7 +256,7 @@
             },
             "data_description": {
               "isolation_rule_2_entities": "Groepsleden die worden geïsoleerd wanneer de trigger actief is.",
-              "isolation_rule_2_trigger": "Kies wat de isolatie activeert: een binaire sensor of een specifieke HVAC-modus van de groep.",
+              "isolation_rule_2_trigger": "Kies wat de isolatie activeert: een binaire sensor, een specifieke HVAC-modus van de groep of een handmatig uitgeschakeld lid.",
               "isolation_rule_2_sensor": "(Sensortrigger) Binaire sensor die isolatie activeert bij ON.",
               "isolation_rule_2_hvac_modes": "(HVAC-modus trigger) Isolatie activeert wanneer de doelmodus van de groep een van deze is.",
               "isolation_rule_2_activate_delay": "(Alleen sensor-/HVAC-modus trigger) Wachttijd nadat de trigger activeert voordat leden worden geïsoleerd.",
@@ -282,7 +282,7 @@
             },
             "data_description": {
               "isolation_rule_3_entities": "Groepsleden die worden geïsoleerd wanneer de trigger actief is.",
-              "isolation_rule_3_trigger": "Kies wat de isolatie activeert: een binaire sensor of een specifieke HVAC-modus van de groep.",
+              "isolation_rule_3_trigger": "Kies wat de isolatie activeert: een binaire sensor, een specifieke HVAC-modus van de groep of een handmatig uitgeschakeld lid.",
               "isolation_rule_3_sensor": "(Sensortrigger) Binaire sensor die isolatie activeert bij ON.",
               "isolation_rule_3_hvac_modes": "(HVAC-modus trigger) Isolatie activeert wanneer de doelmodus van de groep een van deze is.",
               "isolation_rule_3_activate_delay": "(Alleen sensor-/HVAC-modus trigger) Wachttijd nadat de trigger activeert voordat leden worden geïsoleerd.",
@@ -308,7 +308,7 @@
             },
             "data_description": {
               "isolation_rule_4_entities": "Groepsleden die worden geïsoleerd wanneer de trigger actief is.",
-              "isolation_rule_4_trigger": "Kies wat de isolatie activeert: een binaire sensor of een specifieke HVAC-modus van de groep.",
+              "isolation_rule_4_trigger": "Kies wat de isolatie activeert: een binaire sensor, een specifieke HVAC-modus van de groep of een handmatig uitgeschakeld lid.",
               "isolation_rule_4_sensor": "(Sensortrigger) Binaire sensor die isolatie activeert bij ON.",
               "isolation_rule_4_hvac_modes": "(HVAC-modus trigger) Isolatie activeert wanneer de doelmodus van de groep een van deze is.",
               "isolation_rule_4_activate_delay": "(Alleen sensor-/HVAC-modus trigger) Wachttijd nadat de trigger activeert voordat leden worden geïsoleerd.",
@@ -320,7 +320,7 @@
           },
           "member_template_section": {
             "name": "Ledensjabloon",
-            "description": "Geeft leden met enkelvoudig instelpunt weer als virtuele warmte/koelte-bereik-entiteiten. De Group Helper vertaalt bereikopdrachten naar passende fysieke warmte/koelte-opdrachten op basis van de huidige temperatuur van elk lid.",
+            "description": "Toont leden met mogelijkheden die hun apparaat zelf niet biedt. Bereiksjabloon: leden met één setpoint werken als verwarmen/koelen-bereikapparaten — bereikopdrachten worden verwarmen of koelen op basis van de huidige temperatuur van elk lid. Uit-sjabloon: verwarmingen zonder uit-modus worden uitgeschakeld door ze op verwarmen op hun eigen minimumtemperatuur te zetten.",
             "data": {
               "range_template_enabled": "Bereiksjabloon inschakelen",
               "range_template_deadband_action": "Deadband-actie",
@@ -330,7 +330,8 @@
               "range_template_humidity_enabled": "Ontvochtigen in dode band",
               "range_template_humidity_action": "Luchtvochtigheidsactie",
               "range_template_humidity_hysteresis": "Luchtvochtigheidshysterese",
-              "range_template_humidity_deactivation_delay": "Uitschakelvertraging"
+              "range_template_humidity_deactivation_delay": "Uitschakelvertraging",
+              "off_template_enabled": "Uit-sjabloon inschakelen"
             },
             "data_description": {
               "range_template_enabled": "Geeft automatisch alle leden met één instelpunt (zonder native verwarming/koeling) weer als virtuele apparaten in bereikmodus.",
@@ -341,13 +342,16 @@
               "range_template_humidity_enabled": "Binnen het doeltemperatuurbereik overschakelen naar de vochtigheidsactie als de vochtigheid de doelwaarde overschrijdt.",
               "range_template_humidity_action": "Actie die wordt uitgevoerd wanneer de huidige vochtigheid de doelvochtigheid overschrijdt in de dode zone.",
               "range_template_humidity_hysteresis": "Schmitt-trigger hystereseband rond de doelvochtigheid om snel schakelen te voorkomen.",
-              "range_template_humidity_deactivation_delay": "Vertraging voor deactivatie van de vochtigheidsactie na daling onder de drempelwaarde."
+              "range_template_humidity_deactivation_delay": "Vertraging voor deactivatie van de vochtigheidsactie na daling onder de drempelwaarde.",
+              "off_template_enabled": "Verwarmingen zonder uit-modus worden bij het uitschakelen van de groep op verwarmen op hun eigen minimumtemperatuur gezet. Een verwarming op zijn minimumtemperatuur geldt dan als uit. Gebruik voor apparaten met een uit-modus in plaats daarvan 'Minimumtemperatuur bij uit'."
             }
           },
           "advanced_section": {
             "name": "Geavanceerde instellingen",
-            "description": "Verfijn opdracht-timings en herhaalpogingen. Schakel diagnostische attributen en configuratiesensoren in.",
+            "description": "Kies wat de hoofdschakelaar doet terwijl hij uit staat. Verfijn opdracht-timings en herhaalpogingen. Schakel diagnostische attributen en configuratiesensoren in.",
             "data": {
+              "switch_action": "Actie van de hoofdschakelaar",
+              "switch_temperature": "Temperatuur van de hoofdschakelaar",
               "debounce_delay": "Debounce Vertraging (seconden)",
               "retry_attempts": "Herhaalpogingen",
               "retry_delay": "Herhaalvertraging (seconden)",
@@ -356,9 +360,11 @@
               "grace_period": "Optimistische UI-overgangsperiode (seconden)",
               "expose_smart_sensors": "Slimme sensoren weergeven",
               "expose_member_entities": "Ledenlijst weergeven",
-              "expose_config": "Configuratie tonen (Debug)"
+              "expose_config": "Configuratiesensor beschikbaar stellen"
             },
             "data_description": {
+              "switch_action": "Wat de apparaten krijgen terwijl de hoofdschakelaar uit staat: Uitschakelen, Temperatuur instellen (een vast setpoint, bijv. vorstbeveiliging – wijzigt alleen het setpoint van draaiende apparaten) of Apparaten vrijgeven (de groep laat de apparaten met rust en je bedient ze rechtstreeks).",
+              "switch_temperature": "Doeltemperatuur wanneer de actie 'Temperatuur instellen' is geselecteerd.",
               "debounce_delay": "Wachttijd voor het verzenden van opdrachten. Hogere waarden voorkomen 'snelvuur'-opdrachten bij het schuiven van regelaars.",
               "retry_attempts": "Hoe vaak een commando opnieuw verzenden als een apparaat niet reageert. Zet op 0 om uit te schakelen.",
               "retry_delay": "Pauze tussen herhaalpogingen. Apparaten een moment geven om te herstellen kan de betrouwbaarheid verbeteren.",
@@ -366,8 +372,8 @@
               "member_command_delay": "Pauze tussen commando's naar individuele leden. Handig wanneer het tegelijk aansturen van meerdere apparaten je netwerk of bridge overbelast (bijv. IR-blasters, sommige Zigbee-coördinatoren). Zet op 0 om uit te schakelen.",
               "grace_period": "Hoe lang de groep de verzonden waarde toont voordat wordt overgeschakeld naar het ledengemiddelde. Voorkomt UI-flikkering wanneer trage apparaten (Cloud-bridges, Zigbee) hun oude toestand terugsturen. Stel in op 0 om te deactiveren.",
               "expose_smart_sensors": "Maakt extra sensorentiteiten voor de temperatuur en vochtigheid van de groep (handig voor grafieken).",
-              "expose_member_entities": "Maakt een attribuut aan met daarin alle lid-entity ID's.",
-              "expose_config": "Voegt alle configuratiewaarden toe aan de entiteitattributen. Handig voor debugging."
+              "expose_member_entities": "Voegt het attribuut 'entity_id' toe met alle leden, zodat het meer-info-venster de ledenlijst weergeeft.",
+              "expose_config": "Maakt een diagnostische sensor (sensor.*_configuration) aan die overdraagbare instellingen als JSON-attribuut aanbiedt. Handig om instellingen via automatiseringen tussen groepen te kopiëren."
             }
           }
         },
@@ -381,13 +387,14 @@
       "no_entities": "Ten minste één klimaatapparaat moet in de groep blijven.",
       "master_not_in_members": "De hoofdidentiteit moet een lid van de groep zijn.",
       "master_refresh_notice": "Master-entiteit toegevoegd. Nieuwe opties beschikbaar.",
-      "master_options_notice": "Nieuwe Master-entiteit optie",
+      "master_options_notice": "Er zijn nieuwe opties voor de master-entiteit beschikbaar in deze sectie.",
       "isolation_all_selected": "Ten minste één lid moet buiten de isolatie blijven.",
       "isolation_entity_overlap": "Elk lid mag slechts in één isolatieregel voorkomen.",
       "isolation_action_preset_required": "Selecteer een vooringestelde modus voor de isolatieactie.",
       "isolation_sensor_required": "Selecteer een sensor voor de isolatieregel, of zet de trigger op Uitgeschakeld.",
       "isolation_hvac_modes_required": "Selecteer ten minste één modus voor de isolatieregel, of zet de trigger op Uitgeschakeld.",
       "window_temperature_required": "Stel een raamtemperatuur in of wijzig de raamactie.",
+      "switch_temperature_required": "Stel een temperatuur voor de hoofdschakelaar in of wijzig de actie.",
       "presence_action_value_required": "Stel een waarde in voor de gekozen afwezigheidsactie of wijzig de actie.",
       "schedule_fallback_payload_invalid": "Ongeldig YAML-formaat in terugval-schema-payload. Moet een geldige sleutel-waarde-toewijzing zijn.",
       "group_presets_invalid": "Ongeldige YAML-indeling in groepsvoorinstellingen. Moet een geldige sleutel-waarde-koppeling zijn.",
@@ -401,15 +408,15 @@
   "selector": {
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normaal (Democratisch)",
-        "off_priority": "Uit Prioriteit (Hoofdschakelaar)",
-        "auto": "Auto (Slim)"
+        "normal": "Normaal – De groep neemt de meest voorkomende modus van de leden over",
+        "off_priority": "Uit-prioriteit – Als één lid uit staat, staat de hele groep uit",
+        "auto": "Auto – Slim schakelen tussen Normaal en Uit-prioriteit"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Doorsnede (Veilige Modus - Gemeenschappelijke Functies)",
-        "union": "Vereniging (Geavanceerde Gebruiker - Alle Functies)"
+        "intersection": "Doorsnede – Ondersteun alleen functies die ALLE leden hebben",
+        "union": "Vereniging – Ondersteun alle functies die bij EEN VAN DE leden aanwezig zijn"
       }
     },
     "temp_target_avg": {
@@ -505,6 +512,13 @@
       "options": {
         "off": "Uitschakelen",
         "temperature": "Temperatuur instellen"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "Uitschakelen",
+        "temperature": "Temperatuur instellen",
+        "release": "Apparaten vrijgeven"
       }
     },
     "union_out_of_bounds_action": {
@@ -628,32 +642,6 @@
     }
   },
   "services": {
-    "set_temperature": {
-      "name": "Temperatuur Instellen",
-      "description": "Stel de doeltemperatuur in voor de hele groep.",
-      "fields": {
-        "entity_id": {
-          "name": "Klimaatgroep",
-          "description": "De te bedienen groep."
-        },
-        "temperature": {
-          "name": "Doeltemperatuur",
-          "description": "De gewenste temperatuur."
-        },
-        "target_temp_high": {
-          "name": "Doel Hoog",
-          "description": "Bovengrens voor verwarmen/koelen modus."
-        },
-        "target_temp_low": {
-          "name": "Doel Laag",
-          "description": "Ondergrens voor verwarmen/koelen modus."
-        },
-        "hvac_mode": {
-          "name": "HVAC-modus",
-          "description": "Optioneel de modus wijzigen."
-        }
-      }
-    },
     "set_schedule_entity": {
       "name": "Schema-entiteit instellen",
       "description": "Wisselt de actieve schema- of kalender-entiteit tijdens uitvoering. Indien weggelaten of op null ingesteld, keert de groep terug naar de geconfigureerde standaard en past de huidige slot opnieuw toe.",
@@ -686,11 +674,11 @@
     },
     "set_group_preset": {
       "name": "Groepsvoorinstelling instellen",
-      "description": "Maakt, werkt bij of verwijdert virtuele groepsvoorinstellingen tijdens runtime. Leeg laten om te resetten.",
+      "description": "Stelt de runtime-voorinstellingen van de groep in, wijzigt of verwijdert ze. Ze komen bij de configuratie-voorinstellingen uit de groepsinstellingen en gaan vóór een gelijknamige.",
       "fields": {
         "payload": {
           "name": "Payload",
-          "description": "De groepsvoorinstellingen als YAML of mapping. Leeg laten om te resetten. Zie de documentatie voor het formaat en voorbeelden."
+          "description": "De in te stellen runtime-voorinstellingen als YAML of mapping. Een voorinstelling die op null of leeg wordt gezet, wordt verwijderd; een lege payload verwijdert alle runtime-voorinstellingen. Zie de documentatie voor het formaat en voorbeelden."
         }
       }
     },
@@ -764,23 +752,9 @@
         },
         "presets": {
           "name": "Groepsvoorinstellingen",
-          "description": "Wist runtime-groepsvoorinstellingen en herstelt de geconfigureerde voorinstellingen."
+          "description": "Verwijdert alle runtime-voorinstellingen. De configuratie-voorinstellingen blijven ongewijzigd."
         }
       }
-    }
-  },
-  "issues": {
-    "member_unavailable": {
-      "title": "Lidapparaat Niet Beschikbaar",
-      "description": "Eén of meer apparaten in {group_name} zijn offline. De groep blijft werken met wat hij heeft.\n\nNiet beschikbaar: {unavailable_entities}"
-    },
-    "no_members_available": {
-      "title": "Geen Leden Beschikbaar",
-      "description": "Groep {group_name} heeft geen actieve leden en is effectief offline.\n\nControleer: {member_entities}"
-    },
-    "conflicting_features": {
-      "title": "Functieconflicten",
-      "description": "Groep {group_name} heeft leden met verschillende functies. Functionaliteit kan beperkt zijn tot wat iedereen ondersteunt.\n\nConflicten: {conflicting_entities}"
     }
   },
   "device_automation": {

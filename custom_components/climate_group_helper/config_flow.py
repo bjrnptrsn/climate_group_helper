@@ -74,6 +74,7 @@ from .const import (
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
+    CONF_OFF_TEMPLATE_ENABLED,
     CONF_PRESENCE_ACTION,
     CONF_PRESENCE_AWAY_DELAY,
     CONF_PRESENCE_AWAY_OFFSET,
@@ -102,6 +103,8 @@ from .const import (
     CONF_SCHEDULE_ENTITY,
     CONF_SCHEDULE_FALLBACK_PAYLOAD,
     CONF_SCHEDULE_HOLD_DURATION,
+    CONF_SWITCH_ACTION,
+    CONF_SWITCH_TEMPERATURE,
     CONF_SYNC_ATTRS,
     CONF_SYNC_MODE,
     CONF_TEMP_CALIBRATION_MODE,
@@ -144,6 +147,7 @@ from .const import (
     RangeTemplateDeadbandAction,
     RangeTemplateHumidityAction,
     RoundOption,
+    SwitchAction,
     SyncMode,
     UnionOutOfBoundsAction,
     UnsupportedHvacAction,
@@ -586,6 +590,8 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_ACTION, None)
                 current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS, None)
                 current_config.pop(CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY, None)
+            if not user_input.get(CONF_OFF_TEMPLATE_ENABLED, False):
+                current_config.pop(CONF_OFF_TEMPLATE_ENABLED, None)
 
         return current_config
 
@@ -1744,6 +1750,10 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                                 unit_of_measurement="s",
                             )
                         ),
+                        vol.Optional(
+                            CONF_OFF_TEMPLATE_ENABLED,
+                            default=config.get(CONF_OFF_TEMPLATE_ENABLED, False),
+                        ): selector.BooleanSelector(),
                     }
                 ),
                 {"collapsed": not config.get(CONF_EXPAND_SECTIONS)},
@@ -1756,6 +1766,32 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
             vol.Required("advanced_section"): section(  # type: ignore[dict-item]
                 vol.Schema(
                     {
+                        vol.Required(
+                            CONF_SWITCH_ACTION,
+                            default=config.get(CONF_SWITCH_ACTION, SwitchAction.OFF),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in SwitchAction],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="switch_action",
+                            )
+                        ),
+                        vol.Optional(
+                            CONF_SWITCH_TEMPERATURE,
+                            description={
+                                "suggested_value": self._within_limits(
+                                    config.get(CONF_SWITCH_TEMPERATURE)
+                                )
+                            },
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=self._min_temp,
+                                max=self._max_temp,
+                                step=0.5,
+                                unit_of_measurement=self._temp_unit,
+                                mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
                         vol.Optional(
                             CONF_DEBOUNCE_DELAY,
                             default=config.get(CONF_DEBOUNCE_DELAY, DEFAULT_DEBOUNCE_DELAY),
@@ -2025,6 +2061,17 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                 return await self._show_main_form(
                     render_config,
                     form_errors={"window_section": "window_temperature_required"},
+                )
+
+            # The switch action is always effective (no mode gate): the main switch
+            # exists whenever this section renders.
+            if (
+                flattened_input.get(CONF_SWITCH_ACTION) == SwitchAction.TEMPERATURE
+                and flattened_input.get(CONF_SWITCH_TEMPERATURE) is None
+            ):
+                return await self._show_main_form(
+                    render_config,
+                    form_errors={"advanced_section": "switch_temperature_required"},
                 )
 
             presence_enabled = (

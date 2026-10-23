@@ -28,13 +28,13 @@
   🎯 <b>Define your own presets</b> that set the whole group at once.<br>
   🔥 <b>Boost the temperature</b> for a while, then fall back automatically.<br>
   🚧 <b>Isolate single devices</b> from the group while a condition holds.<br>
-  🧩 <b>Add a heat/cool range</b> to single-setpoint devices with the Member Template.<br>
+  🧩 <b>Add a heat/cool range or an off mode</b> to devices that lack one, with the Member Template.<br>
   ➕ <b>Shift the whole group</b> up or down with a single offset.<br>
   🎛️ <b>Dashboard card included</b> — shows what the group is doing.
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_simple.png" alt="Climate Group Helper Simple Configuration Options Overview" height="350"/>
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate Group Helper card next to its editor" width="600"/>
 </p>
 
 ---
@@ -54,10 +54,10 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 
 | Step | Action |
 | :--- | :--- |
-| **1. Install** | Add via **HACS** and restart Home Assistant. |
+| **1. Install** | Add via **HACS** and restart Home Assistant. <br> [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bjrnptrsn&repository=climate_group_helper&category=integration) |
 | **2. Add** | Go to *Settings → Devices & Services → Helpers → Create Helper*. |
 | **3. Setup** | Give your group a name and select your thermostats (TRVs, ACs, heaters — mix freely). |
-| **4. Done!** | You now have a single entity controlling everything. <br> *Tip: Enable **Advanced Mode** in the options to unlock all features.* |
+| **4. Done!** | You now have a single entity controlling everything. <br> *Tip: Enable **Advanced Features** in the options to unlock all features.* |
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/helper_selection.png" alt="Select Climate Group Helper in Home Assistant" width="400"/>
@@ -65,6 +65,15 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/setup_flow.png" alt="Configure Climate Group Helper" width="400"/>
 </p>
+
+<details>
+<summary>Manual installation (without HACS)</summary>
+
+1. Download the [latest release](https://github.com/bjrnptrsn/climate_group_helper/releases).
+2. Copy `custom_components/climate_group_helper` to your `custom_components` folder.
+3. **Restart Home Assistant**.
+
+</details>
 
 ---
 
@@ -95,8 +104,6 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 - [Configuration Options](#configuration-options)
 - [Services](#services)
 - [Backup & Migration](#backup--migration)
-- [Installation](#installation)
-- [Setup](#setup)
 - [Troubleshooting](#troubleshooting)
 
 ## Core Concept: The Unified Foundation
@@ -115,6 +122,10 @@ These features are active by default and provide a streamlined "Plug & Play" exp
 *   **HVAC Strategy:** Intelligent logic to determine the group's state (Normal, Off Priority, or Auto).
 *   **Precision & Rounding:** Round target temperatures to device-compatible steps (0.5° or 1°) to ensure compatibility with all hardware.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_simple.png" alt="Climate Group Helper Simple Configuration Options Overview" width="400"/>
+</p>
+
 ---
 
 ## Power User: Advanced Features
@@ -130,11 +141,11 @@ Unlock the full potential of your climate system. These specialized features are
 
 ### Master Entity
 
-Designate a single climate member as the **Reference Point** or **Leader** for the group. It is set in the **Members & Modes** section and requires **Advanced Mode** — once set, it unlocks additional options in several sections (Sync Mode, Window Control, and Temperature/Humidity averaging).
+Designate a single climate member as the **Reference Point** or **Leader** for the group. It is set in the **Members & Modes** section and requires **Advanced Features** — once set, it unlocks additional options in several sections (Sync Mode, Window Control, and Temperature/Humidity averaging).
 
 *   **Centralized Target Display:** Show the Master's target settings (temperature, humidity) as the group's displayed target, rather than calculated averages across all members. This affects only how the group state is displayed — it does not control or synchronize members (use **Sync Mode: Master/Lock** for that).
 *   **Hierarchical Sync (Master/Lock):** Enables a "Follow the Leader" sync mode. Changes on the Master are mirrored to all members; changes on other devices are reverted for the selected **Sync Attributes**, unselected ones are ignored.
-*   **Intelligent Window Control:** If enabled, only manual adjustments on the Master update the target state while windows are open. Changes on other devices remain ignored.
+*   **Intelligent Window Control:** If enabled, only manual adjustments on the Master update the target state while windows are open — provided a Sync Mode that adopts device changes is enabled, such as Master/Lock. Changes on other devices remain ignored.
 
 ### External Sensors
 
@@ -171,7 +182,7 @@ Controls what happens when a member device is changed directly (e.g. via its own
 
 * **Sync Attributes**
 
-  With Sync Attributes, you can select specific attributes, like `hvac_mode`, `temperature`, `preset_mode` to be included for syncing. The meaning of the selected or unselected attributes depends on the **Sync mode**:
+  With Sync Attributes, you can select specific attributes, like HVAC mode, target temperature or preset mode to be included for syncing. The meaning of the selected or unselected attributes depends on the **Sync mode**:
 
   | Mode | Role of **Sync Attributes** |
   |---|---|
@@ -193,11 +204,11 @@ Automatically turn off heating or set a frost-protection temperature when window
 *   **Adopt Manual Changes:** What happens to changes made while windows are open. They are never applied right away — the Window Open Action stays in effect until the windows close.
     *   **Off:** Changes are discarded.
     *   **All:** Changes are kept and applied when the windows close. Changes made directly on a device are only kept if a Sync Mode that adopts them is enabled.
-    *   **Master Only:** *(Requires Master Entity)* Only changes on the master device are kept. Changes made on the group itself are discarded.
+    *   **Master Only:** *(Requires Master Entity)* Only changes on the master device are kept — and only if a Sync Mode that adopts them is enabled, such as Master/Lock. Changes made on the group itself are discarded.
 
 ### Presence Control
 
-Manage climate settings based on room presence. Select one or more triggers (binary sensor, `input_boolean`, calendar, device tracker, or person), optionally restricted to specific **zones** (e.g. to only trigger when someone is actually at 'Home'). Configure delays and fallback actions for when the room becomes empty. The group is considered occupied if **any** sensor reports presence.
+Manage climate settings based on room presence. Select one or more triggers (`binary_sensor`, `input_boolean`, `calendar`, `device_tracker` or `person`), optionally restricted to specific **zones** (e.g. to only trigger when someone is actually at 'Home'). Configure delays and fallback actions for when the room becomes empty. The group is considered occupied if **any** sensor reports presence.
 
 *   **Turn Off:** Members are turned `off` while absence is detected (default).
 *   **Away Offset:** Target temperature is reduced by a fixed offset (e.g. −2°C). The offset is applied relative to the group's *current target temperature*. If a schedule changes during absence, the offset is automatically reapplied to the new scheduled value.
@@ -278,16 +289,18 @@ You can omit attributes you don't need — for example, use only `hvac_mode: off
 | `group_offset` | Float −5.0 … 5.0 | `group_offset: 1.5` | Temporarily sets the **Group Offset** for the slot duration. If you move the offset slider manually while this slot is active, your value takes over and the slot-end reset is skipped. |
 | `sync_mode` | `disabled`, `lock`, `mirror`, `mirror_lock`, `master_lock`, `adopt_only` | `sync_mode: disabled` | Temporarily overrides the configured **Sync Mode** for the slot duration. Useful for slots where you want members to be left alone (e.g. a "sleep" slot where manual adjustments are allowed). |
 | `sync_attributes` | Any subset of: `hvac_mode`, `temperature`, `target_temp_low`, `target_temp_high`, `humidity`, `fan_mode`, `preset_mode`, `swing_mode`, `swing_horizontal_mode` | `sync_attributes: [hvac_mode]` | Temporarily overrides which **Sync Attributes** are synchronized for the slot duration. Useful for slots where you want to sync only the mode but let members manage their own temperature. Restores to the configured Sync Attributes setting when the slot ends. |
-| `turn_off` | `true` / `false` | `turn_off: true` | Explicit two-state trigger: `true` turns all members off (equivalent to toggling the **Main Switch** off). `false` restores all members (equivalent to toggling the **Main Switch** back on). A slot without `turn_off` has no effect on the current state. The Main Switch and this meta-key are equal, interchangeable controls for the same block — whichever acts last wins, so you can always turn the Main Switch back on in the UI, even while a `turn_off: true` slot is active, and a later `turn_off: false` slot will likewise release a block you set manually via the Main Switch. |
+| `turn_off` | `true` / `false` | `turn_off: true` | Explicit two-state trigger: `true` blocks the group with the configured **Main Switch Action** (equivalent to toggling the **Main Switch** off). `false` restores all members (equivalent to toggling the **Main Switch** back on). A slot without `turn_off` has no effect on the current state. The Main Switch and this meta-key are equal, interchangeable controls for the same block — whichever acts last wins, so you can always turn the Main Switch back on in the UI, even while a `turn_off: true` slot is active, and a later `turn_off: false` slot will likewise release a block you set manually via the Main Switch. |
 | `window_mode` | `disabled` | `window_mode: disabled` | Pauses **Window Control** for the slot duration — an open window no longer switches the heating off. If a window is already open when the slot starts, the heating comes back on. |
 | `presence_mode` | `disabled`, `away` | `presence_mode: disabled` | Pauses **Presence Control** for the slot duration. `disabled` keeps the heating running regardless of what the sensors report (guests, pre-heating); `away` forces the away behaviour for the whole slot, again regardless of the sensors (holidays). |
 | `calibration_mode` | `disabled` | `calibration_mode: disabled` | Pauses **Calibration** for the slot duration — no calibration values are written to the devices. At the slot end the current value is written once, so the devices are up to date again. |
 | `isolation_bypass` | `all`, a rule number, or a list of them | `isolation_bypass: 2` | Pauses the named **Member Isolation** rules for the slot duration, so their devices heat along. Rules are numbered by their position in the settings (1–4); `all` pauses every rule. A device covered by two rules stays off as long as the rule you did not pause still applies. |
 
 The last four keys **pause** a feature; they never switch one on. A feature that is
-switched off in the settings has nothing running for a slot to take over, so
-`disabled` is the only value they accept — apart from `away`, which forces the away
-behaviour rather than creating anything. When a slot ends, the sensors are read
+switched off in the settings has nothing running for a slot to take over, so none
+of them takes a value that switches something on: `window_mode`, `presence_mode`
+and `calibration_mode` accept `disabled` — plus `away`, which forces the away
+behaviour rather than creating anything — and `isolation_bypass` names the rules
+to pause. When a slot ends, the sensors are read
 fresh and take over again in both directions: a window still open switches the
 heating back off, a room still empty starts the away behaviour.
 
@@ -320,6 +333,8 @@ To shut the group down outside the active slots, set `hvac_mode: off` here — n
 
 Define your own named presets for the group — e.g. `eco`, `guest`, or `ventilate` — each mapping to a set of climate attributes (target temperature, HVAC mode, fan mode, swing mode) in YAML. Selecting one of these presets applies its attributes to the group and all members at once, the same way changing the temperature or HVAC mode directly would. This is a lightweight alternative to the Master Preset Pattern for groups that don't need a dedicated master entity.
 
+Presets can be defined in two places. **Config presets** are entered in the group's settings and stay as they are until you edit them there. **Runtime presets** are set by the `climate_group_helper.set_group_preset` service — from an automation or a script — and can be changed at any time without touching the settings. Both use the same YAML format shown below; how the two work together is covered at the end of this section.
+
 **Example (Group Presets configuration):**
 ```yaml
 eco:
@@ -351,6 +366,13 @@ wellness:
 *   **When a schedule slot and a preset want the same thing, the preset wins**, and the slot's value comes back as soon as you leave the preset. This holds in both directions: a slot ending does not cancel what the preset asked for.
 *   **`turn_off` is the one key presets cannot use** — presets set temperatures and modes; the Main Switch stays under your control and the schedule's.
 
+**Config and runtime presets together.** The group offers the presets from both places in one list, and once selected, a preset behaves the same wherever it was defined. Each place keeps its own presets, though. The settings page shows only the config presets. The service changes only runtime presets and never touches the config presets. The runtime presets currently set are listed in the group's `runtime_group_presets` attribute.
+
+If both places define a preset with the same name, the runtime preset takes its place. For example, the settings define `comfort` at 21 °C, and a service call sets `comfort` to 22 °C: selecting `comfort` now applies 22 °C (if it is already selected, the group switches right away), while the settings page still shows 21 °C. Removing `comfort` via the service brings back the 21 °C from the settings — again right away if it is selected.
+
+*   **Restart:** runtime presets are kept across a Home Assistant restart only with **Retain Changes Made via Service (Presets)** enabled. Without it, the group starts with its config presets alone.
+*   **Reset:** `climate_group_helper.reset` with `presets` removes all runtime presets at once and leaves the config presets as they are.
+
 ### Member Offsets
 
 Apply permanent individual offsets (±20°C) to each group member to account for physical room differences. The group intelligently handles these offsets during averaging and synchronization: for example, if the group is set to 21°C, a bedroom with a −1°C offset receives 20°C while the living room (+0.5°C) receives 21.5°C. Your logical setting remains a consistent 21°C across all group interfaces.
@@ -367,7 +389,7 @@ You can define **up to 4 independent isolation rules** per group, each with its 
 *   **HVAC Mode:** Isolation activates when the group's target mode matches a configured set (e.g. isolate radiators when switching to `cool`).
 *   **Member Off:** Automatically isolates individual members when they are turned `off` manually. Restoration occurs as soon as the device is turned back `on`.
 *   **Configurable Delays:** Set custom reaction times for activation and restoration (Sensor and HVAC Mode triggers only).
-*   **Isolation Action:** Choose what command to send when a member is isolated. Default is `hvac_mode: off`. For devices without a real off mode (e.g. KNX floor heating), use `preset_mode` to set a safe standby preset (e.g. `building_protection`) instead.
+*   **Isolation Action:** Choose what command to send when a member is isolated. Default is to set the HVAC mode to off. For devices without a real off mode (e.g. KNX floor heating), use **Set preset mode** to set a safe standby preset (e.g. `building_protection`) instead.
 
 ### Member Template
 
@@ -387,16 +409,34 @@ Translates outgoing `heat_cool` range commands into single-setpoint commands for
 *   **Conditional Heat/Cool:** Optionally, the group offers **Heat/Cool** and the range control only while at least one reachable member can heat and one can cool — useful when a seasonal cooling device is offline.
 *   **Covered devices follow the group:** A mode or setpoint changed by hand on a covered device is set back to what the range calls for, regardless of the Sync Mode — to change it, change the group's range.
 
+#### Off Template
+
+Some heaters — many radiator thermostats among them — have no off mode at all. On their own they ignore every "off" from the group and keep heating: when you turn the group off, under the Main Switch, with an open window, during absence or in a schedule slot set to off. With the **Off Template** (**Enable Off Template**), the group turns such a heater off by setting it to heat at its own minimum temperature — also from auto, fan or dry.
+
+*   **Minimum temperature counts as off.** A heater standing on heat at its minimum temperature is shown and treated as off, no matter how it got there. A schedule slot for frost protection at the minimum temperature, or a window or away temperature that low, turns it "off" as well: the group then shows off, and the options that leave switched-off devices alone apply to it. This does not apply while the group runs in Heat/Cool through the Range Template.
+*   **High minimum temperatures:** on a device with a high minimum temperature (floor heating, for example), "off" means holding that minimum temperature.
+*   **Changes while off:** a temperature set while the group is off is kept and arrives when the group is turned back on — sending it right away would wake the heater.
+*   **Temperature display:** if switched-off devices are left out of the group's temperature, this applies to these heaters too (not in Heat/Cool through the Range Template).
+*   **Heaters only:** devices that can cool are not covered. Devices that have an off mode are switched off as usual — for them, **Minimum Temperature when Off** is the matching option.
+*   **Offering Off:** the group offers **Off** only when at least one of its devices can turn off. A group made up only of heaters without an off mode offers it once this option is enabled.
+
 ## Management Entities (Switch & Slider)
 
 Alongside the main climate entity, the integration creates additional helper entities to provide direct control points for your dashboards and automations.
 
 ### Main Switch
 
-A dedicated `switch` entity acts as a **master on/off toggle** for the entire group. It is useful for summer months, extended absences, or any situation where you want the group completely disabled without touching your schedules or target settings. While the switch is `off`, all manual and automated commands are blocked.
+A dedicated `switch` entity acts as a **master toggle** for the entire group. Use it for summer months, extended absences, frost protection, or whenever you want to hand a room over to manual control at the thermostats without touching your schedules or target settings. While the switch is `off`, all group automation stands still — schedule, window and presence control, sync, boost and isolation rules are all paused, and commands to the group itself are held back (turning it off still gets through).
 
-*   **Switch OFF:** Immediately turns all members `off` and aborts any active boost. The group remains blocked until the switch is turned back on.
-*   **Switch ON:** Releases the block and restores all members to the group's current target state.
+What the devices get while the switch is off is set by **Main Switch Action** (Advanced Settings):
+
+*   **Turn Off** (default): all members are turned off and kept off.
+*   **Set Temperature:** all members get a fixed setpoint (**Main Switch Temperature**), e.g. for frost protection, and keep it. Only the setpoint changes, not the mode: a device that is off usually stays off, and a device that is cooling would cool to this value — so this option is meant for heating groups. Devices that only have a temperature range instead of a single setpoint are not reached.
+*   **Release Devices:** hands the devices over to manual control — the group sends nothing and leaves them alone, so you operate them directly by hand as if they were not grouped. Sensor calibration keeps running, and turning the group itself off still reaches all members.
+
+*   **Switch OFF:** Applies the action above, aborts any active boost and lifts all device isolations. Isolation rules do not act while the switch is off. The group remains blocked until the switch is turned back on.
+*   **Switch ON:** Releases the block and restores all members to the group's current target state — including the schedule slot that is current at that moment. Isolation rules then decide anew.
+*   **Restart:** the switch state survives a Home Assistant restart; the schedule does not touch the devices while the group starts up.
 
 ### Group Offset
 
@@ -406,10 +446,6 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 *   **Persistence:** The offset value survives Home Assistant restarts.
 
 ## Dashboard Card
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate Group Helper card next to its editor" width="700"/>
-</p>
 
 The integration ships its own dashboard card. Add it like any other card — it
 appears in the card picker as **Climate Group Helper Card** and needs no extra
@@ -449,6 +485,7 @@ When everything agrees, it is empty. Two details make it trustworthy:
 *   **`blocking_sources`** — present whenever something is holding the group back, listing what: `window`, `presence`, `switch`. While one of these is listed, the group doesn't push changes to its devices. Absent when nothing blocks.
 *   **`blocking_reason`** — of everything listed there, the one currently in charge, and since when (`source` and `since`): the Main Switch outranks a window, a window outranks Presence Control. After a Home Assistant restart the time counts from the restart. Absent when nothing blocks.
 *   **`main_switch_entity_id`** — the group's Main Switch, so a dashboard or automation can find it without guessing its name.
+*   **`main_switch_action`** — what the Main Switch does while it is off: `off`, `temperature` or `release`. Present together with `main_switch_entity_id`.
 *   **`isolated_members`** — devices an isolation rule currently excludes. They keep their own state and are left out of the group's readings.
 *   **`oob_members`** — devices that could not follow the last target because it lies outside their own temperature range.
 *   **`master_entity_id`** — which device is currently set as the group's Master Entity. Present only when one is configured.
@@ -468,6 +505,7 @@ When everything agrees, it is empty. Two details make it trustworthy:
 *   **`config_overrides`** — the pause keys a slot or preset currently applies.
 *   **`active_schedule_slot_title`** — the title of the running calendar event, when a calendar drives the schedule.
 *   **`active_virtual_preset`** — the group preset in effect, if any.
+*   **`runtime_group_presets`** — the runtime presets currently set via service, with their values. Absent when there are none.
 *   **`boost_temperature` / `boost_until`** — setpoint and end time of a running boost.
 *   **`schedule_hold_until`** — when a manual change stops holding and the schedule takes over again. Absent when nothing is holding.
 
@@ -502,15 +540,15 @@ When everything agrees, it is empty. Two details make it trustworthy:
 
 | Action | Behavior |
 |--------|----------|
-| **Off (Default)** | Member is turned `off` when the target temperature is outside its supported range. Restored automatically when the target moves back in range. |
-| **Clamp** | Member is set to its nearest supported limit (`min_temp` or `max_temp`). |
+| **Turn Off (Default)** | Member is turned `off` when the target temperature is outside its supported range. Restored automatically when the target moves back in range. |
+| **Clamp to Limit** | Member is set to its nearest supported limit (`min_temp` or `max_temp`). |
 
-### Unsupported Mode Action *(Union only)*
+### Unsupported HVAC Mode Action *(Union only)*
 
 | Action | Behavior |
 |--------|----------|
 | **Ignore (Default)** | Member stays in its current mode if it doesn't support the target mode. |
-| **Off** | Member is turned `off` when it doesn't support the target mode (e.g. AC when heating). |
+| **Turn Off** | Member is turned `off` when it doesn't support the target mode (e.g. AC when heating). |
 
 ### Temperature & Humidity Settings
 
@@ -526,7 +564,7 @@ When everything agrees, it is empty. Two details make it trustworthy:
 | **Calibration Heartbeat** | Periodically re-send calibration values (in minutes). Helps prevent timeouts on devices that expect frequent updates. |
 | **Ignore Off Members** | Prevents sending calibration updates to devices that are currently `off`, preserving battery life on wireless sensors and TRVs. |
 | **Exclude Off Members from Temperature** | Exclude members that are currently `off` from temperature calculations (both current and target). Prevents a cold, switched-off radiator from dragging down the displayed average. |
-| **Minimum Temperature when Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). |
+| **Minimum Temperature when Off** | Enforce a minimum temperature (e.g. 5°C) even when the group is `off`. This ensures valves are fully closed for frost protection (essential for TRVs that don't close fully in `off` mode). For devices without an off mode, see [Off Template](#off-template). |
 
 In Offset mode, each entity you write to is matched automatically — through the Home Assistant device registry — to the group member on the same device, so the offset is calculated against that device's own reading (without a match, the group's average is used).
 
@@ -555,7 +593,7 @@ In Offset mode, each entity you write to is matched automatically — through th
 | Option | Description |
 |--------|-------------|
 | **Presence Control Mode** | **Disabled** (default) or **Enabled**. |
-| **Presence Trigger** | One or more entities reporting room presence (binary_sensor, `input_boolean`, calendar, device_tracker, or person). Any `on` or `home` state is treated as present; `not_home` and `away` are treated as absent. The group is occupied if **any** sensor reports presence. |
+| **Presence Trigger** | One or more entities reporting room presence (`binary_sensor`, `input_boolean`, `calendar`, `device_tracker` or `person`). Any `on` or `home` state is treated as present; `not_home` and `away` are treated as absent. The group is occupied if **any** sensor reports presence. |
 | **Presence Zone** | *(Optional)* One or more `zone` entities. If configured, a person/device_tracker sensor only counts as present when located in one of the selected zones. Leave empty to treat any non-away state as present. |
 | **Away Action** | The fallback action to perform when absence is detected: **Turn Off**, **Away Offset**, **Away Temperature**, or **Away Preset**. |
 | **Away Temperature Offset** | *(Away Offset action)* Offset from current target when away (e.g. `−2.0°C` or `+2.0°C`). |
@@ -580,8 +618,8 @@ In Offset mode, each entity you write to is matched automatically — through th
 
 | Option | Description |
 |--------|-------------|
-| **Group Presets (YAML)** | Define named presets for the group as a YAML mapping, each with its own set of climate attributes (e.g. `eco:` with `temperature: 18.0` and `hvac_mode: heat`). Selecting one applies its attributes to the group and all members. If a name matches a preset a member device already offers natively, the settings page warns you and the group's own definition is used. |
-| **Retain Changes Made via Service (Presets)** | Keep presets created or updated via service after a restart. Otherwise they reset to the configured presets. |
+| **Group Presets (YAML)** | Define the group's config presets as a YAML mapping, each with its own set of climate attributes (e.g. `eco:` with `temperature: 18.0` and `hvac_mode: heat`). Selecting one applies its attributes to the group and all members. If a name matches a preset a member device already offers natively, the settings page warns you and the group's own definition is used. |
+| **Retain Changes Made via Service (Presets)** | Keep the runtime presets across a restart. Without this, the group starts with its config presets alone. See [Group Presets](#group-presets). |
 
 ### Member Offsets
 
@@ -603,7 +641,7 @@ In Offset mode, each entity you write to is matched automatically — through th
 | **Restore Delay** | Time to wait after the trigger deactivates before restoring members. |
 | **Isolation Action** | What to send to the member when isolation activates: **Set HVAC mode** (default: `off`) or **Set preset mode** (e.g. `building_protection` for floor heating without a real off mode). |
 | **HVAC Mode** | *(HVAC mode action)* The HVAC mode to set on the isolated member (default: `off`). |
-| **Preset Mode** | *(Preset mode action)* The preset to set on the isolated member. Falls back to `hvac_mode: off` if the preset is not supported by the device. |
+| **Preset Mode** | *(Preset mode action)* The preset to set on the isolated member. Falls back to turning the member off if the preset is not supported by the device. |
 
 ### Member Template
 
@@ -616,6 +654,7 @@ In Offset mode, each entity you write to is matched automatically — through th
 | **Humidity Action** | Physical action when the humidity threshold is exceeded inside the deadband: **Dry** (default) or **Fan Only**. |
 | **Humidity Hysteresis** | Symmetrical hysteresis band around the target humidity to prevent rapid cycling (default: 3.0%). |
 | **Deactivation Delay** | Delay before ending the humidity action after humidity falls back below the threshold (default: 0s). Activation is immediate — like leaving the temperature band, reacting to excess humidity is never artificially delayed. |
+| **Enable Off Template** | Heaters without an off mode are set to heat at their own minimum temperature when the group turns off, and count as off while they stand there. See [Off Template](#off-template). |
 
 ### Advanced Settings
 
@@ -626,6 +665,8 @@ pace the commands out instead of sending them all together.
 
 | Option | Description |
 |--------|-------------|
+| **Main Switch Action** | What happens while the Main Switch is off: **Turn Off** (default), **Set Temperature** (e.g. frost protection), or **Release Devices** (manual control at the devices) — see [Main Switch](#main-switch). |
+| **Main Switch Temperature** | The setpoint for **Set Temperature**, e.g. 6 °C for frost protection. |
 | **Debounce Delay** | Wait before sending commands. Higher values prevent 'rapid-fire' commands when sliding controls, but feel slower (default: 0.3s). |
 | **Retry Attempts** | Number of retries if a command fails. |
 | **Retry Delay** | Time between retries (e.g. 1.0s). |
@@ -717,7 +758,7 @@ Resets temporary overrides and runtime state back to their configured defaults. 
 | `schedule` | No | Reverts the active schedule entity to the configured default schedule and ends a manual hold, so the current slot applies right away. |
 | `bypass` | No | Reverts the active bypass entity to the configured default and unwinds bypass adjustments. |
 | `fallback` | No | Reverts the schedule fallback payload to the configured default. |
-| `presets` | No | Clears runtime group presets and restores configured presets. |
+| `presets` | No | Removes all runtime presets. The config presets stay as they are. |
 
 Set at least one option to `true`, or use `everything: true` to reset all of them. A call that selects nothing is rejected.
 
@@ -759,7 +800,7 @@ data:
   schedule_bypass_entity: calendar.holiday_schedule
 ```
 
-Calling this service without an entity clears the bypass schedule and immediately re-applies the current schedule slot.
+Calling this service without an entity returns the group to its configured bypass entity — or to none, if none is configured — and immediately re-applies the current schedule slot.
 
 ### `climate_group_helper.set_schedule_fallback_payload`
 
@@ -784,15 +825,15 @@ data:
 
 ### `climate_group_helper.set_group_preset`
 
-Create, update, or remove virtual group presets at runtime without opening the group settings. Useful for dynamic automations, temporary guest modes, or party setpoints. With "Retain Changes Made via Service (Presets)" enabled, presets created or modified via this service are remembered across Home Assistant restarts.
+Create, change, or remove the group's runtime presets (see [Group Presets](#group-presets)). A call changes only the presets it names; every other preset stays as it is. With "Retain Changes Made via Service (Presets)" enabled, the runtime presets are kept across Home Assistant restarts.
 
-If you update the preset that is currently selected on the group, its new values are applied immediately. Updating any other preset only changes its stored definition.
+If you change the preset that is currently selected on the group, its new values are applied immediately. Changing any other preset only changes its definition.
 
 **Service Fields:**
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `payload` | No | The group presets in the same YAML or mapping format as the group settings (e.g. `party:` with `temperature: 23.0`). Setting an individual preset to empty or `null` removes only that preset. Omitting or passing empty `payload` removes all runtime presets (reverting back to the configured presets). |
+| `payload` | No | The runtime presets to set, in the same YAML or mapping format as the config presets (e.g. `party:` with `temperature: 23.0`). Setting an individual preset to empty or `null` removes only that runtime preset. Omitting or passing an empty `payload` removes all runtime presets. |
 
 **Example — Add or update presets:**
 ```yaml
@@ -858,27 +899,6 @@ data:
   include_member_list: false
   include_entity_selectors: false
 ```
-
-## Installation
-
-### Via HACS (Recommended)
-1. Open **HACS**.
-2. Search for **Climate Group Helper**.
-3. Click **Download**
-4. **Restart Home Assistant**.
-
-### Manual
-1. Download the [latest release](https://github.com/bjrnptrsn/climate_group_helper/releases).
-2. Copy `custom_components/climate_group_helper` to your `custom_components` folder.
-3. **Restart Home Assistant**.
-
-## Setup
-
-1. Go to **Settings** > **Devices & Services** > **Helpers**.
-2. Click **+ Create Helper** > **Climate Group Helper**.
-3. Follow the configuration flow to add your entities.
-
-**To unlock all features:** Open the group's **Configuration** menu and enable **Advanced Mode** in General Settings. This will reveal all category-specific options.
 
 ## Troubleshooting
 

@@ -95,6 +95,7 @@ from .const import (
     RoundOption,
     SyncMode,
 )
+from .member_template import TemplatedState, physical_state
 from .state import ChangeState, CurrentState, TargetState, is_available
 
 if TYPE_CHECKING:
@@ -193,7 +194,7 @@ class Aggregator:
         state = self._group.hass.states.get(entity_id)
         if state is None:
             return state
-        return self._group.member_template_manager.apply_state(entity_id, state)
+        return self._render_member_state(entity_id, state)
 
     def read_member_event(self, event: Event) -> tuple[State | None, State | None]:
         """Unpack a `state_changed` event into template-rendered `(new_state, old_state)`.
@@ -207,10 +208,24 @@ class Aggregator:
         old_state = event.data.get("old_state")
         if entity_id is None:
             return new_state, old_state
-        manager = self._group.member_template_manager
-        new_wrapped = manager.apply_state(entity_id, new_state) if new_state else None
-        old_wrapped = manager.apply_state(entity_id, old_state) if old_state else None
+        new_wrapped = self._render_member_state(entity_id, new_state) if new_state else None
+        old_wrapped = self._render_member_state(entity_id, old_state) if old_state else None
         return new_wrapped, old_wrapped
+
+    def _render_member_state(self, entity_id: str, state: State) -> State | TemplatedState:
+        """Wrap a physical member state with every applicable template overlay.
+
+        Without an overlay the physical state is returned as is — a wrapper without
+        a template would change `isinstance` checks and behaviour. An already
+        rendered state is not wrapped again.
+        """
+        if isinstance(state, TemplatedState):
+            return state
+        overlays = tuple(
+            overlay for manager in self._group.member_templates
+            if (overlay := manager.overlay(entity_id, state)) is not None
+        )
+        return TemplatedState(state, overlays) if overlays else state
 
     def _get_valid_member_states(
         self, entity_ids: list[str], skip_isolated: bool = True
@@ -284,10 +299,29 @@ class Aggregator:
 
         return modes
 
+    def any_member_supports_off(self) -> bool:
+        """Return True if at least one member can be turned off.
+
+        One member is enough, whatever the feature strategy. Isolated members
+        count (`capability_states`). A member reporting no mode list counts as
+        able — the capability check accepts any mode there; it is read from the
+        physical state, since the Range Template turns a missing list into
+        `[heat_cool]`. Before the first aggregation (restore path) nothing is
+        known yet and `off` stays offered.
+        """
+        if not self.aggregation_done:
+            return True
+        return any(
+            HVACMode.OFF in (state.attributes.get(ATTR_HVAC_MODES) or [])
+            or not physical_state(state).attributes.get(ATTR_HVAC_MODES)
+            for state in self.capability_states
+        )
+
     def _sort_hvac_modes(self, modes: list[Any]) -> list[HVACMode]:
-        """Sort HVAC modes based on a predefined order."""
-        # Make sure OFF is always included
-        all_modes = set(modes) | {HVACMode.OFF}
+        """Sort HVAC modes based on a predefined order, with OFF where a member offers it."""
+        all_modes = set(modes) - {HVACMode.OFF}
+        if self.any_member_supports_off():
+            all_modes.add(HVACMode.OFF)
 
         # Return modes sorted in the order of the HVACMode enum
         return [mode for mode in HVACMode if mode in all_modes]
@@ -453,7 +487,7 @@ class Aggregator:
         temp_states = (
             [
                 state for state in self.states
-                if self._group.member_template_manager.display_mode(state) != HVACMode.OFF
+                if self._group.range_template_manager.display_mode(state) != HVACMode.OFF
             ]
             if self._group._ignore_off_members_temperature
             else self.states
@@ -554,7 +588,7 @@ class Aggregator:
         # The humidity action needs a setpoint even with no humidistat member:
         # group target, else the room reading. A None target disables it.
         if target_humidity is None:
-            range_template = self._group.member_template_manager.range_template
+            range_template = self._group.range_template_manager.range_template
             if range_template is not None and range_template.humidity_enabled:
                 target_humidity = self._group.shared_target_state.humidity
                 if target_humidity is None and current_humidity is not None:
@@ -564,7 +598,7 @@ class Aggregator:
 
         target_humidity_step = reduce_attribute(self.capability_states, ATTR_TARGET_HUMIDITY_STEP, reduce=max)
         if target_humidity_step is None:
-            range_template = self._group.member_template_manager.range_template
+            range_template = self._group.range_template_manager.range_template
             if range_template is not None and range_template.humidity_enabled:
                 target_humidity_step = 1
 
@@ -619,8 +653,8 @@ class Aggregator:
         # Supported features — reads the *local* preset_modes, not the entity field
         attr_supported_features = self._reduce_attributes(list(find_state_attributes(self.capability_states, ATTR_SUPPORTED_FEATURES)), default=0)
         features = attr_supported_features if isinstance(attr_supported_features, int) else 0
-        range_template = self._group.member_template_manager.range_template
-        if self._group.member_template_manager.offers_range():
+        range_template = self._group.range_template_manager.range_template
+        if self._group.range_template_manager.offers_range():
             features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         # Only worth offering where a reading can be compared against the
         # setpoint. Keyed on configuration, not the current value: a sensor that
@@ -632,6 +666,11 @@ class Aggregator:
             features |= ClimateEntityFeature.TARGET_HUMIDITY
         if preset_modes:
             features |= ClimateEntityFeature.PRESET_MODE
+        features = (features | DEFAULT_SUPPORTED_FEATURES) & SUPPORTED_FEATURES
+        # Members report TURN_OFF without an off mode too, and HA would accept
+        # `climate.turn_off` and do nothing.
+        if not self.any_member_supports_off():
+            features &= ~ClimateEntityFeature.TURN_OFF
 
         return ModeResult(
             fan_modes=sorted(fan_modes) if isinstance(fan_modes, list) else [],
@@ -642,7 +681,7 @@ class Aggregator:
             swing_mode=swing_mode,
             swing_horizontal_modes=sorted(swing_horizontal_modes) if isinstance(swing_horizontal_modes, list) else [],
             swing_horizontal_mode=swing_horizontal_mode,
-            supported_features=(features | DEFAULT_SUPPORTED_FEATURES) & SUPPORTED_FEATURES,
+            supported_features=features,
         )
 
     def _apply_modes(self, result: ModeResult) -> None:
@@ -789,7 +828,7 @@ class Aggregator:
                 # Range Template owns covered members: drive their changeover/correction
                 # via the TemplateCallHandler — independent of sync_mode. The SyncCallHandler
                 # excludes covered members, so this is the sole, intentional driver.
-                if self._group.member_template_manager.is_covered_state(event.data.get("new_state")):
+                if self._group.range_template_manager.is_covered_state(event.data.get("new_state")):
                     self._group._trigger_template_changeover()
 
         # All available HVAC modes
@@ -800,13 +839,13 @@ class Aggregator:
         # pass through that listener, so this is their only coverage refresh. On the
         # event path it is a cheap idempotent recompute whose return value is needed
         # for the HEAT_COOL enrichment below.
-        template_member_ids = self._group.member_template_manager.update_members()
-        if template_member_ids and self._group.member_template_manager.offers_range() and HVACMode.HEAT_COOL not in hvac_modes_list:
+        template_member_ids = self._group.range_template_manager.update_members()
+        if template_member_ids and self._group.range_template_manager.offers_range() and HVACMode.HEAT_COOL not in hvac_modes_list:
             hvac_modes_list = list(hvac_modes_list) + [HVACMode.HEAT_COOL]
         self._group._attr_hvac_modes = self._sort_hvac_modes(hvac_modes_list)
 
         self._group._current_hvac_modes = [
-            self._group.member_template_manager.display_mode(state) for state in self.states
+            self._group.range_template_manager.display_mode(state) for state in self.states
         ]
 
         self._group._attr_hvac_mode = self._determine_hvac_mode(self._group._current_hvac_modes)
@@ -838,7 +877,7 @@ class Aggregator:
         if humidity.needs_calibration:
             self._group.calibration_handler.update("humidity", event_entity_id)
 
-        self._group.member_template_manager.check_humidity(
+        self._group.range_template_manager.check_humidity(
             humidity.current_humidity, self._group.shared_target_state.humidity
         )
 

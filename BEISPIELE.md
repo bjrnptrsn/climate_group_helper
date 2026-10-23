@@ -4,7 +4,7 @@ Praxisnahe Szenarien, nach Komplexität geordnet. Jedes Beispiel beschreibt die 
 
 > Alle Beispiele ab der Advanced-Stufe erfordern **Erweiterte Funktionen: an**.
 
-- [Basic](#basic) — kein Advanced-Modus nötig, funktioniert sofort
+- [Basic](#basic) — keine Erweiterten Funktionen nötig, funktioniert sofort
   - [1. Präzision der Zieltemperatur](#1-präzision-der-zieltemperatur)
   - [2. HVAC-Modus-Strategie: Auto](#2-hvac-modus-strategie-auto)
 - [Advanced](#advanced) — die Konfigurationen, bei denen die meisten Nutzer landen, alle erfordern Erweiterte Funktionen: an
@@ -35,6 +35,7 @@ Praxisnahe Szenarien, nach Komplexität geordnet. Jedes Beispiel beschreibt die 
   - [26. Entfeuchten, während der Raum auf Temperatur ist](#26-entfeuchten-während-der-raum-auf-temperatur-ist)
   - [27. IR-gesteuerte Klimaanlagen, die die Bridge überlasten](#27-ir-gesteuerte-klimaanlagen-die-die-bridge-überlasten)
   - [28. Union-Gruppe mit gekürzter Modusliste](#28-union-gruppe-mit-gekürzter-modusliste)
+  - [29. Heizkörperthermostate ohne Aus-Modus](#29-heizkörperthermostate-ohne-aus-modus)
 
 ---
 
@@ -219,7 +220,7 @@ ventilate:
 
 Benennst du ein Gruppen-Preset genauso wie eines, das ein Mitgliedsgerät bereits anbietet (z. B. beide heißen `eco`), gewinnt die eigene Definition der Gruppe — die Version des Geräts wird nie gesendet. Die Einstellungsseite warnt dich beim Speichern, damit du eines von beiden umbenennen kannst, falls das nicht beabsichtigt war.
 
-> **Tipp:** Presets lassen sich auch zur Laufzeit aus einer Automation heraus erstellen, aktualisieren oder löschen — siehe Beispiel 10.
+> **Tipp:** Auch eine Automation kann Presets setzen, als Laufzeit-Presets neben den Konfigurations-Presets oben — siehe Beispiel 10.
 
 ---
 
@@ -243,7 +244,7 @@ Konfiguriere die Away-/Home-Presets des `generic_thermostat` mit den gewünschte
 
 ### 10. Sollwerte über einen Dashboard-Schieberegler
 
-Halte die Temperaturen in einem Preset und lass sie von einer Automation schreiben — so können die Werte aus beliebigen Quellen in Home Assistant kommen: ein `input_number` auf dem Dashboard, ein berechneter Sensor, eine Preisprognose. Die Gruppeneinstellungen bleiben unangetastet.
+Halte die Temperaturen in einem Laufzeit-Preset, das eine Automation schreibt — so können die Werte aus beliebigen Quellen in Home Assistant kommen: ein `input_number` auf dem Dashboard, ein berechneter Sensor, eine Preisprognose. Wie Laufzeit-Presets mit den Presets in den Gruppeneinstellungen zusammenhängen, steht in [LIESMICH § Gruppen-Presets](LIESMICH.md#gruppen-presets).
 
 **Entitäten:** die Gruppe sowie `input_number.comfort_temperature` als Schieberegler
 
@@ -451,7 +452,7 @@ hvac_mode: heat
 temperature: 20.0
 ```
 
-**Ergebnis:** `turn_off: true` sperrt die Gruppe genau wie das Ausschalten des Hauptschalters — alle Mitglieder schalten aus und bleiben gesperrt. `turn_off` ist ein einmaliger Auslöser, kein an den Zeitblock gebundener Zustand: Er bleibt aktiv, bis ein späterer Zeitblock explizit erneut `turn_off: false` setzt — der Zeitblock, der die Abschaltung beenden soll, muss dies also explizit tun.
+**Ergebnis:** `turn_off: true` sperrt die Gruppe genau wie das Ausschalten des Hauptschalters — mit der Standard-Aktion **Ausschalten** schalten alle Mitglieder aus und bleiben gesperrt. Ist bei **Aktion des Hauptschalters** die Option **Temperatur setzen** oder **Geräte freigeben** gewählt, gilt diese Aktion auch hier. `turn_off` ist ein einmaliger Auslöser, kein an den Zeitblock gebundener Zustand: Er bleibt aktiv, bis ein späterer Zeitblock explizit erneut `turn_off: false` setzt — der Zeitblock, der die Abschaltung beenden soll, muss dies also explizit tun.
 
 ---
 
@@ -593,7 +594,7 @@ Ein Raum hat einen reinen Heizkörper (Wiser) und eine Heiz-/Kühl-Klimaanlage (
 |---|---|
 | Mitglieder | `climate.wiser_radiator`, `climate.daikin_ac` |
 | Funktionsstrategie | Union |
-| Aktion bei nicht unterstütztem HVAC-Modus | Aus |
+| Aktion bei nicht unterstütztem HVAC-Modus | Ausschalten |
 | Sync-Modus | Deaktiviert |
 | Mitglieder-Isolation | an |
 | **Isolationsregel 1** | Trigger: HVAC-Modus `heat` → Isoliere `climate.daikin_ac` (HVAC-Modus setzen: `off`) |
@@ -618,6 +619,8 @@ Eine wasserbasierte Fußbodenheizung hat keinen `off`-Modus — sie unterstützt
 
 **Ergebnis:** Das Umschalten der Gruppe auf `cool` isoliert die Fußbodenheizung in ein niedriges, sicheres Preset, statt ihr ein nicht unterstütztes `off` zu senden. Das Zurückschalten auf `heat` stellt sie wieder in der Gruppe her.
 
+Wird die ganze Gruppe ausgeschaltet, heizt die Fußbodenheizung von sich aus weiter — mit der **Aus-Vorlage** (siehe [29](#29-heizkörperthermostate-ohne-aus-modus)) wird sie stattdessen auf Heizen mit ihrer Minimaltemperatur gestellt, was bei einer Fußbodenheizung meist eine niedrige, aber spürbare Temperatur bedeutet.
+
 ---
 
 ### 21. Union-Gruppe mit Geräten außerhalb des Bereichs
@@ -630,7 +633,7 @@ Mischung von Geräten mit unterschiedlichen Temperaturbereichen — ein TRV mit 
 |---|---|
 | Mitglieder | `climate.trv`, `climate.ac` |
 | Funktionsstrategie | Union |
-| Außerhalb-Bereich-Aktion | Aus |
+| Außerhalb-Bereich-Aktion | Ausschalten |
 
 **Ergebnis:** Ziel auf 14 °C gesetzt → die Klimaanlage kann das nicht erreichen (Min. 16 °C) und schaltet aus; der TRV heizt weiter. Ziel auf 22 °C gesetzt → beide liegen im Bereich und bleiben aktiv.
 
@@ -664,7 +667,7 @@ Ein HRV (Wärmerückgewinnungslüftung) mit heat/cool/auto fungiert als "Dirigen
 | Master-Gerät | `climate.hrv` |
 | Sync-Modus | Master/Lock |
 | Funktionsstrategie | Union |
-| Aktion bei nicht unterstütztem HVAC-Modus | Aus |
+| Aktion bei nicht unterstütztem HVAC-Modus | Ausschalten |
 
 **Ergebnis:** Der HRV steuert den `hvac_mode` der Gruppe. Wechselt er in `cool` (manuell oder über `auto`), werden die Fußbodenzonen — die `cool` nicht unterstützen — automatisch über die Union-Behandlung für nicht unterstützte Modi ausgeschaltet. Das Zurückschalten des HRV auf `heat` stellt sie wieder her.
 
@@ -773,7 +776,7 @@ Beide Anlagen können außerdem trocknen und als reiner Lüfter laufen. Union bi
 |---|---|
 | Mitglieder | `climate.living_ac`, `climate.bedroom_ac` |
 | Funktionsstrategie | Union |
-| Aktion bei nicht unterstütztem HVAC-Modus | Aus |
+| Aktion bei nicht unterstütztem HVAC-Modus | Ausschalten |
 
 Die Gruppe bietet die Modi an, die ihre Mitglieder melden — also kürzt du die Liste bei den Mitgliedern. Die Home-Assistant-eigene Option `customize` ersetzt die Modusliste, die eine Entität meldet; die Vereinigung der Gruppe folgt den gekürzten Listen. Eintrag in die `configuration.yaml` übernehmen und Home Assistant neu starten:
 
@@ -797,11 +800,28 @@ In die Liste gehören nur Modi, die das Gerät wirklich beherrscht — die Grupp
 
 ---
 
+### 29. Heizkörperthermostate ohne Aus-Modus
+
+Manche Heizkörperthermostate bieten nur Heizen an — einen Aus-Modus, in den sie wechseln könnten, gibt es nicht. Schaltest du die Gruppe aus, passiert bei ihnen nichts: Sie heizen weiter, auch wenn ein Fenster aufgeht, der Hauptschalter ausgeschaltet wird oder ein Zeitblock `hvac_mode: off` setzt.
+
+**Entitäten:** `climate.kitchen_trv`, `climate.hallway_trv` (nur Heizen, Minimaltemperatur 5 °C)
+
+| Einstellung | Wert |
+|---|---|
+| Mitglieder | `climate.kitchen_trv`, `climate.hallway_trv` |
+| Aus-Vorlage aktivieren | an |
+
+**Ergebnis:** Die Gruppe bietet jetzt Aus an. Was sie auch ausschaltet — du, der Hauptschalter, ein offenes Fenster, Abwesenheit oder ein Zeitblock —, jedes Thermostat wird auf Heizen mit seiner eigenen Minimaltemperatur gestellt, und die Gruppe zeigt es als aus. Schaltest du die Gruppe wieder ein, geht die Zieltemperatur erneut raus. Eine Temperatur, die du bei ausgeschalteter Gruppe einstellst, bleibt erhalten und kommt an, sobald die Gruppe wieder eingeschaltet wird.
+
+Ein Thermostat auf seiner Minimaltemperatur gilt als aus, egal wie es dorthin kam — auch ein Frostschutz-Zeitblock mit 5 °C lässt die Gruppe aus zeigen. Geräte mit echtem Aus-Modus werden wie gewohnt ausgeschaltet; für sie ist **Min. Temp bei 'Aus'** die passende Option.
+
+---
+
 ## Tipps
 
 - **Einfach anfangen:** Zuerst die grundlegende Gruppierung zum Laufen bringen (nur Mitglieder, keine weiteren Einstellungen), dann Funktionen nach und nach hinzufügen.
 - **Erweiterte Funktionen:** In der Gruppenkonfiguration aktivieren, um alles jenseits der Basic-Stufe freizuschalten — jedes Beispiel nach dem Basic-Abschnitt benötigt sie.
-- **Sync-Modus:** Nutze `Lock`, wenn die Gruppe die alleinige Quelle der Wahrheit sein soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen und an alle gespiegelt werden sollen; nutze `Adopt Only` (bzw. *Nur übernehmen*), wenn Änderungen an einem Mitglied das Gruppenziel anpassen sollen, ohne die anderen Geräte anzusteuern; nutze `Mirror` mit eingeschränkten **Sync-Attributen**, wenn nur einige Attribute synchronisiert werden sollen und der Rest in Ruhe gelassen wird (Beispiel 22).
+- **Sync-Modus:** Nutze `Lock`, wenn allein die Vorgabe der Gruppe gelten soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen und an alle gespiegelt werden sollen; nutze `Adopt Only` (bzw. *Nur übernehmen*), wenn Änderungen an einem Mitglied das Gruppenziel anpassen sollen, ohne die anderen Geräte anzusteuern; nutze `Mirror` mit eingeschränkten **Sync-Attributen**, wenn nur einige Attribute synchronisiert werden sollen und der Rest in Ruhe gelassen wird (Beispiel 22).
 - **Sperr-Priorität:** Hauptschalter > Fenstersteuerung > Anwesenheitssteuerung — sind mehrere gleichzeitig aktiv, wird nur die Aktion der höchstrangigen an Mitglieder gesendet.
 - **Zeitplan + Boost:** Boost rangiert über dem Zeitplan. Zeitplan-Zeitblock-Änderungen laufen während eines Boosts weiterhin im Hintergrund.
 - **Kalibrierung:** Nutze CGHs eigene Kalibrierung nur, wenn du nicht bereits Better Thermostat oder Versatile Thermostat verwendest — die haben ihre eigene (Beispiel 13).

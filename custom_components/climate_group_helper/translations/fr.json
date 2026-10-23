@@ -68,7 +68,7 @@
               "ignore_off_members_temperature": "Exclure les membres éteints de la température"
             },
             "data_description": {
-              "temp_target_avg": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
+              "temp_target_avg": "Comment le groupe résume les températures cibles de ses membres.",
               "temp_use_master": "Affiche la consigne de l'entité maître comme température cible du groupe au lieu de la moyenne des membres. Revient à la moyenne si l'entité maître est indisponible. Affecte uniquement l'affichage de l'état du groupe — ne contrôle ni ne synchronise les membres (utilisez Mode de synchronisation : Master/Lock pour cela).",
               "temp_target_round": "S'applique uniquement aux valeurs envoyées aux appareils, pas aux valeurs actuelles/affichées.",
               "temp_current_avg": "Comment le groupe résume les relevés des capteurs de ses membres.",
@@ -94,7 +94,7 @@
               "humidity_update_targets": "Écrire l'Humidité Externe vers les Entités"
             },
             "data_description": {
-              "humidity_target_avg": "Comment le groupe calcule la consigne cible à envoyer à ses membres.",
+              "humidity_target_avg": "Comment le groupe résume les humidités cibles de ses membres.",
               "humidity_use_master": "Affiche la consigne de l'entité maître comme humidité cible du groupe au lieu de la moyenne des membres. Revient à la moyenne si l'entité maître est indisponible. Affecte uniquement l'affichage de l'état du groupe — ne contrôle ni ne synchronise les membres (utilisez Mode de synchronisation : Master/Lock pour cela).",
               "humidity_target_round": "S'applique uniquement aux valeurs envoyées aux appareils, pas aux valeurs actuelles/affichées.",
               "humidity_current_avg": "Comment le groupe résume les relevés des capteurs de ses membres.",
@@ -111,8 +111,8 @@
               "ignore_off_members_sync": "Respecter l'état Off des membres (Sync)"
             },
             "data_description": {
-              "sync_mode": "Que faire quand un membre change hors du groupe. Disabled : ignorer. Mirror : refléter les changements. Lock : annuler les changements. Mirror/Lock : refléter sélectionnés, annuler non sélectionnés. Master/Lock : refléter maître, annuler autres. Adopter uniquement : adopter les changements sans les transmettre.",
-              "sync_attributes": "Définit les attributs sur lesquels agit le mode de synchronisation. Le traitement des attributs sélectionnés et non sélectionnés (Mirror, Revert ou Ignore) dépend du mode choisi.",
+              "sync_mode": "Que faire lorsqu'un membre change hors du groupe. Désactivé : ignorer. Miroir : copier les changements. Verrouiller : annuler les changements. Miroir/Verrouiller : copier les attributs sélectionnés, annuler les autres. Maître/Verrouiller : copier le maître, annuler les autres. Adopter uniquement : adopter les changements sans les transmettre.",
+              "sync_attributes": "Définit sur quels attributs le mode de synchronisation agit. Le traitement des attributs sélectionnés et non sélectionnés (copier, annuler ou ignorer) dépend du mode choisi.",
               "ignore_off_members_sync": "Les membres éteints manuellement sont laissés tranquilles. Leur état n'est ni reflété ni annulé. Note : les commandes directes du groupe atteignent toujours tous les membres."
             }
           },
@@ -131,15 +131,15 @@
               "close_delay": "Délai Fermeture (s)"
             },
             "data_description": {
-              "window_mode": "Activer/désactiver le groupe selon les capteurs. HVAC passe à 'off' si des fenêtres sont ouvertes.",
+              "window_mode": "Met le chauffage en pause ou abaisse la température lorsqu'une fenêtre surveillée est ouverte.",
               "window_adopt_manual_changes": "Conserver les modifications faites pendant que les fenêtres sont ouvertes et les appliquer à leur fermeture. D'ici là, l'action fenêtre ouverte s'applique.",
               "window_action": "Action à effectuer lors de l'ouverture d'une fenêtre : Éteindre complètement ou définir une température spécifique (ex. protection contre le gel).",
               "window_temperature": "Température cible lorsque l'action 'Définir la température' est sélectionnée.",
-              "room_sensor": "(Optionnel) Capteur binaire pour la fenêtre/porte de la pièce.",
-              "zone_sensor": "(Optionnel) Capteur binaire pour les fenêtres/portes dans la zone/étage. Le capteur de zone doit inclure le capteur de la pièce.",
-              "room_open_delay": "Temps d'attente après ouverture fenêtre pièce avant coupure.",
-              "zone_open_delay": "Temps d'attente après ouverture fenêtre zone avant coupure.",
-              "close_delay": "Temps d'attente après fermeture fenêtres avant restauration."
+              "room_sensor": "(Optionnel) Capteur binaire, input_boolean ou entité cover pour la fenêtre/porte de la pièce.",
+              "zone_sensor": "(Optionnel) Capteur binaire, input_boolean ou entité cover pour les fenêtres/portes de la zone ou de l'étage. Le capteur de zone doit inclure le capteur de la pièce.",
+              "room_open_delay": "Temps d'attente après l'ouverture de la fenêtre de la pièce avant de déclencher l'action fenêtre.",
+              "zone_open_delay": "Temps d'attente après l'ouverture de la fenêtre de la zone avant de déclencher l'action fenêtre.",
+              "close_delay": "Temps d'attente après la fermeture de toutes les fenêtres avant de restaurer l'état précédent."
             }
           },
           "presence_section": {
@@ -192,14 +192,14 @@
           },
           "presets_section": {
             "name": "Préréglages de groupe",
-            "description": "Définissez vos propres préréglages nommés pour le groupe (par ex. eco, guest, ventilate). En sélectionner un applique ses attributs à tous les membres en une fois. Un préréglage de groupe prévaut sur le préréglage d'un membre portant le même nom.",
+            "description": "Définissez vos propres préréglages nommés pour le groupe (par ex. eco, guest, ventilate). En sélectionner un applique ses attributs à tous les membres en une fois. Un préréglage de groupe prévaut sur le préréglage d'un membre portant le même nom. Les préréglages d'exécution définis par le service set_group_preset s'ajoutent aux préréglages saisis ici et prévalent sur un préréglage portant le même nom.",
             "data": {
               "group_presets": "Préréglages de groupe (YAML)",
               "retain_service_changes_presets": "Conserver les modifications apportées par service (Préréglages)"
             },
             "data_description": {
               "group_presets": "Vos préréglages en YAML : un nom libre par préréglage, chacun avec les attributs qu'il doit appliquer (temperature, hvac_mode, fan_mode, swing_mode). Un préréglage n'applique que les attributs qu'il énumère. Consultez la documentation pour le format et des exemples prêts à copier.",
-              "retain_service_changes_presets": "Conserve les préréglages créés ou mis à jour par service après un redémarrage. Sinon, ils reviennent aux préréglages configurés."
+              "retain_service_changes_presets": "Conserve après un redémarrage les préréglages d'exécution définis par le service set_group_preset. Sans cette option, le groupe démarre uniquement avec les préréglages saisis ici."
             }
           },
           "temp_offsets_section": {
@@ -214,7 +214,7 @@
           },
           "isolation_section": {
             "name": "Isolation de membres",
-            "description": "Isoler temporairement des membres spécifiques (ex: radiateurs derrière des rideaux) lorsqu'un capteur binaire est actif.",
+            "description": "Isole temporairement certains membres tant qu'un déclencheur est actif. Les membres isolés reçoivent l'action d'isolation (Arrêt par défaut) et sont exclus des calculs du groupe.",
             "data": {
               "isolation_rule_count": "Nombre de règles",
               "isolation_rule_1_entities": "Entités à isoler",
@@ -230,7 +230,7 @@
             "data_description": {
               "isolation_rule_count": "Combien de règles d'isolation indépendantes afficher. Enregistrer après modification pour afficher ou masquer des créneaux supplémentaires.",
               "isolation_rule_1_entities": "Membres du groupe à isoler lorsque le déclencheur est actif.",
-              "isolation_rule_1_trigger": "Choisir ce qui active l'isolation : un capteur binaire ou un mode HVAC spécifique du groupe.",
+              "isolation_rule_1_trigger": "Choisissez ce qui active l'isolation : un capteur binaire, un mode CVC spécifique du groupe ou un membre éteint manuellement.",
               "isolation_rule_1_sensor": "(Déclencheur capteur) Capteur binaire qui déclenche l'isolation lorsqu'il est ON.",
               "isolation_rule_1_hvac_modes": "(Déclencheur mode HVAC) L'isolation s'active quand le mode cible du groupe est l'un de ceux-ci.",
               "isolation_rule_1_activate_delay": "(Déclencheur capteur/mode HVAC uniquement) Temps d'attente après l'activation du déclencheur avant d'isoler les membres.",
@@ -256,7 +256,7 @@
             },
             "data_description": {
               "isolation_rule_2_entities": "Membres du groupe à isoler lorsque le déclencheur est actif.",
-              "isolation_rule_2_trigger": "Choisir ce qui active l'isolation : un capteur binaire ou un mode HVAC spécifique du groupe.",
+              "isolation_rule_2_trigger": "Choisissez ce qui active l'isolation : un capteur binaire, un mode CVC spécifique du groupe ou un membre éteint manuellement.",
               "isolation_rule_2_sensor": "(Déclencheur capteur) Capteur binaire qui déclenche l'isolation lorsqu'il est ON.",
               "isolation_rule_2_hvac_modes": "(Déclencheur mode HVAC) L'isolation s'active quand le mode cible du groupe est l'un de ceux-ci.",
               "isolation_rule_2_activate_delay": "(Déclencheur capteur/mode HVAC uniquement) Temps d'attente après l'activation du déclencheur avant d'isoler les membres.",
@@ -282,7 +282,7 @@
             },
             "data_description": {
               "isolation_rule_3_entities": "Membres du groupe à isoler lorsque le déclencheur est actif.",
-              "isolation_rule_3_trigger": "Choisir ce qui active l'isolation : un capteur binaire ou un mode HVAC spécifique du groupe.",
+              "isolation_rule_3_trigger": "Choisissez ce qui active l'isolation : un capteur binaire, un mode CVC spécifique du groupe ou un membre éteint manuellement.",
               "isolation_rule_3_sensor": "(Déclencheur capteur) Capteur binaire qui déclenche l'isolation lorsqu'il est ON.",
               "isolation_rule_3_hvac_modes": "(Déclencheur mode HVAC) L'isolation s'active quand le mode cible du groupe est l'un de ceux-ci.",
               "isolation_rule_3_activate_delay": "(Déclencheur capteur/mode HVAC uniquement) Temps d'attente après l'activation du déclencheur avant d'isoler les membres.",
@@ -308,7 +308,7 @@
             },
             "data_description": {
               "isolation_rule_4_entities": "Membres du groupe à isoler lorsque le déclencheur est actif.",
-              "isolation_rule_4_trigger": "Choisir ce qui active l'isolation : un capteur binaire ou un mode HVAC spécifique du groupe.",
+              "isolation_rule_4_trigger": "Choisissez ce qui active l'isolation : un capteur binaire, un mode CVC spécifique du groupe ou un membre éteint manuellement.",
               "isolation_rule_4_sensor": "(Déclencheur capteur) Capteur binaire qui déclenche l'isolation lorsqu'il est ON.",
               "isolation_rule_4_hvac_modes": "(Déclencheur mode HVAC) L'isolation s'active quand le mode cible du groupe est l'un de ceux-ci.",
               "isolation_rule_4_activate_delay": "(Déclencheur capteur/mode HVAC uniquement) Temps d'attente après l'activation du déclencheur avant d'isoler les membres.",
@@ -320,7 +320,7 @@
           },
           "member_template_section": {
             "name": "Modèle de membre",
-            "description": "Rend les membres à point de consigne unique comme des entités virtuelles de plage chaud/froid. Le Group Helper traduit les commandes de plage en commandes physiques chaud/froid appropriées en fonction de la température actuelle de chaque membre.",
+            "description": "Présente les membres avec des capacités que leur appareil n'offre pas nativement. Modèle de plage : les membres à consigne unique fonctionnent comme des appareils à plage chauffage/climatisation — les commandes de plage deviennent chauffage ou climatisation selon la température actuelle de chaque membre. Modèle d'arrêt : les radiateurs sans mode arrêt sont éteints en les passant en chauffage à leur propre température minimale.",
             "data": {
               "range_template_enabled": "Activer le modèle de plage",
               "range_template_deadband_action": "Action en zone morte",
@@ -330,7 +330,8 @@
               "range_template_humidity_enabled": "Déshumidifier en zone morte",
               "range_template_humidity_action": "Action d'humidité",
               "range_template_humidity_hysteresis": "Hystérésis d'humidité",
-              "range_template_humidity_deactivation_delay": "Délai de désactivation"
+              "range_template_humidity_deactivation_delay": "Délai de désactivation",
+              "off_template_enabled": "Activer le modèle d'arrêt"
             },
             "data_description": {
               "range_template_enabled": "Affiche automatiquement tous les membres à consigne unique (sans chauffage/refroidissement natif) comme des appareils virtuels en mode plage.",
@@ -341,13 +342,16 @@
               "range_template_humidity_enabled": "Dans la plage de température cible, bascule sur l'action d'humidité si l'humidité dépasse la cible.",
               "range_template_humidity_action": "Action à exécuter lorsque l'humidité actuelle dépasse l'humidité cible dans la zone morte.",
               "range_template_humidity_hysteresis": "Bande d'hystérésis de déclenchement de Schmitt autour de l'humidité cible pour éviter les cycles rapides.",
-              "range_template_humidity_deactivation_delay": "Délai avant de désactiver l'action d'humidité après passage sous le seuil."
+              "range_template_humidity_deactivation_delay": "Délai avant de désactiver l'action d'humidité après passage sous le seuil.",
+              "off_template_enabled": "Les radiateurs sans mode arrêt passent en chauffage à leur propre température minimale lorsque le groupe s'éteint. Un radiateur à sa température minimale est alors considéré comme éteint. Pour les appareils disposant d'un mode arrêt, utilisez plutôt 'Température minimale à l'arrêt'."
             }
           },
           "advanced_section": {
             "name": "Paramètres avancés",
-            "description": "Ajustez les délais de commande et le comportement de relance. Activez les attributs de diagnostic et les capteurs de configuration.",
+            "description": "Choisissez ce que fait l'interrupteur principal lorsqu'il est éteint. Ajustez les délais de commande et le comportement de relance. Activez les attributs de diagnostic et les capteurs de configuration.",
             "data": {
+              "switch_action": "Action de l'interrupteur principal",
+              "switch_temperature": "Température de l'interrupteur principal",
               "debounce_delay": "Délai d'Anti-rebond (secondes)",
               "retry_attempts": "Tentatives de Réessai",
               "retry_delay": "Délai de Réessai (secondes)",
@@ -356,9 +360,11 @@
               "grace_period": "Période de grâce UI optimiste (secondes)",
               "expose_smart_sensors": "Exposer des capteurs intelligents",
               "expose_member_entities": "Exposer la liste des membres",
-              "expose_config": "Afficher la configuration (Debug)"
+              "expose_config": "Exposer le capteur de configuration"
             },
             "data_description": {
+              "switch_action": "Ce que reçoivent les appareils tant que l'interrupteur principal est éteint : Éteindre, Définir la température (une consigne fixe, p. ex. protection antigel — ne modifie que la consigne des appareils en marche) ou Libérer les appareils (le groupe laisse les appareils tranquilles et vous les pilotez directement).",
+              "switch_temperature": "Température cible lorsque l'action 'Définir la température' est sélectionnée.",
               "debounce_delay": "Temps d'attente avant l'envoi des commandes. Des valeurs plus élevées empêchent les commandes en 'rafale' lors du glissement des curseurs.",
               "retry_attempts": "Combien de fois renvoyer une commande si un appareil ne répond pas. Mettre à 0 pour désactiver.",
               "retry_delay": "Pause entre les tentatives de réessai. Donner un moment aux appareils pour récupérer peut améliorer la fiabilité.",
@@ -366,8 +372,8 @@
               "member_command_delay": "Pause entre les commandes envoyées à chaque membre. Utile lorsque piloter plusieurs appareils en même temps surcharge votre réseau ou votre passerelle (ex. émetteurs IR, certains coordinateurs Zigbee). Mettre à 0 pour désactiver.",
               "grace_period": "Durée pendant laquelle le groupe affiche la valeur envoyée avant de revenir à la moyenne des membres. Évite le scintillement de l'UI lorsque des appareils lents (ponts Cloud, Zigbee) renvoient leur ancien état. Mettre à 0 pour désactiver.",
               "expose_smart_sensors": "Crée des entités de capteur supplémentaires pour la température et l'humidité du groupe (utile pour les graphiques).",
-              "expose_member_entities": "Crée un attribut listant tous les ID d'entité des membres.",
-              "expose_config": "Ajoute toutes les valeurs de configuration aux attributs de l'entité. Utile pour le débogage."
+              "expose_member_entities": "Ajoute l'attribut 'entity_id' listant tous les membres afin que la boîte de dialogue de détails affiche la liste des membres.",
+              "expose_config": "Crée un capteur de diagnostic (sensor.*_configuration) qui expose les paramètres portables sous forme d'attribut JSON. Utile pour copier les paramètres entre groupes via des automatisations."
             }
           }
         },
@@ -381,13 +387,14 @@
       "no_entities": "Au moins un appareil climatique doit rester dans le groupe.",
       "master_not_in_members": "L'entité principale doit être un membre du groupe.",
       "master_refresh_notice": "Entité Maître ajoutée. Nouvelles options disponibles.",
-      "master_options_notice": "Nouvelle option d'entité Maître",
+      "master_options_notice": "De nouvelles options pour l'entité maître sont disponibles dans cette section.",
       "isolation_all_selected": "Au moins un membre doit rester en dehors de l'isolation.",
       "isolation_entity_overlap": "Chaque membre ne peut apparaître que dans une seule règle d'isolation.",
       "isolation_action_preset_required": "Sélectionnez un mode prédéfini pour l'action d'isolation.",
       "isolation_sensor_required": "Sélectionnez un capteur pour la règle d'isolation, ou réglez son déclencheur sur Désactivé.",
       "isolation_hvac_modes_required": "Sélectionnez au moins un mode pour la règle d'isolation, ou réglez son déclencheur sur Désactivé.",
       "window_temperature_required": "Définissez une température de fenêtre ou modifiez l'action de fenêtre.",
+      "switch_temperature_required": "Définissez une température pour l'interrupteur principal ou modifiez son action.",
       "presence_action_value_required": "Définissez une valeur pour l'action d'absence sélectionnée ou modifiez l'action.",
       "schedule_fallback_payload_invalid": "Format YAML invalide dans les données de secours du planning. Doit être un mappage clé-valeur valide.",
       "group_presets_invalid": "Format YAML non valide dans les préréglages de groupe. Doit être un mappage clé-valeur valide.",
@@ -401,15 +408,15 @@
   "selector": {
     "hvac_mode_strategy": {
       "options": {
-        "normal": "Normal (Démocratique)",
-        "off_priority": "Priorité Arrêt (Interrupteur Maître)",
-        "auto": "Auto (Intelligent)"
+        "normal": "Normal – Le groupe adopte le mode le plus courant parmi ses membres",
+        "off_priority": "Priorité Arrêt – Si un membre est éteint, tout le groupe est éteint",
+        "auto": "Auto – Basculement intelligent entre Normal et Priorité Arrêt"
       }
     },
     "feature_strategy": {
       "options": {
-        "intersection": "Intersection (Mode Sans Échec - Fonctions Communes)",
-        "union": "Union (Utilisateur Avancé - Toutes Fonctions)"
+        "intersection": "Intersection – Ne prendre en charge que les fonctions présentes sur TOUS les membres",
+        "union": "Union – Prendre en charge toutes les fonctions présentes sur AU MOINS UN membre"
       }
     },
     "temp_target_avg": {
@@ -505,6 +512,13 @@
       "options": {
         "off": "Éteindre",
         "temperature": "Définir la température"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "Éteindre",
+        "temperature": "Définir la température",
+        "release": "Libérer les appareils"
       }
     },
     "union_out_of_bounds_action": {
@@ -628,32 +642,6 @@
     }
   },
   "services": {
-    "set_temperature": {
-      "name": "Définir la Température",
-      "description": "Définir la température cible pour tout le groupe.",
-      "fields": {
-        "entity_id": {
-          "name": "Groupe Climatique",
-          "description": "Le groupe à contrôler."
-        },
-        "temperature": {
-          "name": "Température Cible",
-          "description": "La température désirée."
-        },
-        "target_temp_high": {
-          "name": "Cible Haute",
-          "description": "Limite supérieure pour le mode chauffage/refroidissement."
-        },
-        "target_temp_low": {
-          "name": "Cible Basse",
-          "description": "Limite inférieure pour le mode chauffage/refroidissement."
-        },
-        "hvac_mode": {
-          "name": "Mode HVAC",
-          "description": "Changer optionnellement le mode."
-        }
-      }
-    },
     "set_schedule_entity": {
       "name": "Définir l'entité de programmation",
       "description": "Change l'entité de programmation ou de calendrier active à l'exécution. Si omis ou défini sur null, le groupe revient à son entité par défaut configurée et réapplique le créneau actuel.",
@@ -686,11 +674,11 @@
     },
     "set_group_preset": {
       "name": "Définir le préréglage de groupe",
-      "description": "Crée, met à jour ou efface des préréglages de groupe virtuels au moment de l'exécution. Laisser vide pour réinitialiser.",
+      "description": "Définit, modifie ou supprime les préréglages d'exécution du groupe. Ils s'ajoutent aux préréglages de configuration des paramètres du groupe et prévalent sur un préréglage portant le même nom.",
       "fields": {
         "payload": {
           "name": "Charge utile",
-          "description": "Les préréglages de groupe sous forme de YAML ou de mappage. Laisser vide pour réinitialiser. Voir la documentation pour le format et les exemples."
+          "description": "Les préréglages d'exécution à définir, sous forme de YAML ou de mappage. Un préréglage défini sur null ou vide est supprimé ; un payload vide supprime tous les préréglages d'exécution. Voir la documentation pour le format et les exemples."
         }
       }
     },
@@ -764,23 +752,9 @@
         },
         "presets": {
           "name": "Préréglages de groupe",
-          "description": "Efface les préréglages de groupe d'exécution et restaure les préréglages configurés."
+          "description": "Supprime tous les préréglages d'exécution. Les préréglages de configuration restent inchangés."
         }
       }
-    }
-  },
-  "issues": {
-    "member_unavailable": {
-      "title": "Appareil Membre Indisponible",
-      "description": "Un ou plusieurs appareils dans {group_name} sont hors ligne. Le groupe continuera de fonctionner avec ce qu'il a.\n\nIndisponible : {unavailable_entities}"
-    },
-    "no_members_available": {
-      "title": "Aucun Membre Disponible",
-      "description": "Le groupe {group_name} n'a aucun membre actif et est effectivement hors ligne.\n\nVérifier : {member_entities}"
-    },
-    "conflicting_features": {
-      "title": "Conflits de Fonctionnalités",
-      "description": "Le groupe {group_name} a des membres avec différentes fonctionnalités. La fonctionnalité pourrait être limitée à ce que tous supportent.\n\nConflits : {conflicting_entities}"
     }
   },
   "device_automation": {

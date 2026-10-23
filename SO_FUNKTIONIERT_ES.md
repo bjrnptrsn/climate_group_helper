@@ -52,20 +52,20 @@ Von oben nach unten entscheidet die erste Regel, die zutrifft, was die Geräte b
 
 | Regel | Was die Geräte bekommen | Änderungen am Zielzustand währenddessen | Wenn sie endet |
 |---|---|---|---|
-| **Hauptschalter aus** | Aus, und zwar alle. | Werden zurückgehalten. | Der Zielzustand wird wieder geschickt. |
+| **Hauptschalter aus** | Je nach gewählter Aktion: alle aus (Standard), eine feste Temperatur oder gar nichts — die Geräte sind für den Handbetrieb freigegeben. | Werden zurückgehalten. | Der Zielzustand wird wieder geschickt. |
 | **Fenster offen** | Aus, oder die Zieltemperatur bei offenem Fenster. | Werden zurückgehalten, außer **Manuelle Änderungen übernehmen** lässt sie für später durch — das gilt nur, solange das Fenster die einzige aktive Regel ist. | Der Zielzustand wird wieder geschickt. |
 | **Niemand zu Hause** | Die Abwesenheits-Aktion: aus, ein Versatz, eine feste Temperatur oder ein Preset. | Werden zurückgehalten. | Der Zielzustand wird wieder geschickt. |
 | **Boost** | Die Boost-Temperatur, so lange wie angefordert. | Ein direkter Befehl an die Gruppe beendet den Boost, ebenso ein `aus` am Gerät, wenn der Sync-Modus dieses `aus` ohnehin übernehmen würde. Andere Geräteänderungen werden während eines Boosts ignoriert. | Der Zielzustand wird wieder geschickt, einschließlich des Zeitblocks, der dann gerade aktiv ist. |
 
 Die ersten drei sind **Sperren**. Ein paar Dinge solltest du über sie wissen:
 
-- **Sie werden durchgesetzt, nicht nur ausgelöst.** Ein Gerät, das abweicht, wird auf das zurückgesetzt, was die Sperre verlangt — bei **Ausschalten** ist das „aus“, bei **Temperatur setzen** die Fenster-Temperatur.
+- **Sie werden durchgesetzt, nicht nur ausgelöst.** Ein Gerät, das abweicht, wird auf das zurückgesetzt, was die Sperre verlangt — bei **Ausschalten** ist das „aus“, bei **Temperatur setzen** die Fenster- bzw. Hauptschalter-Temperatur. Die einzige Ausnahme ist ein Hauptschalter mit **Geräte freigeben** (Handbetrieb): Er sendet nichts und korrigiert nichts.
 - **Der Zeitplan läuft im Hintergrund weiter.** Ein Wechsel des Zeitblocks während einer Sperre aktualisiert den Zielzustand. Die Geräte bekommen ihn, sobald die Sperre endet.
 - **Die Gruppe auszuschalten kommt immer durch.**
 - **Endet eine Sperre, während eine andere noch aktiv ist,** übernimmt die andere, und der Zielzustand wartet, bis alle vorbei sind.
 - **Ein Boost startet nicht während einer Sperre**, und eine beginnende Sperre beendet einen laufenden Boost.
 
-**Isolierte Geräte** sind ein eigener Fall. Solange ihre Isolationsregel gilt, bleiben sie ganz außen vor: nicht in den Messwerten, nicht bei den Befehlen, nicht bei Fenster- und Anwesenheitssteuerung. Nur der Hauptschalter erreicht sie noch. Endet die Regel, gehören sie wieder zur Gruppe.
+**Isolierte Geräte** sind ein eigener Fall. Solange ihre Isolationsregel gilt, bleiben sie ganz außen vor: nicht in den Messwerten, nicht bei den Befehlen, nicht bei Fenster- und Anwesenheitssteuerung. Endet die Regel, gehören sie wieder zur Gruppe. Auch über der Isolation steht der Hauptschalter: Beim Ausschalten wird jede Isolation aufgehoben; solange er aus ist, greift keine Isolationsregel, und beim Einschalten wird jede Regel neu ausgewertet.
 
 ---
 
@@ -79,8 +79,9 @@ Der Zielzustand ist für die ganze Gruppe gleich. Auf dem Weg zu jedem Gerät wi
 
 - **Gruppen-Offset** verschiebt alle Geräte nach oben oder unten, ohne den Zielzustand darunter zu ändern. Während einer Sperre oder eines Boosts ist er pausiert. Auf das, was du selbst an der Gruppe einstellst, wirkt er nicht: Diese Befehle kommen genau so an, und wer an der Gruppe eine Temperatur setzt, setzt den Gruppen-Offset auf 0 zurück.
 - **Mitglieder-Offsets** verschieben einzelne Geräte, z. B. ein Schlafzimmer, das immer ein Grad kühler laufen soll.
-- **Gerätegrenzen** *(nur Union)*: Ein Gerät, das die Temperatur nicht erreichen kann, wird ausgeschaltet oder auf seinen nächsten Grenzwert gesetzt (**Aktion außerhalb des Bereichs**). Ein Gerät, das den Modus nicht unterstützt, bleibt, wie es ist, oder wird ausgeschaltet (**Aktion bei nicht unterstütztem HVAC-Modus**).
-- **Mitglieder-Vorlage** macht aus einem Heiz-/Kühlbereich einfaches Heizen oder Kühlen, für Geräte mit nur einem Sollwert.
+- **Gerätegrenzen** *(nur Union)*: Ein Gerät, das die Temperatur nicht erreichen kann, wird ausgeschaltet oder auf seinen nächsten Grenzwert gesetzt (**Außerhalb-Bereich-Aktion**). Ein Gerät, das den Modus nicht unterstützt, bleibt, wie es ist, oder wird ausgeschaltet (**Aktion bei nicht unterstütztem HVAC-Modus**).
+- **Bereichsvorlage** macht aus einem Heiz-/Kühlbereich einfaches Heizen oder Kühlen, für Geräte mit nur einem Sollwert.
+- **Aus-Vorlage** schaltet ein Heizgerät ohne Aus-Modus aus, indem es auf Heizen mit seiner eigenen Minimaltemperatur gestellt wird.
 - **Min. Temp bei „Aus“** schickt beim Ausschalten die niedrigste Temperatur des Geräts, für Ventile, die nicht vollständig schließen.
 
 Welche Geräte einen Befehl bekommen:
@@ -110,7 +111,8 @@ Einige Fälle folgen nicht dem Sync-Modus:
 
 - **Während einer Sperre** entscheidet die Sperre: Das Gerät wird auf das zurückgesetzt, was die Sperre verlangt (siehe oben).
 - **Isolierte Geräte** bleiben in Ruhe.
-- **Von der Mitglieder-Vorlage erfasste Geräte** folgen immer dem Bereich der Gruppe.
+- **Von der Bereichsvorlage erfasste Geräte** folgen immer dem Bereich der Gruppe.
+- **Heizgeräte ohne Aus-Modus** (mit der **Aus-Vorlage**): Eines auf seine Minimaltemperatur herunterzudrehen gilt als Ausschalten, auch für die Fälle davor und danach.
 - **Mit Respektiere Aus-Status der Mitglieder (Sync)** bleibt ein Gerät, das du ausschaltest, aus, und sein „aus“ wird nicht an die anderen weitergegeben. Ist es das letzte Gerät, das noch läuft, schaltet sich die ganze Gruppe aus.
 - **Kurz nachdem die Gruppe diesem Gerät einen Befehl geschickt hat,** übernimmt sie eine Änderung, die du innerhalb von etwa fünf Sekunden direkt am Gerät machst, nicht. Home Assistant wertet die Meldungen des Geräts so lange als Antwort auf diesen Befehl; ein Wert, der vom soeben gesendeten abweicht, wird deshalb ignoriert, und die Gruppe behält ihren eigenen. Brauchst du deinen Wert, warte ein paar Sekunden und stelle ihn erneut ein.
 - **Eine Temperatur, die du an einem ausgeschalteten Gerät einstellst,** wird bei manchen Geräten ignoriert: Im Aus zeigen sie denselben Wert wie die Gruppe, die erste Änderung lässt sich deshalb nicht vom Ausschalten selbst unterscheiden. Schalte das Gerät zuerst ein und stelle die Temperatur danach ein.
@@ -125,7 +127,7 @@ Die Gruppen-Entität zeigt, **was die Geräte tun**, nicht was die Gruppe will:
 - **Zieltemperatur** wird genauso aus den Sollwerten der Geräte berechnet oder mit **Master-Zieltemperatur verwenden** (bzw. **Master-Zielfeuchtigkeit verwenden**) vom Master-Gerät übernommen. Mit **Mitglieds-Offset korrigieren** (standardmäßig an) werden die Mitglieder-Offsets vorher herausgerechnet, damit ein Schlafzimmer, das ein Grad kühler läuft, den Wert nicht nach unten zieht.
 - **Modus** wird aus den Modi der Geräte so zusammengefasst, wie es die **HVAC-Modus-Strategie** festlegt.
 
-Deshalb kann die Anzeige von dem abweichen, was du eingestellt hast: Hat ein offenes Fenster die Heizung ausgeschaltet, zeigt die Gruppe „aus“, obwohl ihr Zielzustand weiterhin Heizen auf 21 °C ist. Direkt nach einer Änderung zeigt die Gruppe kurz deinen Wert (**UI-Schonfrist**), bevor sie auf die Meldungen der Geräte umschaltet.
+Deshalb kann die Anzeige von dem abweichen, was du eingestellt hast: Hat ein offenes Fenster die Heizung ausgeschaltet, zeigt die Gruppe „aus“, obwohl ihr Zielzustand weiterhin Heizen auf 21 °C ist. Mit der **Aus-Vorlage** gilt auch ein Heizgerät, das auf Heizen mit seiner Minimaltemperatur steht, als aus — auch wenn ein Frostschutz-Slot es dorthin gestellt hat; die Gruppe kann dann „aus“ zeigen, während ihr Zielzustand Heizen ist. Direkt nach einer Änderung zeigt die Gruppe kurz deinen Wert (**Optimistische UI-Übergangszeit**), bevor sie auf die Meldungen der Geräte umschaltet.
 
 **Externe Sensoren** arbeiten unabhängig vom Zielzustand: Sie liefern die Raumtemperatur, und mit eingerichteter Kalibrierung schreibt die Gruppe sie in deine Thermostate — direkt, als Korrektur gegenüber der eigenen Messung des Geräts oder skaliert, je nach [Kalibrierungs-Modus](LIESMICH.md#geräte-kalibrierung).
 

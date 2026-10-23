@@ -16,7 +16,7 @@
     <!-- 1 Main Switch -->
     <rect x="80" y="30" width="470" height="62" rx="10" fill="#ffebe9" stroke="#cf222e" stroke-width="2"/>
     <text x="100" y="56" font-size="16" font-weight="700">Main Switch off</text>
-    <text x="100" y="78" font-size="13" fill="#57606a">Every device off — isolated ones included.</text>
+    <text x="100" y="78" font-size="13" fill="#57606a">Its action: off, a fixed temperature, or manual control.</text>
 
     <!-- 2 Window -->
     <rect x="80" y="104" width="470" height="62" rx="10" fill="#fff8c5" stroke="#bf8700" stroke-width="2"/>
@@ -56,9 +56,9 @@
     <text x="596" y="278" font-size="15" font-weight="700">Isolated devices</text>
     <text x="596" y="300" font-size="12" fill="#57606a">Stand aside while their</text>
     <text x="596" y="316" font-size="12" fill="#57606a">isolation rule applies.</text>
-    <text x="596" y="340" font-size="12" fill="#57606a">Only the Main Switch still</text>
-    <text x="596" y="356" font-size="12" fill="#57606a">reaches them. When the rule</text>
-    <text x="596" y="372" font-size="12" fill="#57606a">ends, they rejoin the group</text>
-    <text x="596" y="388" font-size="12" fill="#57606a">and follow it like the rest.</text>
+    <text x="596" y="340" font-size="12" fill="#57606a">Turning the Main Switch off</text>
+    <text x="596" y="356" font-size="12" fill="#57606a">lifts every isolation. When</text>
+    <text x="596" y="372" font-size="12" fill="#57606a">the rule ends, they rejoin</text>
+    <text x="596" y="388" font-size="12" fill="#57606a">the group like the rest.</text>
   </g>
 </svg>

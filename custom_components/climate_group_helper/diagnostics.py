@@ -100,7 +100,7 @@ async def async_get_config_entry_diagnostics(
     handlers["advanced_mode"] = group.advanced_mode
     diag["handlers"] = handlers
     # Range Template (Member Template Pattern)
-    range_template = group.member_template_manager.range_template
+    range_template = group.range_template_manager.range_template
     if range_template is not None:
         diag["range_template"] = {
             "entity_ids": sorted(range_template.entity_ids),

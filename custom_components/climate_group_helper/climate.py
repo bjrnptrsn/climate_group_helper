@@ -31,6 +31,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import Event, HomeAssistant, State, callback
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -61,6 +62,7 @@ from .const import (
     CONF_MEMBER_OFFSET_CORRECTION,
     CONF_MEMBER_TEMP_OFFSETS,
     CONF_MIN_TEMP_OFF,
+    CONF_OFF_TEMPLATE_ENABLED,
     CONF_RANGE_TEMPLATE_CONDITIONAL,
     CONF_RANGE_TEMPLATE_COOL_ENTITIES,
     CONF_RANGE_TEMPLATE_DEADBAND_ACTION,
@@ -94,15 +96,19 @@ from .const import (
     RangeTemplateDeadbandAction,
     RoundOption,
 )
+from .device import group_device_info, group_name
 from .initialization import (
     filter_sensor_entities,
+    release_stale_isolation,
     restore_state,
+    should_restore_switch_block,
     strip_self_reference,
     warn_missing_entities,
 )
 from .isolation import MemberIsolationHandler
 from .member_template import MemberTemplateManager
 from .meta_processor import SlotMetaProcessor
+from .off_template import OffTemplateManager
 from .override import (
     BoostOverrideManager,
     OverrideHandler,
@@ -111,6 +117,7 @@ from .override import (
 )
 from .presence import PresenceHandler, PresenceOverrideManager
 from .preset import PresetManager
+from .range_template import RangeTemplateManager
 from .reset import async_reset_group
 from .schedule import BypassScheduleHandler, MainScheduleHandler, ScheduleHoldManager
 from .service_call import (
@@ -168,7 +175,7 @@ async def async_setup_entry(
     group = ClimateGroupHelper(
         hass=hass,
         unique_id=config_entry.unique_id,
-        name=config.get(CONF_NAME, config_entry.title),
+        name=group_name(config_entry),
         entity_ids=entities,
         config=config,
     )
@@ -253,7 +260,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         if _get_adv(CONF_RANGE_TEMPLATE_ENABLED, False):
             deadband_action = config.get(CONF_RANGE_TEMPLATE_DEADBAND_ACTION, RangeTemplateDeadbandAction.NONE)
         humidity_enabled = _get_adv(CONF_RANGE_TEMPLATE_HUMIDITY_ENABLED, False) and deadband_action is not None
-        self.member_template_manager = MemberTemplateManager(
+        self.range_template_manager = RangeTemplateManager(
             group=self,
             deadband_action=deadband_action,
             heat_entities=set(config.get(CONF_RANGE_TEMPLATE_HEAT_ENTITIES, [])),
@@ -264,6 +271,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             humidity_hysteresis=float(config.get(CONF_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS, DEFAULT_RANGE_TEMPLATE_HUMIDITY_HYSTERESIS)),
             humidity_deactivation_delay=float(config.get(CONF_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY, DEFAULT_RANGE_TEMPLATE_HUMIDITY_DEACTIVATION_DELAY)),
         )
+        self.off_template_manager = OffTemplateManager(enabled=_get_adv(CONF_OFF_TEMPLATE_ENABLED, False))
 
         # Aggregator first: CalibrationHandler reads member states through it.
         self.aggregator = Aggregator(self)
@@ -392,13 +400,9 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self._attr_translation_key = "climate_group_helper"
 
     @property
-    def device_info(self) -> dict[str, Any]:  # type: ignore[override]
+    def device_info(self) -> DeviceInfo:
         """Return the device info."""
-        return {
-            "identifiers": {(DOMAIN, self._attr_unique_id)},
-            "name": self._attr_name,
-            "manufacturer": "Climate Group Helper",
-        }
+        return group_device_info(self._attr_unique_id, self._attr_name)
 
     @property
     def advanced_mode(self) -> bool:
@@ -415,6 +419,15 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         group as offset-corrected.
         """
         return any(offset != 0.0 for offset in self._temp_offset_map.values())
+
+    @property
+    def member_templates(self) -> tuple[MemberTemplateManager, ...]:
+        """All Member Template managers in precedence order.
+
+        Built from the named managers on every access rather than stored: a
+        manager replaced on the group must reach the gateway too.
+        """
+        return (self.range_template_manager, self.off_template_manager)
 
     @property
     def log_id(self) -> str:
@@ -477,6 +490,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Therefore, we restore some of the last known states before registering the listeners.
         if (last_state := await self.async_get_last_state()) is not None:
             restore_state(self, last_state)
+            release_stale_isolation(self)
 
         filter_sensor_entities(self)
         warn_missing_entities(self.hass, self.config, self.entity_id)
@@ -514,6 +528,14 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         self.async_defer_or_update_ha_state()
 
         if self.advanced_mode:
+            # Main switch block before everything below may send: the switch
+            # platform sets up after this one, so a block restored by the switch
+            # entity would arrive after the startup slot already reached the
+            # members. After the Cold Start, which must seed from the members'
+            # real state, not from the switch's OFF.
+            if should_restore_switch_block(self, last_state):
+                await self.switch_override_manager.activate()
+
             # Setup window control (subscribes to sensor events)
             await self.window_control_handler.async_setup()
 
@@ -530,6 +552,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             # Setup member isolation handlers (subscribe to isolation sensor events)
             for handler in self.member_isolation_handlers:
                 await handler.async_setup()
+            release_stale_isolation(self)
 
             # Apply the active schedule slot now that every blocking handler is
             # subscribed. The Cold-Start-Init update above runs the aggregation
@@ -593,7 +616,8 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         await self.sync_mode_call_handler.async_shutdown()
         await self.template_call_handler.async_shutdown()
         await self.window_control_call_handler.async_shutdown()
-        self.member_template_manager.async_cancel_timers()
+        for manager in self.member_templates:
+            manager.async_cancel_timers()
         self.sync_mode_handler.async_teardown()
 
         if self.advanced_mode:
@@ -624,13 +648,14 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         """
         if event is not None:
             # Template coverage must be current BEFORE the event is rendered:
-            # `read_member_event` → `apply_state` decides per entity_id whether to
-            # wrap, and that decision travels with the event downstream.
+            # `read_member_event` asks each template for its overlay per entity_id,
+            # and that decision travels with the event downstream.
             # `async_update_group_state()` recomputes coverage too, but only after
             # this listener returns — an event rendered here would carry the
             # *previous* cycle's snapshot, and a covered member reconnecting as
             # physically `off` would be adopted as a group OFF.
-            self.member_template_manager.update_members()
+            for manager in self.member_templates:
+                manager.update_members()
             new_wrapped, old_wrapped = self.aggregator.read_member_event(event)
             event = Event(
                 event_type=event.event_type,

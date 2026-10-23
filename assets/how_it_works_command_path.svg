@@ -49,8 +49,8 @@
 
   <g fill="#1f2328" font-size="13">
     <text x="36" y="186" font-weight="600">The target itself is never changed on the way — every device just gets its own share of it.</text>
-    <text x="36" y="214" fill="#57606a">Also on the way, where configured: the Member Template turns a heat/cool range into heat or cool,</text>
-    <text x="36" y="232" fill="#57606a">Min Temp Off turns "off" into the device's lowest temperature, and the Member Command Delay</text>
-    <text x="36" y="250" fill="#57606a">paces the commands out.</text>
+    <text x="36" y="214" fill="#57606a">Also on the way, where configured: the Range Template turns a heat/cool range into heat or cool,</text>
+    <text x="36" y="232" fill="#57606a">the Off Template and Minimum Temperature when Off turn "off" into the device's lowest</text>
+    <text x="36" y="250" fill="#57606a">temperature, and the Member Command Delay paces the commands out.</text>
   </g>
 </svg>

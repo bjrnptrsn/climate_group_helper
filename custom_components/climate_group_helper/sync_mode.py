@@ -322,7 +322,7 @@ class SyncModeHandler:
         # Changeover/correction for these members is driven by the TemplateCallHandler.
         # `new_state` is already template-rendered (_state_change_listener recomputes
         # entity_ids before wrapping), so this alone is authoritative.
-        is_covered = self._group.member_template_manager.is_covered_state(new_state)
+        is_covered = self._group.range_template_manager.is_covered_state(new_state)
 
         # ADOPT_ONLY adopts like MIRROR and skips the enforcement at the end, so
         # it shares every guard above. What its own state manager adds is the
