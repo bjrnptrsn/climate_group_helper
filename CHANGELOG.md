@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.1 - 2026-10-25
+
+### 🐛 Bug Fixes
+
+*   **Auto Sets the Temperature per Device**: While the group is on Auto, devices without Auto follow the group's temperature, and the others keep their own program.
+
+*   **Switching from Auto to Heat Carries the Target Temperature**: A device that leaves its own Auto schedule for Heat or Cool now receives the group's temperature with the mode change, instead of keeping its schedule's setpoint.
+
 ## 1.16.0 - 2026-10-23
 
 ### ✨ Improvements

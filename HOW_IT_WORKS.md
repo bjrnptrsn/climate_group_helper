@@ -88,6 +88,7 @@ Which devices get a command:
 
 - **Commands you give the group** go to every device that supports them.
 - **Automatic commands** (schedule, Sync Mode) go only to the devices that differ from the target. **Force Retry** sends them to all devices anyway, for devices that don't reliably report their state.
+- **Auto** is the device's own program: while the group is on Auto, automatic commands leave the temperature of devices that can do Auto alone. Devices without Auto follow the group's temperature while they are on.
 - **Member Command Delay** paces the commands out instead of sending them all at once.
 
 ---

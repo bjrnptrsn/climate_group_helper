@@ -22,6 +22,7 @@ from .const import (
     CONF_SWITCH_TEMPERATURE,
     CONF_WINDOW_ACTION,
     CONF_WINDOW_TEMPERATURE,
+    SINGLE_SETPOINT_MODES,
     PresenceAction,
     SwitchAction,
     WindowControlAction,
@@ -169,7 +170,7 @@ class BoostOverrideManager(BaseOverrideManager):
 
     OVERRIDE_NAME = "boost"
 
-    BOOST_SINGLE_MODES = (HVACMode.HEAT, HVACMode.COOL, HVACMode.DRY, HVACMode.FAN_ONLY)
+    BOOST_SINGLE_MODES = SINGLE_SETPOINT_MODES
 
     async def activate(self, temperature: float, duration: float, hvac_mode: str | None = None) -> bool:
         """Start boost override directly on members.

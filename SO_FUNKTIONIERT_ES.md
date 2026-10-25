@@ -88,6 +88,7 @@ Welche Geräte einen Befehl bekommen:
 
 - **Befehle, die du der Gruppe gibst,** gehen an jedes Gerät, das sie unterstützt.
 - **Automatische Befehle** (Zeitplan, Sync-Modus) gehen nur an die Geräte, die vom Zielzustand abweichen. **Wiederholung erzwingen** schickt sie trotzdem an alle, für Geräte, die ihren Zustand nicht zuverlässig melden.
+- **Auto** ist das eigene Programm des Geräts: Steht die Gruppe auf Auto, lassen automatische Befehle die Temperatur von Geräten, die Auto können, in Ruhe. Geräte ohne Auto folgen der Gruppentemperatur, solange sie eingeschaltet sind.
 - **Verzögerung zwischen Mitglieder-Befehlen** verteilt die Befehle zeitlich, statt sie alle auf einmal zu senden.
 
 ---

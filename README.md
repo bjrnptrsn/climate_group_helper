@@ -547,7 +547,7 @@ When everything agrees, it is empty. Two details make it trustworthy:
 
 | Action | Behavior |
 |--------|----------|
-| **Ignore (Default)** | Member stays in its current mode if it doesn't support the target mode. |
+| **Ignore (Default)** | Member stays in its current mode if it doesn't support the target mode. While the group is on Auto, such a member still follows the group's temperature as long as it is on. |
 | **Turn Off** | Member is turned `off` when it doesn't support the target mode (e.g. AC when heating). |
 
 ### Temperature & Humidity Settings

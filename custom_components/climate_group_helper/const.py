@@ -24,6 +24,7 @@ from homeassistant.components.climate import (
     SERVICE_SET_SWING_MODE,
     SERVICE_SET_TEMPERATURE,
     ClimateEntityFeature,
+    HVACMode,
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
@@ -539,6 +540,15 @@ SETPOINT_ATTRS: frozenset[str] = frozenset({
     ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_TEMP_HIGH,
 })
+
+# The modes that carry a single setpoint. `heat_cool` carries a range, `auto`
+# is the device's own regulation, `off` carries none.
+SINGLE_SETPOINT_MODES: tuple[str, ...] = (
+    HVACMode.HEAT,
+    HVACMode.COOL,
+    HVACMode.DRY,
+    HVACMode.FAN_ONLY,
+)
 
 # Float comparison tolerance for temperature and humidity
 FLOAT_TOLERANCE = 0.05

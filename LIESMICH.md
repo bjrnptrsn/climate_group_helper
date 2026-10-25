@@ -548,7 +548,7 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 
 | Aktion | Verhalten |
 |--------|-------------|
-| **Ignorieren (Standard)** | Mitglied bleibt in seinem aktuellen Modus, wenn es den Zielmodus nicht unterstützt. |
+| **Ignorieren (Standard)** | Mitglied bleibt in seinem aktuellen Modus, wenn es den Zielmodus nicht unterstützt. Steht die Gruppe auf Auto, folgt ein solches Mitglied trotzdem der Gruppentemperatur, solange es eingeschaltet ist. |
 | **Ausschalten** | Mitglied wird `aus` geschaltet, wenn es den Zielmodus nicht unterstützt (z. B. Klimaanlage beim Heizen). |
 
 ### Temperatur- & Feuchtigkeitseinstellungen

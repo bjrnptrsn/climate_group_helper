@@ -44,6 +44,7 @@ from .const import (
     MODE_MODES_MAP,
     OVERRIDE_ENFORCE_DEBOUNCE_DELAY,
     RANGE_TEMPLATE_DEBOUNCE_DELAY,
+    SINGLE_SETPOINT_MODES,
     TEMP_TARGET_ATTRS,
     FeatureStrategy,
     PresenceOffRespect,
@@ -449,6 +450,7 @@ class BaseServiceCallHandler(ABC):
                 raw = self._append_turn_on_calls(raw, data)
             elif attr == ATTR_TEMPERATURE:
                 raw = self._off_template_hold_setpoints(raw, data)
+                raw = self._auto_hold_setpoints(raw, data)
 
             if raw:
                 calls.extend(self._run_pipeline(raw))
@@ -861,11 +863,29 @@ class BaseServiceCallHandler(ABC):
         if not unsupported:
             return calls
 
-        # Filter unsupported members out of all existing calls (e.g. temperature)
-        filtered = [
-            {**call, "entity_ids": [entity_id for entity_id in call["entity_ids"] if entity_id not in unsupported]}
-            for call in calls
-        ]
+        # Filter unsupported members out of all existing calls (e.g. temperature).
+        # Under `auto` with IGNORE, a bare temperature call is the exception: the
+        # member cannot take `auto` (it is in `unsupported`), but the value means
+        # the same in its own single-setpoint mode, so only wake-up prevention
+        # remains. With OFF the member is switched off in this batch, so it never
+        # keeps one.
+        keep_unsupported_temperature = target_mode == HVACMode.AUTO and action == UnsupportedHvacAction.IGNORE
+        filtered = []
+        for call in calls:
+            excluded = unsupported
+            if (
+                keep_unsupported_temperature
+                and call["service"] == SERVICE_SET_TEMPERATURE
+                and set(call["kwargs"]) == {ATTR_TEMPERATURE}
+            ):
+                excluded = {
+                    entity_id for entity_id in unsupported
+                    if not self._runs_single_setpoint(entity_id)
+                }
+            filtered.append({
+                **call,
+                "entity_ids": [entity_id for entity_id in call["entity_ids"] if entity_id not in excluded],
+            })
 
         # For explicit HVAC_MODE changes, turn unsupported members OFF if configured
         if hvac_call and action == UnsupportedHvacAction.OFF:
@@ -888,7 +908,7 @@ class BaseServiceCallHandler(ABC):
           non-temp (SET_HVAC_MODE OFF)
         - Restore (ON): the mode call stays; temp-capable devices get the setpoint
           as a separate call (offsets included), so a device parked at its
-          min_temp does not come back on 5°
+          min_temp does not come back on 5° — except for `auto`
         - Non-applicable calls pass through unchanged.
         """
         if not self._group.min_temp_off:
@@ -939,6 +959,10 @@ class BaseServiceCallHandler(ABC):
                 # integrations ignore `hvac_mode` inside `set_temperature` — and
                 # the setpoint follows as its own call (see docstring).
                 result.append(call)
+                # The members of an `auto` call can do `auto`: a setpoint
+                # following it would take them straight out of it again.
+                if hvac_mode == HVACMode.AUTO:
+                    continue
                 target_temp = self._min_temp_off_restore_value()
                 if target_temp is None:
                     continue
@@ -998,12 +1022,15 @@ class BaseServiceCallHandler(ABC):
     def _append_turn_on_calls(
         self, calls: list[dict[str, Any]], data: dict[str, Any]
     ) -> list[dict[str, Any]]:
-        """Append the group target to an activation call for currently-off members.
+        """Append the group target to a mode call for members that need it.
 
-        Called from `_generate_calls_from_dict` for the `hvac_mode` attribute,
-        before the pipeline: the extra calls join the raw list and are processed
-        by every stage (offsets, OOB) like any other. The mode call stays
-        untouched — the mode must go through `set_hvac_mode`, since many
+        That is a member currently `off` (turning on) and one leaving `auto` or
+        `heat_cool` for a single-setpoint mode: it would otherwise keep the
+        setpoint its own schedule left behind, and the mode-change echo does not
+        drive a sync. Called from `_generate_calls_from_dict` for the `hvac_mode`
+        attribute, before the pipeline: the extra calls join the raw list and are
+        processed by every stage (offsets, OOB) like any other. The mode call
+        stays untouched — the mode must go through `set_hvac_mode`, since many
         integrations ignore `hvac_mode` inside `set_temperature`. An attribute
         the generation already sends is skipped, so a combined payload or a slot
         carrying mode and temperature never gets a second call. `min_temp_off`
@@ -1042,7 +1069,14 @@ class BaseServiceCallHandler(ABC):
             humidity_ids: list[str] = []
             for entity_id in call["entity_ids"]:
                 state = available_state(self._group.aggregator.read_member_state(entity_id))
-                if state is None or state.state != HVACMode.OFF:
+                if state is None:
+                    continue
+                turning_on = state.state == HVACMode.OFF
+                leaving_dynamic = (
+                    hvac_mode in SINGLE_SETPOINT_MODES
+                    and state.state in (HVACMode.AUTO, HVACMode.HEAT_COOL)
+                )
+                if not (turning_on or leaving_dynamic):
                     continue
                 if self._group.range_template_manager.is_covered_state(state):
                     continue
@@ -1062,7 +1096,7 @@ class BaseServiceCallHandler(ABC):
                     value = self._turn_on_setpoint(entity_id, target_temperature)
                     if not within_tolerance(state.attributes.get(ATTR_TEMPERATURE), value):
                         temp_by_value.setdefault(value, []).append(entity_id)
-                if inject_humidity and ATTR_HUMIDITY in state.attributes:
+                if turning_on and inject_humidity and ATTR_HUMIDITY in state.attributes:
                     if not within_tolerance(state.attributes.get(ATTR_HUMIDITY), target_humidity):
                         humidity_ids.append(entity_id)
 
@@ -1619,6 +1653,47 @@ class BaseServiceCallHandler(ABC):
         ]
         return [call for call in result if call["entity_ids"]]
 
+    def _auto_hold_setpoints(self, calls: list[dict[str, Any]], data: dict[str, Any]) -> list[dict[str, Any]]:
+        """Send the setpoint of an `auto` payload only to members that take it."""
+        if data.get(ATTR_HVAC_MODE) != HVACMode.AUTO or not self._hold_auto_setpoints(data):
+            return calls
+        result = [
+            {**call, "entity_ids": [entity_id for entity_id in call["entity_ids"] if self._takes_auto_setpoint(entity_id)]}
+            for call in calls
+        ]
+        return [call for call in result if call["entity_ids"]]
+
+    def _hold_auto_setpoints(self, data: dict[str, Any]) -> bool:  # noqa: ARG002
+        """Whether `_auto_hold_setpoints()` applies. A direct command overrides it."""
+        return True
+
+    def _takes_auto_setpoint(self, entity_id: str) -> bool:
+        """Whether the member gets the setpoint of an `auto` payload.
+
+        Only a member that cannot do `auto` and is on in a single-setpoint mode.
+        On a device that can, `auto` is its own schedule, and a setpoint counts
+        as a manual change that takes it out of it — also on one about to be
+        switched to `auto` in the same batch, so capability decides, not the
+        current mode. Without an `hvac_modes` list the capability rule assumes a
+        device accepts every mode, `auto` included — the cautious reading of the
+        same assumption.
+        """
+        capability = available_state(self._read_capability_state(entity_id))
+        modes = capability.attributes.get(ATTR_HVAC_MODES) if capability else None
+        if not modes or HVACMode.AUTO in modes:
+            return False
+        return self._runs_single_setpoint(entity_id)
+
+    def _runs_single_setpoint(self, entity_id: str) -> bool:
+        """Whether the member is on in a mode that carries a single setpoint.
+
+        Read from the rendered state: a member the Off Template parked reads `off`,
+        and one in `heat_cool` or `auto` is not in `SINGLE_SETPOINT_MODES`. A
+        member that is off would be woken by the setpoint.
+        """
+        state = available_state(self._group.aggregator.read_member_state(entity_id))
+        return state is not None and state.state in SINGLE_SETPOINT_MODES
+
     def _min_temp_off_restore_value(self) -> float | None:
         """Setpoint the min_temp_off restore branch sends when turning a device on.
 
@@ -1683,9 +1758,10 @@ class BaseServiceCallHandler(ABC):
         """Block calls for specific attributes based on requested HVAC mode.
 
         1. Prevent all setpoint changes if requested HVAC mode is OFF (Wake-up prevention).
-        2. Prevent single setpoint changes if requested HVAC mode is AUTO or HEAT_COOL
-           (Dynamic modes where single setpoints are often irrelevant or stale).
-        3. Prevent range setpoint changes if requested HVAC mode is AUTO.
+        2. Prevent single setpoint changes if requested HVAC mode is HEAT_COOL
+           (it carries a range).
+        3. Prevent range setpoint changes if requested HVAC mode is AUTO. Its
+           single setpoint is decided per member (`_auto_hold_setpoints()`).
         """
         if attr == ATTR_HVAC_MODE:
             return False
@@ -1695,7 +1771,7 @@ class BaseServiceCallHandler(ABC):
             return True
 
         if requested_hvac_mode == HVACMode.AUTO:
-            return attr in TEMP_TARGET_ATTRS
+            return attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
 
         if requested_hvac_mode == HVACMode.HEAT_COOL:
             return attr == ATTR_TEMPERATURE
@@ -1787,6 +1863,15 @@ class ClimateCallHandler(BaseServiceCallHandler):
     def _inject_turn_on_setpoint(self) -> bool:
         """A direct command may switch members on without carrying the setpoint."""
         return True
+
+    def _hold_auto_setpoints(self, data: dict[str, Any]) -> bool:
+        """A direct setpoint is the user's intent and reaches members in `auto` too.
+
+        A selected virtual preset is not: its setpoint comes from a stored
+        definition, as a slot's does. Only `_resolve_virtual_preset()` puts
+        `preset_mode` next to `hvac_mode` — no direct climate service carries both.
+        """
+        return ATTR_PRESET_MODE in data
 
     def _is_member_blocked(self, entity_id: str) -> bool:
         """Ignore the global block when turning the group off (isolation still applies).
