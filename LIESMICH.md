@@ -44,17 +44,13 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 
 **Climate Group Helper fungiert als intelligente "Logikschicht"** für dein Zuhause. Er umhüllt deine vorhandenen Geräte mit einem einzigen Controller, der das "Wenn dies, dann das"-Verhalten automatisch für dich übernimmt.
 
-> [!TIP]
-> **Nicht nur für Gruppen!** Selbst wenn du nur **ein Thermostat** hast, kannst du diesen Helper nutzen, um Premium-Funktionen wie Fenstersteuerung und Sensor-Kalibrierung zu einfacher Hardware hinzuzufügen.
-
-> [!TIP]
-> **Funktioniert mit anderen Integrationen!** CGH funktioniert mit jeder `climate.*`-Entität — auch mit denen von [Better Thermostat](https://github.com/KartoffelToby/better_thermostat) oder [Versatile Thermostat](https://github.com/jmcollin78/versatile_thermostat). Lass sie die Regelung pro Gerät übernehmen (MPC, PID, TPI), während CGH die raumübergreifende Logik orchestriert. Siehe [BEISPIELE.md](BEISPIELE.md) für Einrichtungsbeispiele.
+Er funktioniert mit jeder `climate.*`-Entität — mit einem einzelnen Thermostat genauso wie mit einer ganzen Gruppe, und auch mit Thermostaten, die bereits eine eigene Regelung mitbringen ([Beispiel 13](BEISPIELE.md#13-thermostate-mit-eigener-regelung)).
 
 ## Schnellstart
 
 | Schritt | Aktion |
 | :--- | :--- |
-| **1. Installieren** | Über **HACS** hinzufügen und Home Assistant neu starten. <br> [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bjrnptrsn&repository=climate_group_helper&category=integration) |
+| **1. Installieren** | Über den **Marketplace** (ab Home Assistant 2026.11) oder **HACS** (ältere Versionen) hinzufügen und Home Assistant neu starten. <br> [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bjrnptrsn&repository=climate_group_helper&category=integration) |
 | **2. Hinzufügen** | Gehe zu *Einstellungen → Geräte & Dienste → Helfer → Helfer erstellen*. |
 | **3. Einrichten** | Gib deiner Gruppe einen Namen und wähle deine Thermostate (TRVs, Klimaanlagen, Heizungen — beliebig gemischt). |
 | **4. Fertig!** | Du hast jetzt eine einzige Entität, die alles steuert. <br> *Tipp: Aktiviere **Erweiterte Funktionen** in den Optionen, um alle Features freizuschalten.* |
@@ -67,7 +63,7 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 </p>
 
 <details>
-<summary>Manuelle Installation (ohne HACS)</summary>
+<summary>Manuelle Installation (ohne Marketplace oder HACS)</summary>
 
 1. Lade das [neueste Release](https://github.com/bjrnptrsn/climate_group_helper/releases) herunter.
 2. Kopiere `custom_components/climate_group_helper` in deinen `custom_components`-Ordner.
@@ -81,7 +77,6 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 
 - [Kernkonzept](#kernkonzept-die-einheitliche-grundlage)
   - [Einfacher Modus](#einfacher-modus-kernfunktionen)
-- [So funktioniert es](SO_FUNKTIONIERT_ES.md)
 - [Erweiterte Funktionen](#power-user-erweiterte-funktionen)
   - [Master-Entität](#master-entität)
   - [Externe Sensoren](#externe-sensoren)
@@ -95,7 +90,6 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
   - [Mitglieder-Offsets](#mitglieder-offsets)
   - [Mitglieder-Isolation](#mitglieder-isolation)
   - [Mitglieder-Vorlage](#mitglieder-vorlage)
-- [Beispiele](BEISPIELE.md)
 - [Verwaltungs-Entitäten (Schalter & Regler)](#verwaltungs-entitäten-schalter--regler)
   - [Hauptschalter](#hauptschalter)
   - [Gruppen-Offset](#gruppen-offset)
@@ -110,8 +104,7 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 
 Der Climate Group Helper bietet eine zentrale, verlässliche Steuerung für deine Klimageräte. Er erstellt eine einheitliche Verwaltungsschicht, die dafür sorgt, dass deine Geräte als ein zusammenhängendes System zusammenarbeiten und gleichzeitig präzise Raumzustände liefern.
 
-> [!TIP]
-> **Wie spielen die Funktionen zusammen?** [SO_FUNKTIONIERT_ES.md](SO_FUNKTIONIERT_ES.md) zeigt, wer entscheidet, was deine Geräte tun, was Vorrang hat, und warum die Gruppe manchmal etwas anderes anzeigt, als du eingestellt hast.
+Wie die Funktionen zusammenspielen — wer entscheidet, was deine Geräte tun, was Vorrang hat, und warum die Gruppe manchmal etwas anderes anzeigt, als du eingestellt hast — erklärt [SO_FUNKTIONIERT_ES.md](SO_FUNKTIONIERT_ES.md). Fertige Einrichtungen für typische Situationen findest du in [BEISPIELE.md](BEISPIELE.md).
 
 ### Einfacher Modus (Kernfunktionen)
 
@@ -130,10 +123,7 @@ Diese Funktionen sind standardmäßig aktiv und bieten ein optimiertes "Plug & P
 
 ## Power User: Erweiterte Funktionen
 
-Schöpfe das volle Potenzial deines Klimasystems aus. Diese speziellen Funktionen werden durch Umschalten von **Erweiterte Funktionen** in der Gruppenkonfiguration aktiviert. Ein Zurückschalten in den einfachen Modus blendet diese Optionen aus und versetzt die Funktionen in den **Ruhezustand** — sie stoppen funktional, aber deine Konfiguration bleibt erhalten und wird beim Zurückschalten sofort wiederhergestellt.
-
-> [!NOTE]
-> **Neue Gruppen starten im einfachen Modus.** Bestehende Gruppen, die aus früheren Versionen aktualisiert wurden, behalten **Erweiterte Funktionen** automatisch aktiviert, damit nichts kaputtgeht.
+Schöpfe das volle Potenzial deines Klimasystems aus. Neue Gruppen starten im einfachen Modus; diese speziellen Funktionen werden durch Umschalten von **Erweiterte Funktionen** in der Gruppenkonfiguration aktiviert. Ein Zurückschalten in den einfachen Modus blendet diese Optionen aus und versetzt die Funktionen in den **Ruhezustand** — sie stoppen funktional, aber deine Konfiguration bleibt erhalten und wird beim Zurückschalten wiederhergestellt.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_advanced.png" alt="Climate Group Helper Advanced Configuration Options Overview" width="400"/>
@@ -228,9 +218,9 @@ Zeitpläne können per Dienst live umgeschaltet werden (z. B. für "Urlaub"- ode
 *   **Kalender-Unterstützung:** `calendar.*`-Entitäten funktionieren genauso wie `schedule.*`-Entitäten. Die Zeitblock-Daten werden aus dem **Beschreibungsfeld** jedes Ereignisses gelesen, im selben `key: value`-YAML-Format wie die zusätzlichen Zeitplan-Daten. Siehe [Zeitplan-Konfiguration & Meta-Keys](#zeitplan-konfiguration--meta-keys) für Details.
 *   **Bypass-Ebene:** Eine zweite `schedule.*`- oder `calendar.*`-Entität kann als **Prioritätsebene** über deinem Haupt-Zeitplan fungieren. Ist ein Bypass-Zeitblock aktiv, überschreiben dessen Attribute den Haupt-Zeitblock (Bypass gewinnt bei Konflikten).
 *   **Fallback bei inaktivem Zeitplan:** Ein optionaler Zustand (z. B. Nachtabsenkung oder Ausschalten), der außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan einspringt — lückenlose 24/7-Zeitpläne sind damit unnötig. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist.
-*   **Per Dienst geänderte Werte beibehalten (Zeitplan):** Stellt sicher, dass per Dienst geänderter Haupt-Zeitplan, Bypass-Entität und Fallback-Zustand einen Home-Assistant-Neustart überstehen. Wenn deaktiviert, kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück.
+*   **Per Dienst geänderte Werte beibehalten (Zeitplan):** Stellt sicher, dass per Dienst geänderter Haupt-Zeitplan, Bypass-Entität, Fallback-Zustand und manuelle Haltezeit einen Home-Assistant-Neustart überstehen. Wenn deaktiviert, kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück.
 *   **Respektiere Aus-Status der Mitglieder (Zeitplan):** Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet.
-*   **Manuelle Haltezeit:** Eine manuelle Anpassung (Temperaturänderung oder die Gruppe von Hand ein-/ausschalten) hält für eine konfigurierbare Dauer, danach übernimmt der Zeitplan wieder mit dem *dann* aktuellen Zeitblock. Eine Dauer von `0` deaktiviert die Haltezeit — deine Änderung bleibt dann bis zum Beginn des nächsten Zeitblocks bestehen. Setzt du den Zeitplan mit dem Reset-Dienst zurück, endet eine laufende Haltezeit vorzeitig.
+*   **Manuelle Haltezeit:** Eine manuelle Anpassung (Temperaturänderung oder die Gruppe von Hand ein-/ausschalten) hält für eine konfigurierbare Dauer, danach übernimmt der Zeitplan wieder mit dem *dann* aktuellen Zeitblock. Eine Dauer von `0` deaktiviert die Haltezeit — deine Änderung bleibt dann bis zum Beginn des nächsten Zeitblocks bestehen. Setzt du den Zeitplan mit dem Reset-Dienst zurück, endet eine laufende Haltezeit vorzeitig. Die Dauer lässt sich auch zur Laufzeit per Dienst ändern.
 
 > **Hinweis — Ausschalten außerhalb aktiver Zeitblöcke:** Um die Gruppe in der inaktiven Phase abzuschalten, setze `hvac_mode: off` im Fallback. Verwende hier **nicht** den `turn_off`-Meta-Key — er ist ein einmaliger Auslöser für die Hauptschalter-Sperre, die aktiv bleibt, bis ein Zeitblock sie explizit mit `turn_off: false` freigibt. Ein `turn_off: true` im Fallback würde also den nächsten Heiz-Zeitblock blockiert lassen.
 
@@ -509,6 +499,7 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 *   **`runtime_group_presets`** — die aktuell per Dienst gesetzten Laufzeit-Presets mit ihren Werten. Fehlt, wenn keine gesetzt sind.
 *   **`boost_temperature` / `boost_until`** — Sollwert und Endzeit eines laufenden Boosts.
 *   **`schedule_hold_until`** — wann eine manuelle Änderung aufhört zu halten und der Zeitplan wieder übernimmt. Fehlt, wenn nichts hält.
+*   **`schedule_hold_duration`** — die manuelle Haltezeit in Minuten, wenn sie per Dienst gesetzt wurde. Fehlt, solange die Dauer aus den Gruppeneinstellungen gilt.
 
 ## Konfigurationsoptionen
 
@@ -548,7 +539,7 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 
 | Aktion | Verhalten |
 |--------|-------------|
-| **Ignorieren (Standard)** | Mitglied bleibt in seinem aktuellen Modus, wenn es den Zielmodus nicht unterstützt. Steht die Gruppe auf Auto, folgt ein solches Mitglied trotzdem der Gruppentemperatur, solange es eingeschaltet ist. |
+| **Ignorieren (Standard)** | Mitglied bleibt in seinem aktuellen Modus, wenn es den Zielmodus nicht unterstützt. Ausnahme: Steht die Gruppe auf Auto, laufen Heizkörper ohne eigenes Auto in Heat und folgen der Gruppentemperatur. |
 | **Ausschalten** | Mitglied wird `aus` geschaltet, wenn es den Zielmodus nicht unterstützt (z. B. Klimaanlage beim Heizen). |
 
 ### Temperatur- & Feuchtigkeitseinstellungen
@@ -612,8 +603,8 @@ Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assi
 | **Fallback-Zustand bei inaktivem Haupt-Zeitplan / Kalender (YAML)** | *(Optional)* Zustand, der außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan einspringt (z. B. Nachtabsenkung oder vollständiges Ausschalten). Die Bypass-Ebene überschreibt ihn, solange sie aktiv ist. |
 | **Bypass-Zeitplan / Kalenderentität** | *(Optional)* Eine zweite `schedule.*`- oder `calendar.*`-Entität, die als Prioritätsebene fungiert. Ist ein Bypass-Zeitblock aktiv, überschreibt er den Haupt-Zeitplan. |
 | **Respektiere 'Aus'-Status der Mitglieder (Zeitplan)** | Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet. Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
-| **Per Dienst geänderte Werte beibehalten (Zeitplan)** | Behält Haupt-Zeitplan, Bypass-Entität und Fallback-Zustand über Neustarts hinweg bei, wenn sie über einen Dienst geändert wurden. Ohne diese Option kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück. |
-| **Manuelle Haltezeit** | Wie lange eine manuelle Anpassung (Temperatur oder die Gruppe von Hand ein-/ausschalten) hält, bevor der Zeitplan mit dem dann aktuellen Zeitblock wieder übernimmt. `0` deaktiviert die Haltezeit. |
+| **Per Dienst geänderte Werte beibehalten (Zeitplan)** | Behält Haupt-Zeitplan, Bypass-Entität, Fallback-Zustand und manuelle Haltezeit über Neustarts hinweg bei, wenn sie über einen Dienst geändert wurden. Ohne diese Option kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück. |
+| **Manuelle Haltezeit** | Wie lange eine manuelle Anpassung (Temperatur oder die Gruppe von Hand ein-/ausschalten) hält, bevor der Zeitplan mit dem dann aktuellen Zeitblock wieder übernimmt. `0` deaktiviert die Haltezeit. Lässt sich zur Laufzeit per Dienst überschreiben. |
 
 ### Gruppen-Presets
 
@@ -753,7 +744,7 @@ Setzt temporäre Überschreibungen und den Runtime-Zustand auf die konfigurierte
 | `everything` | Nein | Setzt alle folgenden Bereiche auf einmal zurück. Die einzelnen Felder werden dann ignoriert. |
 | `boost` | Nein | Bricht einen aktiven Boost ab und stellt den Zielzustand wieder her. |
 | `offset` | Nein | Setzt den globalen Temperatur-Offset der Gruppe auf 0.0 zurück. |
-| `schedule` | Nein | Setzt die aktive Zeitplan-Entität auf den konfigurierten Standardzeitplan zurück und beendet eine manuelle Haltezeit, sodass der aktuelle Zeitblock sofort gilt. |
+| `schedule` | Nein | Setzt die aktive Zeitplan-Entität und die manuelle Haltezeit auf ihre konfigurierten Standardwerte zurück und beendet eine manuelle Haltezeit, sodass der aktuelle Zeitblock sofort gilt. |
 | `bypass` | Nein | Setzt die aktive Bypass-Entität auf den konfigurierten Standard zurück und nimmt Bypass-Anpassungen zurück. |
 | `fallback` | Nein | Setzt den Fallback-Payload des Zeitplans auf den konfigurierten Standard zurück. |
 | `presets` | Nein | Entfernt alle Laufzeit-Presets. Die Konfigurations-Presets bleiben unverändert. |
@@ -821,6 +812,28 @@ data:
     hvac_mode: heat
 ```
 
+### `climate_group_helper.set_schedule_hold_duration`
+
+Ändert die Dauer der **Manuellen Haltezeit** zur Laufzeit, ohne die Gruppeneinstellungen zu bearbeiten. Die Gruppeneinstellungen bleiben unverändert; der hier gesetzte Wert gilt zusätzlich darüber, bis du ihn wieder entfernst.
+
+**Dienst-Felder:**
+
+| Feld | Erforderlich | Beschreibung |
+|-------|----------|-------------|
+| `duration` | Nein | Haltezeit in Minuten, `0` bis `480`. `0` schaltet die Haltezeit aus, auch wenn in den Gruppeneinstellungen eine Dauer steht. Wenn weggelassen, kehrt die Gruppe zur Dauer aus ihren Einstellungen zurück. |
+
+*   **Eine laufende Haltezeit behält ihr Ende.** Eine neue Dauer gilt ab der nächsten manuellen Änderung. Nur `0` beendet eine laufende Haltezeit sofort, und der aktuelle Zeitblock übernimmt.
+*   **Nach einem Neustart** bleibt die gesetzte Dauer nur mit aktivierter Option **Per Dienst geänderte Werte beibehalten (Zeitplan)** erhalten. Mit dieser Option bleibt sie auch dann wirksam, wenn du die Dauer später in den Gruppeneinstellungen änderst — rufe den Dienst ohne Dauer auf oder setze den Zeitplan mit dem Reset-Dienst zurück, um zum konfigurierten Wert zurückzukehren.
+
+**Beispiel:**
+```yaml
+service: climate_group_helper.set_schedule_hold_duration
+target:
+  entity_id: climate.my_group
+data:
+  duration: 120
+```
+
 ### `climate_group_helper.set_group_preset`
 
 Erstellt, ändert oder entfernt die Laufzeit-Presets der Gruppe (siehe [Gruppen-Presets](#gruppen-presets)). Ein Aufruf ändert nur die Presets, die er nennt; alle anderen bleiben, wie sie sind. Wenn „Per Dienst geänderte Werte beibehalten (Presets)“ aktiviert ist, bleiben die Laufzeit-Presets auch nach einem Home-Assistant-Neustart erhalten.
@@ -861,6 +874,8 @@ data:
 
 Wendet eine portable JSON-Konfiguration auf eine Gruppe an. Nützlich, um Logikeinstellungen zwischen Gruppen zu kopieren oder eine Sicherung von einem Konfigurationssensor wiederherzustellen.
 
+**Öffne danach die Einstellungen der Gruppe und speichere einmal.** Der Dienst übernimmt, was du ihm übergibst, ungeprüft; erst der Einstellungsdialog prüft, ob die Kombination sinnvoll ist, und weist auf alles hin, was noch korrigiert werden muss.
+
 **Dienst-Felder:**
 
 | Feld | Erforderlich | Beschreibung |
@@ -873,9 +888,6 @@ Standardmäßig werden nur Logikeinstellungen übertragen (Sync-Modi, Fensterste
 
 > [!IMPORTANT]
 > **Neuladeverhalten:** Der Aufruf dieses Dienstes löst ein vollständiges Neuladen der Gruppen-Entität aus. Alle aktiven, nicht persistierten Timer (z. B. Boost, Fenster-Verzögerungen) werden sofort zurückgesetzt. Dies ist dasselbe Verhalten wie bei Änderungen über die UI.
-
-> [!TIP]
-> **Öffne danach die Einstellungen der Gruppe und speichere einmal.** Der Dienst übernimmt, was du ihm übergibst; der Einstellungsdialog prüft zusätzlich, ob die Kombination sinnvoll ist, und weist auf alles hin, was noch korrigiert werden muss.
 
 ## Sicherung & Migration
 
@@ -898,6 +910,8 @@ data:
   include_entity_selectors: false
 ```
 
+3. Öffne die Einstellungen der **Ziel**-Gruppe und speichere einmal.
+
 ## Fehlerbehebung
 
 ### Probleme nach einem Update?
@@ -905,7 +919,7 @@ Falls du nach einem Update seltsames Verhalten bemerkst (z. B. Einstellungen wer
 
 ### Debug-Protokollierung
 
-#### Option 1: Über die UI (Sofort)
+#### Option 1: Über die UI (für Probleme, die du nachstellen kannst)
 1. Gehe zu **Einstellungen** > **Geräte & Dienste** > **Geräte**.
 2. Suche nach deiner **Climate Group** und klicke darauf.
 3. Klicke im Panel **Geräteinfo** auf den Link **Climate Group Helper** (neben dem Symbol).
@@ -913,7 +927,7 @@ Falls du nach einem Update seltsames Verhalten bemerkst (z. B. Einstellungen wer
 5. Reproduziere das Problem und deaktiviere dann die Protokollierung. Die Datei wird automatisch heruntergeladen.
    *(Hinweis: Bei startbedingten Problemen HA nach dem Aktivieren der Protokollierung neu starten.)*
 
-#### Option 2: Über YAML (Manuell)
+#### Option 2: Über YAML (für sporadische Probleme)
 Füge dies zu deiner `configuration.yaml` hinzu (erfordert Neustart):
 
 ```yaml
@@ -923,11 +937,15 @@ logger:
     custom_components.climate_group_helper: debug
 ```
 
-#### Log teilen
+Die Debug-Protokollierung bleibt dann dauerhaft aktiv, auch über Neustarts hinweg — tritt ein Problem auf, das du nicht gezielt auslösen kannst, enthält das Log die Details also bereits. Entferne den Eintrag wieder, wenn du fertig bist, da das Log deutlich wächst.
+
+#### Log finden und teilen
+Gehe zu **Einstellungen** > **System** > **Protokolle**. Die Seite zeigt standardmäßig eine verdichtete Liste der Fehler und Warnungen — Debug-Einträge erscheinen erst in der Rohansicht, die du über das **⋮-Menü** öffnest (englisch *Show raw logs*). Über die Download-Schaltfläche daneben speicherst du das Log als Datei.
+
 Idealerweise teilst du die vollständige Log-Datei. Möchtest du keine unbeteiligten Daten teilen, kannst du sie auf nur die Einträge der Integration reduzieren:
 
 ```bash
-grep 'climate_group_helper' home-assistant.log > cgh.log
+grep 'climate_group_helper' home-assistant_*.log > cgh.log
 ```
 
 ## Mitwirken

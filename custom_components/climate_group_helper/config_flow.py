@@ -133,6 +133,7 @@ from .const import (
     DEFAULT_ROOM_OPEN_DELAY,
     DEFAULT_ZONE_OPEN_DELAY,
     DOMAIN,
+    MAX_SCHEDULE_HOLD_DURATION,
     SYNC_TARGET_ATTRS,
     AdoptManualChanges,
     AverageOption,
@@ -1331,7 +1332,7 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                         ): selector.NumberSelector(
                             selector.NumberSelectorConfig(
                                 min=0,
-                                max=480,
+                                max=MAX_SCHEDULE_HOLD_DURATION,
                                 step=5,
                                 unit_of_measurement="min",
                                 mode=selector.NumberSelectorMode.SLIDER,

@@ -185,7 +185,7 @@
               "schedule_entity": "Bir schedule.* veya calendar.* varlığı seçin. Program varlıkları için zaman aralığı verileri, aralığın özniteliklerinden okunur. Takvim varlıkları için zaman aralığı verileri, etkinliğin description alanından YAML olarak okunur. Desteklenen anahtarlar: iklim öznitelikleri ve meta anahtarlar.",
               "schedule_fallback_payload": "Ana programın etkin blokları dışında onun yerine geçer, böylece kesintisiz 24/7 programlara gerek kalmaz. Baypas katmanı her zamanki gibi çalışmaya devam eder ve etkinken bunu geçersiz kılar. Yukarıdakiyle aynı YAML biçimi (ör. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "İsteğe bağlı daha yüksek öncelikli katman (örn. bir tatil takvimi). Etkin olduğunda, zaman aralığı verileri ana programı geçersiz kılar. Zaman aralığı verileri aynı şekilde okunur: schedule.* varlıkları için öznitelikler, calendar.* varlıkları için YAML açıklaması.",
-              "retain_service_changes_schedule": "Hizmet aracılığıyla değiştirilen ana programı, baypası ve yedek durumu yeniden başlatmadan sonra korur. Aksi takdirde yapılandırılmış varsayılanlara sıfırlanır.",
+              "retain_service_changes_schedule": "Hizmet aracılığıyla değiştirilen ana programı, baypası, yedek durumu ve manuel tutma süresini yeniden başlatmadan sonra korur. Aksi takdirde yapılandırılmış varsayılanlara sıfırlanır.",
               "ignore_off_members_schedule": "Program, şu anda kapalı olan üyeleri AÇMAZ.",
               "schedule_hold_duration": "Manuel bir değişikliğin (örn. sıcaklık veya grubu elle açıp kapatma) ne kadar süre tutulacağı; bu sürenin sonunda program o sırada geçerli olan zaman dilimiyle devam eder. 0 değeri tutmayı devre dışı bırakır."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Program Tutma Süresini Ayarla",
+      "description": "Manuel tutma süresini ayarlar veya temizler: manuel bir değişikliğin program yeniden devralmadan önce ne kadar süre geçerli kalacağı. Yapılandırılan süreyi geçersiz kılar. 0 olduğunda devam eden bir tutma hemen sona erer.",
+      "fields": {
+        "duration": {
+          "name": "Süre (dakika)",
+          "description": "Dakika cinsinden tutma süresi. 0 tutmayı devre dışı bırakır. Yapılandırılan süreye dönmek için boş bırakın."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Grup Ön Ayarını Ayarla",
       "description": "Grubun çalışma zamanı ön ayarlarını ayarlar, değiştirir veya kaldırır. Bunlar grup ayarlarındaki yapılandırma ön ayarlarına eklenir ve aynı adlı olanın önüne geçer.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Program Varlığı",
-          "description": "Etkin program varlığını yapılandırılan varsayılan programa döndürür ve manuel tutmayı sonlandırır."
+          "description": "Etkin program varlığını ve manuel tutma süresini yapılandırılan varsayılanlara döndürür ve manuel tutmayı sonlandırır."
         },
         "bypass": {
           "name": "Bypass Varlığı",

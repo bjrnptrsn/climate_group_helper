@@ -471,7 +471,8 @@ class BaseServiceCallHandler(ABC):
         """Select entities for a single attribute and build its raw call."""
         entity_ids = self._get_call_entity_ids(attr, value)
         # hvac_mode proceeds even with no capable entities: _process_unsupported_hvac
-        # may generate OFF calls for members that advertise modes but not this one.
+        # may generate OFF or substitute-mode calls for members that advertise
+        # modes but not this one.
         if not entity_ids and attr != ATTR_HVAC_MODE:
             return []
         return self._build_initial_call(attr, value, entity_ids)
@@ -839,7 +840,12 @@ class BaseServiceCallHandler(ABC):
         return [{"service": service, "kwargs": {attr: value}, "entity_ids": entity_ids}]
 
     def _process_unsupported_hvac(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Union strategy: handle members that don't support the requested HVAC mode."""
+        """Union strategy: handle members that don't support the requested HVAC mode.
+
+        Filters them out of every call, switches them off with the OFF action, and
+        with IGNORE switches a member that is off on to a substitute mode where one
+        is defined (`_substitute_mode_calls()`).
+        """
         if self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
             return calls
 
@@ -899,7 +905,69 @@ class BaseServiceCallHandler(ABC):
                         "injected": [ATTR_HVAC_MODE],
                     })
 
+        # `hvac_call` means "the payload carries a mode" only because this is the
+        # first stage — later stages create `set_hvac_mode` calls of their own.
+        if hvac_call and action == UnsupportedHvacAction.IGNORE:
+            filtered.extend(self._substitute_mode_calls(unsupported, target_mode))
+
         return [call for call in filtered if call["entity_ids"]]
+
+    def _substitute_mode_calls(self, unsupported: set[str], target_mode: str) -> list[dict[str, Any]]:
+        """Switch an unsupported member that is off on to a substitute for the target mode.
+
+        Defined for `auto` only: a heater without `auto` runs in `heat`, as under a
+        `heat` target. That mode is its own state, not a target the group holds,
+        so once anything switched it off no `auto` payload would bring it back.
+        It goes on through the same gates as a member that supports the target
+        mode: the handler's capability and isolation check
+        (`_get_capable_entities()`, never the whole member list — the isolation
+        handler blocks no one) and its respect-off hook. Heaters only: a device
+        that can also cool has no known mode to return to.
+
+        The setpoint follows as under `heat`, only when the device has one and a
+        value is known; with `min_temp_off` that stage adds it to the `heat` call.
+        """
+        if target_mode != HVACMode.AUTO:
+            return []
+        base = self._min_temp_off_restore_value()
+        heat_ids: list[str] = []
+        temp_by_value: dict[float, list[str]] = {}
+        for entity_id in self._get_capable_entities(ATTR_HVAC_MODE):
+            if entity_id not in unsupported:
+                continue
+            state = available_state(self._group.aggregator.read_member_state(entity_id))
+            if state is None or state.state != HVACMode.OFF:
+                continue
+            modes = state.attributes.get(ATTR_HVAC_MODES) or []
+            if HVACMode.HEAT not in modes or HVACMode.COOL in modes or HVACMode.HEAT_COOL in modes:
+                continue
+            if self._group.range_template_manager.is_covered_state(state):
+                continue
+            if self._block_unsynced_entity(ATTR_HVAC_MODE, HVACMode.HEAT, state):
+                continue
+            heat_ids.append(entity_id)
+            if self._group.min_temp_off or base is None or ATTR_TEMPERATURE not in state.attributes:
+                continue
+            value = self._turn_on_setpoint(entity_id, base)
+            if not within_tolerance(state.attributes.get(ATTR_TEMPERATURE), value):
+                temp_by_value.setdefault(value, []).append(entity_id)
+
+        if not heat_ids:
+            return []
+        result: list[dict[str, Any]] = [{
+            "service": SERVICE_SET_HVAC_MODE,
+            "kwargs": {ATTR_HVAC_MODE: HVACMode.HEAT},
+            "entity_ids": heat_ids,
+            "injected": [ATTR_HVAC_MODE],
+        }]
+        for value, entity_ids in temp_by_value.items():
+            result.append({
+                "service": SERVICE_SET_TEMPERATURE,
+                "kwargs": {ATTR_TEMPERATURE: value},
+                "entity_ids": entity_ids,
+                "injected": [ATTR_TEMPERATURE],
+            })
+        return result
 
     def _process_min_temp_off(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Handle min_temp_off: restructure HVAC_MODE calls for temp-capable devices.
@@ -1676,7 +1744,8 @@ class BaseServiceCallHandler(ABC):
         switched to `auto` in the same batch, so capability decides, not the
         current mode. Without an `hvac_modes` list the capability rule assumes a
         device accepts every mode, `auto` included — the cautious reading of the
-        same assumption.
+        same assumption. A heater that is off is switched on to `heat` with its
+        setpoint by `_substitute_mode_calls()`, not through this rule.
         """
         capability = available_state(self._read_capability_state(entity_id))
         modes = capability.attributes.get(ATTR_HVAC_MODES) if capability else None
@@ -1689,13 +1758,17 @@ class BaseServiceCallHandler(ABC):
 
         Read from the rendered state: a member the Off Template parked reads `off`,
         and one in `heat_cool` or `auto` is not in `SINGLE_SETPOINT_MODES`. A
-        member that is off would be woken by the setpoint.
+        member that is off would be woken by the setpoint — switching it on is a
+        mode call's job (`_substitute_mode_calls()` under `auto`).
         """
         state = available_state(self._group.aggregator.read_member_state(entity_id))
         return state is not None and state.state in SINGLE_SETPOINT_MODES
 
     def _min_temp_off_restore_value(self) -> float | None:
         """Setpoint the min_temp_off restore branch sends when turning a device on.
+
+        `_substitute_mode_calls()` uses it for the same reason when it switches a
+        heater on under `auto`.
 
         An active boost wins over `target_state`: it owns the members while it
         runs and deliberately never writes the target, so the stored value is the

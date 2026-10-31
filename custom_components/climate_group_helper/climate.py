@@ -579,6 +579,10 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         """Handle set_schedule_fallback_payload service."""
         await self.schedule_handler.update_fallback_payload(fallback_payload)
 
+    async def async_service_set_schedule_hold_duration(self, duration: int | None = None) -> None:
+        """Handle set_schedule_hold_duration service."""
+        await self.schedule_hold_manager.update_duration(duration)
+
     async def async_service_set_group_preset(self, payload: Any = None) -> None:
         """Handle set_group_preset service."""
         await self.preset_manager.async_update_runtime_presets(payload)

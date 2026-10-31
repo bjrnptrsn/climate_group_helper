@@ -48,6 +48,7 @@ from .const import (
     ATTR_RUNTIME_GROUP_PRESETS,
     ATTR_SCHEDULE_BYPASS_CLAIMS,
     ATTR_SCHEDULE_FALLBACK_PAYLOAD,
+    ATTR_SCHEDULE_HOLD_DURATION,
     ATTR_SCHEDULE_HOLD_UNTIL,
     ATTR_TARGET_STATE,
     CONF_HUMIDITY_UPDATE_TARGETS,
@@ -64,6 +65,7 @@ from .const import (
     CONF_TEMP_UPDATE_TARGETS,
     CONF_ZONE_SENSOR,
     DOMAIN,
+    MAX_SCHEDULE_HOLD_DURATION,
     SUPPORTED_FEATURES,
     IsolationTrigger,
 )
@@ -337,8 +339,8 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
         group._attr_target_humidity_step = last_attrs.get(ATTR_TARGET_HUMIDITY_STEP)
 
     # Restore schedule changes made via service (main entity, bypass entity,
-    # fallback payload). All three are governed by the same flag — without it
-    # the group falls back to its configured defaults after a restart.
+    # fallback payload, hold duration). All four are governed by the same flag —
+    # without it the group falls back to its configured defaults after a restart.
     if group.config.get(CONF_RETAIN_SERVICE_CHANGES_SCHEDULE):
         if restored_schedule := last_attrs.get(ATTR_ACTIVE_SCHEDULE_ENTITY):
             group.schedule_handler.restore_schedule_entity(restored_schedule)
@@ -370,6 +372,21 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
                     group.entity_id,
                     restored_fallback,
                 )
+
+        # Before the hold deadline restore below: an override of 0 must drop a
+        # persisted deadline, one above 0 keeps it alive under a configured 0.
+        restored_hold = last_attrs.get(ATTR_SCHEDULE_HOLD_DURATION)
+        if (
+            isinstance(restored_hold, int)
+            and not isinstance(restored_hold, bool)
+            and 0 <= restored_hold <= MAX_SCHEDULE_HOLD_DURATION
+        ):
+            group.schedule_hold_manager.restore_duration(restored_hold)
+            _LOGGER.debug(
+                "[%s] Restored schedule hold duration override: %dmin",
+                group.entity_id,
+                restored_hold,
+            )
 
     # Restore last active HVAC mode. Validated here rather than at the consumers:
     # the boost wake-up path writes it straight into a member service call, so an

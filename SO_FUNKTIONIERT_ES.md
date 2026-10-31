@@ -79,7 +79,7 @@ Der Zielzustand ist für die ganze Gruppe gleich. Auf dem Weg zu jedem Gerät wi
 
 - **Gruppen-Offset** verschiebt alle Geräte nach oben oder unten, ohne den Zielzustand darunter zu ändern. Während einer Sperre oder eines Boosts ist er pausiert. Auf das, was du selbst an der Gruppe einstellst, wirkt er nicht: Diese Befehle kommen genau so an, und wer an der Gruppe eine Temperatur setzt, setzt den Gruppen-Offset auf 0 zurück.
 - **Mitglieder-Offsets** verschieben einzelne Geräte, z. B. ein Schlafzimmer, das immer ein Grad kühler laufen soll.
-- **Gerätegrenzen** *(nur Union)*: Ein Gerät, das die Temperatur nicht erreichen kann, wird ausgeschaltet oder auf seinen nächsten Grenzwert gesetzt (**Außerhalb-Bereich-Aktion**). Ein Gerät, das den Modus nicht unterstützt, bleibt, wie es ist, oder wird ausgeschaltet (**Aktion bei nicht unterstütztem HVAC-Modus**).
+- **Gerätegrenzen** *(nur Union)*: Ein Gerät, das die Temperatur nicht erreichen kann, wird ausgeschaltet oder auf seinen nächsten Grenzwert gesetzt (**Außerhalb-Bereich-Aktion**). Ein Gerät, das den Modus nicht unterstützt, bleibt, wie es ist, oder wird ausgeschaltet (**Aktion bei nicht unterstütztem HVAC-Modus**); unter Auto läuft ein Heizkörper ohne Auto stattdessen in Heat.
 - **Bereichsvorlage** macht aus einem Heiz-/Kühlbereich einfaches Heizen oder Kühlen, für Geräte mit nur einem Sollwert.
 - **Aus-Vorlage** schaltet ein Heizgerät ohne Aus-Modus aus, indem es auf Heizen mit seiner eigenen Minimaltemperatur gestellt wird.
 - **Min. Temp bei „Aus“** schickt beim Ausschalten die niedrigste Temperatur des Geräts, für Ventile, die nicht vollständig schließen.
@@ -88,7 +88,7 @@ Welche Geräte einen Befehl bekommen:
 
 - **Befehle, die du der Gruppe gibst,** gehen an jedes Gerät, das sie unterstützt.
 - **Automatische Befehle** (Zeitplan, Sync-Modus) gehen nur an die Geräte, die vom Zielzustand abweichen. **Wiederholung erzwingen** schickt sie trotzdem an alle, für Geräte, die ihren Zustand nicht zuverlässig melden.
-- **Auto** ist das eigene Programm des Geräts: Steht die Gruppe auf Auto, lassen automatische Befehle die Temperatur von Geräten, die Auto können, in Ruhe. Geräte ohne Auto folgen der Gruppentemperatur, solange sie eingeschaltet sind.
+- **Auto** ist das eigene Programm des Geräts: Steht die Gruppe auf Auto, lassen automatische Befehle die Temperatur von Geräten, die Auto können, in Ruhe. Heizkörper ohne Auto laufen in Heat und folgen der Gruppentemperatur.
 - **Verzögerung zwischen Mitglieder-Befehlen** verteilt die Befehle zeitlich, statt sie alle auf einmal zu senden.
 
 ---

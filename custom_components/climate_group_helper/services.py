@@ -21,6 +21,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
 from .const import (
+    ATTR_DURATION,
     ATTR_FALLBACK_PAYLOAD,
     ATTR_INCLUDE_ENTITY_SELECTORS,
     ATTR_INCLUDE_MEMBER_LIST,
@@ -69,6 +70,7 @@ from .const import (
     CONF_WINDOW_MODE,
     ENTITY_SELECTOR_KEYS,
     IDENTITY_KEYS,
+    MAX_SCHEDULE_HOLD_DURATION,
     MEMBER_LIST_KEYS,
     SERVICE_APPLY_CONFIG,
     SERVICE_BOOST,
@@ -77,6 +79,7 @@ from .const import (
     SERVICE_SET_SCHEDULE_BYPASS_ENTITY,
     SERVICE_SET_SCHEDULE_ENTITY,
     SERVICE_SET_SCHEDULE_FALLBACK_PAYLOAD,
+    SERVICE_SET_SCHEDULE_HOLD_DURATION,
     AdoptManualChanges,
     AverageOption,
     CalibrationMode,
@@ -115,6 +118,16 @@ def async_register_services(group: ClimateGroupHelper) -> None:
             SERVICE_SET_SCHEDULE_FALLBACK_PAYLOAD,
             {vol.Optional(ATTR_FALLBACK_PAYLOAD): vol.Any(cv.string, dict, None)},
             "async_service_set_schedule_fallback_payload",
+        )
+        group.platform.async_register_entity_service(
+            SERVICE_SET_SCHEDULE_HOLD_DURATION,
+            {
+                vol.Optional(ATTR_DURATION): vol.Any(
+                    None,
+                    vol.All(vol.Coerce(int), vol.Range(min=0, max=MAX_SCHEDULE_HOLD_DURATION)),
+                ),
+            },
+            "async_service_set_schedule_hold_duration",
         )
         group.platform.async_register_entity_service(
             SERVICE_SET_GROUP_PRESET,

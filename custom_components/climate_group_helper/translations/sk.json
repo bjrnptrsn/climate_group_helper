@@ -185,7 +185,7 @@
               "schedule_entity": "Vyberte entitu schedule.* alebo calendar.*. Pre entity rozvrhu sa dáta slotu čítajú z atribútov slotu. Pre entity kalendára sa dáta slotu čítajú ako YAML z poľa popisu udalosti. Podporované kľúče: klimatické atribúty a meta-kľúče.",
               "schedule_fallback_payload": "Zastupuje hlavný rozvrh mimo jeho aktívnych blokov, takže nepotrebujete súvislé rozvrhy 24/7. Vrstva bypass funguje bez zmeny a počas aktivity ho prepíše. Rovnaký formát YAML ako vyššie (napr. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Voliteľná prioritná vrstva (napr. kalendár dovolenky). Keď je aktívna, jej dáta slotu prepíšu hlavný plán. Dáta slotu sa čítajú rovnako: atribúty pre entity schedule.*, YAML popis pre entity calendar.*.",
-              "retain_service_changes_schedule": "Po reštarte zachová hlavný rozvrh, bypass a náhradný stav zmenené prostredníctvom služby. Inak sa vrátia na nakonfigurované predvolené hodnoty.",
+              "retain_service_changes_schedule": "Po reštarte zachová hlavný rozvrh, bypass, náhradný stav a dobu manuálneho podržania zmenené prostredníctvom služby. Inak sa vrátia na nakonfigurované predvolené hodnoty.",
               "ignore_off_members_schedule": "Plán NEZAPNE členov, ktorí sú momentálne VYPNUTÍ.",
               "schedule_hold_duration": "Ako dlho manuálna zmena (napr. teplota alebo manuálne zapnutie/vypnutie skupiny) vydrží, kým rozvrh znova prevezme vtedy aktuálny časový úsek. 0 podržanie deaktivuje."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Nastaviť dobu podržania rozvrhu",
+      "description": "Nastaví alebo zruší dobu manuálneho podržania: ako dlho platí manuálna zmena, kým rozvrh opäť prevezme riadenie. Prepíše nakonfigurovanú dobu. Pri hodnote 0 prebiehajúce podržanie okamžite skončí.",
+      "fields": {
+        "duration": {
+          "name": "Trvanie (minúty)",
+          "description": "Doba podržania v minútach. 0 podržanie vypne. Ponechajte prázdne pre obnovenie nakonfigurovanej doby."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Nastaviť predvoľbu skupiny",
       "description": "Nastaví, zmení alebo odstráni predvoľby skupiny za behu. Pridávajú sa k predvoľbám z konfigurácie v nastaveniach skupiny a majú prednosť pred rovnomennou.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Entita plánu",
-          "description": "Vráti aktívnu entitu plánu na nakonfigurovaný predvolený plán a ukončí manuálne podržanie."
+          "description": "Vráti aktívnu entitu plánu a dobu manuálneho podržania na nakonfigurované predvolené hodnoty a ukončí manuálne podržanie."
         },
         "bypass": {
           "name": "Entita bypassu",

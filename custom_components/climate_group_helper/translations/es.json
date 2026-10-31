@@ -185,7 +185,7 @@
               "schedule_entity": "Selecciona una entidad schedule.* o calendar.*. Para entidades de programación, los datos del slot se leen de los atributos del slot. Para entidades de calendario, los datos del slot se leen como YAML del campo de descripción del evento. Claves admitidas: atributos climáticos y meta-keys.",
               "schedule_fallback_payload": "Sustituye al horario principal fuera de sus franjas activas, por lo que no necesitas horarios continuos 24/7. La capa de anulación sigue funcionando igual y lo reemplaza mientras está activa. Mismo formato YAML que arriba (p. ej. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Capa de prioridad opcional (p. ej. un calendario de vacaciones). Cuando está activa, sus datos de slot anulan el programa principal. Los datos del slot se leen igual: atributos para entidades schedule.*, descripción YAML para entidades calendar.*.",
-              "retain_service_changes_schedule": "Mantiene el horario principal, el bypass y el estado de reserva cambiados mediante servicio tras un reinicio. De lo contrario, vuelven a los valores predeterminados configurados.",
+              "retain_service_changes_schedule": "Mantiene el horario principal, el bypass, el estado de reserva y la duración de la retención manual cambiados mediante servicio tras un reinicio. De lo contrario, vuelven a los valores predeterminados configurados.",
               "ignore_off_members_schedule": "La Programación NO encenderá los miembros que estén actualmente APAGADOS.",
               "schedule_hold_duration": "Cuánto tiempo se mantiene un cambio manual (p. ej. temperatura, o encender/apagar el grupo manualmente) antes de que el horario retome con el intervalo entonces vigente. 0 desactiva la retención."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Establecer duración de retención del horario",
+      "description": "Establece o borra una duración de retención manual: cuánto tiempo se mantiene un cambio manual antes de que el horario vuelva a tomar el control. Sobrescribe la duración configurada. Con 0, una retención en curso termina de inmediato.",
+      "fields": {
+        "duration": {
+          "name": "Duración (minutos)",
+          "description": "Duración de la retención en minutos. 0 desactiva la retención. Déjalo vacío para restaurar la duración configurada."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Establecer preajuste de grupo",
       "description": "Establece, cambia o elimina los preajustes de ejecución del grupo. Se suman a los preajustes de configuración de los ajustes del grupo y tienen prioridad sobre uno con el mismo nombre.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Entidad de programación",
-          "description": "Revierte la entidad de programación activa al horario predeterminado configurado y finaliza una retención manual."
+          "description": "Revierte la entidad de programación activa y la duración de la retención manual a los valores predeterminados configurados y finaliza una retención manual."
         },
         "bypass": {
           "name": "Entidad de bypass",

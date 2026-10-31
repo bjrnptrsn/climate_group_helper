@@ -185,7 +185,7 @@
               "schedule_entity": "Välj en schedule.*- eller calendar.*-enhet. För schemaenheter läses slot-data från slot-attributen. För kalenderenheter läses slot-data som YAML från händelsens beskrivelsfält. Stödda nycklar: klimatattribut och meta-nycklar.",
               "schedule_fallback_payload": "Träder in för huvudschemat utanför dess aktiva tidsblock, så du slipper heltäckande 24/7-scheman. Bypass-lagret fungerar som vanligt och åsidosätter det medan det är aktivt. Samma YAML-format som ovan (t.ex. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valfritt prioritetslager (t.ex. en semesterkalender). När aktivt ersätter dess slot-data huvudschemat. Slot-data läses på samma sätt: attribut för schedule.*-, YAML-beskrivning för calendar.*-enheter.",
-              "retain_service_changes_schedule": "Behåller huvudschema, bypass och reservtillstånd som ändrats via tjänsten efter en omstart. Annars återställs de till de konfigurerade standardvärdena.",
+              "retain_service_changes_schedule": "Behåller huvudschema, bypass, reservtillstånd och manuell hålltid som ändrats via tjänsten efter en omstart. Annars återställs de till de konfigurerade standardvärdena.",
               "ignore_off_members_schedule": "Schemat kommer INTE att slå på medlemmar som för närvarande är AVSTÄNGDA.",
               "schedule_hold_duration": "Hur länge en manuell ändring (t.ex. temperatur, eller att slå på/av gruppen manuellt) håller innan schemat återtar med det då gällande tidsintervallet. 0 inaktiverar hålltiden."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Ställ in hålltid för schema",
+      "description": "Ställer in eller rensar en manuell hålltid: hur länge en manuell ändring gäller innan schemat tar över igen. Åsidosätter den konfigurerade varaktigheten. Vid 0 avslutas en pågående hålltid direkt.",
+      "fields": {
+        "duration": {
+          "name": "Varaktighet (minuter)",
+          "description": "Hålltid i minuter. 0 inaktiverar hålltiden. Lämna tomt för att återställa den konfigurerade varaktigheten."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Ställ in gruppförinställning",
       "description": "Sätter, ändrar eller tar bort gruppens körtidsförinställningar. De tillkommer till konfigurationsförinställningarna i gruppinställningarna och har företräde framför en med samma namn.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Schemaentitet",
-          "description": "Återställer den aktiva schemaentiteten till det konfigurerade standardschemat och avslutar en manuell hålltid."
+          "description": "Återställer den aktiva schemaentiteten och den manuella hålltiden till de konfigurerade standardvärdena och avslutar en manuell hålltid."
         },
         "bypass": {
           "name": "Bypass-entitet",

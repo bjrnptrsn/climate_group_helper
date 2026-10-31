@@ -185,7 +185,7 @@
               "schedule_entity": "Selecteer een schedule.*- of calendar.*-entiteit. Voor schema-entiteiten worden slot-gegevens gelezen uit de slot-attributen. Voor kalender-entiteiten worden slot-gegevens als YAML gelezen uit het beschrijvingsveld van de gebeurtenis. Ondersteunde sleutels: klimaatkenmerken en meta-sleutels.",
               "schedule_fallback_payload": "Neemt de plaats in van het hoofdschema buiten de actieve blokken, zodat sluitende 24/7-schema's niet nodig zijn. De bypass-laag werkt gewoon door en overschrijft het zolang die actief is. Zelfde YAML-formaat als hierboven (bijv. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optionele prioriteitslaag (bijv. een vakantiekalender). Wanneer actief overschrijven de slot-gegevens het hoofdschema. Slot-gegevens worden op dezelfde manier gelezen: attributen voor schedule.*-, YAML-beschrijving voor calendar.*-entiteiten.",
-              "retain_service_changes_schedule": "Behoudt het hoofdschema, de bypass en de terugvalstatus die via de service zijn gewijzigd na een herstart. Anders worden ze hersteld naar de geconfigureerde standaardwaarden.",
+              "retain_service_changes_schedule": "Behoudt het hoofdschema, de bypass, de terugvalstatus en de handmatige vasthoudperiode die via de service zijn gewijzigd na een herstart. Anders worden ze hersteld naar de geconfigureerde standaardwaarden.",
               "ignore_off_members_schedule": "De Planning zal GEEN leden inschakelen die momenteel UIT staan.",
               "schedule_hold_duration": "Hoe lang een handmatige wijziging (bijv. temperatuur, of de groep handmatig aan/uit zetten) vastgehouden wordt voordat het schema weer overneemt met het dan geldende tijdvak. 0 schakelt de vasthoudperiode uit."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Vasthoudperiode van schema instellen",
+      "description": "Stelt een handmatige vasthoudperiode in of wist deze: hoe lang een handmatige wijziging geldt voordat het schema het weer overneemt. Overschrijft de geconfigureerde duur. Bij 0 eindigt een lopende vasthoudperiode direct.",
+      "fields": {
+        "duration": {
+          "name": "Duur (minuten)",
+          "description": "Vasthoudperiode in minuten. 0 schakelt de vasthoudperiode uit. Laat leeg om de geconfigureerde duur te herstellen."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Groepsvoorinstelling instellen",
       "description": "Stelt de runtime-voorinstellingen van de groep in, wijzigt of verwijdert ze. Ze komen bij de configuratie-voorinstellingen uit de groepsinstellingen en gaan vóór een gelijknamige.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Schema-entiteit",
-          "description": "Zet de actieve schema-entiteit terug naar het geconfigureerde standaardschema en beëindigt een handmatige vasthoudperiode."
+          "description": "Zet de actieve schema-entiteit en de handmatige vasthoudperiode terug naar de geconfigureerde standaardwaarden en beëindigt een handmatige vasthoudperiode."
         },
         "bypass": {
           "name": "Bypass-entiteit",

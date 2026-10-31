@@ -79,7 +79,7 @@ The target is the same for the whole group. On the way to each device, it is adj
 
 - **Group Offset** shifts every device up or down, without changing the target underneath. It is paused while a block or a boost is active. It does not apply to what you set on the group yourself: those commands arrive exactly as given, and setting a temperature on the group resets the Group Offset to 0.
 - **Member Offsets** shift individual devices, e.g. a bedroom that should always run a degree cooler.
-- **Device limits** *(Union only)*: a device that cannot reach the temperature is turned off or set to its nearest limit (**Out-of-Bounds Action**). A device that does not support the mode is left alone or turned off (**Unsupported HVAC Mode Action**).
+- **Device limits** *(Union only)*: a device that cannot reach the temperature is turned off or set to its nearest limit (**Out-of-Bounds Action**). A device that does not support the mode is left alone or turned off (**Unsupported HVAC Mode Action**); under Auto, a heater without Auto runs in Heat instead.
 - **Range Template** turns a heat/cool range into plain heat or cool for devices that only have a single setpoint.
 - **Off Template** turns a heater that has no off mode off by setting it to heat at its own minimum temperature.
 - **Minimum Temperature when Off** sends a device's lowest temperature when turning it off, for valves that don't close fully.
@@ -88,7 +88,7 @@ Which devices get a command:
 
 - **Commands you give the group** go to every device that supports them.
 - **Automatic commands** (schedule, Sync Mode) go only to the devices that differ from the target. **Force Retry** sends them to all devices anyway, for devices that don't reliably report their state.
-- **Auto** is the device's own program: while the group is on Auto, automatic commands leave the temperature of devices that can do Auto alone. Devices without Auto follow the group's temperature while they are on.
+- **Auto** is the device's own program: while the group is on Auto, automatic commands leave the temperature of devices that can do Auto alone. Heaters without Auto run in Heat and follow the group's temperature.
 - **Member Command Delay** paces the commands out instead of sending them all at once.
 
 ---

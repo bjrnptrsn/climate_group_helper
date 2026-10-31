@@ -185,7 +185,7 @@
               "schedule_entity": "Sélectionnez une entité schedule.* ou calendar.*. Pour les entités de programmation, les données du créneau sont lues dans les attributs du créneau. Pour les entités de calendrier, les données du créneau sont lues en YAML depuis le champ de description de l'événement. Clés supportées : attributs climatiques et méta-clés.",
               "schedule_fallback_payload": "Remplace la planification principale en dehors de ses plages actives, ce qui évite les plannings 24h/24 et 7j/7 sans interruption. La couche de dérogation continue de fonctionner normalement et la remplace tant qu'elle est active. Même format YAML que ci-dessus (par ex. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Couche de priorité optionnelle (ex. un calendrier de vacances). Lorsqu'elle est active, ses données de créneau remplacent le programme principal. Les données du créneau sont lues de la même façon : attributs pour les entités schedule.*, description YAML pour les entités calendar.*.",
-              "retain_service_changes_schedule": "Conserve la planification principale, la dérogation et l'état de secours modifiés via le service après un redémarrage. Sinon, ils reviennent aux valeurs par défaut configurées.",
+              "retain_service_changes_schedule": "Conserve la planification principale, la dérogation, l'état de secours et la durée de maintien manuel modifiés via le service après un redémarrage. Sinon, ils reviennent aux valeurs par défaut configurées.",
               "ignore_off_members_schedule": "La Planification n'allumera PAS les membres actuellement ÉTEINTS.",
               "schedule_hold_duration": "Durée pendant laquelle un changement manuel (p. ex. température, ou allumer/éteindre le groupe à la main) est maintenu avant que le planning ne reprenne avec le créneau alors en cours. 0 désactive le maintien."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Définir la durée de maintien du planning",
+      "description": "Définit ou efface une durée de maintien manuel : combien de temps une modification manuelle est conservée avant que le planning reprenne la main. Remplace la durée configurée. À 0, un maintien en cours se termine immédiatement.",
+      "fields": {
+        "duration": {
+          "name": "Durée (minutes)",
+          "description": "Durée du maintien en minutes. 0 désactive le maintien. Laisser vide pour restaurer la durée configurée."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Définir le préréglage de groupe",
       "description": "Définit, modifie ou supprime les préréglages d'exécution du groupe. Ils s'ajoutent aux préréglages de configuration des paramètres du groupe et prévalent sur un préréglage portant le même nom.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Entité de planification",
-          "description": "Rétablit l'entité de planification active à la planification par défaut configurée et met fin à un maintien manuel."
+          "description": "Rétablit l'entité de planification active et la durée de maintien manuel aux valeurs par défaut configurées et met fin à un maintien manuel."
         },
         "bypass": {
           "name": "Entité de dérogation",

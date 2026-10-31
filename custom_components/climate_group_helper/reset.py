@@ -24,14 +24,15 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-def _reset_schedule(group: ClimateGroupHelper) -> Awaitable[None] | None:
-    """Revert the schedule entity to the configured one and end a manual hold.
+async def _reset_schedule(group: ClimateGroupHelper) -> None:
+    """Revert the schedule entity and the hold duration to the configured ones and end a manual hold.
 
     The hold belongs to this field: the reset re-applies the current slot, and a
     running hold would defer exactly that re-apply until it expires.
     """
     group.schedule_hold_manager.clear()
-    return group.schedule_handler.update_schedule_entity(None, apply=False)
+    await group.schedule_hold_manager.update_duration(None, apply=False)
+    await group.schedule_handler.update_schedule_entity(None, apply=False)
 
 
 async def async_reset_group(
@@ -44,7 +45,7 @@ async def async_reset_group(
     fallback: bool = False,
     presets: bool = False,
 ) -> None:
-    """Reset runtime states (boost, offset, schedule, bypass, fallback, presets).
+    """Reset runtime states (boost, offset, schedule incl. hold duration, bypass, fallback, presets).
 
     `everything` resets every option and makes the other
     flags redundant. A call that selects nothing at all is rejected rather than

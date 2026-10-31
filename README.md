@@ -44,17 +44,13 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 
 **Climate Group Helper acts as the intelligent "Logic Layer"** for your home. It wraps your existing devices into a single controller that handles the "If this, then that" behavior for you automatically.
 
-> [!TIP]
-> **Not just for groups!** Even if you have only **one thermostat**, you can use this helper to add premium features like Window Control and Sensor Calibration to basic hardware.
-
-> [!TIP]
-> **Works with other integrations!** CGH works with any `climate.*` entity — including those from [Better Thermostat](https://github.com/KartoffelToby/better_thermostat) or [Versatile Thermostat](https://github.com/jmcollin78/versatile_thermostat). Let them handle per-device regulation (MPC, PID, TPI), while CGH orchestrates the multi-room logic. See [EXAMPLES.md](EXAMPLES.md) for setup examples.
+It works with any `climate.*` entity — a single thermostat as well as a whole group, and thermostats that already run their own regulation too ([Example 13](EXAMPLES.md#13-thermostats-with-their-own-regulation)).
 
 ## Quick Start
 
 | Step | Action |
 | :--- | :--- |
-| **1. Install** | Add via **HACS** and restart Home Assistant. <br> [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bjrnptrsn&repository=climate_group_helper&category=integration) |
+| **1. Install** | Add via the **Marketplace** (Home Assistant 2026.11 or newer) or **HACS** (older versions) and restart Home Assistant. <br> [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bjrnptrsn&repository=climate_group_helper&category=integration) |
 | **2. Add** | Go to *Settings → Devices & Services → Helpers → Create Helper*. |
 | **3. Setup** | Give your group a name and select your thermostats (TRVs, ACs, heaters — mix freely). |
 | **4. Done!** | You now have a single entity controlling everything. <br> *Tip: Enable **Advanced Features** in the options to unlock all features.* |
@@ -67,7 +63,7 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 </p>
 
 <details>
-<summary>Manual installation (without HACS)</summary>
+<summary>Manual installation (without Marketplace or HACS)</summary>
 
 1. Download the [latest release](https://github.com/bjrnptrsn/climate_group_helper/releases).
 2. Copy `custom_components/climate_group_helper` to your `custom_components` folder.
@@ -81,7 +77,6 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 
 - [Core Concept](#core-concept-the-unified-foundation)
   - [Simple Mode](#simple-mode-core-capabilities)
-- [How It Works](HOW_IT_WORKS.md)
 - [Advanced Features](#power-user-advanced-features)
   - [Master Entity](#master-entity)
   - [External Sensors](#external-sensors)
@@ -95,7 +90,6 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
   - [Member Offsets](#member-offsets)
   - [Member Isolation](#member-isolation)
   - [Member Template](#member-template)
-- [Examples](EXAMPLES.md)
 - [Management Entities (Switch & Slider)](#management-entities-switch--slider)
   - [Main Switch](#main-switch)
   - [Group Offset](#group-offset)
@@ -110,8 +104,7 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 
 The Climate Group Helper provides a robust "Single Source of Truth" for your climate devices. It creates a unified management layer that ensures your devices work together as one cohesive system while maintaining accurate room states.
 
-> [!TIP]
-> **How do the features fit together?** [HOW_IT_WORKS.md](HOW_IT_WORKS.md) shows who decides what your devices do, what takes priority, and why the group sometimes shows something different from what you set.
+How the features fit together — who decides what your devices do, what takes priority, and why the group sometimes shows something different from what you set — is explained in [HOW_IT_WORKS.md](HOW_IT_WORKS.md). Ready-made setups for common situations are in [EXAMPLES.md](EXAMPLES.md).
 
 ### Simple Mode (Core Capabilities)
 
@@ -130,10 +123,7 @@ These features are active by default and provide a streamlined "Plug & Play" exp
 
 ## Power User: Advanced Features
 
-Unlock the full potential of your climate system. These specialized features are enabled by toggling **Advanced Features** in the group's configuration. Toggling back to Simple Mode hides these options and puts the features into **hibernation** — they stop running functionally, but your configuration remains intact and will be immediately restored when you switch back.
-
-> [!NOTE]
-> **New groups start in Simple Mode.** Existing groups upgraded from earlier versions keep **Advanced Features** active automatically so nothing breaks.
+Unlock the full potential of your climate system. New groups start in Simple Mode; these specialized features are enabled by toggling **Advanced Features** in the group's configuration. Toggling back to Simple Mode hides these options and puts the features into **hibernation** — they stop running functionally, but your configuration remains intact and is restored when you switch back.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/configuration_advanced.png" alt="Climate Group Helper Advanced Configuration Options Overview" width="400"/>
@@ -228,9 +218,9 @@ Schedules can be switched on the fly via service (e.g. for "Vacation" or "Guest"
 *   **Calendar support:** `calendar.*` entities work the same as `schedule.*` entities. Slot data is read from each event's **Description** field using the same `key: value` YAML format as schedule Additional data. See [Schedule Configuration & Meta-Keys](#schedule-configuration--meta-keys) for details.
 *   **Bypass Layer:** A second `schedule.*` or `calendar.*` entity can act as a **priority layer** on top of your main schedule. When a bypass slot is active, its attributes override the main slot (bypass wins on conflicts).
 *   **Inactive Schedule Fallback:** An optional state (e.g. night setback or turning off) that stands in for the main schedule outside its active slots — no need for gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active.
-*   **Retain Changes Made via Service (Schedule):** Ensures that the main schedule, bypass entity and fallback state — when changed via service — survive a Home Assistant restart. If disabled, the group always reverts to its configured defaults after a restart.
+*   **Retain Changes Made via Service (Schedule):** Ensures that the main schedule, bypass entity, fallback state and manual hold duration — when changed via service — survive a Home Assistant restart. If disabled, the group always reverts to its configured defaults after a restart.
 *   **Respect Member Off State (Schedule):** Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on.
-*   **Manual Hold:** A manual adjustment (temperature change, or switching the group on/off) holds for a configurable duration, after which the schedule resumes with the slot that is current *then*. A duration of `0` disables the hold — your change then stays until the next slot starts. Resetting the schedule with the reset service ends a running hold early.
+*   **Manual Hold:** A manual adjustment (temperature change, or switching the group on/off) holds for a configurable duration, after which the schedule resumes with the slot that is current *then*. A duration of `0` disables the hold — your change then stays until the next slot starts. Resetting the schedule with the reset service ends a running hold early. The duration can also be changed at runtime via service.
 
 > **Note — turning off outside active slots:** to shut the group down in the inactive period, set `hvac_mode: off` in the fallback. Do **not** use the `turn_off` meta-key here — it is a one-shot trigger for the Main Switch block that stays active until a slot explicitly releases it with `turn_off: false`, so a `turn_off: true` fallback would keep the next heating slot blocked.
 
@@ -508,6 +498,7 @@ When everything agrees, it is empty. Two details make it trustworthy:
 *   **`runtime_group_presets`** — the runtime presets currently set via service, with their values. Absent when there are none.
 *   **`boost_temperature` / `boost_until`** — setpoint and end time of a running boost.
 *   **`schedule_hold_until`** — when a manual change stops holding and the schedule takes over again. Absent when nothing is holding.
+*   **`schedule_hold_duration`** — the manual hold duration in minutes, when it was set via service. Absent while the duration from the group's settings applies.
 
 ## Configuration Options
 
@@ -547,7 +538,7 @@ When everything agrees, it is empty. Two details make it trustworthy:
 
 | Action | Behavior |
 |--------|----------|
-| **Ignore (Default)** | Member stays in its current mode if it doesn't support the target mode. While the group is on Auto, such a member still follows the group's temperature as long as it is on. |
+| **Ignore (Default)** | Member stays in its current mode if it doesn't support the target mode. Exception: while the group is on Auto, heaters without their own Auto mode run in Heat and follow the group's temperature. |
 | **Turn Off** | Member is turned `off` when it doesn't support the target mode (e.g. AC when heating). |
 
 ### Temperature & Humidity Settings
@@ -611,8 +602,8 @@ In Offset mode, each entity you write to is matched automatically — through th
 | **Fallback State for Inactive Main Schedule / Calendar (YAML)** | *(Optional)* State that stands in for the main schedule outside its active slots (e.g. night setback or complete turn off). The bypass layer overrides it while active. |
 | **Bypass Schedule / Calendar Entity** | *(Optional)* A second `schedule.*` or `calendar.*` entity acting as a priority layer. When a bypass slot is active, it overrides the main schedule. |
 | **Respect Member Off State (Schedule)** | Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on. Direct group commands always reach all members regardless of this setting. |
-| **Retain Changes Made via Service (Schedule)** | Keep the main schedule, bypass entity and fallback state across restarts when changed via service. Without this, the group always reverts to its configured defaults on restart. |
-| **Manual Hold Duration** | How long a manual adjustment (temperature, or switching the group on/off) holds before the schedule resumes with the then-current slot. `0` disables the hold. |
+| **Retain Changes Made via Service (Schedule)** | Keep the main schedule, bypass entity, fallback state and manual hold duration across restarts when changed via service. Without this, the group always reverts to its configured defaults on restart. |
+| **Manual Hold Duration** | How long a manual adjustment (temperature, or switching the group on/off) holds before the schedule resumes with the then-current slot. `0` disables the hold. Can be overridden at runtime via service. |
 
 ### Group Presets
 
@@ -755,7 +746,7 @@ Resets temporary overrides and runtime state back to their configured defaults. 
 | `everything` | No | Resets all options below at once. The individual fields are then ignored. |
 | `boost` | No | Aborts an active boost override and restores the group target state. |
 | `offset` | No | Resets the global group temperature offset to 0.0. |
-| `schedule` | No | Reverts the active schedule entity to the configured default schedule and ends a manual hold, so the current slot applies right away. |
+| `schedule` | No | Reverts the active schedule entity and the manual hold duration to their configured defaults and ends a manual hold, so the current slot applies right away. |
 | `bypass` | No | Reverts the active bypass entity to the configured default and unwinds bypass adjustments. |
 | `fallback` | No | Reverts the schedule fallback payload to the configured default. |
 | `presets` | No | Removes all runtime presets. The config presets stay as they are. |
@@ -823,6 +814,28 @@ data:
     hvac_mode: heat
 ```
 
+### `climate_group_helper.set_schedule_hold_duration`
+
+Change the **Manual Hold** duration at runtime, without editing the group's settings. The group's settings stay as they are; the value you set here applies on top of them until you clear it.
+
+**Service Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `duration` | No | Hold duration in minutes, `0` to `480`. `0` turns the hold off, even if the group's settings name a duration. If omitted, the group returns to the duration from its settings. |
+
+*   **A running hold keeps its end time.** A new duration applies from the next manual change. Only `0` ends a running hold right away, and the current slot takes over.
+*   **After a restart** the duration you set is kept only with **Retain Changes Made via Service (Schedule)** enabled. With that option on, it also stays in effect when you later change the duration in the group's settings — call this service without a duration, or reset the schedule with the reset service, to return to the configured value.
+
+**Example:**
+```yaml
+service: climate_group_helper.set_schedule_hold_duration
+target:
+  entity_id: climate.my_group
+data:
+  duration: 120
+```
+
 ### `climate_group_helper.set_group_preset`
 
 Create, change, or remove the group's runtime presets (see [Group Presets](#group-presets)). A call changes only the presets it names; every other preset stays as it is. With "Retain Changes Made via Service (Presets)" enabled, the runtime presets are kept across Home Assistant restarts.
@@ -863,6 +876,8 @@ data:
 
 Apply a portable JSON configuration to a group. This is useful for copying logic settings between groups or restoring a backup from a configuration sensor.
 
+**Afterwards, open the group's settings and save once.** The service applies what you hand it as is; only the settings dialog checks that the combination makes sense and points out anything that needs fixing.
+
 **Service Fields:**
 
 | Field | Required | Description |
@@ -875,9 +890,6 @@ By default, only logic settings (Sync Modes, Window Control, Schedules, etc.) ar
 
 > [!IMPORTANT]
 > **Reload Behavior:** Calling this service triggers a full reload of the group entity. All active, non-persisted timers (e.g., Boost, Window delays) will be reset immediately. This is the same behavior as when making changes through the UI.
-
-> [!TIP]
-> **Open the group's settings afterwards and save once.** The service applies what you hand it, while the settings dialog additionally checks that the combination makes sense and points out anything that needs fixing.
 
 ## Backup & Migration
 
@@ -900,6 +912,8 @@ data:
   include_entity_selectors: false
 ```
 
+3. Open the **target** group's settings and save once.
+
 ## Troubleshooting
 
 ### Issues after updating?
@@ -907,7 +921,7 @@ If you experience strange behavior after an update (e.g. settings not saving), f
 
 ### Debug Logging
 
-#### Option 1: Via UI (Instant)
+#### Option 1: Via UI (for issues you can reproduce)
 1. Go to **Settings** > **Devices & Services** > **Devices**.
 2. Search for your **Climate Group** and click it.
 3. In the **Device info** panel, click the **Climate Group Helper** link (next to the icon).
@@ -915,7 +929,7 @@ If you experience strange behavior after an update (e.g. settings not saving), f
 5. Reproduce the issue, then disable logging. The file will download automatically.
    *(Note: For startup-related issues, restart HA after enabling logging.)*
 
-#### Option 2: Via YAML (Manual)
+#### Option 2: Via YAML (for sporadic issues)
 Add this to your `configuration.yaml` (requires restart):
 
 ```yaml
@@ -925,11 +939,15 @@ logger:
     custom_components.climate_group_helper: debug
 ```
 
-#### Sharing the log
+Debug logging then stays active permanently, across restarts — so when an issue shows up that you can't trigger on purpose, the log already contains the details. Remove the entry again once you're done, as the log grows considerably.
+
+#### Finding and sharing the log
+Go to **Settings** > **System** > **Logs**. The page shows a condensed list of errors and warnings by default — debug entries only appear after selecting **Show raw logs** in the **⋮ menu**. The download button next to it saves the log as a file.
+
 Ideally, share the full log file. If you prefer not to share unrelated data, you can strip it down to only the integration's entries:
 
 ```bash
-grep 'climate_group_helper' home-assistant.log > cgh.log
+grep 'climate_group_helper' home-assistant_*.log > cgh.log
 ```
 
 ## Contributing

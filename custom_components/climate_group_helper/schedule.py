@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace
 from datetime import timedelta
@@ -705,29 +706,81 @@ class ScheduleHoldManager:
         self._group = group
         self._hass = group.hass
         self._timer: Any = None
-        self._duration = self._resolve_duration()
+        self._config_duration = self._resolve_config_duration()
+        # Runtime override in minutes (service: set_schedule_hold_duration).
+        # 0 is a valid override — it disables the hold; only None falls back.
+        self._duration_override: int | None = None
         _LOGGER.debug(
-            "[%s] Schedule hold initialized: duration=%.0fs",
-            group.log_id, self._duration,
+            "[%s] Schedule hold initialized: duration=%dmin",
+            group.log_id, self.duration_minutes,
         )
 
-    def _resolve_duration(self) -> float:
-        """Return the configured hold duration in seconds (0 = disabled)."""
-        if not self._group.advanced_mode:
-            return 0.0
+    def _resolve_config_duration(self) -> int:
+        """Return the configured hold duration in minutes (0 = disabled).
+
+        The options flow stores a float, and `apply_config` may have stored
+        anything — an unusable value disables the hold instead of raising.
+        """
         try:
             minutes = float(self._group.config.get(CONF_SCHEDULE_HOLD_DURATION, 0))
         except (TypeError, ValueError):
-            return 0.0
-        return max(0.0, minutes) * 60.0
+            return 0
+        # JSON accepts NaN/Infinity, and int() raises on both.
+        if not math.isfinite(minutes):
+            return 0
+        return max(0, int(minutes))
+
+    @property
+    def duration_override(self) -> int | None:
+        """Return the runtime override in minutes, or None when the config applies."""
+        return self._duration_override
+
+    @property
+    def duration_minutes(self) -> int:
+        """Return the effective hold duration in minutes (0 outside Advanced Mode)."""
+        if not self._group.advanced_mode:
+            return 0
+        if self._duration_override is not None:
+            return self._duration_override
+        return self._config_duration
+
+    def restore_duration(self, minutes: int) -> None:
+        """Restore the runtime override from persisted state.
+
+        Must run before `restore()`, which drops a persisted deadline when the
+        effective duration is 0.
+        """
+        self._duration_override = minutes
+
+    async def update_duration(self, minutes: int | None, apply: bool = True) -> None:
+        """Set or clear the runtime override (service: set_schedule_hold_duration).
+
+        A running hold keeps its deadline — a new duration applies from the next
+        manual change. Only a switch to an effective 0 ends it, and then the
+        current slot applies right away.
+        """
+        self._duration_override = minutes
+        _LOGGER.debug(
+            "[%s] Schedule hold duration %s: %dmin",
+            self._group.entity_id,
+            "reset to configured default" if minutes is None else "override set",
+            self.duration_minutes,
+        )
+        if self.duration_minutes > 0 or self._group.run_state.schedule_hold_until is None:
+            self._group.async_defer_or_update_ha_state()
+            return
+        self.clear()
+        if apply and self._group.schedule_handler.schedule_entity_id:
+            await self._group.schedule_handler.on_slot_change()
 
     def on_target_state_write(self, source: str | None) -> None:
         """Start or renew the hold when a manual source wrote `target_state`."""
-        if self._duration <= 0.0 or source not in self.TRIGGER_SOURCES:
+        if self.duration_minutes <= 0 or source not in self.TRIGGER_SOURCES:
             return
-        deadline = dt_util.utcnow() + timedelta(seconds=self._duration)
+        seconds = self.duration_minutes * 60
+        deadline = dt_util.utcnow() + timedelta(seconds=seconds)
         self._group.run_state = replace(self._group.run_state, schedule_hold_until=deadline)
-        self._start_timer(self._duration, self._on_expired)
+        self._start_timer(seconds, self._on_expired)
         _LOGGER.debug(
             "[%s] Schedule hold started/renewed until %s",
             self._group.entity_id, dt_util.as_local(deadline),
@@ -740,7 +793,7 @@ class ScheduleHoldManager:
         before the startup slot apply, which then applies the current slot.
         """
         deadline = dt_util.parse_datetime(raw) if isinstance(raw, str) else raw
-        if deadline is None or self._duration <= 0.0:
+        if deadline is None or self.duration_minutes <= 0:
             return
         remaining = (deadline - dt_util.utcnow()).total_seconds()
         if remaining <= 0:

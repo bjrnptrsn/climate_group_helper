@@ -18,7 +18,7 @@ Praxisnahe Szenarien, nach Komplexität geordnet. Jedes Beispiel beschreibt die 
   - [10. Sollwerte über einen Dashboard-Schieberegler](#10-sollwerte-über-einen-dashboard-schieberegler)
   - [11. Zeitplan als Ein/Aus, Schieberegler für die Temperaturen](#11-zeitplan-als-einaus-schieberegler-für-die-temperaturen)
   - [12. Kalibrierung durch externen Sensor für TRVs](#12-kalibrierung-durch-externen-sensor-für-trvs)
-  - [13. Better Thermostat / Versatile Thermostat + CGH](#13-better-thermostat--versatile-thermostat--cgh)
+  - [13. Thermostate mit eigener Regelung](#13-thermostate-mit-eigener-regelung)
   - [14. Zeitplan mit temporären lokalen Überschreibungen](#14-zeitplan-mit-temporären-lokalen-überschreibungen)
   - [15. Saisonale Abschaltung per Zeitplan](#15-saisonale-abschaltung-per-zeitplan)
   - [16. Automatikfunktionen für einen Zeitblock pausieren](#16-automatikfunktionen-für-einen-zeitblock-pausieren)
@@ -345,7 +345,7 @@ Der eingebaute Sensor eines TRVs sitzt direkt neben einem heißen Rohr und misst
 
 **Ergebnis:** CGH berechnet den Offset zwischen der internen Messung des TRVs und dem externen Sensor, schreibt ihn in die Kalibrierungs-`number`-Entität und sendet ihn periodisch erneut, um Timeouts bei batteriebetriebenen Geräten zu vermeiden.
 
-> Überspringe dies, wenn deine Geräte bereits von Better Thermostat oder Versatile Thermostat gehandhabt werden — siehe Beispiel 13.
+> Überspringe dies, wenn eine Regelungs-Integration diese Geräte bereits kalibriert — siehe Beispiel 13.
 
 **Variante — SONOFF TRVZB mit eigenem Adaptive Mode:**
 
@@ -365,40 +365,40 @@ Neuere TRVZB-Firmware regelt die Ventilöffnung selbst (*Adaptive Mode* / *Smart
 
 ---
 
-### 13. Better Thermostat / Versatile Thermostat + CGH
+### 13. Thermostate mit eigener Regelung
 
-Du nutzt bereits eine dedizierte Regelungs-Integration (Better Thermostat oder Versatile Thermostat) für gerätespezifische Algorithmen (MPC/PID/TPI) — jedes Gerät regelt sein eigenes Ventil/seinen eigenen Ausgang unabhängig. CGH muss (und sollte im Allgemeinen nicht) darüber einen gemeinsamen Sollwert erzwingen; seine Aufgabe ist die Orchestrierung, die jede Regelungs-Integration nicht selbst übernimmt: Zeitplan, Fenstersteuerung, Anwesenheit, eine kombinierte Übersichts-Entität.
+Du nutzt bereits eine dedizierte Regelungs-Integration (zum Beispiel Better Thermostat oder Versatile Thermostat) — jedes Gerät regelt sein eigenes Ventil/seinen eigenen Ausgang unabhängig. CGH muss (und sollte im Allgemeinen nicht) darüber einen gemeinsamen Sollwert erzwingen; seine Aufgabe ist die Orchestrierung, die jede Regelungs-Integration nicht selbst übernimmt: Zeitplan, Fenstersteuerung, Anwesenheit, eine kombinierte Übersichts-Entität.
 
 **Variante A — unabhängige Räume, nur gemeinsame Orchestrierung (am häufigsten):**
 
-Jeder Raum behält seinen eigenen Sollwert, vollständig verwaltet von seiner eigenen BT/VT-Instanz. CGH liefert nur das, was raumübergreifend geteilt wird.
+Jeder Raum behält seinen eigenen Sollwert, vollständig verwaltet von seinem eigenen geregelten Thermostat. CGH liefert nur das, was raumübergreifend geteilt wird.
 
-**Entitäten:** `climate.bt_living_room_trv`, `climate.bt_bedroom_trv`
+**Entitäten:** `climate.living_room_regulated`, `climate.bedroom_regulated`
 
 | Einstellung | Wert |
 |---|---|
-| Mitglieder | `climate.bt_living_room_trv`, `climate.bt_bedroom_trv` |
+| Mitglieder | `climate.living_room_regulated`, `climate.bedroom_regulated` |
 | Sync-Modus | Deaktiviert |
 | Haupt-Zeitplan / Kalenderentität | `schedule.house_weekly` |
 | Fenstersteuerung | an — hier zentralisieren statt pro Gerät zu konfigurieren |
 | Kalibrierung | aus — die Regelungs-Integration übernimmt das |
 | Externer Temperatursensor | aus — die Regelungs-Integration nutzt ihre eigenen |
 
-**Ergebnis:** Jede BT/VT-Instanz regelt ihr eigenes Gerät weiterhin unabhängig. CGH überträgt nur den `hvac_mode`/`temperature`-Wert des Zeitplans an jeden Raum und übernimmt Fenster/Anwesenheit zentral — es versucht nie, Räume miteinander zu synchronisieren.
+**Ergebnis:** Jedes geregelte Thermostat regelt sein eigenes Gerät weiterhin unabhängig. CGH überträgt nur den `hvac_mode`/`temperature`-Wert des Zeitplans an jeden Raum und übernimmt Fenster/Anwesenheit zentral — es versucht nie, Räume miteinander zu synchronisieren.
 
-**Variante B — ein präzises BT/VT-Gerät führt einfache TRVs (Master/Lock):**
+**Variante B — ein präzise geregeltes Thermostat führt einfache TRVs (Master/Lock):**
 
-Ein Raum hat ein gut kalibriertes BT/VT-Gerät (guter externer Sensor, saubere Regelung) und einen oder mehrere einfache, ungeregelte TRVs anderswo, die einfach dessen Ziel folgen sollen, statt ihre eigene grobe geräteinterne Logik zu nutzen — die einfachen TRVs profitieren vom besseren Sensor des BT/VT-Geräts, ohne selbst BT/VT zu benötigen.
+Ein Raum hat ein gut geregeltes Thermostat (guter externer Sensor, saubere Regelung) und einen oder mehrere einfache, ungeregelte TRVs anderswo, die einfach dessen Ziel folgen sollen, statt ihre eigene grobe geräteinterne Logik zu nutzen — die einfachen TRVs profitieren von dessen besserem Sensor, ohne selbst eine eigene Regelung zu benötigen.
 
-**Entitäten:** `climate.bt_living_room_trv` (Better Thermostat, externer Sensor), `climate.bedroom_trv`, `climate.hallway_trv` (einfache TRVs)
+**Entitäten:** `climate.living_room_regulated` (eigene Regelung, externer Sensor), `climate.bedroom_trv`, `climate.hallway_trv` (einfache TRVs)
 
 | Einstellung | Wert |
 |---|---|
-| Mitglieder | `climate.bt_living_room_trv`, `climate.bedroom_trv`, `climate.hallway_trv` |
-| Master-Gerät | `climate.bt_living_room_trv` |
+| Mitglieder | `climate.living_room_regulated`, `climate.bedroom_trv`, `climate.hallway_trv` |
+| Master-Gerät | `climate.living_room_regulated` |
 | Sync-Modus | Master/Lock |
 
-**Ergebnis:** Die BT/VT-Instanz regelt ihr eigenes Gerät weiterhin über ihren eigenen Algorithmus; ihre resultierende Zieltemperatur wird auch an `climate.bedroom_trv` und `climate.hallway_trv` übertragen, die sie direkt übernehmen. Manuelle Änderungen an den einfachen TRVs werden zurückgesetzt. Vermeide hier `Mirror`/`Mirror-Lock` — sie übernehmen *jede* Änderung von `hvac_mode`/Temperatur eines Mitglieds, als wäre sie beabsichtigte Nutzereingabe, und Versatile Thermostats eigene Fenster-/Sicherheits-/Leistungs-Manager können diese Attribute selbstständig ändern, was dann auf jedes andere Mitglied gespiegelt würde.
+**Ergebnis:** Das geregelte Thermostat regelt sein eigenes Gerät weiterhin über seinen eigenen Algorithmus; seine resultierende Zieltemperatur wird auch an `climate.bedroom_trv` und `climate.hallway_trv` übertragen, die sie direkt übernehmen. Manuelle Änderungen an den einfachen TRVs werden zurückgesetzt. Vermeide hier `Mirror`/`Mirror-Lock` — sie übernehmen *jede* Änderung von `hvac_mode`/Temperatur eines Mitglieds, als wäre sie beabsichtigte Nutzereingabe, und die eigene Fenster-, Sicherheits- oder Leistungslogik einer Regelungs-Integration kann diese Attribute selbstständig ändern, was dann auf jedes andere Mitglied gespiegelt würde.
 
 ---
 
@@ -824,5 +824,5 @@ Ein Thermostat auf seiner Minimaltemperatur gilt als aus, egal wie es dorthin ka
 - **Sync-Modus:** Nutze `Lock`, wenn allein die Vorgabe der Gruppe gelten soll; nutze `Mirror`, wenn manuelle Mitgliedsänderungen übernommen und an alle gespiegelt werden sollen; nutze `Adopt Only` (bzw. *Nur übernehmen*), wenn Änderungen an einem Mitglied das Gruppenziel anpassen sollen, ohne die anderen Geräte anzusteuern; nutze `Mirror` mit eingeschränkten **Sync-Attributen**, wenn nur einige Attribute synchronisiert werden sollen und der Rest in Ruhe gelassen wird (Beispiel 22).
 - **Sperr-Priorität:** Hauptschalter > Fenstersteuerung > Anwesenheitssteuerung — sind mehrere gleichzeitig aktiv, wird nur die Aktion der höchstrangigen an Mitglieder gesendet.
 - **Zeitplan + Boost:** Boost rangiert über dem Zeitplan. Zeitplan-Zeitblock-Änderungen laufen während eines Boosts weiterhin im Hintergrund.
-- **Kalibrierung:** Nutze CGHs eigene Kalibrierung nur, wenn du nicht bereits Better Thermostat oder Versatile Thermostat verwendest — die haben ihre eigene (Beispiel 13).
+- **Kalibrierung:** Nutze CGHs eigene Kalibrierung nur, wenn nicht bereits eine Regelungs-Integration das Gerät kalibriert — die hat ihre eigene (Beispiel 13).
 - **Mehrere Isolationsregeln:** Wenn verschiedene Mitgliedsgeräte unterschiedlich auf denselben Trigger (oder ganz unterschiedliche Trigger) reagieren müssen, füge eine Isolationsregel pro Gerät hinzu — siehe Beispiele 19 und 20.

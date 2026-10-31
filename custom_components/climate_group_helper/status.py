@@ -59,6 +59,7 @@ from .const import (
     ATTR_SCHEDULE_BYPASS_CLAIMS,
     ATTR_SCHEDULE_FALLBACK_PAYLOAD,
     ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE,
+    ATTR_SCHEDULE_HOLD_DURATION,
     ATTR_SCHEDULE_HOLD_UNTIL,
     ATTR_TARGET_STATE,
     ATTR_TOTAL_MEMBER_COUNT,
@@ -332,6 +333,12 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # Manual schedule hold deadline (also the persistence vehicle across restarts)
     if run_state.schedule_hold_until is not None:
         attrs[ATTR_SCHEDULE_HOLD_UNTIL] = run_state.schedule_hold_until.isoformat()
+
+    # Only a runtime override — never the configured value. The restore reads
+    # presence as "set via service"; a configured value here would come back as
+    # an override after the options were changed.
+    if (hold_override := group.schedule_hold_manager.duration_override) is not None:
+        attrs[ATTR_SCHEDULE_HOLD_DURATION] = hold_override
 
     # Persisted schedule bypass claims (for restore)
     if run_state.schedule_bypass_claims:

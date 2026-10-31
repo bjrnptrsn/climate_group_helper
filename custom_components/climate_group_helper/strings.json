@@ -185,7 +185,7 @@
               "schedule_entity": "Select a schedule.* or calendar.* entity. For schedule entities, slot data is read from the slot's attributes. For calendar entities, slot data is read from the event's description field as YAML. Supported keys: climate attributes and meta-keys.",
               "schedule_fallback_payload": "Stands in for the main schedule outside its active slots, so you don't need gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active. Same YAML format as above (e.g. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optional higher-priority layer (e.g. a vacation calendar). When active, its slot data overrides the main schedule. Slot data is read the same way: attributes for schedule.* entities, YAML description for calendar.* entities.",
-              "retain_service_changes_schedule": "Keep main schedule, bypass and fallback state changes made via service after a restart. Otherwise they reset to the configured defaults.",
+              "retain_service_changes_schedule": "Keep main schedule, bypass, fallback state and manual hold duration changes made via service after a restart. Otherwise they reset to the configured defaults.",
               "ignore_off_members_schedule": "The Schedule will NOT turn on members that are currently Off.",
               "schedule_hold_duration": "How long a manual change (e.g. temperature, or switching the group on/off) holds before the schedule resumes with the then-current slot. 0 disables the hold."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Set Schedule Hold Duration",
+      "description": "Sets or clears a manual hold duration: how long a manual change holds before the schedule resumes. Overrides the configured duration. Switching to 0 ends a running hold right away.",
+      "fields": {
+        "duration": {
+          "name": "Duration (minutes)",
+          "description": "Hold duration in minutes. 0 disables the hold. Leave empty to restore the configured duration."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Set Group Preset",
       "description": "Sets, changes, or removes the group's runtime presets. They add to the config presets from the group settings and take precedence over one of the same name.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Schedule Entity",
-          "description": "Reverts the active schedule entity to the configured default schedule and ends a manual hold."
+          "description": "Reverts the active schedule entity and the manual hold duration to the configured defaults and ends a manual hold."
         },
         "bypass": {
           "name": "Bypass Entity",

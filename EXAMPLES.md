@@ -18,7 +18,7 @@ Real-world scenarios, ordered by complexity. Each example describes the situatio
   - [10. Setpoints from a Dashboard Slider](#10-setpoints-from-a-dashboard-slider)
   - [11. Schedule as On/Off, Sliders for the Temperatures](#11-schedule-as-onoff-sliders-for-the-temperatures)
   - [12. External Sensor Calibration for TRVs](#12-external-sensor-calibration-for-trvs)
-  - [13. Better Thermostat / Versatile Thermostat + CGH](#13-better-thermostat--versatile-thermostat--cgh)
+  - [13. Thermostats with Their Own Regulation](#13-thermostats-with-their-own-regulation)
   - [14. Schedule with Temporary Local Overrides](#14-schedule-with-temporary-local-overrides)
   - [15. Seasonal Shutdown via Schedule](#15-seasonal-shutdown-via-schedule)
   - [16. Pausing Automatic Features for One Slot](#16-pausing-automatic-features-for-one-slot)
@@ -345,7 +345,7 @@ A TRV's built-in sensor sits right next to a hot pipe and reads too high. Correc
 
 **Result:** CGH computes the offset between the TRV's internal reading and the external sensor, writes it to the calibration `number` entity, and re-sends it periodically to prevent battery-device timeouts.
 
-> Skip this if your devices are already handled by Better Thermostat or Versatile Thermostat — see Example 13.
+> Skip this if a regulation integration already calibrates these devices — see Example 13.
 
 **Variant — SONOFF TRVZB with its own Adaptive Mode:**
 
@@ -365,40 +365,40 @@ Newer TRVZB firmware regulates the valve opening itself (*Adaptive Mode* / *Smar
 
 ---
 
-### 13. Better Thermostat / Versatile Thermostat + CGH
+### 13. Thermostats with Their Own Regulation
 
-You already use a dedicated regulation integration (Better Thermostat or Versatile Thermostat) for per-device algorithms (MPC/PID/TPI) — each device regulates its own valve/output independently. CGH doesn't need to (and generally shouldn't) force a shared setpoint on top of that; its job is the orchestration each regulation integration doesn't do by itself: Schedule, Window Control, Presence, a combined overview entity.
+You already use a dedicated regulation integration (for example Better Thermostat or Versatile Thermostat) — each device regulates its own valve/output independently. CGH doesn't need to (and generally shouldn't) force a shared setpoint on top of that; its job is the orchestration each regulation integration doesn't do by itself: Schedule, Window Control, Presence, a combined overview entity.
 
 **Variant A — independent rooms, shared orchestration only (most common):**
 
-Each room keeps its own setpoint, managed entirely by its own BT/VT instance. CGH only supplies what's shared across rooms.
+Each room keeps its own setpoint, managed entirely by its own regulated thermostat. CGH only supplies what's shared across rooms.
 
-**Entities:** `climate.bt_living_room_trv`, `climate.bt_bedroom_trv`
+**Entities:** `climate.living_room_regulated`, `climate.bedroom_regulated`
 
 | Setting | Value |
 |---|---|
-| Members | `climate.bt_living_room_trv`, `climate.bt_bedroom_trv` |
+| Members | `climate.living_room_regulated`, `climate.bedroom_regulated` |
 | Sync Mode | Disabled |
 | Main Schedule / Calendar Entity | `schedule.house_weekly` |
 | Window Control | on — centralize this in CGH instead of configuring it per-device |
 | Calibration | off — the regulation integration handles this |
 | External Temperature Sensors | off — the regulation integration uses its own |
 
-**Result:** Each BT/VT instance keeps regulating its own device independently. CGH only pushes the schedule's `hvac_mode`/`temperature` to each room and handles window/presence centrally — it never tries to keep rooms in sync with each other.
+**Result:** Each regulated thermostat keeps regulating its own device independently. CGH only pushes the schedule's `hvac_mode`/`temperature` to each room and handles window/presence centrally — it never tries to keep rooms in sync with each other.
 
-**Variant B — one accurate BT/VT device leads plain TRVs (Master/Lock):**
+**Variant B — one accurately regulated thermostat leads plain TRVs (Master/Lock):**
 
-A room has one well-calibrated BT/VT device (good external sensor, proper regulation) and one or more plain, unregulated TRVs elsewhere that should simply follow its target rather than run their own crude on-device logic — the plain TRVs profit from BT/VT's better sensor without needing BT/VT themselves.
+A room has one well-regulated thermostat (good external sensor, proper regulation) and one or more plain, unregulated TRVs elsewhere that should simply follow its target rather than run their own crude on-device logic — the plain TRVs profit from its better sensor without needing a regulation of their own.
 
-**Entities:** `climate.bt_living_room_trv` (Better Thermostat, external sensor), `climate.bedroom_trv`, `climate.hallway_trv` (plain TRVs)
+**Entities:** `climate.living_room_regulated` (own regulation, external sensor), `climate.bedroom_trv`, `climate.hallway_trv` (plain TRVs)
 
 | Setting | Value |
 |---|---|
-| Members | `climate.bt_living_room_trv`, `climate.bedroom_trv`, `climate.hallway_trv` |
-| Master Entity | `climate.bt_living_room_trv` |
+| Members | `climate.living_room_regulated`, `climate.bedroom_trv`, `climate.hallway_trv` |
+| Master Entity | `climate.living_room_regulated` |
 | Sync Mode | Master/Lock |
 
-**Result:** The BT/VT instance keeps regulating its own device via its own algorithm; its resulting target temperature is also pushed to `climate.bedroom_trv` and `climate.hallway_trv`, which just apply it directly. Manual changes on the plain TRVs are reverted. Avoid `Mirror`/`Mirror-Lock` here — they adopt *any* member's `hvac_mode`/temperature change as if it were deliberate user input, and Versatile Thermostat's own window/safety/power managers can change those attributes on their own, which would get mirrored to every other member.
+**Result:** The regulated thermostat keeps regulating its own device via its own algorithm; its resulting target temperature is also pushed to `climate.bedroom_trv` and `climate.hallway_trv`, which just apply it directly. Manual changes on the plain TRVs are reverted. Avoid `Mirror`/`Mirror-Lock` here — they adopt *any* member's `hvac_mode`/temperature change as if it were deliberate user input, and a regulation integration's own window, safety or power handling can change those attributes on its own, which would get mirrored to every other member.
 
 ---
 
@@ -821,5 +821,5 @@ A thermostat standing at its minimum temperature counts as off no matter how it 
 - **Sync Mode:** use `Lock` if the group should be the single source of truth; use `Mirror` if manual member changes should be adopted and mirrored to peers; use `Adopt Only` if member changes should update the group target without touching other devices; use `Mirror` with limited **Sync Attributes** when only some attributes should sync and the rest be left alone (Example 22).
 - **Blocking priority:** Main Switch > Window Control > Presence Control — if several are active at once, only the highest-ranked one's action is sent to members.
 - **Schedule + Boost:** Boost outranks the schedule. Schedule slot changes still run in the background during a boost.
-- **Calibration:** only use CGH's own calibration if you're not already using Better Thermostat or Versatile Thermostat — they handle their own (Example 13).
+- **Calibration:** only use CGH's own calibration if no regulation integration already calibrates the device — it handles its own (Example 13).
 - **Multiple Isolation Rules:** when different member devices need different reactions to the same trigger (or different triggers entirely), add one isolation rule per device — see Examples 19 and 20.

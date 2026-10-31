@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.17.0 🎃 2026-10-31
+
+### ✨ Improvements
+
+*   **Ready for Home Assistant 2026.11**: The integration runs on Home Assistant 2026.11 from the day it is released.
+
+*   **Change the Manual Hold Duration at Runtime**: A new service changes how long a manual change holds before the schedule takes over again, without editing the group's settings.
+
+### 🐛 Bug Fixes
+
+*   **Heaters Without Auto Run in Heat**: While the group is on Auto, heaters without their own Auto mode now run in Heat with the group's temperature, also after a window, presence, the main switch or isolation switched them off.
+
+*   **Card Ignores a Tap on the Selected Option**: Tapping the mode, fan, swing or horizontal swing that is already selected no longer ends a running boost or starts the schedule's manual hold.
+
 ## 1.16.1 - 2026-10-25
 
 ### 🐛 Bug Fixes

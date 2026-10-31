@@ -49,6 +49,25 @@ set_schedule_fallback_payload:
         object:
       required: false
 
+set_schedule_hold_duration:
+  name: Set Schedule Hold Duration
+  description: "Sets or clears a manual hold duration: how long a manual change holds before the schedule resumes. Overrides the configured duration. Switching to 0 ends a running hold right away."
+  target:
+    entity:
+      integration: climate_group_helper
+      domain: climate
+  fields:
+    duration:
+      name: Duration (minutes)
+      description: Hold duration in minutes. 0 disables the hold. Leave empty to restore the configured duration.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 480
+          step: 5
+          unit_of_measurement: "min"
+
 set_group_preset:
   name: Set Group Preset
   description: Sets, changes, or removes the group's runtime presets. They add to the config presets from the group settings and take precedence over one of the same name.
@@ -175,7 +194,7 @@ reset:
       required: false
     schedule:
       name: Schedule Entity
-      description: Reverts the active schedule entity to the configured default schedule and ends a manual hold.
+      description: Reverts the active schedule entity and the manual hold duration to the configured defaults and ends a manual hold.
       selector:
         boolean:
       default: false

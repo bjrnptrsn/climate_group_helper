@@ -185,7 +185,7 @@
               "schedule_entity": "Valitse schedule.* tai calendar.* -entiteetti. Aikatauluentiteeteillä aikavälin tiedot luetaan aikavälin attribuuteista. Kalenterientiteeteillä aikavälin tiedot luetaan tapahtuman description-kentästä YAML-muodossa. Tuetut avaimet: ilmastointiattribuutit ja meta-avaimet.",
               "schedule_fallback_payload": "Korvaa pääaikataulun sen aktiivisten jaksojen ulkopuolella, joten aukottomia 24/7-aikatauluja ei tarvita. Ohituskerros toimii ennallaan ja ohittaa sen ollessaan aktiivinen. Sama YAML-muoto kuin yllä (esim. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Valinnainen korkeamman prioriteetin taso (esim. loma-kalenteri). Kun aktiivinen, sen aikavälin tiedot ohittavat pääaikataulun. Aikavälin tiedot luetaan samalla tavalla: attribuutit schedule.*-entiteeteille, YAML-kuvaus calendar.*-entiteeteille.",
-              "retain_service_changes_schedule": "Säilyttää palvelun kautta muutetun pääaikataulun, ohituksen ja varatilan uudelleenkäynnistyksen jälkeen. Muuten ne palautuvat määritettyihin oletusarvoihin.",
+              "retain_service_changes_schedule": "Säilyttää palvelun kautta muutetun pääaikataulun, ohituksen, varatilan ja manuaalisen pidon keston uudelleenkäynnistyksen jälkeen. Muuten ne palautuvat määritettyihin oletusarvoihin.",
               "ignore_off_members_schedule": "Aikataulu EI kytke päälle jäseniä, jotka ovat tällä hetkellä pois päältä.",
               "schedule_hold_duration": "Kuinka pitkään manuaalinen muutos (esim. lämpötila tai ryhmän käsin päälle/pois kytkeminen) pidetään voimassa, ennen kuin aikataulu jatkaa silloin voimassa olevalla jaksolla. 0 poistaa pidon käytöstä."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Aseta aikataulun pidon kesto",
+      "description": "Asettaa tai poistaa manuaalisen pidon keston: kuinka kauan manuaalinen muutos pysyy voimassa ennen kuin aikataulu jatkaa. Ohittaa määritetyn keston. Arvolla 0 käynnissä oleva pito päättyy heti.",
+      "fields": {
+        "duration": {
+          "name": "Kesto (minuuttia)",
+          "description": "Pidon kesto minuutteina. 0 poistaa pidon käytöstä. Jätä tyhjäksi palauttaaksesi määritetyn keston."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Aseta ryhmän esiasetus",
       "description": "Asettaa, muuttaa tai poistaa ryhmän ajonaikaisia esiasetuksia. Ne tulevat ryhmän asetusten konfiguraatioesiasetusten lisäksi ja ohittavat samannimisen.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Aikatauluentiteetti",
-          "description": "Palauttaa aktiivisen aikatauluentiteetin määritettyyn oletusaikatauluun ja päättää manuaalisen pidon."
+          "description": "Palauttaa aktiivisen aikatauluentiteetin ja manuaalisen pidon keston määritettyihin oletusarvoihin ja päättää manuaalisen pidon."
         },
         "bypass": {
           "name": "Ohitusentiteetti",

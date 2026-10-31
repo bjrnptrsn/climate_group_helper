@@ -185,7 +185,7 @@
               "schedule_entity": "Wähle eine schedule.*- oder calendar.*-Entität. Bei Zeitplan-Entitäten werden die Slot-Daten aus den Slot-Attributen gelesen. Bei Kalender-Entitäten werden die Slot-Daten als YAML aus dem Beschreibungsfeld des Ereignisses gelesen. Unterstützte Schlüssel: Klima-Attribute und Meta-Keys.",
               "schedule_fallback_payload": "Springt außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan ein, sodass keine lückenlosen 24/7-Zeitpläne nötig sind. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist. Gleiches YAML-Format wie oben (z.B. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Optionale Prioritätsebene (z.B. ein Urlaubskalender). Wenn aktiv, überschreiben ihre Slot-Daten den Hauptplan. Slot-Daten werden gleich gelesen: Attribute für schedule.*-, YAML-Beschreibung für calendar.*-Entitäten.",
-              "retain_service_changes_schedule": "Behält per Dienst geänderten Haupt-Zeitplan, Bypass und Fallback-Zustand nach einem Neustart bei. Andernfalls wird auf die konfigurierten Standardwerte zurückgesetzt.",
+              "retain_service_changes_schedule": "Behält per Dienst geänderten Haupt-Zeitplan, Bypass, Fallback-Zustand und manuelle Haltezeit nach einem Neustart bei. Andernfalls wird auf die konfigurierten Standardwerte zurückgesetzt.",
               "ignore_off_members_schedule": "Der Zeitplan schaltet keine Mitglieder ein, die aktuell ausgeschaltet sind.",
               "schedule_hold_duration": "Wie lange eine manuelle Änderung (z.B. Temperatur oder die Gruppe von Hand ein-/ausschalten) hält, bevor der Zeitplan mit dem dann aktuellen Zeitblock wieder übernimmt. 0 deaktiviert die Haltezeit."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Zeitplan-Haltezeit setzen",
+      "description": "Setzt oder entfernt eine manuelle Haltezeit: wie lange eine manuelle Änderung gilt, bevor der Zeitplan wieder übernimmt. Überschreibt die konfigurierte Dauer. Bei 0 endet eine laufende Haltezeit sofort.",
+      "fields": {
+        "duration": {
+          "name": "Dauer (Minuten)",
+          "description": "Haltezeit in Minuten. 0 deaktiviert die Haltezeit. Leer lassen, um die konfigurierte Dauer wiederherzustellen."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Gruppen-Preset setzen",
       "description": "Setzt, ändert oder entfernt die Laufzeit-Presets der Gruppe. Sie kommen zu den Konfigurations-Presets aus den Gruppeneinstellungen hinzu und haben Vorrang vor einem gleichnamigen.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Zeitplan-Entität",
-          "description": "Setzt die aktive Zeitplan-Entität auf den konfigurierten Standardzeitplan zurück und beendet eine manuelle Haltezeit."
+          "description": "Setzt die aktive Zeitplan-Entität und die manuelle Haltezeit auf die konfigurierten Standardwerte zurück und beendet eine manuelle Haltezeit."
         },
         "bypass": {
           "name": "Bypass-Entität",

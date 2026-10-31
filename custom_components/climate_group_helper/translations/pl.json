@@ -185,7 +185,7 @@
               "schedule_entity": "Wybierz encję schedule.* lub calendar.*. Dla encji harmonogramu dane slotu są odczytywane z atrybutów slotu. Dla encji kalendarza dane slotu są odczytywane jako YAML z pola opisu zdarzenia. Obsługiwane klucze: atrybuty klimatyczne i meta-klucze.",
               "schedule_fallback_payload": "Zastępuje harmonogram główny poza jego aktywnymi blokami, więc nie potrzebujesz ciągłych harmonogramów 24/7. Warstwa obejścia działa bez zmian i zastępuje go, gdy jest aktywna. Ten sam format YAML co powyżej (np. temperature: 17, hvac_mode: heat).",
               "schedule_bypass_entity": "Opcjonalna warstwa priorytetowa (np. kalendarz wakacyjny). Gdy aktywna, jej dane slotu zastępują główny harmonogram. Dane slotu są odczytywane tak samo: atrybuty dla encji schedule.*, opis YAML dla encji calendar.*.",
-              "retain_service_changes_schedule": "Zachowuje harmonogram główny, obejście i stan zapasowy zmienione przez usługę po restarcie. W przeciwnym razie wracają do skonfigurowanych wartości domyślnych.",
+              "retain_service_changes_schedule": "Zachowuje harmonogram główny, obejście, stan zapasowy i czas ręcznego wstrzymania zmienione przez usługę po restarcie. W przeciwnym razie wracają do skonfigurowanych wartości domyślnych.",
               "ignore_off_members_schedule": "Harmonogram NIE włączy członków, którzy są obecnie WYŁĄCZENI.",
               "schedule_hold_duration": "Jak długo ręczna zmiana (np. temperatura lub ręczne włączenie/wyłączenie grupy) jest utrzymywana, zanim harmonogram ponownie przejmie kontrolę z aktualnym wówczas przedziałem. 0 wyłącza wstrzymanie."
             }
@@ -672,6 +672,16 @@
         }
       }
     },
+    "set_schedule_hold_duration": {
+      "name": "Ustaw czas wstrzymania harmonogramu",
+      "description": "Ustawia lub usuwa czas ręcznego wstrzymania: jak długo obowiązuje ręczna zmiana, zanim harmonogram ponownie przejmie sterowanie. Zastępuje skonfigurowany czas. Przy 0 trwające wstrzymanie kończy się natychmiast.",
+      "fields": {
+        "duration": {
+          "name": "Czas trwania (minuty)",
+          "description": "Czas wstrzymania w minutach. 0 wyłącza wstrzymanie. Pozostaw puste, aby przywrócić skonfigurowany czas."
+        }
+      }
+    },
     "set_group_preset": {
       "name": "Ustaw profil grupy",
       "description": "Ustawia, zmienia lub usuwa profile czasu działania grupy. Są dodawane do profili konfiguracji z ustawień grupy i mają pierwszeństwo przed profilem o tej samej nazwie.",
@@ -740,7 +750,7 @@
         },
         "schedule": {
           "name": "Encja harmonogramu",
-          "description": "Przywraca aktywną encję harmonogramu do skonfigurowanego domyślnego harmonogramu i kończy ręczne wstrzymanie."
+          "description": "Przywraca aktywną encję harmonogramu i czas ręcznego wstrzymania do skonfigurowanych wartości domyślnych i kończy ręczne wstrzymanie."
         },
         "bypass": {
           "name": "Encja obejścia",
