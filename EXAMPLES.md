@@ -371,7 +371,7 @@ You already use a dedicated regulation integration (for example Better Thermosta
 
 **Variant A — independent rooms, shared orchestration only (most common):**
 
-Each room keeps its own setpoint, managed entirely by its own regulated thermostat. CGH only supplies what's shared across rooms.
+Each room keeps its own setpoint, set on its own regulated thermostat. CGH only switches the rooms on and off together.
 
 **Entities:** `climate.living_room_regulated`, `climate.bedroom_regulated`
 
@@ -379,12 +379,14 @@ Each room keeps its own setpoint, managed entirely by its own regulated thermost
 |---|---|
 | Members | `climate.living_room_regulated`, `climate.bedroom_regulated` |
 | Sync Mode | Disabled |
-| Main Schedule / Calendar Entity | `schedule.house_weekly` |
+| Main Schedule / Calendar Entity | `schedule.house_weekly`, with `hvac_mode` only in its slots |
 | Window Control | on — centralize this in CGH instead of configuring it per-device |
+| Window Open Action | Turn Off |
+| Restore When Window Closes | Only the Changed Setting |
 | Calibration | off — the regulation integration handles this |
 | External Temperature Sensors | off — the regulation integration uses its own |
 
-**Result:** Each regulated thermostat keeps regulating its own device independently. CGH only pushes the schedule's `hvac_mode`/`temperature` to each room and handles window/presence centrally — it never tries to keep rooms in sync with each other.
+**Result:** Each regulated thermostat keeps regulating its own device independently. CGH only pushes the schedule's `hvac_mode` to each room and switches the rooms off and back on with the windows — it leaves their setpoints alone.
 
 **Variant B — one accurately regulated thermostat leads plain TRVs (Master/Lock):**
 

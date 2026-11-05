@@ -44,7 +44,7 @@ Klimasteuerung in Home Assistant kann unübersichtlich werden: TRVs messen am He
 
 **Climate Group Helper fungiert als intelligente "Logikschicht"** für dein Zuhause. Er umhüllt deine vorhandenen Geräte mit einem einzigen Controller, der das "Wenn dies, dann das"-Verhalten automatisch für dich übernimmt.
 
-Er funktioniert mit jeder `climate.*`-Entität — mit einem einzelnen Thermostat genauso wie mit einer ganzen Gruppe, und auch mit Thermostaten, die bereits eine eigene Regelung mitbringen ([Beispiel 13](BEISPIELE.md#13-thermostate-mit-eigener-regelung)).
+Er funktioniert mit jeder `climate.*`-Entität — mit einem einzelnen Thermostat genauso wie mit einer ganzen Gruppe.
 
 ## Schnellstart
 
@@ -191,6 +191,7 @@ Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn
 *   **Raum- + Zonensensoren:** Kombiniert einen schnell reagierenden Raumsensor mit einem langsam reagierenden Zonensensor (z. B. für eine ganze Etage). Der Raum ist Teil der Zone: Werden beide genutzt, **muss der Zonensensor den Raumsensor enthalten** (nimm den Raumsensor in die Zonen-Gruppe auf). Sonst gelten die eingestellten Verzögerungen nicht mehr.
 *   **Konfigurierbare Verzögerungen:** Lege eigene Reaktionszeiten für Öffnen und Schließen fest.
 *   **Aktion bei offenem Fenster:** Wähle zwischen vollständigem `aus` oder einem konfigurierbaren Temperatur-Sollwert.
+*   **Wiederherstellung beim Fensterschließen:** Was das Schließen des Fensters sendet. **Gesamter Zielzustand** (Standard) stellt den ganzen Zielzustand der Gruppe wieder her. **Nur die geänderte Einstellung** sendet nur den Modus (Ausschalten) oder die Temperatur (Temperatur setzen).
 *   **Manuelle Änderungen übernehmen:** Was mit Änderungen passiert, die bei offenem Fenster gemacht werden. Sie werden nie sofort angewendet — bis die Fenster schließen, gilt die Aktion bei offenem Fenster.
     *   **Aus:** Änderungen werden verworfen.
     *   **Alle:** Änderungen werden gemerkt und beim Schließen der Fenster angewendet. Änderungen direkt an einem Gerät werden nur gemerkt, wenn ein Sync-Modus aktiv ist, der sie übernimmt.
@@ -447,6 +448,7 @@ Repository.
 *   **Badges** stehen für je eine Funktion: Sie leuchten, solange sie eingreift, und werden grau, solange ein Zeitblock oder ein Preset sie pausiert.
 *   **Mitglieder-Punkte** stehen für je ein Gerät, daneben die Zahl der aktiven Mitglieder; ein Tipp darauf zeigt die vollständige Liste. Der größere Punkt ist das Master-Gerät.
 *   **Der Statusbereich** nennt, woher das Ziel der Gruppe kommt — beim Zeitplan auch die Ebene: Haupt-Zeitplan, Bypass oder Fallback — und zeigt einen aktiven Gruppen-Offset. Die Mitgliederliste ergänzt den eigenen Offset jedes Geräts und, solange die Geräte uneinig sind, ihre Einstellungen — hervorgehoben, wo sie von der Vorgabe der Gruppe abweichen; der Punkt eines solchen Geräts bekommt einen Warnring.
+*   **Batterien**: Ein Batteriesymbol oben links im Statusbereich zeigt die schwächste Batterie der Gruppe, eingefärbt wie in Home Assistant. Geräte mit schwacher Batterie markiert die Karte zusätzlich in der Mitgliederliste und nennt sie unter dem Status. Die Batterie jedes Geräts findet sie selbst — Geräte ohne Batterie zeigen einfach nichts. Im Karten-Editor lässt sich die Batterieanzeige abschalten.
 *   **Der Demo-Modus** füllt die Karte mit erfundenen Daten, damit du ohne Einrichtung siehst, was sie alles anzeigen kann.
 
 ## Was die Gruppe über sich selbst berichtet

@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Manuelle Änderungen übernehmen",
               "window_action": "Aktion bei offenem Fenster",
               "window_temperature": "Zieltemperatur bei offenem Fenster",
+              "window_restore_scope": "Wiederherstellung beim Fensterschließen",
               "room_sensor": "Raum-Fenstersensor",
               "zone_sensor": "Zonen-Fenstersensor",
               "room_open_delay": "Verzögerung Raum (Sekunden)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Änderungen, die bei offenem Fenster gemacht werden, merken und beim Schließen anwenden. Bis dahin gilt die Aktion bei offenem Fenster.",
               "window_action": "Was passieren soll, wenn ein Fenster geöffnet wird: Komplett ausschalten oder eine feste Temperatur setzen (z. B. Frostschutz).",
               "window_temperature": "Zieltemperatur, die gesetzt wird, wenn die Aktion 'Temperatur setzen' gewählt ist.",
+              "window_restore_scope": "Was beim Schließen des Fensters wiederhergestellt wird: der gesamte Zielzustand oder nur die Einstellung, die die Aktion bei offenem Fenster geändert hat.",
               "room_sensor": "(Optional) Binärsensor, Helfer oder Cover-Entität für Fenster/Türen im Raum.",
               "zone_sensor": "(Optional) Binärsensor, Helfer oder Cover-Entität für Fenster/Türen in der Zone/Etage. Der Zonensensor muss den Raumsensor enthalten.",
               "room_open_delay": "Wartezeit nach dem Öffnen des Raumfensters, bevor die Fensteraktion ausgelöst wird.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Ausschalten",
         "temperature": "Temperatur setzen"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Gesamter Zielzustand",
+        "action": "Nur die geänderte Einstellung"
       }
     },
     "switch_action": {

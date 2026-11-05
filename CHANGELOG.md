@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.18.0 - 2026-11-05
+
+### ✨ Improvements
+
+*   **Choose What a Closing Window Restores**: A new option restores either the group's whole target or only what the Window Open Action changed.
+
+*   **Card Shows Batteries**: The card shows the group's weakest battery and marks devices whose battery is low; the card editor can turn this off.
+
+*   **Status Cell Switch Removed from the Card Editor**: To hide the status cell, untick all its sections; dashboards that already hide it stay as they are.
+
+### 🐛 Bug Fixes
+
+*   **Away Offset Follows a New Target**: While presence keeps the group away, a changed target — including one from a schedule slot or preset — now reaches the devices with the away offset calculated from the new value, not the old one.
+
 ## 1.17.0 🎃 2026-10-31
 
 ### ✨ Improvements

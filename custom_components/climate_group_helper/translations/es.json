@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Adoptar cambios manuales",
               "window_action": "Acción al abrir ventana",
               "window_temperature": "Temperatura al abrir ventana",
+              "window_restore_scope": "Restaurar al cerrar ventana",
               "room_sensor": "Sensor Ventana Habitación",
               "zone_sensor": "Sensor Ventana Zona",
               "room_open_delay": "Retardo Apertura Habitación (s)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Conservar los cambios hechos con las ventanas abiertas y aplicarlos cuando se cierren. Hasta entonces se aplica la acción al abrir ventana.",
               "window_action": "Qué hacer al abrir una ventana: Apagar completamente o establecer una temperatura específica (ej. protección contra heladas).",
               "window_temperature": "Temperatura objetivo cuando se selecciona la acción 'Establecer temperatura'.",
+              "window_restore_scope": "Qué se restaura al cerrar la ventana: todo el estado objetivo o solo el ajuste que cambió la Acción al abrir ventana.",
               "room_sensor": "(Opcional) Sensor binario, input_boolean o entidad cover para la ventana/puerta de la habitación.",
               "zone_sensor": "(Opcional) Sensor binario, input_boolean o entidad cover para las ventanas/puertas de la zona o planta. El sensor de zona debe incluir el sensor de la habitación.",
               "room_open_delay": "Tiempo de espera tras abrirse la ventana de la habitación antes de activar la acción de ventana.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Apagar",
         "temperature": "Establecer temperatura"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Estado objetivo completo",
+        "action": "Solo el ajuste modificado"
       }
     },
     "switch_action": {

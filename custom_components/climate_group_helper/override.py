@@ -21,14 +21,17 @@ from .const import (
     CONF_SWITCH_ACTION,
     CONF_SWITCH_TEMPERATURE,
     CONF_WINDOW_ACTION,
+    CONF_WINDOW_RESTORE_SCOPE,
     CONF_WINDOW_TEMPERATURE,
     SINGLE_SETPOINT_MODES,
     PresenceAction,
     SwitchAction,
     WindowControlAction,
+    WindowRestoreScope,
 )
 from .isolation import drop_all_claims, reevaluate_all
 from .member_template import setpoint_reaches
+from .service_call import SYNC_TARGET, SyncTarget
 from .state import available_state
 
 if TYPE_CHECKING:
@@ -421,6 +424,8 @@ class WindowOverrideManager(BaseOverrideManager):
         super().__init__(group)
         self._window_action = group.config.get(CONF_WINDOW_ACTION, WindowControlAction.OFF)
         self._window_temperature: float | None = group.config.get(CONF_WINDOW_TEMPERATURE)
+        self._restore_scope = group.config.get(CONF_WINDOW_RESTORE_SCOPE, WindowRestoreScope.FULL)
+        self._full_restore_due = False
 
     @property
     def call_handler(self) -> WindowControlCallHandler:  # type: ignore[override]
@@ -437,12 +442,34 @@ class WindowOverrideManager(BaseOverrideManager):
             )
         return {"hvac_mode": HVACMode.OFF}
 
+    def _restore_payload(self) -> dict[str, Any] | SyncTarget:
+        """Return what a closing window sends: the target, or only what the action changed."""
+        if self._restore_scope == WindowRestoreScope.FULL or self._full_restore_due:
+            return SYNC_TARGET
+        target = self._group.shared_target_state
+        if ATTR_HVAC_MODE in self._active_data():
+            payload: dict[str, Any] = {ATTR_HVAC_MODE: target.hvac_mode}
+            # Only a setpoint brings a parked heater back; `min_temp_off` adds its own.
+            if self._group.off_template_manager.enabled and not self._group.min_temp_off:
+                payload[ATTR_TEMPERATURE] = target.temperature
+            return payload
+        # The target keeps a setpoint across a mode change: it must not go out with an
+        # OFF target, and without a mode the pipeline's wake-up guards do not hold it back.
+        if target.temperature is None or target.hvac_mode in (None, HVACMode.OFF):
+            return {}
+        return {ATTR_TEMPERATURE: target.temperature}
+
     async def activate(self) -> None:
         """Add 'window' to blocking_sources and push members.
 
         Sends OFF or the configured window temperature, depending on window_action.
         Skipped if already OFF and action is OFF (no-op guard based on member states).
         """
+        # Boost and presence away left their values on the devices, and only a full
+        # target clears them: this block ends both without a push of their own.
+        run_state = self._group.run_state
+        if run_state.boost_temperature is not None or "presence" in run_state.blocking_sources:
+            self._full_restore_due = True
         self._group.boost_override_manager.abort(push=False)
         self._block()
         if "switch" in self._group.run_state.blocking_sources:
@@ -459,8 +486,10 @@ class WindowOverrideManager(BaseOverrideManager):
         # Cancel our own pending debounced enforce call — it carries a stale payload
         # that must not land after the restore or the cascade re-assert.
         await self.call_handler.async_cancel_all()
+        payload = self._restore_payload()
+        self._full_restore_due = False
         if "switch" not in self._group.run_state.blocking_sources:
-            await self.call_handler.call_immediate()
+            await self.call_handler.call_immediate(payload)
         if self._group.run_state.blocking_sources:
             await self._resolve_remaining_blocks()
 
@@ -537,8 +566,8 @@ class PresenceOverrideManager(BaseOverrideManager):
         """Compute the away payload against the current target_state at call time.
 
         AWAY_OFFSET is intentionally computed here (not at activate time) so that
-        schedule changes during absence are reflected the next time enforce_override
-        pushes the payload to a deviating member.
+        a target temperature written during absence reaches the members —
+        `on_target_temperature_changed()` re-enforces the block after each write.
 
         Returns `None` when the configured action cannot produce a payload — an
         offset without a base temperature, or a missing temperature/preset value.
@@ -582,14 +611,33 @@ class PresenceOverrideManager(BaseOverrideManager):
             )
         return None
 
-    async def activate(self) -> None:
-        self._group.boost_override_manager.abort(push=False)
-        self._block()
+    def on_target_temperature_changed(self) -> None:
+        """Re-send the away offset after a target temperature write under the block.
+
+        The writer's own push is held back by the block, and an `activate()`
+        started by a slot or preset meta-key runs before that slot's or preset's
+        temperature is written — so it computed the offset on the old target.
+        Immediate: the writers (slot change, preset) are calm at their source.
+        """
+        if self._action != PresenceAction.AWAY_OFFSET:
+            return
+        if "presence" not in self._group.run_state.blocking_sources:
+            return
+        self._group.hass.async_create_background_task(
+            self._push_away_payload(), name="climate_group_presence_away_offset"
+        )
+
+    async def _push_away_payload(self) -> None:
         # Window/switch already cover the members — don't send a conflicting command.
         if {"switch", "window"} & self._group.run_state.blocking_sources:
             return
         if (payload := self._away_payload()) is not None:
             await self.call_handler.call_immediate(payload)
+
+    async def activate(self) -> None:
+        self._group.boost_override_manager.abort(push=False)
+        self._block()
+        await self._push_away_payload()
 
     async def restore(self) -> None:
         self._unblock()

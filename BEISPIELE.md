@@ -371,7 +371,7 @@ Du nutzt bereits eine dedizierte Regelungs-Integration (zum Beispiel Better Ther
 
 **Variante A — unabhängige Räume, nur gemeinsame Orchestrierung (am häufigsten):**
 
-Jeder Raum behält seinen eigenen Sollwert, vollständig verwaltet von seinem eigenen geregelten Thermostat. CGH liefert nur das, was raumübergreifend geteilt wird.
+Jeder Raum behält seinen eigenen Sollwert, eingestellt an seinem eigenen geregelten Thermostat. CGH schaltet die Räume nur gemeinsam ein und aus.
 
 **Entitäten:** `climate.living_room_regulated`, `climate.bedroom_regulated`
 
@@ -379,12 +379,14 @@ Jeder Raum behält seinen eigenen Sollwert, vollständig verwaltet von seinem ei
 |---|---|
 | Mitglieder | `climate.living_room_regulated`, `climate.bedroom_regulated` |
 | Sync-Modus | Deaktiviert |
-| Haupt-Zeitplan / Kalenderentität | `schedule.house_weekly` |
+| Haupt-Zeitplan / Kalenderentität | `schedule.house_weekly`, in den Zeitblöcken nur `hvac_mode` |
 | Fenstersteuerung | an — hier zentralisieren statt pro Gerät zu konfigurieren |
+| Aktion bei offenem Fenster | Ausschalten |
+| Wiederherstellung beim Fensterschließen | Nur die geänderte Einstellung |
 | Kalibrierung | aus — die Regelungs-Integration übernimmt das |
 | Externer Temperatursensor | aus — die Regelungs-Integration nutzt ihre eigenen |
 
-**Ergebnis:** Jedes geregelte Thermostat regelt sein eigenes Gerät weiterhin unabhängig. CGH überträgt nur den `hvac_mode`/`temperature`-Wert des Zeitplans an jeden Raum und übernimmt Fenster/Anwesenheit zentral — es versucht nie, Räume miteinander zu synchronisieren.
+**Ergebnis:** Jedes geregelte Thermostat regelt sein eigenes Gerät weiterhin unabhängig. CGH überträgt nur den `hvac_mode` des Zeitplans an jeden Raum und schaltet die Räume mit den Fenstern aus und wieder ein — ihre Sollwerte lässt es in Ruhe.
 
 **Variante B — ein präzise geregeltes Thermostat führt einfache TRVs (Master/Lock):**
 

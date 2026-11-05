@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Przyjmij zmiany ręczne",
               "window_action": "Akcja po otwarciu okna",
               "window_temperature": "Temperatura przy otwartym oknie",
+              "window_restore_scope": "Przywracanie po zamknięciu okna",
               "room_sensor": "Czujnik Okna Pokojowego",
               "zone_sensor": "Czujnik Okna Strefowego",
               "room_open_delay": "Opóźnienie Pokoju (s)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Zachowaj zmiany wprowadzone przy otwartych oknach i zastosuj je po ich zamknięciu. Do tego czasu obowiązuje akcja po otwarciu okna.",
               "window_action": "Co zrobić po otwarciu okna: Wyłącz całkowicie lub ustaw określoną temperaturę (np. ochronę przed mrozem).",
               "window_temperature": "Temperatura docelowa, gdy wybrana jest akcja 'Ustaw temperaturę'.",
+              "window_restore_scope": "Co jest przywracane po zamknięciu okna: cały stan docelowy lub tylko ustawienie zmienione przez Akcję po otwarciu okna.",
               "room_sensor": "(Opcjonalnie) Czujnik binarny, pomocnik (input_boolean) lub encja rolety (cover) dla okna/drzwi w pokoju.",
               "zone_sensor": "(Opcjonalnie) Czujnik binarny, pomocnik (input_boolean) lub encja rolety (cover) dla okien/drzwi w strefie/na piętrze. Czujnik strefy musi obejmować czujnik pokoju.",
               "room_open_delay": "Czas oczekiwania po otwarciu okna w pokoju przed uruchomieniem akcji okna.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Wyłącz",
         "temperature": "Ustaw temperaturę"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Cały stan docelowy",
+        "action": "Tylko zmienione ustawienie"
       }
     },
     "switch_action": {

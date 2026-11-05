@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Adotta modifiche manuali",
               "window_action": "Azione finestra aperta",
               "window_temperature": "Temperatura finestra aperta",
+              "window_restore_scope": "Ripristino alla chiusura finestra",
               "room_sensor": "Sensore Finestra Stanza",
               "zone_sensor": "Sensore Finestra Zona",
               "room_open_delay": "Ritardo Apertura Stanza (s)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Conservare le modifiche fatte a finestre aperte e applicarle alla chiusura. Fino ad allora vale l'azione finestra aperta.",
               "window_action": "Cosa fare quando si apre una finestra: Spegnere completamente o impostare una temperatura specifica (es. antigelo).",
               "window_temperature": "Temperatura target quando è selezionata l'azione 'Imposta temperatura'.",
+              "window_restore_scope": "Cosa viene ripristinato alla chiusura della finestra: l'intero stato target o solo l'impostazione modificata dall'Azione finestra aperta.",
               "room_sensor": "(Opzionale) Sensore binario, input_boolean o entità cover per la finestra/porta della stanza.",
               "zone_sensor": "(Opzionale) Sensore binario, input_boolean o entità cover per le finestre/porte della zona o del piano. Il sensore di zona deve includere il sensore della stanza.",
               "room_open_delay": "Tempo di attesa dopo l'apertura della finestra della stanza prima di attivare l'azione finestra.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Spegni",
         "temperature": "Imposta temperatura"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Stato target completo",
+        "action": "Solo l'impostazione modificata"
       }
     },
     "switch_action": {

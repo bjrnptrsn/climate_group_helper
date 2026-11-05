@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Anta manuella ändringar",
               "window_action": "Åtgärd vid öppet fönster",
               "window_temperature": "Temperatur vid öppet fönster",
+              "window_restore_scope": "Återställning när fönstret stängs",
               "room_sensor": "Rumfönstersensor",
               "zone_sensor": "Zonfönstersensor",
               "room_open_delay": "Fördröjning Rum (s)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Behåll ändringar som görs medan fönster är öppna och tillämpa dem när de stängs. Till dess gäller åtgärden vid öppet fönster.",
               "window_action": "Vad som ska hända när ett fönster öppnas: Stäng av helt eller ställ in en specifik temperatur (t.ex. frostskydd).",
               "window_temperature": "Måltemperatur när 'Ställ in temperatur' är valt.",
+              "window_restore_scope": "Vad som återställs när fönstret stängs: hela måltillståndet eller bara inställningen som Åtgärd vid öppet fönster ändrade.",
               "room_sensor": "(Valfritt) Binär sensor, input_boolean eller cover-entitet för rummets eget fönster/dörr.",
               "zone_sensor": "(Valfritt) Binär sensor, input_boolean eller cover-entitet för fönster/dörrar i zonen/våningen. Zonsensorn måste inkludera rumssensorn.",
               "room_open_delay": "Väntetid efter att rumsfönstret öppnats innan fönsteråtgärden utlöses.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Stäng av",
         "temperature": "Ställ in temperatur"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Hela måltillståndet",
+        "action": "Endast den ändrade inställningen"
       }
     },
     "switch_action": {

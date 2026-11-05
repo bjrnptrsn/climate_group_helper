@@ -120,6 +120,7 @@ from .const import (
     CONF_WINDOW_ACTION,
     CONF_WINDOW_ADOPT_MANUAL_CHANGES,
     CONF_WINDOW_MODE,
+    CONF_WINDOW_RESTORE_SCOPE,
     CONF_WINDOW_TEMPERATURE,
     CONF_ZONE_OPEN_DELAY,
     CONF_ZONE_SENSOR,
@@ -154,6 +155,7 @@ from .const import (
     UnsupportedHvacAction,
     WindowControlAction,
     WindowControlMode,
+    WindowRestoreScope,
 )
 from .initialization import filter_cgh_entities
 from .state import available_state
@@ -1016,6 +1018,18 @@ class ClimateGroupHelperOptionsFlow(config_entries.OptionsFlow):
                                 step=0.5,
                                 unit_of_measurement=self._temp_unit,
                                 mode=selector.NumberSelectorMode.SLIDER,
+                            )
+                        ),
+                        vol.Required(
+                            CONF_WINDOW_RESTORE_SCOPE,
+                            default=config.get(
+                                CONF_WINDOW_RESTORE_SCOPE, WindowRestoreScope.FULL
+                            ),
+                        ): selector.SelectSelector(
+                            selector.SelectSelectorConfig(
+                                options=[opt.value for opt in WindowRestoreScope],
+                                mode=selector.SelectSelectorMode.DROPDOWN,
+                                translation_key="window_restore_scope",
                             )
                         ),
                         vol.Optional(

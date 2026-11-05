@@ -543,7 +543,7 @@ class BypassScheduleHandler(BaseScheduleHandler):
         """Return the active bypass entity ID."""
         return self._bypass_entity
 
-    async def on_slot_change(self, was_active: bool = False) -> None:
+    async def on_slot_change(self, was_active: bool = False, startup: bool = False) -> None:
         """Read both layers and decide what a bypass-triggered run means.
 
         `was_active` is never remembered — it is what the caller just observed
@@ -556,6 +556,10 @@ class BypassScheduleHandler(BaseScheduleHandler):
         an entity returning via `unavailable` (that edge is dropped), or a
         runtime entity switch. They were still holding attributes on the
         members, and only a full re-sync takes those back off.
+
+        `startup` (setup with the entity on, but possibly empty): a run that
+        turns out not to be a running bypass only releases, like setup with the
+        entity off — the main handler's startup run follows and sends the slot.
         """
         async with self.slot_transition_lock:
             ctx = await self._read_slots()
@@ -578,7 +582,8 @@ class BypassScheduleHandler(BaseScheduleHandler):
                 if self._hold_active:
                     return
                 self._update_state(record)
-                await self._call_members(SYNC_TARGET if had_claims else ctx.main_payload)
+                if not startup:
+                    await self._call_members(SYNC_TARGET if had_claims else ctx.main_payload)
 
     async def _release_bypass(self, ctx: SlotContext) -> None:
         """Bypass end: release claims, record the main, full re-sync.
@@ -610,7 +615,7 @@ class BypassScheduleHandler(BaseScheduleHandler):
             if state := self._hass.states.get(self._bypass_entity):
                 if state.state == "on":
                     _LOGGER.debug("[%s] Bypass entity already active at startup — applying slot", self._group.entity_id)
-                    await self.on_slot_change()
+                    await self.on_slot_change(startup=True)
 
         _LOGGER.debug("[%s] Bypass handler setup complete (subscribed to: %s)", self._group.entity_id, self._bypass_entity)
 
