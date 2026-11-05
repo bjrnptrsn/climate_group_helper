@@ -53,7 +53,7 @@ From top to bottom, the first one that applies decides what the devices get:
 | Rule | What the devices get | Changes to the target meanwhile | When it ends |
 |---|---|---|---|
 | **Main Switch off** | Its action: off for all of them (default), a fixed temperature, or nothing at all — the devices are released for manual control. | Held back. | The target is sent again. |
-| **Window open** | Off, or the window temperature. | Held back, unless **Adopt Manual Changes** lets them through for later — that works only while the window is the only active rule. | The target is sent again. |
+| **Window open** | Off, or the window temperature. | Held back, unless **Adopt Manual Changes** lets them through for later — that works only while the window is the only active rule. | The target is sent again, or only what the Window Open Action changed. |
 | **Nobody home** | The away action: off, an offset, a fixed temperature or a preset. | Held back. | The target is sent again. |
 | **Boost** | The boost temperature, for the time you asked for. | A direct command to the group ends the boost, and so does a device's `off` when the Sync Mode would mirror that `off` anyway. Other device changes are ignored while a boost runs. | The target is sent again, including the schedule slot that is current by then. |
 

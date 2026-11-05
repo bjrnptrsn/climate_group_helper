@@ -99,6 +99,7 @@ CONF_ROOM_SENSOR = "room_sensor"
 CONF_WINDOW_ACTION = "window_action"
 CONF_WINDOW_ADOPT_MANUAL_CHANGES = "window_adopt_manual_changes"
 CONF_WINDOW_MODE = "window_mode"
+CONF_WINDOW_RESTORE_SCOPE = "window_restore_scope"
 CONF_WINDOW_TEMPERATURE = "window_temperature"
 CONF_ZONE_OPEN_DELAY = "zone_open_delay"
 CONF_ZONE_SENSOR = "zone_sensor"
@@ -281,6 +282,13 @@ class WindowControlAction(StrEnum):
 
     OFF = "off"
     TEMPERATURE = "temperature"
+
+
+class WindowRestoreScope(StrEnum):
+    """What a closing window sends to the members."""
+
+    FULL = "full"
+    ACTION = "action"
 
 
 class SwitchAction(StrEnum):

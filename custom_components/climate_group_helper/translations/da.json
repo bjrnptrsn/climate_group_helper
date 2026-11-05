@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Adopter manuelle ændringer",
               "window_action": "Handling ved åbent vindue",
               "window_temperature": "Temperatur ved åbent vindue",
+              "window_restore_scope": "Gendan ved lukning af vindue",
               "room_sensor": "Rum Vindue Sensor",
               "zone_sensor": "Zone Vindue Sensor",
               "room_open_delay": "Rum Åben Forsinkelse (s)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Behold ændringer foretaget, mens vinduer er åbne, og anvend dem, når de lukkes. Indtil da gælder handlingen ved åbent vindue.",
               "window_action": "Hvad der skal ske, når et vindue åbnes: Sluk helt eller indstil en bestemt temperatur (f.eks. frostbeskyttelse).",
               "window_temperature": "Måltemperatur når 'Indstil temperatur' er valgt.",
+              "window_restore_scope": "Hvad der gendannes, når vinduet lukkes: hele måltilstanden eller kun den indstilling, som Handling ved åbent vindue ændrede.",
               "room_sensor": "(Valgfri) Binær sensor, input_boolean eller cover-enhed for rummets eget vindue/dør.",
               "zone_sensor": "(Valgfri) Binær sensor, input_boolean eller cover-enhed for vinduer/døre i zonen/etagen. Zonesensoren skal inkludere rumsensoren.",
               "room_open_delay": "Ventetid efter åbning af rumvindue, før vindueshandlingen udløses.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Sluk",
         "temperature": "Indstil temperatur"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Hele måltilstanden",
+        "action": "Kun den ændrede indstilling"
       }
     },
     "switch_action": {

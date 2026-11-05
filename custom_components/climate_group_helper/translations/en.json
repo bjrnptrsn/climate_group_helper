@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Adopt Manual Changes",
               "window_action": "Window Open Action",
               "window_temperature": "Window Open Temperature",
+              "window_restore_scope": "Restore When Window Closes",
               "room_sensor": "Room Window Sensor",
               "zone_sensor": "Zone Window Sensor",
               "room_open_delay": "Room Open Delay (seconds)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Keep changes made while windows are open and apply them once they close. Until then, the Window Open Action applies.",
               "window_action": "What to do when window opens: Turn Off completely or set a specific Temperature (e.g. frost protection).",
               "window_temperature": "Target temperature to set when 'Temperature' action is selected.",
+              "window_restore_scope": "What closing the window restores: the whole target, or only the setting the Window Open Action changed.",
               "room_sensor": "(Optional) Binary sensor, input_boolean, or cover entity for the room's own window/door.",
               "zone_sensor": "(Optional) Binary sensor, input_boolean, or cover entity for windows/doors in the zone/floor. Zone sensor must include room sensor.",
               "room_open_delay": "Time to wait after room window opens before triggering the window action.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Turn Off",
         "temperature": "Set Temperature"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Full Target",
+        "action": "Only the Changed Setting"
       }
     },
     "switch_action": {

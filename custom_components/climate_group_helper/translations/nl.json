@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Handmatige wijzigingen overnemen",
               "window_action": "Actie bij open raam",
               "window_temperature": "Temperatuur bij open raam",
+              "window_restore_scope": "Herstellen bij sluiten raam",
               "room_sensor": "Kamer Raamsensor",
               "zone_sensor": "Zone Raamsensor",
               "room_open_delay": "Vertraging Kamer (s)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Wijzigingen die bij open ramen worden gedaan bewaren en toepassen zodra de ramen sluiten. Tot dan geldt de actie bij open raam.",
               "window_action": "Wat te doen als een raam opent: Volledig uitschakelen of een specifieke temperatuur instellen (bijv. vorstbeveiliging).",
               "window_temperature": "Doeltemperatuur wanneer de actie 'Temperatuur instellen' is geselecteerd.",
+              "window_restore_scope": "Wat wordt hersteld als het raam sluit: de volledige doelstatus of alleen de instelling die de Actie bij open raam heeft gewijzigd.",
               "room_sensor": "(Optioneel) Binaire sensor, input_boolean of cover-entiteit voor het raam/de deur van de kamer.",
               "zone_sensor": "(Optioneel) Binaire sensor, input_boolean of cover-entiteit voor ramen/deuren in de zone/verdieping. De zonesensor moet de kamersensor bevatten.",
               "room_open_delay": "Wachttijd na het openen van het kamerraam voordat de raamactie wordt geactiveerd.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Uitschakelen",
         "temperature": "Temperatuur instellen"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Volledige doelstatus",
+        "action": "Alleen de gewijzigde instelling"
       }
     },
     "switch_action": {

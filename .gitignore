@@ -60,5 +60,6 @@ custom_components/climate_group_helper/www/climate-group-helper-card.js
 # own `frontend/src/lib/` — keep it tracked.
 !frontend/src/lib/
 
-# State of scripts/ha_watch.py (date of the last run) — local only.
+# State of scripts/ha_watch.py (date of the last run, PHACC pin index) — local only.
 data/ha_watch_state.json
+data/phacc_pins.json

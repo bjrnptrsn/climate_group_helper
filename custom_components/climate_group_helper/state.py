@@ -503,6 +503,9 @@ class BaseStateManager:
                 self._group._attr_current_humidity, kwargs["humidity"]
             )
 
+        if "temperature" in kwargs:
+            self._group.presence_override_manager.on_target_temperature_changed()
+
         # A manual write (user command or MIRROR adoption) starts/renews the
         # hold that defers the schedule's climate payload; the schedule's own
         # writes and restores pass through the source filter.

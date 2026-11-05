@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Adotar alterações manuais",
               "window_action": "Ação ao abrir janela",
               "window_temperature": "Temperatura ao abrir janela",
+              "window_restore_scope": "Restaurar ao fechar janela",
               "room_sensor": "Sensor Janela Quarto",
               "zone_sensor": "Sensor Janela Zona",
               "room_open_delay": "Atraso Abertura Quarto (s)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Guardar as alterações feitas com as janelas abertas e aplicá-las quando forem fechadas. Até lá, aplica-se a ação ao abrir janela.",
               "window_action": "O que fazer ao abrir uma janela: Desligar completamente ou definir uma temperatura específica (ex: proteção contra gelo).",
               "window_temperature": "Temperatura alvo quando a ação 'Definir temperatura' é selecionada.",
+              "window_restore_scope": "O que é restaurado ao fechar a janela: todo o estado alvo ou apenas a definição alterada pela Ação ao abrir janela.",
               "room_sensor": "(Opcional) Sensor binário, input_boolean ou entidade cover para a janela/porta da divisão.",
               "zone_sensor": "(Opcional) Sensor binário, input_boolean ou entidade cover para janelas/portas na zona ou piso. O sensor de zona deve incluir o sensor da divisão.",
               "room_open_delay": "Tempo de espera após abrir a janela da divisão antes de acionar a ação de janela.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Desligar",
         "temperature": "Definir temperatura"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Estado alvo completo",
+        "action": "Apenas a definição alterada"
       }
     },
     "switch_action": {

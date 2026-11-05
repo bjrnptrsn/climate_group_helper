@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Manuel Değişiklikleri Kabul Et",
               "window_action": "Pencere Açık Eylemi",
               "window_temperature": "Pencere Açık Sıcaklığı",
+              "window_restore_scope": "Pencere Kapanınca Geri Yükleme",
               "room_sensor": "Oda Pencere Sensörü",
               "zone_sensor": "Bölge Pencere Sensörü",
               "room_open_delay": "Oda Açılma Gecikmesi (saniye)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Pencereler açıkken yapılan değişiklikleri sakla ve pencereler kapandığında uygula. O zamana kadar Pencere Açık Eylemi geçerlidir.",
               "window_action": "Pencere açıldığında ne yapılacağı: tamamen kapat veya belirli bir sıcaklık ayarla (örn. donma koruması).",
               "window_temperature": "'Sıcaklık' eylemi seçildiğinde ayarlanacak hedef sıcaklık.",
+              "window_restore_scope": "Pencere kapandığında neyin geri yükleneceği: tüm hedef durum veya yalnızca Pencere Açık Eylemi'nin değiştirdiği ayar.",
               "room_sensor": "(İsteğe bağlı) Odanın kendi penceresi/kapısı için ikili sensör (binary_sensor), input_boolean veya panjur/perde (cover) varlığı.",
               "zone_sensor": "(İsteğe bağlı) Bölgedeki/kattaki pencereler/kapılar için ikili sensör (binary_sensor), input_boolean veya panjur/perde (cover) varlığı. Bölge sensörü, oda sensörünü içermelidir.",
               "room_open_delay": "Oda penceresi açıldıktan sonra pencere eylemini tetiklemeden önce beklenecek süre.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Kapat",
         "temperature": "Sıcaklık Ayarla"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Tüm Hedef Durum",
+        "action": "Yalnızca Değişen Ayar"
       }
     },
     "switch_action": {

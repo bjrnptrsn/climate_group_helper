@@ -68,6 +68,7 @@ from .const import (
     CONF_WINDOW_ACTION,
     CONF_WINDOW_ADOPT_MANUAL_CHANGES,
     CONF_WINDOW_MODE,
+    CONF_WINDOW_RESTORE_SCOPE,
     ENTITY_SELECTOR_KEYS,
     IDENTITY_KEYS,
     MAX_SCHEDULE_HOLD_DURATION,
@@ -90,6 +91,7 @@ from .const import (
     SyncMode,
     WindowControlAction,
     WindowControlMode,
+    WindowRestoreScope,
 )
 
 if TYPE_CHECKING:
@@ -308,6 +310,7 @@ async def async_apply_config(
             CONF_WINDOW_MODE: WindowControlMode,
             CONF_WINDOW_ACTION: WindowControlAction,
             CONF_WINDOW_ADOPT_MANUAL_CHANGES: AdoptManualChanges,
+            CONF_WINDOW_RESTORE_SCOPE: WindowRestoreScope,
             CONF_PRESENCE_MODE: PresenceMode,
             CONF_PRESENCE_ACTION: PresenceAction,
         }

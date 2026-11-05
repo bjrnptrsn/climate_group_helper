@@ -44,7 +44,7 @@ Managing climate in Home Assistant can be messy: TRVs measure the wrong temperat
 
 **Climate Group Helper acts as the intelligent "Logic Layer"** for your home. It wraps your existing devices into a single controller that handles the "If this, then that" behavior for you automatically.
 
-It works with any `climate.*` entity — a single thermostat as well as a whole group, and thermostats that already run their own regulation too ([Example 13](EXAMPLES.md#13-thermostats-with-their-own-regulation)).
+It works with any `climate.*` entity — a single thermostat as well as a whole group.
 
 ## Quick Start
 
@@ -191,6 +191,7 @@ Automatically turn off heating or set a frost-protection temperature when window
 *   **Room + Zone Sensors:** Combines a fast-reacting room sensor with a slow-reacting zone sensor (e.g. for a whole floor). The room is part of the zone: when you use both, the zone sensor **must include the room sensor** (add the room sensor to your zone group). Otherwise the configured delays no longer apply.
 *   **Configurable Delays:** Set custom reaction times for opening and closing.
 *   **Window Open Action:** Choose between full `off` or a configurable temperature setpoint.
+*   **Restore When Window Closes:** What closing the window sends. **Full Target** (default) restores the group's whole target. **Only the Changed Setting** sends just the mode (Turn Off) or the temperature (Set Temperature).
 *   **Adopt Manual Changes:** What happens to changes made while windows are open. They are never applied right away — the Window Open Action stays in effect until the windows close.
     *   **Off:** Changes are discarded.
     *   **All:** Changes are kept and applied when the windows close. Changes made directly on a device are only kept if a Sync Mode that adopts them is enabled.
@@ -446,6 +447,7 @@ resource entry or separate repository.
 *   **Badges** show one feature each: they light up while it is acting and turn grey while a schedule slot or preset pauses it.
 *   **Member dots** stand for one device each, next to the count of active members; tap them for the full list. The larger dot is the master device.
 *   **The status area** names where the group's target comes from — for the schedule also which layer: main schedule, bypass or fallback — and shows an active group offset. The member list adds each device's own offset and, while the devices disagree, their settings, highlighting those that differ from what the group has set; the dot of such a device gets a warning ring.
+*   **Batteries**: a battery symbol at the top left of the status area shows the group's weakest battery, coloured as in Home Assistant. Devices with a low battery are also marked in the member list and named below the status. The card finds each device's battery by itself — devices without one simply show nothing. The card editor can turn the battery display off.
 *   **Demo mode** fills the card with made-up data, so you can see everything it can show without setting anything up.
 
 ## What the Group Reports About Itself

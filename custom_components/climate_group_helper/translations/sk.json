@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Prijať manuálne zmeny",
               "window_action": "Akcia pri otvorení okna",
               "window_temperature": "Teplota pri otvorení okna",
+              "window_restore_scope": "Obnovenie pri zatvorení okna",
               "room_sensor": "Senzor okna v izbe",
               "zone_sensor": "Senzor okna v zóne",
               "room_open_delay": "Oneskorenie otvorenia izby (s)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Zmeny vykonané pri otvorených oknách si zapamätať a použiť po ich zatvorení. Dovtedy platí akcia pri otvorení okna.",
               "window_action": "Čo urobiť pri otvorení okna: Úplne vypnúť alebo nastaviť konkrétnu teplotu (napr. ochrana pred mrazom).",
               "window_temperature": "Cieľová teplota pri výbere akcie 'Nastaviť teplotu'.",
+              "window_restore_scope": "Čo sa obnoví pri zatvorení okna: celý cieľový stav, alebo iba nastavenie, ktoré zmenila Akcia pri otvorení okna.",
               "room_sensor": "(Voliteľne) Binárny senzor, pomocník (input_boolean) alebo entita tienenia (cover) pre okno/dvere v miestnosti.",
               "zone_sensor": "(Voliteľne) Binárny senzor, pomocník (input_boolean) alebo entita tienenia (cover) pre okná/dvere v zóne alebo poschodí. Senzor zóny musí zahŕňať senzor miestnosti.",
               "room_open_delay": "Čas čakania po otvorení okna v miestnosti pred spustením akcie okna.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Vypnúť",
         "temperature": "Nastaviť teplotu"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Celý cieľový stav",
+        "action": "Iba zmenené nastavenie"
       }
     },
     "switch_action": {

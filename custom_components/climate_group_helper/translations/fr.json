@@ -124,6 +124,7 @@
               "window_adopt_manual_changes": "Adopter les modifications manuelles",
               "window_action": "Action fenêtre ouverte",
               "window_temperature": "Température fenêtre ouverte",
+              "window_restore_scope": "Restauration à la fermeture de la fenêtre",
               "room_sensor": "Capteur Fenêtre Pièce",
               "zone_sensor": "Capteur Fenêtre Zone",
               "room_open_delay": "Délai Ouverture Pièce (s)",
@@ -135,6 +136,7 @@
               "window_adopt_manual_changes": "Conserver les modifications faites pendant que les fenêtres sont ouvertes et les appliquer à leur fermeture. D'ici là, l'action fenêtre ouverte s'applique.",
               "window_action": "Action à effectuer lors de l'ouverture d'une fenêtre : Éteindre complètement ou définir une température spécifique (ex. protection contre le gel).",
               "window_temperature": "Température cible lorsque l'action 'Définir la température' est sélectionnée.",
+              "window_restore_scope": "Ce qui est restauré à la fermeture de la fenêtre : l'état cible complet ou uniquement le réglage modifié par l'action fenêtre ouverte.",
               "room_sensor": "(Optionnel) Capteur binaire, input_boolean ou entité cover pour la fenêtre/porte de la pièce.",
               "zone_sensor": "(Optionnel) Capteur binaire, input_boolean ou entité cover pour les fenêtres/portes de la zone ou de l'étage. Le capteur de zone doit inclure le capteur de la pièce.",
               "room_open_delay": "Temps d'attente après l'ouverture de la fenêtre de la pièce avant de déclencher l'action fenêtre.",
@@ -512,6 +514,12 @@
       "options": {
         "off": "Éteindre",
         "temperature": "Définir la température"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "État cible complet",
+        "action": "Uniquement le réglage modifié"
       }
     },
     "switch_action": {
