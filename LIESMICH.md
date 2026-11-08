@@ -191,10 +191,10 @@ Schaltet die Heizung automatisch aus oder setzt eine Frostschutztemperatur, wenn
 *   **Raum- + Zonensensoren:** Kombiniert einen schnell reagierenden Raumsensor mit einem langsam reagierenden Zonensensor (z. B. für eine ganze Etage). Der Raum ist Teil der Zone: Werden beide genutzt, **muss der Zonensensor den Raumsensor enthalten** (nimm den Raumsensor in die Zonen-Gruppe auf). Sonst gelten die eingestellten Verzögerungen nicht mehr.
 *   **Konfigurierbare Verzögerungen:** Lege eigene Reaktionszeiten für Öffnen und Schließen fest.
 *   **Aktion bei offenem Fenster:** Wähle zwischen vollständigem `aus` oder einem konfigurierbaren Temperatur-Sollwert.
-*   **Wiederherstellung beim Fensterschließen:** Was das Schließen des Fensters sendet. **Gesamter Zielzustand** (Standard) stellt den ganzen Zielzustand der Gruppe wieder her. **Nur die geänderte Einstellung** sendet nur den Modus (Ausschalten) oder die Temperatur (Temperatur setzen).
+*   **Wiederherstellung beim Fensterschließen:** Was das Schließen des Fensters sendet. **Gesamter Zielzustand** (Standard) stellt den ganzen Zielzustand der Gruppe wieder her. **Nur die geänderte Einstellung** sendet nur den Modus (Ausschalten) oder die Temperatur (Temperatur setzen) — alles andere, was sich bei offenem Fenster geändert hat, durch dich oder den Zeitplan, bleibt im Zielzustand der Gruppe, bis es erneut gesendet wird.
 *   **Manuelle Änderungen übernehmen:** Was mit Änderungen passiert, die bei offenem Fenster gemacht werden. Sie werden nie sofort angewendet — bis die Fenster schließen, gilt die Aktion bei offenem Fenster.
     *   **Aus:** Änderungen werden verworfen.
-    *   **Alle:** Änderungen werden gemerkt und beim Schließen der Fenster angewendet. Änderungen direkt an einem Gerät werden nur gemerkt, wenn ein Sync-Modus aktiv ist, der sie übernimmt.
+    *   **Alle:** Änderungen werden im Zielzustand der Gruppe gemerkt; das Schließen der Fenster wendet sie mit **Gesamter Zielzustand** an. Änderungen direkt an einem Gerät werden nur gemerkt, wenn ein Sync-Modus aktiv ist, der sie übernimmt.
     *   **Nur Master:** *(Erfordert Master-Entität)* Nur Änderungen am Master-Gerät werden gemerkt — und nur, wenn ein Sync-Modus aktiv ist, der sie übernimmt, etwa Master/Lock. Änderungen an der Gruppe selbst werden verworfen.
 
 ### Anwesenheitssteuerung
@@ -212,7 +212,7 @@ Kehrt die Anwesenheit zurück, stellt die Gruppe alle Mitglieder auf den aktuell
 
 ### Zeitplan-Automatisierung
 
-Integriere native HA-`schedule`- oder `calendar`-Helfer, um deine Klimaeinstellungen pro Zeitblock zu automatisieren. Du kannst Temperatur und HVAC-Modus direkt in den Daten des Zeitplans festlegen, und die Gruppe handhabt Übergänge intelligent: Wenn eine Zeitplanänderung eintritt, während die **Fenstersteuerung** aktiv ist (z. B. die Heizung pausiert ist), wird das neue Ziel sofort angewendet, sobald alles geschlossen ist.
+Integriere native HA-`schedule`- oder `calendar`-Helfer, um deine Klimaeinstellungen pro Zeitblock zu automatisieren. Du kannst Temperatur und HVAC-Modus direkt in den Daten des Zeitplans festlegen, und die Gruppe handhabt Übergänge intelligent: Wenn eine Zeitplanänderung eintritt, während die **Fenstersteuerung** aktiv ist (z. B. die Heizung pausiert ist), wird das neue Ziel sofort angewendet, sobald alles geschlossen ist (mit **Gesamter Zielzustand**, dem Standard für die Wiederherstellung beim Fensterschließen).
 
 Zeitpläne können per Dienst live umgeschaltet werden (z. B. für "Urlaub"- oder "Gäste"-Modi). Wird der Dienst ohne Entität aufgerufen, setzt er auf den konfigurierten Standard zurück und wendet den aktuellen Zeitblock erneut an.
 
@@ -444,7 +444,9 @@ und braucht weder einen zusätzlichen Resource-Eintrag noch ein separates
 Repository.
 
 *   **Steuert** die üblichen Klimaeinstellungen: Modus, Temperatur, Luftfeuchte, Preset, Lüfter und Schwenk. Im Karten-Editor lässt sich der ganze Regler ausblenden, oder nur seine −/+-Tasten bzw. der Umschalter Temperatur/Luftfeuchte.
-*   **Zeigt**, was Climate Group Helper gerade tut: den aktiven Blocker und seit wann, Boost- und Hold-Countdowns, die Mitglieder sowie isolierte oder außerhalb des Bereichs liegende Geräte. Das ist reine Anzeige — Hauptschalter, Offset und Boost bedienst du über die eigenen Entitäten der Gruppe und die Dienste.
+*   **Hauptschalter** oben links bedient den Hauptschalter der Gruppe (Gruppen mit „Erweiterte Funktionen“). Im Karten-Editor lässt er sich ein- und ausblenden.
+*   **Zurücksetzen**: Eine Kachel setzt vorübergehende Änderungen mit einem Tipp zurück, etwa eine manuelle Änderung gegenüber dem Zeitplan, einen Boost oder den Offset (Gruppen mit „Erweiterte Funktionen“). Was sie zurücksetzt, wählst du im Karten-Editor.
+*   **Zeigt**, was Climate Group Helper gerade tut: den aktiven Blocker und seit wann, Boost- und Hold-Countdowns, die Mitglieder sowie isolierte oder außerhalb des Bereichs liegende Geräte. Das ist reine Anzeige — Offset und Boost stellst du über die eigenen Entitäten der Gruppe und die Dienste ein.
 *   **Badges** stehen für je eine Funktion: Sie leuchten, solange sie eingreift, und werden grau, solange ein Zeitblock oder ein Preset sie pausiert.
 *   **Mitglieder-Punkte** stehen für je ein Gerät, daneben die Zahl der aktiven Mitglieder; ein Tipp darauf zeigt die vollständige Liste. Der größere Punkt ist das Master-Gerät.
 *   **Der Statusbereich** nennt, woher das Ziel der Gruppe kommt — beim Zeitplan auch die Ebene: Haupt-Zeitplan, Bypass oder Fallback — und zeigt einen aktiven Gruppen-Offset. Die Mitgliederliste ergänzt den eigenen Offset jedes Geräts und, solange die Geräte uneinig sind, ihre Einstellungen — hervorgehoben, wo sie von der Vorgabe der Gruppe abweichen; der Punkt eines solchen Geräts bekommt einen Warnring.
@@ -486,7 +488,7 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 
 ### Was die Gruppe vorhat und woher es kam
 
-*   **`target_state`** — die Einstellungen, die die Gruppe für ihre Geräte vorhält. Genau dorthin wird zurückgestellt, wenn ein Fenster schließt oder eine Isolation endet; übersteht Neustarts.
+*   **`target_state`** — die Einstellungen, die die Gruppe für ihre Geräte vorhält. Genau dorthin wird zurückgestellt, wenn ein Fenster schließt (mit **Gesamter Zielzustand**) oder eine Isolation endet; übersteht Neustarts.
 *   **`last_source`, `last_entity`, `last_changed`** — was den Zielzustand zuletzt geändert hat: ein Zeitplan, ein direkter Befehl, ein Gerät unter Mirror-Sync — und wann.
 *   **`last_active_hvac_mode`** — der letzte Modus außer `off`. Damit werden Geräte geweckt, wenn ein Boost auf einer ausgeschalteten Gruppe startet.
 *   **`active_member_count` / `total_member_count`** — wie viele Geräte tatsächlich laufen, von wie vielen konfigurierten.
@@ -575,7 +577,8 @@ Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assi
 | Option | Beschreibung |
 |--------|-------------|
 | **Aktion bei offenem Fenster** | **Ausschalten** (Standard) oder **Temperatur setzen**. Nützlich für Frostschutz. |
-| **Manuelle Änderungen übernehmen** | Was mit Änderungen passiert, die bei offenem Fenster gemacht werden: **Aus** (verwerfen), **Alle** (merken und beim Schließen der Fenster anwenden) oder **Nur Master** *(erfordert Master-Entität)*. |
+| **Wiederherstellung beim Fensterschließen** | Was das Schließen des Fensters sendet: **Gesamter Zielzustand** (Standard) oder **Nur die geänderte Einstellung** (nur den Modus oder die Temperatur, die die Aktion bei offenem Fenster geändert hat). |
+| **Manuelle Änderungen übernehmen** | Was mit Änderungen passiert, die bei offenem Fenster gemacht werden: **Aus** (verwerfen), **Alle** (merken; beim Schließen mit **Gesamter Zielzustand** angewendet) oder **Nur Master** *(erfordert Master-Entität)*. |
 | **Zieltemperatur bei offenem Fenster** | Zieltemperatur, die bei Aktion "Temperatur setzen" gesetzt wird. |
 | **Raum-Fenstersensor** | (Optional) Binärsensor (Fenster/Tür), `input_boolean` oder Cover-Entität für schnelle Reaktion. Cover gelten in `open`/`opening`/`closing` als offen. Bei jedem Sensortyp behalten `unknown`/`unavailable` den letzten bekannten Zustand. |
 | **Zonen-Fenstersensor** | (Optional) Binärsensor, `input_boolean` oder Cover-Entität für langsame Reaktion (z. B. Wohnung oder Etage). Muss den Raum-Fenstersensor enthalten, wenn beide genutzt werden. |

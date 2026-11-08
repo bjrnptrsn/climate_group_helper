@@ -628,10 +628,16 @@ class PresenceOverrideManager(BaseOverrideManager):
         )
 
     async def _push_away_payload(self) -> None:
+        # The hook's task may land after a restore already ended the block.
+        if "presence" not in self._group.run_state.blocking_sources:
+            return
         # Window/switch already cover the members — don't send a conflicting command.
         if {"switch", "window"} & self._group.run_state.blocking_sources:
             return
         if (payload := self._away_payload()) is not None:
+            # A queued enforce call carries a payload frozen on the old target;
+            # landing after this push it would undo it.
+            await self.call_handler.async_cancel_all()
             await self.call_handler.call_immediate(payload)
 
     async def activate(self) -> None:

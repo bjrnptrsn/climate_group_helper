@@ -244,7 +244,7 @@ class WindowControlHandler:
 
         The activate()/restore() calls carry no idempotency guard of their own —
         activate() unconditionally aborts a running boost and re-sends OFF,
-        restore() unconditionally cancels and pushes target_state — so the call
+        restore() unconditionally cancels and pushes its restore payload — so the call
         is gated on the block state actually differing from the target.
         """
         result = self._window_control_logic()

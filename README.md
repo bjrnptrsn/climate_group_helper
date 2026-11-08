@@ -191,10 +191,10 @@ Automatically turn off heating or set a frost-protection temperature when window
 *   **Room + Zone Sensors:** Combines a fast-reacting room sensor with a slow-reacting zone sensor (e.g. for a whole floor). The room is part of the zone: when you use both, the zone sensor **must include the room sensor** (add the room sensor to your zone group). Otherwise the configured delays no longer apply.
 *   **Configurable Delays:** Set custom reaction times for opening and closing.
 *   **Window Open Action:** Choose between full `off` or a configurable temperature setpoint.
-*   **Restore When Window Closes:** What closing the window sends. **Full Target** (default) restores the group's whole target. **Only the Changed Setting** sends just the mode (Turn Off) or the temperature (Set Temperature).
+*   **Restore When Window Closes:** What closing the window sends. **Full Target** (default) restores the group's whole target. **Only the Changed Setting** sends just the mode (Turn Off) or the temperature (Set Temperature) — anything else that changed while the window was open, by you or by the schedule, stays in the group's target until it is sent again.
 *   **Adopt Manual Changes:** What happens to changes made while windows are open. They are never applied right away — the Window Open Action stays in effect until the windows close.
     *   **Off:** Changes are discarded.
-    *   **All:** Changes are kept and applied when the windows close. Changes made directly on a device are only kept if a Sync Mode that adopts them is enabled.
+    *   **All:** Changes are kept in the group's target; closing the windows applies them with **Full Target**. Changes made directly on a device are only kept if a Sync Mode that adopts them is enabled.
     *   **Master Only:** *(Requires Master Entity)* Only changes on the master device are kept — and only if a Sync Mode that adopts them is enabled, such as Master/Lock. Changes made on the group itself are discarded.
 
 ### Presence Control
@@ -212,7 +212,7 @@ When presence returns, the group restores all members to the current target stat
 
 ### Schedule Automation
 
-Integrate native HA `schedule` or `calendar` helpers to automate your climate settings per time slot. You can set temperature and HVAC mode directly in the schedule's data, and the group intelligently handles transitions: if a schedule change occurs while **Window Control** is active (e.g. heating is paused), the new target is applied immediately once everything is closed.
+Integrate native HA `schedule` or `calendar` helpers to automate your climate settings per time slot. You can set temperature and HVAC mode directly in the schedule's data, and the group intelligently handles transitions: if a schedule change occurs while **Window Control** is active (e.g. heating is paused), the new target is applied immediately once everything is closed (with **Full Target**, the default for what a closing window restores).
 
 Schedules can be switched on the fly via service (e.g. for "Vacation" or "Guest" modes). Calling the service without an entity resets to the configured default and re-applies the current slot.
 
@@ -443,7 +443,9 @@ appears in the card picker as **Climate Group Helper Card** and needs no extra
 resource entry or separate repository.
 
 *   **Controls** the usual climate settings: mode, temperature, humidity, preset, fan and swing. The card editor can hide the whole dial, or just its −/+ buttons or the temperature/humidity switch.
-*   **Shows** what Climate Group Helper is doing: the active blocker and for how long, boost and hold countdowns, the members, and devices that are isolated or out of bounds. It only displays these — the main switch, the offset and a boost are operated through the group's own entities and services.
+*   **Main switch** at the top left operates the group's main switch (groups with Advanced Features). The card editor shows or hides it.
+*   **Reset**: a tile resets temporary changes with one tap, such as a manual change against the schedule, a boost or the offset (groups with Advanced Features). The card editor chooses what it resets.
+*   **Shows** what Climate Group Helper is doing: the active blocker and for how long, boost and hold countdowns, the members, and devices that are isolated or out of bounds. It only displays these — the offset and a boost are set through the group's own entities and services.
 *   **Badges** show one feature each: they light up while it is acting and turn grey while a schedule slot or preset pauses it.
 *   **Member dots** stand for one device each, next to the count of active members; tap them for the full list. The larger dot is the master device.
 *   **The status area** names where the group's target comes from — for the schedule also which layer: main schedule, bypass or fallback — and shows an active group offset. The member list adds each device's own offset and, while the devices disagree, their settings, highlighting those that differ from what the group has set; the dot of such a device gets a warning ring.
@@ -485,7 +487,7 @@ When everything agrees, it is empty. Two details make it trustworthy:
 
 ### What the group intends, and where it came from
 
-*   **`target_state`** — the settings the group is holding for its devices. This is what a window closing or an isolation ending restores to, and it survives restarts.
+*   **`target_state`** — the settings the group is holding for its devices. This is what a window closing (with **Full Target**) or an isolation ending restores to, and it survives restarts.
 *   **`last_source`, `last_entity`, `last_changed`** — what last changed the target state: a schedule, a direct command, a device under Mirror sync — and when.
 *   **`last_active_hvac_mode`** — the last non-`off` mode. Used to wake devices when a boost starts on a group that is off.
 *   **`active_member_count` / `total_member_count`** — how many devices are actually running, out of how many are configured.
@@ -574,7 +576,8 @@ In Offset mode, each entity you write to is matched automatically — through th
 | Option | Description |
 |--------|-------------|
 | **Window Open Action** | **Turn Off** (Default) or **Set Temperature**. Useful for frost protection. |
-| **Adopt Manual Changes** | What happens to changes made while windows are open: **Off** (discard), **All** (keep and apply when windows close), or **Master Only** *(requires Master Entity)*. |
+| **Restore When Window Closes** | What closing the window sends: **Full Target** (default) or **Only the Changed Setting** (just the mode or the temperature the Window Open Action changed). |
+| **Adopt Manual Changes** | What happens to changes made while windows are open: **Off** (discard), **All** (keep; applied at close with **Full Target**), or **Master Only** *(requires Master Entity)*. |
 | **Window Open Temperature** | Target temperature to set when 'Set Temperature' action is selected. |
 | **Room Window Sensor** | (Optional) Binary sensor (window/door), `input_boolean` or cover entity for fast reaction. Covers count as open in `open`/`opening`/`closing`. For every sensor type, `unknown`/`unavailable` keep the last known state. |
 | **Zone Window Sensor** | (Optional) Binary sensor, `input_boolean` or cover entity for slow reaction (e.g. apartment or floor). Must include the Room Window Sensor when both are used. |

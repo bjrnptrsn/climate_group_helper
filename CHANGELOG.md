@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.18.1 - 2026-11-08
+
+### ✨ Improvements
+
+*   **Main Switch in the Card**: The card can show the group's main switch at the top left.
+
+*   **Reset in the Card**: The card can show a Reset tile; the card editor chooses what it resets.
+
 ## 1.18.0 - 2026-11-05
 
 ### ✨ Improvements
