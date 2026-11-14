@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Pausa o aquecimento ou baixa a temperatura quando uma janela monitorizada é aberta.",
-              "window_adopt_manual_changes": "Guardar as alterações feitas com as janelas abertas e aplicá-las quando forem fechadas. Até lá, aplica-se a ação ao abrir janela.",
+              "window_adopt_manual_changes": "Guarda as alterações feitas com as janelas abertas; ao fechar as janelas, só são aplicadas com «Estado alvo completo». Até lá, aplica-se a ação ao abrir janela.",
               "window_action": "O que fazer ao abrir uma janela: Desligar completamente ou definir uma temperatura específica (ex: proteção contra gelo).",
               "window_temperature": "Temperatura alvo quando a ação 'Definir temperatura' é selecionada.",
               "window_restore_scope": "O que é restaurado ao fechar a janela: todo o estado alvo ou apenas a definição alterada pela Ação ao abrir janela.",

@@ -5,10 +5,16 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "advance_schedule": "mdi:calendar-arrow-right",
               "antifrost": "mdi:snowflake",
               "auto": "mdi:thermostat-auto",
               "away": "mdi:home-outline",
+              "boost_1h": "mdi:numeric-1",
+              "boost_2h": "mdi:numeric-2",
+              "boost_30m": "mdi:fraction-one-half",
+              "boost_3h": "mdi:numeric-3",
               "building_protection": "mdi:shield-home",
+              "cancel_overrides": "mdi:close-circle",
               "day": "mdi:weather-sunny",
               "economy": "mdi:leaf",
               "frost_guard": "mdi:snowflake-thermometer",

@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Keskeyttää lämmityksen tai laskee lämpötilaa, kun valvottu ikkuna avataan.",
-              "window_adopt_manual_changes": "Säilytä ikkunoiden ollessa auki tehdyt muutokset ja ota ne käyttöön, kun ikkunat suljetaan. Siihen asti käytetään ikkuna auki -toimintoa.",
+              "window_adopt_manual_changes": "Säilytä muutokset, jotka tehdään ikkunoiden ollessa auki; ikkunoiden sulkeutuessa ne otetaan käyttöön vain asetuksella ”Koko tavoitetila”. Siihen asti käytetään ikkuna auki -toimintoa.",
               "window_action": "Mitä tehdä, kun ikkuna avataan: sammuta kokonaan tai aseta tietty lämpötila (esim. jäätymissuoja).",
               "window_temperature": "Tavoitelämpötila, kun 'Lämpötila'-toiminto on valittu.",
               "window_restore_scope": "Mitä palautetaan, kun ikkuna suljetaan: koko tavoitetila tai vain asetus, jonka Ikkuna auki -toiminto muutti.",

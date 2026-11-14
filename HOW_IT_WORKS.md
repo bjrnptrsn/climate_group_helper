@@ -77,7 +77,7 @@ The first three are **blocks**. A few things are worth knowing about them:
 
 The target is the same for the whole group. On the way to each device, it is adjusted for that device:
 
-- **Group Offset** shifts every device up or down, without changing the target underneath. It is paused while a block or a boost is active. It does not apply to what you set on the group yourself: those commands arrive exactly as given, and setting a temperature on the group resets the Group Offset to 0.
+- **Group Offset** shifts every device up or down, without changing the target underneath. It is paused while a block or a boost is active. It does not apply to what you set on the group yourself: those commands arrive exactly as given, and setting a temperature on the group resets the Group Offset to 0. A group preset is the exception — like a schedule slot, it is shifted by the offset and keeps it.
 - **Member Offsets** shift individual devices, e.g. a bedroom that should always run a degree cooler.
 - **Device limits** *(Union only)*: a device that cannot reach the temperature is turned off or set to its nearest limit (**Out-of-Bounds Action**). A device that does not support the mode is left alone or turned off (**Unsupported HVAC Mode Action**); under Auto, a heater without Auto runs in Heat instead.
 - **Range Template** turns a heat/cool range into plain heat or cool for devices that only have a single setpoint.

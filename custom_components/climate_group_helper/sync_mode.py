@@ -174,7 +174,7 @@ class SyncModeHandler:
         6. Sync-mode logic — MIRROR adopts, LOCK reverts, MASTER_LOCK does both.
         7. Enforcement — call_debounced() pushes target_state to out-of-sync members.
 
-        Range-Template-covered members are excluded from all adoption paths (step 6);
+        Range-Template-covered members are excluded from all adoption paths (steps 5 and 6);
         their changeover is driven independently by TemplateCallHandler.
         """
 
@@ -254,6 +254,11 @@ class SyncModeHandler:
             # the running boost.
             if self._group.run_state.boost_temperature is not None:
                 _LOGGER.debug("[%s] Ignoring own-echo side effect during boost", self._group.entity_id)
+                return
+            # Covered members are owned by the Range Template: like the fresh
+            # branch, adopt nothing they report. "Sender Wins" alone does not
+            # stop it — it is open while the target carries no origin entity.
+            if self._group.range_template_manager.is_covered_state(new_state):
                 return
             accepted = self._filter_echo_changes(origin_event, deviations, member_id)
             # Like the fresh-event adoption: a side effect is adopted only when

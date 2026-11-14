@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Pausa la calefacción o baja la temperatura cuando se abre una ventana monitorizada.",
-              "window_adopt_manual_changes": "Conservar los cambios hechos con las ventanas abiertas y aplicarlos cuando se cierren. Hasta entonces se aplica la acción al abrir ventana.",
+              "window_adopt_manual_changes": "Conserva los cambios hechos mientras las ventanas están abiertas; al cerrar las ventanas solo se aplican con «Estado objetivo completo». Hasta entonces, se aplica la acción de ventana abierta.",
               "window_action": "Qué hacer al abrir una ventana: Apagar completamente o establecer una temperatura específica (ej. protección contra heladas).",
               "window_temperature": "Temperatura objetivo cuando se selecciona la acción 'Establecer temperatura'.",
               "window_restore_scope": "Qué se restaura al cerrar la ventana: todo el estado objetivo o solo el ajuste que cambió la Acción al abrir ventana.",

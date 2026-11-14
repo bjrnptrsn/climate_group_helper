@@ -433,7 +433,7 @@ What the devices get while the switch is off is set by **Main Switch Action** (A
 
 A dedicated `number` entity allows you to apply a global temperature shift (±5.0°C) to all group members. Use it to temporarily adjust the room's comfort level without modifying your underlying schedule or target settings. The offset acts as a non-destructive layer: a +1.5°C offset shifts a 20°C morning setpoint to 21.5°C and automatically follows a schedule transition to 23.5°C in the evening.
 
-*   **Auto-reset:** Setting a temperature directly on the group (via UI or service) resets the offset to `0` automatically.
+*   **Auto-reset:** Setting a temperature directly on the group (via UI or service) resets the offset to `0` automatically. Selecting a group preset does not: like a schedule slot, its temperature is shifted by the offset.
 *   **Persistence:** The offset value survives Home Assistant restarts.
 
 ## Dashboard Card
@@ -442,15 +442,18 @@ The integration ships its own dashboard card. Add it like any other card — it
 appears in the card picker as **Climate Group Helper Card** and needs no extra
 resource entry or separate repository.
 
-*   **Controls** the usual climate settings: mode, temperature, humidity, preset, fan and swing. The card editor can hide the whole dial, or just its −/+ buttons or the temperature/humidity switch.
-*   **Main switch** at the top left operates the group's main switch (groups with Advanced Features). The card editor shows or hides it.
-*   **Reset**: a tile resets temporary changes with one tap, such as a manual change against the schedule, a boost or the offset (groups with Advanced Features). The card editor chooses what it resets.
-*   **Shows** what Climate Group Helper is doing: the active blocker and for how long, boost and hold countdowns, the members, and devices that are isolated or out of bounds. It only displays these — the offset and a boost are set through the group's own entities and services.
-*   **Badges** show one feature each: they light up while it is acting and turn grey while a schedule slot or preset pauses it.
-*   **Member dots** stand for one device each, next to the count of active members; tap them for the full list. The larger dot is the master device.
-*   **The status area** names where the group's target comes from — for the schedule also which layer: main schedule, bypass or fallback — and shows an active group offset. The member list adds each device's own offset and, while the devices disagree, their settings, highlighting those that differ from what the group has set; the dot of such a device gets a warning ring.
+*   **Header**: the card editor can hide the name, so the card combines more easily with other cards; the main switch and the menu button then move down beside the dial. The menu button can be hidden too.
+*   **Controls** the usual climate settings: mode, temperature, humidity, preset, fan and swing, plus the group offset. The card editor can hide the whole dial, or just its −/+ buttons, and choose which views its switch offers.
+*   **Main switch** at the top left operates the group's main switch. The card editor shows or hides it.
+*   **Boost**: a tile starts a boost with fixed values and ends it with the next tap. The card editor sets its temperature and duration.
+*   **Reset**: a tile resets temporary changes with one tap, such as a manual change against the schedule, a boost or the offset. The card editor chooses what it resets.
+*   **Shows** what Climate Group Helper is doing: the active blocker and for how long, boost and hold countdowns, the members, and devices that are isolated or out of bounds.
+*   **Badges** show one feature each: they light up while it is acting and fade while a schedule slot or preset pauses it.
+*   **Member dots** stand for one device each, next to the count of active members; tap them for the full list, and tap a device there to open its details. The larger dot is the master device.
+*   **The status area** names where the group's target comes from — for the schedule also which layer (main schedule, bypass or fallback) and which calendar or schedule is active, marked "Service" when a service call set it in place of the configured one — and shows an active group offset. The member list adds each device's own offset and, while the devices disagree, their settings, highlighting those that differ from what the group has set; the dot of such a device gets a warning ring.
 *   **Batteries**: a battery symbol at the top left of the status area shows the group's weakest battery, coloured as in Home Assistant. Devices with a low battery are also marked in the member list and named below the status. The card finds each device's battery by itself — devices without one simply show nothing. The card editor can turn the battery display off.
 *   **Demo mode** fills the card with made-up data, so you can see everything it can show without setting anything up.
+*   **Developer guide**: the card's source code and a [guide for building your own card or changing this one](frontend/README.md) are in the repository.
 
 ## What the Group Reports About Itself
 
@@ -474,6 +477,12 @@ When everything agrees, it is empty. Two details make it trustworthy:
 *   **Isolated and offline devices are left out.** An isolated device is meant to differ — counting it would report a disagreement for as long as the isolation lasts.
 *   **Member offsets are accounted for.** With offsets configured, the comparison happens on the logical setting while the listed values stay the real ones on the devices. Two thermostats at +1 and −1 therefore count as agreeing — that difference is what you asked for.
 
+Around it, the group lists its devices:
+
+*   **`member_entities`** — all member devices, always present. With **Expose Member List** turned on, the same list also appears as `entity_id`, which lets the more-info dialog show the members.
+*   **`member_offsets`** — the per-device temperature offsets you configured, only those other than 0. It explains why a device runs on a different setpoint than the group. Absent when there are none.
+*   **`current_hvac_modes`** — the modes of the devices the group currently counts, without isolated and offline ones.
+
 ### Why the group isn't doing what you expect
 
 *   **`blocking_sources`** — present whenever something is holding the group back, listing what: `window`, `presence`, `switch`. While one of these is listed, the group doesn't push changes to its devices. Absent when nothing blocks.
@@ -481,9 +490,10 @@ When everything agrees, it is empty. Two details make it trustworthy:
 *   **`main_switch_entity_id`** — the group's Main Switch, so a dashboard or automation can find it without guessing its name.
 *   **`main_switch_action`** — what the Main Switch does while it is off: `off`, `temperature` or `release`. Present together with `main_switch_entity_id`.
 *   **`isolated_members`** — devices an isolation rule currently excludes. They keep their own state and are left out of the group's readings.
-*   **`oob_members`** — devices that could not follow the last target because it lies outside their own temperature range.
+*   **`oob_members`** — devices whose own temperature range the group target lies outside of.
 *   **`master_entity_id`** — which device is currently set as the group's Master Entity. Present only when one is configured.
 *   **`master_fallback_active`** — the configured master entity is unavailable and the group is aggregating without it.
+*   **`presence_fallback`** — Presence Control is holding the group back while one of its presence sensors is unavailable: a dead sensor rather than an empty house.
 
 ### What the group intends, and where it came from
 
@@ -491,12 +501,18 @@ When everything agrees, it is empty. Two details make it trustworthy:
 *   **`last_source`, `last_entity`, `last_changed`** — what last changed the target state: a schedule, a direct command, a device under Mirror sync — and when.
 *   **`last_active_hvac_mode`** — the last non-`off` mode. Used to wake devices when a boost starts on a group that is off.
 *   **`active_member_count` / `total_member_count`** — how many devices are actually running, out of how many are configured.
+*   **`group_offset`** — the current **Group Offset**, always present, also at 0. The devices run on the group's setpoint plus this offset.
+*   **`offset_entity_id`** — the Group Offset slider entity, so a dashboard can find it. Present when the slider exists.
 
 ### What is currently in effect
 
 *   **`enabled_features`** — which features are configured at all (`window`, `presence`, `schedule`, `sync`, `isolation`, `range_template`, `calibration`, `master`), so a dashboard can tell "off" from "not set up".
 *   **`effective_sync_mode` / `effective_sync_attributes`** — the sync settings in force *right now*, including a schedule slot's or preset's temporary override — not necessarily what the settings page shows.
 *   **`config_overrides`** — the pause keys a slot or preset currently applies.
+*   **`active_schedule_entity` / `active_schedule_bypass_entity`** — the schedule or calendar and the bypass calendar the group is following right now.
+*   **`schedule_entity_overridden` / `schedule_bypass_entity_overridden`** — present while a service call has replaced the configured schedule or bypass entity.
+*   **`active_schedule_layer`** — where the current slot comes from: `main`, `bypass`, `fallback` or `none`.
+*   **`schedule_fallback_payload_active`** — the fallback applies because the schedule has no active slot.
 *   **`active_schedule_slot_title`** — the title of the running calendar event, when a calendar drives the schedule.
 *   **`active_virtual_preset`** — the group preset in effect, if any.
 *   **`runtime_group_presets`** — the runtime presets currently set via service, with their values. Absent when there are none.
@@ -730,6 +746,8 @@ Dynamically change the active schedule entity for a group. With **Retain Changes
 | `schedule_entity` | No | The entity ID of the new schedule or calendar (e.g. `schedule.*` or `calendar.*`). If omitted, the group reverts to its configured default schedule entity. |
 
 Calling this service **without** an entity returns the group to its configured schedule (discarding one set via this service earlier) and re-applies the current slot. To reset other temporary overrides like boost or offset, use the `climate_group_helper.reset` service.
+
+The schedule field in the group's settings always shows the configured schedule, not the one set here. The active one is shown in the status area of the dashboard card and in the group's attributes. Without **Retain Changes Made via Service (Schedule)**, the group returns to the configured schedule after a restart or when its settings are saved.
 
 **Example:**
 ```yaml

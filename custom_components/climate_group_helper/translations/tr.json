@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "İzlenen bir pencere açıldığında ısıtmayı duraklatır veya sıcaklığı düşürür.",
-              "window_adopt_manual_changes": "Pencereler açıkken yapılan değişiklikleri sakla ve pencereler kapandığında uygula. O zamana kadar Pencere Açık Eylemi geçerlidir.",
+              "window_adopt_manual_changes": "Pencereler açıkken yapılan değişiklikleri sakla; pencereler kapanırken bunlar yalnızca \"Tüm Hedef Durum\" ile uygulanır. O zamana kadar Pencere Açık Eylemi geçerlidir.",
               "window_action": "Pencere açıldığında ne yapılacağı: tamamen kapat veya belirli bir sıcaklık ayarla (örn. donma koruması).",
               "window_temperature": "'Sıcaklık' eylemi seçildiğinde ayarlanacak hedef sıcaklık.",
               "window_restore_scope": "Pencere kapandığında neyin geri yükleneceği: tüm hedef durum veya yalnızca Pencere Açık Eylemi'nin değiştirdiği ayar.",

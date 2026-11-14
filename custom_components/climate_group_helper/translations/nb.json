@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Setter oppvarming på pause eller senker temperaturen når et overvåket vindu åpnes.",
-              "window_adopt_manual_changes": "Behold endringer gjort mens vinduer er åpne, og bruk dem når de lukkes. Inntil da gjelder handlingen ved åpent vindu.",
+              "window_adopt_manual_changes": "Behold endringer som gjøres mens vinduene er åpne; når vinduene lukkes, brukes de bare med «Hele måltilstanden». Inntil da gjelder handlingen ved åpent vindu.",
               "window_action": "Hva som skal skje når et vindu åpnes: Slå av helt eller sett en bestemt temperatur (f.eks. frostsikring).",
               "window_temperature": "Måltemperatur når 'Sett temperatur' er valgt.",
               "window_restore_scope": "Hva som gjenopprettes når vinduet lukkes: hele måltilstanden eller bare innstillingen som Handling ved åpent vindu endret.",

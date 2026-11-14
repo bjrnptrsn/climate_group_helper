@@ -19,7 +19,7 @@ from homeassistant.const import ATTR_TEMPERATURE
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .state import is_available
+from .state import is_available, oob_member_ids
 
 
 async def async_get_config_entry_diagnostics(
@@ -68,6 +68,7 @@ async def async_get_config_entry_diagnostics(
 
     # Member snapshots
     members: list[dict[str, Any]] = []
+    oob = oob_member_ids(group)
     for entity_id in group.climate_entity_ids:
         state = hass.states.get(entity_id)
         if state is None:
@@ -78,7 +79,7 @@ async def async_get_config_entry_diagnostics(
             "state": state.state,
             "available": is_available(state),
             "isolated": entity_id in run.isolated_members,
-            "oob": entity_id in run.oob_members,
+            "oob": entity_id in oob,
         }
         # Include relevant climate attributes. Named via the HA constants: these
         # are read out of `state.attributes`, so a rename upstream would drop the

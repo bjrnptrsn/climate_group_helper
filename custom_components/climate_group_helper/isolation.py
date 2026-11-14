@@ -586,9 +586,14 @@ class MemberIsolationHandler:
             self._pre_action_presets.pop(entity_id, None)
 
         # Skip restore if globally blocked (e.g. window open) — Window Control
-        # will restore all members (including the newly un-isolated one) when the block is lifted.
+        # restores the newly un-isolated member when the block is lifted. Under
+        # restore scope `action` it would send only its own payload, so ask it
+        # for the full target when that payload carries no mode; presence
+        # restores the full target by itself.
         # Checked per device: a block that starts during an earlier restore owns
         # the rest, and this handler would bypass it.
+        if release_entities and "window" in self._group.run_state.blocking_sources:
+            self._group.window_override_manager.request_full_restore()
         for entity_id in release_entities:
             if self._group.run_state.blocked:
                 break

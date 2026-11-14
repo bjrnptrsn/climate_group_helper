@@ -8,16 +8,29 @@ from datetime import datetime
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Self
 
-from homeassistant.components.climate import ATTR_HVAC_MODE, PRESET_NONE, HVACMode
+from homeassistant.components.climate import (
+    ATTR_HVAC_MODE,
+    ATTR_HVAC_MODES,
+    ATTR_MAX_TEMP,
+    ATTR_MIN_TEMP,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
+    ATTR_TEMPERATURE,
+    PRESET_NONE,
+    HVACMode,
+)
 from homeassistant.core import Event, State
 
 from .const import (
+    CONF_FEATURE_STRATEGY,
     CONF_IGNORE_OFF_MEMBERS_SYNC,
     FLOAT_TOLERANCE,
     SETPOINT_ATTRS,
+    SINGLE_SETPOINT_MODES,
     TEMP_TARGET_ATTRS,
     TRANSIENT_STATES,
     AdoptManualChanges,
+    FeatureStrategy,
 )
 from .meta_processor import SOURCE_PRESET
 
@@ -179,6 +192,75 @@ def other_active_members(group: ClimateGroupHelper, entity_id: str | None) -> li
     ]
 
 
+def target_bounds(group: ClimateGroupHelper, state: State) -> list[tuple[str, float]]:
+    """The target bounds the member gets, each with member and group offset.
+
+    Only what the pipeline sends counts: a bound the member carries as an
+    attribute (so a range bound cannot exclude a single-setpoint member), and
+    for the target mode — `heat_cool` sends no single setpoint, `auto` and the
+    single-setpoint modes no band, though the target keeps both. A Range
+    Template member gets only the band side its template can drive.
+    """
+    target = group.shared_target_state
+    if target.hvac_mode == HVACMode.HEAT_COOL:
+        attrs = (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
+    elif target.hvac_mode == HVACMode.AUTO or target.hvac_mode in SINGLE_SETPOINT_MODES:
+        attrs = (ATTR_TEMPERATURE,)
+    else:
+        attrs = TEMP_TARGET_ATTRS
+    manager = group.range_template_manager
+    if manager.is_covered_state(state):
+        modes = state.attributes.get(ATTR_HVAC_MODES)
+        attrs = tuple(
+            attr for attr in attrs
+            if (attr == ATTR_TARGET_TEMP_LOW and manager.mode_allowed(HVACMode.HEAT, modes, state.entity_id))
+            or (attr == ATTR_TARGET_TEMP_HIGH and manager.mode_allowed(HVACMode.COOL, modes, state.entity_id))
+        )
+    offset = group._temp_offset_map.get(state.entity_id, 0.0) + group.run_state.group_offset
+    return [
+        (attr, value + offset)
+        for attr in attrs
+        if (value := getattr(target, attr)) is not None and attr in state.attributes
+    ]
+
+
+def is_target_oob(group: ClimateGroupHelper, entity_id: str) -> bool:
+    """Whether the permanent target puts the member outside its limits.
+
+    Says nothing about a call's own setpoint; the OOB guard judges those. An
+    unavailable member counts as out of range, so nothing is sent to it.
+    """
+    if all(getattr(group.shared_target_state, attr) is None for attr in TEMP_TARGET_ATTRS):
+        return False
+    if (state := available_state(group.aggregator.read_member_state(entity_id))) is None:
+        return True
+    min_temp = state.attributes.get(ATTR_MIN_TEMP)
+    max_temp = state.attributes.get(ATTR_MAX_TEMP)
+    return any(
+        (min_temp is not None and value < min_temp) or (max_temp is not None and value > max_temp)
+        for _, value in target_bounds(group, state)
+    )
+
+
+def oob_member_ids(group: ClimateGroupHelper) -> frozenset[str]:
+    """Members the group target puts outside their limits — the `oob_members` status.
+
+    Union only; available, not isolated members under a target mode other than
+    off. Shown also while a block or boost holds the OOB action back: the
+    target is what is out of range, not a call.
+    """
+    if group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
+        return frozenset()
+    if group.shared_target_state.hvac_mode in (None, HVACMode.OFF):
+        return frozenset()
+    return frozenset(
+        entity_id for entity_id in group.climate_entity_ids
+        if entity_id not in group.run_state.isolated_members
+        and available_state(group.aggregator.read_member_state(entity_id)) is not None
+        and is_target_oob(group, entity_id)
+    )
+
+
 @dataclass(frozen=True)
 class RunState:
     """Immutable operational status for the climate group.
@@ -205,7 +287,8 @@ class RunState:
     isolated_members: frozenset[str] = field(default_factory=frozenset)
     last_active_hvac_mode: str | None = None  # last mode other than OFF
     master_fallback_active: bool = False
-    oob_members: frozenset[str] = field(default_factory=frozenset)
+    # Members whose OFF the OOB guard sent; only the return reads it, persisted.
+    oob_off_members: frozenset[str] = field(default_factory=frozenset)
     # Monotonic timestamp, only ever used as an interval — wall-clock jumps must not affect it.
     startup_time: float | None = None
 

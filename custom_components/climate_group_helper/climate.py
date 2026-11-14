@@ -35,6 +35,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.start import async_at_start
 
 from . import temperature_attrs as temp_attrs
 from .aggregation import Aggregator
@@ -130,6 +131,7 @@ from .service_call import (
     SyncCallHandler,
     TemplateCallHandler,
     WindowControlCallHandler,
+    release_oob_off,
 )
 from .services import async_apply_config, async_boost, async_register_services
 from .state import (
@@ -565,7 +567,18 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
         # Update state again to reflect any blocking source activated above.
         self.async_defer_or_update_ha_state()
 
+        # Both updates above are no-ops while HA boots (`hass.is_running` is
+        # False): aggregate once it starts, as `GroupEntity` does — otherwise the
+        # group keeps its restored state until the first member event.
+        if not self.hass.is_running:
+            self.async_on_remove(async_at_start(self.hass, self._update_on_ha_start))
+
         async_register_services(self)
+
+    @callback
+    def _update_on_ha_start(self, _hass: HomeAssistant) -> None:
+        """Aggregate and write once HA starts (must be a callback: runs in the loop)."""
+        self.async_defer_or_update_ha_state()
 
     async def async_service_set_schedule_entity(self, schedule_entity: str | None = None) -> None:
         """Handle set_schedule_entity service."""
@@ -672,6 +685,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
                 time_fired_timestamp=event.time_fired_timestamp,
                 context=event.context,
             )
+            release_oob_off(self, new_wrapped)
         self.event = event
         self.async_defer_or_update_ha_state()
 

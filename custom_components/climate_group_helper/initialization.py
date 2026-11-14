@@ -45,6 +45,7 @@ from .const import (
     ATTR_GROUP_OFFSET,
     ATTR_ISOLATED_MEMBERS,
     ATTR_LAST_ACTIVE_HVAC_MODE,
+    ATTR_OOB_OFF_MEMBERS,
     ATTR_RUNTIME_GROUP_PRESETS,
     ATTR_SCHEDULE_BYPASS_CLAIMS,
     ATTR_SCHEDULE_FALLBACK_PAYLOAD,
@@ -485,6 +486,15 @@ def restore_state(group: ClimateGroupHelper, last_state: State) -> None:
         if claim_map:
             group.run_state = group.run_state.set_bypass_claims(claim_map)
             _LOGGER.debug("[%s] Restored schedule bypass claims: %s", group.entity_id, claim_map)
+
+    # Restore the members the OOB guard switched off — nothing re-derives that
+    # origin after a restart, and without it their return would never come.
+    # A member reporting any mode other than off drops out (`release_oob_off()`).
+    if (saved_oob_off := last_attrs.get(ATTR_OOB_OFF_MEMBERS)) and isinstance(
+        saved_oob_off, (list, set, tuple)
+    ):
+        if valid_oob_off := set(saved_oob_off) & set(group.climate_entity_ids):
+            group.run_state = replace(group.run_state, oob_off_members=frozenset(valid_oob_off))
 
     # Restore isolated members (with defensive full-isolation invariant check).
     # Only entities still covered by a currently instantiated

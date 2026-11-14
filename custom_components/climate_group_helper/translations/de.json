@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Pausiert das Heizen oder senkt die Temperatur ab, sobald ein überwachtes Fenster geöffnet wird.",
-              "window_adopt_manual_changes": "Änderungen, die bei offenem Fenster gemacht werden, merken und beim Schließen anwenden. Bis dahin gilt die Aktion bei offenem Fenster.",
+              "window_adopt_manual_changes": "Änderungen, die bei offenem Fenster gemacht werden, merken; beim Schließen werden sie nur mit „Gesamter Zielzustand“ angewendet. Bis dahin gilt die Aktion bei offenem Fenster.",
               "window_action": "Was passieren soll, wenn ein Fenster geöffnet wird: Komplett ausschalten oder eine feste Temperatur setzen (z. B. Frostschutz).",
               "window_temperature": "Zieltemperatur, die gesetzt wird, wenn die Aktion 'Temperatur setzen' gewählt ist.",
               "window_restore_scope": "Was beim Schließen des Fensters wiederhergestellt wird: der gesamte Zielzustand oder nur die Einstellung, die die Aktion bei offenem Fenster geändert hat.",

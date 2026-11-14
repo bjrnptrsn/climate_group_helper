@@ -12,6 +12,8 @@ from homeassistant.components.climate import (
     ATTR_HUMIDITY,
     ATTR_HVAC_MODE,
     ATTR_HVAC_MODES,
+    ATTR_MAX_TEMP,
+    ATTR_MIN_TEMP,
     ATTR_PRESET_MODE,
     ATTR_TARGET_TEMP_HIGH,
     ATTR_TARGET_TEMP_LOW,
@@ -53,7 +55,14 @@ from .const import (
     UnsupportedHvacAction,
 )
 from .number import async_reset_group_offset
-from .state import FilterState, available_state, other_active_members
+from .state import (
+    FilterState,
+    available_state,
+    is_available,
+    is_target_oob,
+    other_active_members,
+    target_bounds,
+)
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -94,6 +103,27 @@ class DispatchEntry:
         return False
 
 
+def release_oob_off(group: ClimateGroupHelper, state: State | None) -> None:
+    """Drop a member from `oob_off_members` once it reports a mode other than off.
+
+    Whoever switched it on — the return, the user, an automation — the OFF is no
+    longer ours to take back; a later OFF by the user stays the user's. Our own
+    OFF echo reads off and leaves the entry. `state` is the template-rendered
+    one: a parked Off Template heater reads off and keeps its entry.
+    """
+    run_state = group.run_state
+    if (
+        state is None
+        or state.entity_id not in run_state.oob_off_members
+        or not is_available(state)
+        or state.state == HVACMode.OFF
+    ):
+        return
+    group.run_state = replace(
+        run_state, oob_off_members=run_state.oob_off_members - {state.entity_id}
+    )
+
+
 class BaseServiceCallHandler(ABC):
     """Base class for service call execution with debouncing and retry logic.
 
@@ -130,10 +160,9 @@ class BaseServiceCallHandler(ABC):
         self._call_triggers: list[Callable[[dict[str, Any] | SyncTarget], Any]] = []
         self._lock = asyncio.Lock()
         self._pending_queue: list[DispatchEntry] = []
-        # OOB marking collected by _process_oob_guard during call generation and
-        # applied by _execute_calls once the calls have gone out.
-        self._pending_oob_add: set[str] = set()
-        self._pending_oob_discard: set[str] = set()
+        # Members whose OFF the OOB guard generated — recorded as ours by
+        # `_record_oob_off()` once the call went out.
+        self._pending_oob_off: set[str] = set()
 
     @property
     def target_state(self) -> TargetState:
@@ -282,25 +311,20 @@ class BaseServiceCallHandler(ABC):
         # state"), since HA service calls don't raise when a device silently ignores
         # a command.
         for attempt in range(attempts):
-            # Entities whose service call completed successfully this attempt.
-            # Tracked per attempt so the exception handler below can mark exactly
-            # the members that actually received a command — never one whose call
-            # raised before it reached the device.
+            # Two sets per attempt: `sent_entity_ids` for the entities whose call
+            # completed, `failed_entity_ids` for those whose call raised. An OOB
+            # OFF is recorded only for a member that received it — never for one
+            # whose call raised.
             sent_entity_ids: set[str] = set()
-            current_call: dict[str, Any] | None = None
+            failed_entity_ids: set[str] = set()
             try:
-                # Drop a previous attempt's pending marking — this generation
+                # Drop a previous attempt's pending OFFs — this generation
                 # re-evaluates every member against the current states.
-                self._pending_oob_add.clear()
-                self._pending_oob_discard.clear()
+                self._pending_oob_off.clear()
 
                 calls = self._generate_calls(data)
 
                 if not calls:
-                    # Nothing to send: a member found in range needs its marking
-                    # cleared even without a call (the OFF-restore call is only
-                    # built for members currently OFF).
-                    self._apply_pending_oob()
                     _LOGGER.debug("[%s] No pending calls, stopping retry loop", self._group.entity_id)
                     # The group's mode refreshes on the echo of the calls below,
                     # and a Range Template member in the deadband may need none —
@@ -329,7 +353,6 @@ class BaseServiceCallHandler(ABC):
                 # entered fresh on each attempt).
                 async with self._group.member_command_scope():
                     for index, call in enumerate(calls):
-                        current_call = call
                         service = call["service"]
                         service_data = {ATTR_ENTITY_ID: call["entity_ids"], **call["kwargs"]}
 
@@ -341,30 +364,45 @@ class BaseServiceCallHandler(ABC):
                         # inconsistent state.
                         if not self._pending_queue and self._is_stale_call(call):
                             _LOGGER.debug("[%s] Aborting stale call: kwargs=%s no longer match target_state", self._group.entity_id, call["kwargs"])
-                            # Calls earlier in this batch already went out — their OOB
-                            # marking must not be lost just because a later call in the
-                            # same batch went stale. Restricted to sent_entity_ids: a
-                            # fully stale batch (nothing sent) must still leave no
-                            # marking behind, and entities from calls that never went
-                            # out must not be marked based on a decision that was
-                            # never executed.
-                            self._apply_pending_oob(sent_entity_ids)
+                            # An OOB OFF earlier in this batch already went out and
+                            # stays recorded; one that never went out is not. A
+                            # failed call loses against a sent one for the same
+                            # entity, as after the loop.
+                            self._record_oob_off(sent_entity_ids - failed_entity_ids)
                             return
 
                         if index > 0 and member_command_delay:
                             await asyncio.sleep(member_command_delay)
 
-                        await self._hass.services.async_call(
-                            domain=CLIMATE_DOMAIN,
-                            service=service,
-                            service_data=service_data,
-                            blocking=True,
-                            context=Context(id=context_id, parent_id=parent_id),
-                        )
+                        # A rejected call must not stop the rest of the batch. One
+                        # that addresses several entities counts as failed for all
+                        # of them: Home Assistant calls each entity and raises the
+                        # first error afterwards, so which one failed is unknown.
+                        # `Exception` only — a cancellation must still end the run.
+                        try:
+                            await self._hass.services.async_call(
+                                domain=CLIMATE_DOMAIN,
+                                service=service,
+                                service_data=service_data,
+                                blocking=True,
+                                context=Context(id=context_id, parent_id=parent_id),
+                            )
+                        except Exception as error:
+                            failed_entity_ids.update(call["entity_ids"])
+                            error_msg = str(error)
+                            if "not_valid_hvac_mode" in error_msg:
+                                _LOGGER.debug("[%s] Call attempt (%d/%d) skipped (not supported): %s", self._group.entity_id, attempt + 1, attempts, error_msg)
+                            else:
+                                # Many device exceptions carry no message (e.g.
+                                # NotImplementedError), so the type and the call
+                                # itself are what identify it.
+                                _LOGGER.warning(
+                                    "[%s] Call attempt (%d/%d) failed: %s: %s — '%s' to %s with %s",
+                                    self._group.entity_id, attempt + 1, attempts, type(error).__name__, error_msg,
+                                    service, call["entity_ids"], call["kwargs"],
+                                )
+                            continue
 
-                        # Only a successfully completed send counts as "sent" for OOB
-                        # marking — a call that raises below must not mark an entity
-                        # that never received the command.
                         sent_entity_ids.update(call["entity_ids"])
 
                         _LOGGER.debug("[%s] Call %d/%d (%d/%d) '%s' with data: %s, Parent ID: %s",
@@ -372,39 +410,24 @@ class BaseServiceCallHandler(ABC):
                                       attempts, service, service_data, parent_id
                         )
 
-                # The calls went out — only now may the OOB marking be applied.
-                current_call = None
-                self._apply_pending_oob()
+                # The calls went out — only now is an OOB OFF ours.
+                self._record_oob_off(exclude=failed_entity_ids)
 
+                # Also after failed member calls: the hook follows the command,
+                # not the device's success (the group offset reset).
                 await self._after_call_trigger(data)
 
             except Exception as error:
-                error_msg = str(error)
-                if "not_valid_hvac_mode" in error_msg:
-                    _LOGGER.debug("[%s] Call attempt (%d/%d) skipped (not supported): %s", self._group.entity_id, attempt + 1, attempts, error_msg)
-                elif current_call is None:
-                    # Raised outside a member call (building the calls, or the
-                    # bookkeeping after them): a fault of our own, so the
-                    # traceback is the useful part.
-                    _LOGGER.warning(
-                        "[%s] Call attempt (%d/%d) failed outside a member call: %s: %s",
-                        self._group.entity_id, attempt + 1, attempts, type(error).__name__, error_msg,
-                        exc_info=True,
-                    )
-                else:
-                    # A device or its integration rejected the call. Many of those
-                    # exceptions carry no message (e.g. NotImplementedError), so the
-                    # type and the call itself are what identify it.
-                    _LOGGER.warning(
-                        "[%s] Call attempt (%d/%d) failed: %s: %s — '%s' to %s with %s",
-                        self._group.entity_id, attempt + 1, attempts, type(error).__name__, error_msg,
-                        current_call["service"], current_call["entity_ids"], current_call["kwargs"],
-                    )
-                # Calls that already went out before the exception still acted on
-                # their members — keep their OOB marking (restricted to the sent
-                # entities) so the next sync does not re-drive them as if they
-                # were in range.
-                self._apply_pending_oob(sent_entity_ids)
+                # Raised outside a member call (building the calls, or the
+                # bookkeeping after them): a fault of our own, so the traceback
+                # is the useful part.
+                _LOGGER.warning(
+                    "[%s] Call attempt (%d/%d) failed outside a member call: %s: %s",
+                    self._group.entity_id, attempt + 1, attempts, type(error).__name__, str(error),
+                    exc_info=True,
+                )
+                # An OOB OFF that already went out still switched its member off.
+                self._record_oob_off(sent_entity_ids - failed_entity_ids)
 
             if attempts > 1 and attempt < (attempts - 1):
                 await asyncio.sleep(delay)
@@ -432,6 +455,8 @@ class BaseServiceCallHandler(ABC):
 
         calls: list[dict[str, Any]] = []
         range_bundled = False
+        # Members a raw mode call of this generation already reaches.
+        mode_call_ids: set[str] = set()
 
         for attr, value in data.items():
             if not self._is_callable_attr(data, attr, value, filter_attrs):
@@ -447,6 +472,12 @@ class BaseServiceCallHandler(ABC):
                 raw = self._build_attr_initial_calls(attr, value)
 
             if attr == ATTR_HVAC_MODE:
+                mode_call_ids.update(
+                    entity_id
+                    for call in raw
+                    if call["service"] == SERVICE_SET_HVAC_MODE
+                    for entity_id in call["entity_ids"]
+                )
                 raw = self._append_turn_on_calls(raw, data)
             elif attr == ATTR_TEMPERATURE:
                 raw = self._off_template_hold_setpoints(raw, data)
@@ -454,6 +485,12 @@ class BaseServiceCallHandler(ABC):
 
             if raw:
                 calls.extend(self._run_pipeline(raw))
+
+        # Computed after the loop, so an empty payload (a window close that
+        # restores nothing) still brings the members back. Sent first: a device
+        # that drops setpoints while off would come back on its old value.
+        if raw := self._oob_return_calls(mode_call_ids):
+            calls = [*self._run_pipeline(self._append_turn_on_calls(raw, data)), *calls]
 
         # Pipeline stages may empty an entity list (e.g. unsupported-hvac filtering).
         return [call for call in calls if call.get("entity_ids")]
@@ -670,41 +707,77 @@ class BaseServiceCallHandler(ABC):
             return True
         return False
 
-    def _is_oob_blocked(self, entity_id: str) -> bool:
-        """Check if a member is blocked due to being out-of-bounds (OOB).
+    def _is_oob_held(self, entity_id: str) -> bool:
+        """Whether OOB already put the member where it belongs, so the target handlers leave it out.
 
-        If target_state has drifted back into range, the member is unblocked
-        so _process_oob_guard can restore it.
+        Under OFF: the target is out of range and the member is off — it needs
+        nothing, not even fan or preset, which the guard does not judge and a
+        preset could wake it with. A member that is on stays in: its
+        temperature call carries the OFF. Under CLAMP: the member already
+        stands in the target mode on the clamped target — it reports its
+        limit, which the diff would read as a deviation on every resync. One
+        moved off it by hand, or a new target mode (the group switching off),
+        is a deviation again.
         """
-        if entity_id in self._group.run_state.oob_members:
-            # Check if current target_state would STILL put it OOB.
-            # If target_state is now valid, unblock it so it can receive the call & restore.
-            temp_attrs = TEMP_TARGET_ATTRS
-            active_temps = [
-                getattr(self.target_state, attr) for attr in temp_attrs
-                if getattr(self.target_state, attr) is not None
-            ]
+        if self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
+            return False
+        if not is_target_oob(self._group, entity_id):
+            return False
+        if (state := available_state(self._group.aggregator.read_member_state(entity_id))) is None:
+            return False
+        action = self._group.config.get(CONF_UNION_OUT_OF_BOUNDS_ACTION, UnionOutOfBoundsAction.OFF)
+        if action == UnionOutOfBoundsAction.CLAMP:
+            if self.target_state.hvac_mode not in (None, state.state):
+                return False
+            min_temp = state.attributes.get(ATTR_MIN_TEMP)
+            max_temp = state.attributes.get(ATTR_MAX_TEMP)
+            min_temp = float("-inf") if min_temp is None else min_temp
+            max_temp = float("inf") if max_temp is None else max_temp
+            return all(
+                within_tolerance(state.attributes.get(attr), min(max(value, min_temp), max_temp))
+                for attr, value in target_bounds(self._group, state)
+            )
+        return state.state == HVACMode.OFF
 
-            if not active_temps:
-                return False  # Targets cleared -> no longer OOB
+    def _oob_return_calls(self, mode_call_ids: set[str]) -> list[dict[str, Any]]:
+        """Raw mode call that switches back on the members whose OFF the guard sent.
 
-            if (state := available_state(self._group.aggregator.read_member_state(entity_id))) is None:
-                return True  # Device unavailable -> keep blocked
-
-            min_temp = state.attributes.get("min_temp")
-            max_temp = state.attributes.get("max_temp")
-            member_offset = self._group._temp_offset_map.get(entity_id, 0.0)
-            group_offset = self._group.run_state.group_offset
-
-            for target_temp in active_temps:
-                effective_tgt = target_temp + member_offset + group_offset
-                if (min_temp is not None and effective_tgt < min_temp) or \
-                   (max_temp is not None and effective_tgt > max_temp):
-                    return True  # Still OOB -> keep blocked
-
-            return False  # In range! Remove block so _process_oob_guard can clear it.
-
-        return False
+        Decided per member from `oob_off_members`, not from the calls of this
+        generation: a slot back on the member's old setpoint is no deviation, and
+        Respect-Off skips an off member — no temperature call would reach it.
+        Respect-Off and `sync_attributes` do not apply, since only our own OFF is
+        taken back. Under a block or boost nothing returns; the push at its end
+        does. An isolated member is left to the isolation — its handler does not
+        filter it, so it is excluded here; the push on release brings it back.
+        Built before the pipeline, so the Range and Off Template stages
+        translate it like any mode call.
+        """
+        run_state = self._group.run_state
+        target_mode = self.target_state.hvac_mode
+        if (
+            not run_state.oob_off_members
+            or run_state.temporary_state_active
+            or target_mode in (None, HVACMode.OFF)
+        ):
+            return []
+        candidates = run_state.oob_off_members - mode_call_ids - run_state.isolated_members
+        if not candidates:
+            return []
+        returning = [
+            entity_id
+            for entity_id in self._get_capable_entities(ATTR_HVAC_MODE, target_mode)
+            if entity_id in candidates
+            and not is_target_oob(self._group, entity_id)
+            and (state := available_state(self._group.aggregator.read_member_state(entity_id)))
+            and state.state == HVACMode.OFF
+        ]
+        if not returning:
+            return []
+        return [{
+            "service": SERVICE_SET_HVAC_MODE,
+            "kwargs": {ATTR_HVAC_MODE: target_mode},
+            "entity_ids": returning,
+        }]
 
     def _get_capable_entities(self, attr: str, value: Any = None) -> list[str]:
         """Get members that technically support this attribute/value (Capability check).
@@ -1471,18 +1544,19 @@ class BaseServiceCallHandler(ABC):
         return result
 
     def _process_oob_guard(self, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """OOB guard: check if temperature values are within device range (union only).
+        """OOB guard: check temperature values and non-off mode calls (union only).
 
-        Checks ALL calls with ATTR_TEMPERATURE kwargs against device min/max.
+        Temperature calls are checked against device min/max as before. A
+        `set_hvac_mode` call with a mode other than off also carries a wake-up
+        risk: it can turn on a member whose permanent target is out of range.
+        Those members are removed from the mode call; the temperature calls and
+        the next push do the OFF work.
+
         Preserves upstream kwargs (e.g. hvac_mode from min_temp_off restore).
 
-        Side-effect free: the members this pass found out of bounds are collected
-        in `self._pending_oob_add`/`_pending_oob_discard` instead of being written
-        to run_state here. Call generation must not mark a member OOB before the
-        corresponding OFF/CLAMP call actually went out — `_execute_calls` may
-        still discard the whole batch as stale, which would leave the member
-        excluded from later syncs without ever having been acted on.
-        `_execute_calls` applies the marking once the calls have been sent.
+        Side-effect free: an OFF it generates is only collected in
+        `self._pending_oob_off`; `_execute_calls` records it once the call went
+        out — the batch may still be discarded as stale.
         """
         if self._group.config.get(CONF_FEATURE_STRATEGY) != FeatureStrategy.UNION:
             return calls  # No-op when not union strategy
@@ -1494,6 +1568,24 @@ class BaseServiceCallHandler(ABC):
 
         for call in calls:
             kwargs = call["kwargs"]
+
+            # A non-off mode call can wake a member whose permanent target is
+            # out of range. Remove it here; the temperature call — if the batch
+            # has one — or the next push does the OFF.
+            hvac_mode = kwargs.get(ATTR_HVAC_MODE)
+            if (
+                action == UnionOutOfBoundsAction.OFF
+                and call["service"] == SERVICE_SET_HVAC_MODE
+                and hvac_mode not in (None, HVACMode.OFF)
+            ):
+                keep = [
+                    entity_id
+                    for entity_id in call["entity_ids"]
+                    if not is_target_oob(self._group, entity_id)
+                ]
+                if keep:
+                    result.append({**call, "entity_ids": keep})
+                continue
 
             # Intercept any temperature-altering attributes
             call_temp_attrs = {attr: kwargs[attr] for attr in temp_attrs if attr in kwargs}
@@ -1520,11 +1612,10 @@ class BaseServiceCallHandler(ABC):
                         break
 
                 if is_oob:
-                    # → OOB
-                    self._pending_oob_add.add(entity_id)
-                    self._pending_oob_discard.discard(entity_id)
                     if action == UnionOutOfBoundsAction.OFF:
                         if state.state != HVACMode.OFF:
+                            # Only an OFF we send is ours to take back later.
+                            self._pending_oob_off.add(entity_id)
                             result.append({
                                 "service": SERVICE_SET_HVAC_MODE,
                                 "kwargs": {ATTR_HVAC_MODE: HVACMode.OFF},
@@ -1549,26 +1640,9 @@ class BaseServiceCallHandler(ABC):
                             "injected": list(set(call.get("injected", [])) | call_temp_attrs.keys()),
                         })
                 else:
-                    # → In-range for THIS call's attributes. That is not enough to
-                    # clear the marking: a member out of bounds only on
-                    # target_temp_low would be released by a temperature-only call
-                    # and re-marked by the next range call, flip-flopping every
-                    # sync cycle. `_is_oob_blocked` weighs every bound the target
-                    # state currently carries — reuse it as the single authority.
+                    # Switching the member back on is not done here: see
+                    # `_oob_return_calls()`.
                     in_range_ids.append(entity_id)
-                    if entity_id in self._group.run_state.oob_members and not self._is_oob_blocked(entity_id):
-                        if state.state == HVACMode.OFF:
-                            target_mode = self.target_state.hvac_mode
-                            if target_mode and target_mode != HVACMode.OFF:
-                                capable = self._get_capable_entities(ATTR_HVAC_MODE, target_mode)
-                                if entity_id in capable:
-                                    result.append({
-                                        "service": SERVICE_SET_HVAC_MODE,
-                                        "kwargs": {ATTR_HVAC_MODE: target_mode},
-                                        "entity_ids": [entity_id],
-                                    })
-                        self._pending_oob_discard.add(entity_id)
-                        self._pending_oob_add.discard(entity_id)
 
             if in_range_ids:
                 result.append({
@@ -1616,7 +1690,8 @@ class BaseServiceCallHandler(ABC):
 
         Such a member cannot change its mode, so the call changes nothing —
         and some integrations offer a single mode without a way to set it, so
-        the call raises and the rest of the batch never goes out. Judged on
+        the call raises: a warning on every command, and the call counts as
+        failed for every member it addresses. Judged on
         the physical state: a template's rendered mode list is not the
         device's. Here, not in the entity selection: the turn-on setpoint is
         derived from the mode call's members before the pipeline runs.
@@ -1784,37 +1859,25 @@ class BaseServiceCallHandler(ABC):
         """Whether to apply the global group offset. False by default (direct-command handlers)."""
         return False
 
-    def _apply_pending_oob(self, sent_entity_ids: set[str] | None = None) -> None:
-        """Write the OOB marking collected during call generation to run_state.
+    def _record_oob_off(self, sent_entity_ids: set[str] | None = None, *, exclude: set[str] | None = None) -> None:
+        """Record the members whose OOB OFF went out in `oob_off_members`.
 
-        Called by `_execute_calls` after the generated calls have been sent, so a
-        batch discarded as stale never leaves a member marked OOB without the
-        corresponding OFF/CLAMP call having gone out. Read-modify-write is atomic
-        (no await), and the pending sets are cleared for the next generation.
-
-        `sent_entity_ids`, when given, restricts the marking to entities whose
-        call actually went out — used by the mid-batch stale abort, where later
-        calls in the same batch never reached their entities and must not be
-        marked based on a generation-time decision that was never executed.
+        Called by `_execute_calls` after the calls were sent, so a batch
+        discarded as stale never records an OFF that did not go out.
+        `sent_entity_ids` restricts it to entities whose call went out (the
+        batch stopped early); `exclude` drops those whose call raised.
         """
-        if not self._pending_oob_add and not self._pending_oob_discard:
-            return
-        # Copy before clearing — pending_add/pending_discard would otherwise be
-        # the same set objects as self._pending_oob_add/_discard and go empty
-        # along with them below.
-        pending_add = set(self._pending_oob_add)
-        pending_discard = set(self._pending_oob_discard)
+        pending = set(self._pending_oob_off)
+        self._pending_oob_off.clear()
         if sent_entity_ids is not None:
-            pending_add &= sent_entity_ids
-            pending_discard &= sent_entity_ids
-        self._pending_oob_add.clear()
-        self._pending_oob_discard.clear()
-        if not pending_add and not pending_discard:
-            return
+            pending &= sent_entity_ids
+        if exclude:
+            pending -= exclude
         run_state = self._group.run_state
-        new_oob = (run_state.oob_members | pending_add) - pending_discard
-        if new_oob != run_state.oob_members:
-            self._group.run_state = replace(run_state, oob_members=frozenset(new_oob))
+        if pending - run_state.oob_off_members:
+            self._group.run_state = replace(
+                run_state, oob_off_members=run_state.oob_off_members | pending
+            )
 
     def _block_all_calls(self, data: dict[str, Any] | SyncTarget = SYNC_TARGET) -> bool:
         """Hook for derived classes to implement custom call blocking logic.
@@ -1833,8 +1896,10 @@ class BaseServiceCallHandler(ABC):
         1. Prevent all setpoint changes if requested HVAC mode is OFF (Wake-up prevention).
         2. Prevent single setpoint changes if requested HVAC mode is HEAT_COOL
            (it carries a range).
-        3. Prevent range setpoint changes if requested HVAC mode is AUTO. Its
-           single setpoint is decided per member (`_auto_hold_setpoints()`).
+        3. Prevent range setpoint changes if requested HVAC mode is AUTO or a
+           single-setpoint mode — the target keeps the band for a later
+           `heat_cool`. AUTO's single setpoint is decided per member
+           (`_auto_hold_setpoints()`).
         """
         if attr == ATTR_HVAC_MODE:
             return False
@@ -1843,7 +1908,7 @@ class BaseServiceCallHandler(ABC):
         if requested_hvac_mode == HVACMode.OFF:
             return True
 
-        if requested_hvac_mode == HVACMode.AUTO:
+        if requested_hvac_mode == HVACMode.AUTO or requested_hvac_mode in SINGLE_SETPOINT_MODES:
             return attr in (ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
 
         if requested_hvac_mode == HVACMode.HEAT_COOL:
@@ -1876,10 +1941,26 @@ class BaseServiceCallHandler(ABC):
             return False
         if state.state != HVACMode.OFF:
             return False
+        # Our own OOB OFF is not the user's: once the target fits again, its
+        # calls must reach the member — a parked heater is unparked only by the
+        # setpoint, not by the return's mode call. Not under a block or boost:
+        # a parked heater runs on its minimum, so a block setpoint would really
+        # run it before the block ends.
+        run_state = self._group.run_state
+        if (
+            not run_state.temporary_state_active
+            and state.entity_id in run_state.oob_off_members
+            and not is_target_oob(self._group, state.entity_id)
+        ):
+            return False
         return True
 
     async def _after_call_trigger(self, data: dict[str, Any] | SyncTarget = SYNC_TARGET) -> None:
-        """Hook called after a successful service call batch. No-op by default.
+        """Hook called once a pass of the batch has run. No-op by default.
+
+        Runs also when single member calls in it failed — it reacts to the
+        command, not to the devices' success. Not after a stale abort or a fault
+        outside a member call.
 
         Override in handlers that need to react after the call completes
         (e.g. ClimateCallHandler resets the group offset on manual setpoint changes).
@@ -1910,9 +1991,11 @@ class ClimateCallHandler(BaseServiceCallHandler):
         super().__init__(group)
         self._turning_off = False
         self._dispatched_data: dict[str, Any] | SyncTarget | None = None
+        self._from_preset = False
 
     def _generate_calls(self, data: dict[str, Any] | SyncTarget = SYNC_TARGET, filter_state: FilterState | None = None) -> list[dict[str, Any]]:
         """Generate calls for user operations."""
+        self._from_preset = False
         if data is SYNC_TARGET or not data:
             return []
         self._turning_off = data.get(ATTR_HVAC_MODE) == HVACMode.OFF
@@ -1925,6 +2008,9 @@ class ClimateCallHandler(BaseServiceCallHandler):
         # original payload by the retry loop and must not act on attributes
         # that were stripped here.
         self._dispatched_data = data
+        # A group preset is a stored definition, like a slot: its temperature
+        # goes out with the group offset and does not reset it.
+        self._from_preset = ATTR_PRESET_MODE in data
         try:
             return super()._generate_calls(data=data, filter_state=filter_state)
         finally:
@@ -1932,6 +2018,10 @@ class ClimateCallHandler(BaseServiceCallHandler):
 
     def _should_diff(self) -> bool:
         return False
+
+    def _apply_group_offset(self) -> bool:
+        """Only for a group preset — direct user input must arrive exactly."""
+        return self._from_preset
 
     def _inject_turn_on_setpoint(self) -> bool:
         """A direct command may switch members on without carrying the setpoint."""
@@ -2026,6 +2116,7 @@ class ClimateCallHandler(BaseServiceCallHandler):
             effective is not SYNC_TARGET
             and effective
             and temp_attrs & set(effective)
+            and not self._from_preset
         ):
             await async_reset_group_offset(self._group)
 
@@ -2062,14 +2153,12 @@ class SyncCallHandler(BaseServiceCallHandler):
         return super()._generate_calls(data=data, filter_state=effective_filter)
 
     def _is_member_blocked(self, entity_id: str) -> bool:
-        """Extend base blocking with OOB check.
+        """Extend base blocking with the OOB hold (`_is_oob_held`).
 
-        OOB members are excluded from automatic syncs (SyncCallHandler) to
-        prevent constant re-syncing of devices that intentionally deviate from
-        target_state. ClimateCallHandler (base) does NOT override this, so
-        direct user commands still reach OOB members and can clear their OOB state.
+        ClimateCallHandler (base) does NOT override this, so direct user
+        commands still reach OOB members.
         """
-        return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
+        return super()._is_member_blocked(entity_id) or self._is_oob_held(entity_id)
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Read from target_state with group_offset applied for temperature attributes."""
@@ -2212,8 +2301,8 @@ class ScheduleCallHandler(BaseServiceCallHandler):
         super().__init__(group)
 
     def _is_member_blocked(self, entity_id: str) -> bool:
-        """Extend base blocking with OOB check (same as SyncCallHandler)."""
-        return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
+        """Extend base blocking with the OOB hold (same as SyncCallHandler)."""
+        return super()._is_member_blocked(entity_id) or self._is_oob_held(entity_id)
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Read from target_state with group_offset applied for temperature attributes."""
@@ -2303,7 +2392,7 @@ class OverrideCallHandler(BaseServiceCallHandler):
     - context_id="override" (not "schedule")
     - no _block_all_calls: boost is already guarded in activate()
     - no _block_unsynced_entity: OFF-member skipping is a future config option
-    - no _is_oob_blocked pre-filter: that check compares target_state against the
+    - no _is_oob_held pre-filter: that check compares target_state against the
       device limits, and a boost carries its own setpoint. A member marked OOB by
       an earlier target would be excluded from every boost, including one that
       lands inside its range. `_process_oob_guard` still runs at the end of the
@@ -2362,8 +2451,8 @@ class TemplateCallHandler(BaseServiceCallHandler):
         self._debounce_delay = RANGE_TEMPLATE_DEBOUNCE_DELAY
 
     def _is_member_blocked(self, entity_id: str) -> bool:
-        """Extend base blocking with OOB check (same as SyncCallHandler)."""
-        return super()._is_member_blocked(entity_id) or self._is_oob_blocked(entity_id)
+        """Extend base blocking with the OOB hold (same as SyncCallHandler)."""
+        return super()._is_member_blocked(entity_id) or self._is_oob_held(entity_id)
 
     def _get_target_value(self, attr: str, value: Any = None) -> Any:
         """Read from target_state with group_offset applied for temperature attributes."""

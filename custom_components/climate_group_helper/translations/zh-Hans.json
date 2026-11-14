@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "当受监控的窗户打开时，暂停供暖或降低温度。",
-              "window_adopt_manual_changes": "保留窗户打开期间所做的更改，并在窗户关闭后应用。在此之前，执行开窗动作。",
+              "window_adopt_manual_changes": "保留开窗期间所做的更改；关闭窗户时，只有使用“完整目标状态”才会应用这些更改。在此之前，开窗操作仍然生效。",
               "window_action": "窗户打开时的动作：完全关闭或设置为特定温度（例如防冻保护）。",
               "window_temperature": "选择“设置温度”动作时的目标温度。",
               "window_restore_scope": "关窗时恢复的内容：完整目标状态，或仅开窗动作更改过的设置。",

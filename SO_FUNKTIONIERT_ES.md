@@ -77,7 +77,7 @@ Die ersten drei sind **Sperren**. Ein paar Dinge solltest du über sie wissen:
 
 Der Zielzustand ist für die ganze Gruppe gleich. Auf dem Weg zu jedem Gerät wird er für dieses Gerät angepasst:
 
-- **Gruppen-Offset** verschiebt alle Geräte nach oben oder unten, ohne den Zielzustand darunter zu ändern. Während einer Sperre oder eines Boosts ist er pausiert. Auf das, was du selbst an der Gruppe einstellst, wirkt er nicht: Diese Befehle kommen genau so an, und wer an der Gruppe eine Temperatur setzt, setzt den Gruppen-Offset auf 0 zurück.
+- **Gruppen-Offset** verschiebt alle Geräte nach oben oder unten, ohne den Zielzustand darunter zu ändern. Während einer Sperre oder eines Boosts ist er pausiert. Auf das, was du selbst an der Gruppe einstellst, wirkt er nicht: Diese Befehle kommen genau so an, und wer an der Gruppe eine Temperatur setzt, setzt den Gruppen-Offset auf 0 zurück. Ausnahme ist ein Gruppen-Preset — wie ein Zeitblock wird es um den Offset verschoben und behält ihn.
 - **Mitglieder-Offsets** verschieben einzelne Geräte, z. B. ein Schlafzimmer, das immer ein Grad kühler laufen soll.
 - **Gerätegrenzen** *(nur Union)*: Ein Gerät, das die Temperatur nicht erreichen kann, wird ausgeschaltet oder auf seinen nächsten Grenzwert gesetzt (**Außerhalb-Bereich-Aktion**). Ein Gerät, das den Modus nicht unterstützt, bleibt, wie es ist, oder wird ausgeschaltet (**Aktion bei nicht unterstütztem HVAC-Modus**); unter Auto läuft ein Heizkörper ohne Auto stattdessen in Heat.
 - **Bereichsvorlage** macht aus einem Heiz-/Kühlbereich einfaches Heizen oder Kühlen, für Geräte mit nur einem Sollwert.

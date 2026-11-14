@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Wstrzymuje ogrzewanie lub obniża temperaturę po otwarciu monitorowanego okna.",
-              "window_adopt_manual_changes": "Zachowaj zmiany wprowadzone przy otwartych oknach i zastosuj je po ich zamknięciu. Do tego czasu obowiązuje akcja po otwarciu okna.",
+              "window_adopt_manual_changes": "Zachowaj zmiany wprowadzone przy otwartych oknach; po zamknięciu okien są stosowane tylko z „Cały stan docelowy”. Do tego czasu obowiązuje akcja po otwarciu okna.",
               "window_action": "Co zrobić po otwarciu okna: Wyłącz całkowicie lub ustaw określoną temperaturę (np. ochronę przed mrozem).",
               "window_temperature": "Temperatura docelowa, gdy wybrana jest akcja 'Ustaw temperaturę'.",
               "window_restore_scope": "Co jest przywracane po zamknięciu okna: cały stan docelowy lub tylko ustawienie zmienione przez Akcję po otwarciu okna.",

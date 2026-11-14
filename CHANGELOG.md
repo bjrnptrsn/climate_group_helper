@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.19.0 - 2026-11-14
+
+### ✨ Improvements
+
+*   **Hideable Name and Menu Button in the Card**: The card editor can hide the card's name and its menu button.
+
+*   **Group Offset in the Card**: The switch below the dial can also show the group offset, which the dial then sets directly.
+
+*   **Choosable Dial Views in the Card**: The card editor chooses which views the dial's switch offers.
+
+*   **Boost in the Card**: A tile starts a boost with the values set in the card editor and ends it with the next tap.
+
+*   **Device Details from the Member List**: Tapping a device in the card's member list opens its details.
+
+*   **Drayton Wiser Preset Icons**: The Wiser presets for boost, advancing the schedule and cancelling overrides now show their own icons.
+
+*   **Active Calendar in the Card**: The card's status area names the active calendar or schedule and marks one set via service.
+
+*   **Refreshed Card Look**: The card has a lighter glass look, and a tile is highlighted when its setting differs from the default.
+
+*   **Card Source and Developer Guide**: The dashboard card's source code and a guide for building your own card against the group's attributes now ship with the integration.
+
+### 🐛 Bug Fixes
+
+*   **Scrolling No Longer Moves the Dial**: On touch screens, swiping across the dial's ring scrolls the page; the value changes only when the handle is dragged.
+
+*   **−/+ Buttons Follow the Dragged Handle**: In range mode, the −/+ buttons now move the bound whose handle was last dragged on the dial.
+
+*   **A Failing Device No Longer Stops the Others**: When one device rejects a command, the other devices still get theirs.
+
+*   **Schedule Switched via Service Shows Right Away**: A schedule or bypass set via service now shows up immediately, not only after the next device update.
+
+*   **Window and Presence Blocks Show Right Away**: An open window or an away state now shows up immediately, even when the group is already off.
+
+*   **Out-of-Range Devices Come Back Reliably**: A device switched off because the target is outside its range now always comes back on once the target fits again.
+
+*   **Group Presets Keep the Group Offset**: Selecting a group preset no longer resets the group offset; like a schedule slot, its temperature is shifted by it.
+
 ## 1.18.1 - 2026-11-08
 
 ### ✨ Improvements

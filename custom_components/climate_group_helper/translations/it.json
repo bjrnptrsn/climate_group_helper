@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Mette in pausa il riscaldamento o abbassa la temperatura quando viene aperta una finestra monitorata.",
-              "window_adopt_manual_changes": "Conservare le modifiche fatte a finestre aperte e applicarle alla chiusura. Fino ad allora vale l'azione finestra aperta.",
+              "window_adopt_manual_changes": "Mantieni le modifiche fatte mentre le finestre sono aperte; alla chiusura delle finestre vengono applicate solo con «Stato target completo». Fino ad allora si applica l'azione finestra aperta.",
               "window_action": "Cosa fare quando si apre una finestra: Spegnere completamente o impostare una temperatura specifica (es. antigelo).",
               "window_temperature": "Temperatura target quando è selezionata l'azione 'Imposta temperatura'.",
               "window_restore_scope": "Cosa viene ripristinato alla chiusura della finestra: l'intero stato target o solo l'impostazione modificata dall'Azione finestra aperta.",

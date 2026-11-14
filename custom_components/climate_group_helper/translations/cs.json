@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Pozastaví vytápění nebo sníží teplotu, jakmile se otevře sledované okno.",
-              "window_adopt_manual_changes": "Změny provedené při otevřených oknech si zapamatovat a použít po jejich zavření. Do té doby platí akce při otevření okna.",
+              "window_adopt_manual_changes": "Změny provedené při otevřených oknech si zapamatovat; při zavření oken se použijí pouze s možností „Celý cílový stav“. Do té doby platí akce při otevření okna.",
               "window_action": "Co dělat při otevření okna: Úplně vypnout nebo nastavit konkrétní teplotu (např. protimrazová ochrana).",
               "window_temperature": "Cílová teplota při výběru akce 'Nastavit teplotu'.",
               "window_restore_scope": "Co se obnoví při zavření okna: celý cílový stav, nebo jen nastavení, které změnila Akce při otevření okna.",

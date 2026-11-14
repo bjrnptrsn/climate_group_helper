@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Met le chauffage en pause ou abaisse la température lorsqu'une fenêtre surveillée est ouverte.",
-              "window_adopt_manual_changes": "Conserver les modifications faites pendant que les fenêtres sont ouvertes et les appliquer à leur fermeture. D'ici là, l'action fenêtre ouverte s'applique.",
+              "window_adopt_manual_changes": "Conserve les modifications faites pendant que les fenêtres sont ouvertes ; à la fermeture des fenêtres, elles ne sont appliquées qu'avec « État cible complet ». D'ici là, l'action fenêtre ouverte s'applique.",
               "window_action": "Action à effectuer lors de l'ouverture d'une fenêtre : Éteindre complètement ou définir une température spécifique (ex. protection contre le gel).",
               "window_temperature": "Température cible lorsque l'action 'Définir la température' est sélectionnée.",
               "window_restore_scope": "Ce qui est restauré à la fermeture de la fenêtre : l'état cible complet ou uniquement le réglage modifié par l'action fenêtre ouverte.",

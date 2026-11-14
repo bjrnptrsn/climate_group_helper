@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Pausar uppvärmningen eller sänker temperaturen när ett övervakat fönster öppnas.",
-              "window_adopt_manual_changes": "Behåll ändringar som görs medan fönster är öppna och tillämpa dem när de stängs. Till dess gäller åtgärden vid öppet fönster.",
+              "window_adopt_manual_changes": "Behåll ändringar som görs medan fönstren är öppna; när fönstren stängs tillämpas de endast med ”Hela måltillståndet”. Tills dess gäller åtgärden vid öppet fönster.",
               "window_action": "Vad som ska hända när ett fönster öppnas: Stäng av helt eller ställ in en specifik temperatur (t.ex. frostskydd).",
               "window_temperature": "Måltemperatur när 'Ställ in temperatur' är valt.",
               "window_restore_scope": "Vad som återställs när fönstret stängs: hela måltillståndet eller bara inställningen som Åtgärd vid öppet fönster ändrade.",

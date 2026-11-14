@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Pause heating or lower the temperature when a monitored window opens.",
-              "window_adopt_manual_changes": "Keep changes made while windows are open and apply them once they close. Until then, the Window Open Action applies.",
+              "window_adopt_manual_changes": "Keep changes made while windows are open; closing the windows applies them only with Full Target. Until then, the Window Open Action applies.",
               "window_action": "What to do when window opens: Turn Off completely or set a specific Temperature (e.g. frost protection).",
               "window_temperature": "Target temperature to set when 'Temperature' action is selected.",
               "window_restore_scope": "What closing the window restores: the whole target, or only the setting the Window Open Action changed.",

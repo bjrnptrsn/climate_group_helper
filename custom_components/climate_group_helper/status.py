@@ -54,9 +54,12 @@ from .const import (
     ATTR_MEMBER_OFFSETS,
     ATTR_OFFSET_ENTITY_ID,
     ATTR_OOB_MEMBERS,
+    ATTR_OOB_OFF_MEMBERS,
     ATTR_PRESENCE_FALLBACK,
     ATTR_RUNTIME_GROUP_PRESETS,
     ATTR_SCHEDULE_BYPASS_CLAIMS,
+    ATTR_SCHEDULE_BYPASS_ENTITY_OVERRIDDEN,
+    ATTR_SCHEDULE_ENTITY_OVERRIDDEN,
     ATTR_SCHEDULE_FALLBACK_PAYLOAD,
     ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE,
     ATTR_SCHEDULE_HOLD_DURATION,
@@ -65,7 +68,10 @@ from .const import (
     ATTR_TOTAL_MEMBER_COUNT,
     CONF_PRESENCE_MODE,
     CONF_PRESENCE_SENSOR,
+    CONF_SCHEDULE_BYPASS_ENTITY,
+    CONF_SCHEDULE_ENTITY,
     CONF_SWITCH_ACTION,
+    CONF_SYNC_MODE,
     CONF_WINDOW_MODE,
     FLOAT_TOLERANCE,
     IsolationTrigger,
@@ -74,7 +80,7 @@ from .const import (
     SyncMode,
     WindowControlMode,
 )
-from .state import ClimateState, RunState, is_available
+from .state import ClimateState, RunState, is_available, oob_member_ids
 
 if TYPE_CHECKING:
     from .climate import ClimateGroupHelper
@@ -254,8 +260,10 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # --- Isolated / OOB members ---
     if run_state.isolated_members:
         attrs[ATTR_ISOLATED_MEMBERS] = sorted(run_state.isolated_members)
-    if run_state.oob_members:
-        attrs[ATTR_OOB_MEMBERS] = sorted(run_state.oob_members)
+    if oob := oob_member_ids(group):
+        attrs[ATTR_OOB_MEMBERS] = sorted(oob)
+    if run_state.oob_off_members:
+        attrs[ATTR_OOB_OFF_MEMBERS] = sorted(run_state.oob_off_members)
 
     # --- Config overrides (schedule meta-keys) ---
     if run_state.config_overrides:
@@ -273,13 +281,18 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     # Simple mode handlers are not initialised, so we guard handler access.
     cfg = group.config
     features: list[str] = []
-    if cfg.get(CONF_WINDOW_MODE, WindowControlMode.DISABLED) != WindowControlMode.DISABLED:
+    if group.advanced_mode and cfg.get(CONF_WINDOW_MODE, WindowControlMode.DISABLED) != WindowControlMode.DISABLED:
         features.append("window")
-    if cfg.get(CONF_PRESENCE_MODE, PresenceMode.DISABLED) != PresenceMode.DISABLED:
+    if group.advanced_mode and cfg.get(CONF_PRESENCE_MODE, PresenceMode.DISABLED) != PresenceMode.DISABLED:
         features.append("presence")
     if group.advanced_mode and group.schedule_handler.schedule_entity_id:
         features.append("schedule")
-    if group.advanced_mode and group.sync_mode_handler.sync_mode != SyncMode.DISABLED:
+    # Configured or switched on by a slot: a slot switching sync off pauses
+    # the module (the card reads `effective_sync_mode`), it does not remove it.
+    if group.advanced_mode and (
+        cfg.get(CONF_SYNC_MODE, SyncMode.DISABLED) != SyncMode.DISABLED
+        or group.sync_mode_handler.sync_mode != SyncMode.DISABLED
+    ):
         features.append("sync")
     # Based on the instantiated handlers, not the raw config rules: rules
     # beyond CONF_ISOLATION_RULES_COUNT are hidden and must not count as an
@@ -309,9 +322,13 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
         key for key, value in group.sync_mode_handler.filter_state.to_dict().items() if value
     ]
 
-    # Schedule entities
-    if group.schedule_handler.schedule_entity_id:
-        attrs[ATTR_ACTIVE_SCHEDULE_ENTITY] = group.schedule_handler.schedule_entity_id
+    # Schedule entities. The `*_overridden` flags are display only (the restore
+    # never reads them) and derived, not remembered: active ≠ configured holds
+    # after a restore, an explicit switch back and an options change alike.
+    if schedule_entity := group.schedule_handler.schedule_entity_id:
+        attrs[ATTR_ACTIVE_SCHEDULE_ENTITY] = schedule_entity
+        if schedule_entity != cfg.get(CONF_SCHEDULE_ENTITY):
+            attrs[ATTR_SCHEDULE_ENTITY_OVERRIDDEN] = True
         if group.schedule_handler.active_layer == "fallback":
             attrs[ATTR_SCHEDULE_FALLBACK_PAYLOAD_ACTIVE] = True
         # Gated on the entity: the startup slot read also runs without one.
@@ -319,8 +336,10 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
             attrs[ATTR_ACTIVE_SCHEDULE_LAYER] = run_state.active_schedule_layer
     if group.schedule_handler.fallback_payload:
         attrs[ATTR_SCHEDULE_FALLBACK_PAYLOAD] = dict(group.schedule_handler.fallback_payload)
-    if group.schedule_bypass_handler.bypass_entity_id:
-        attrs[ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY] = group.schedule_bypass_handler.bypass_entity_id
+    if bypass_entity := group.schedule_bypass_handler.bypass_entity_id:
+        attrs[ATTR_ACTIVE_SCHEDULE_BYPASS_ENTITY] = bypass_entity
+        if bypass_entity != cfg.get(CONF_SCHEDULE_BYPASS_ENTITY):
+            attrs[ATTR_SCHEDULE_BYPASS_ENTITY_OVERRIDDEN] = True
     if run_state.active_slot_title:
         attrs[ATTR_ACTIVE_SCHEDULE_SLOT_TITLE] = run_state.active_slot_title
 

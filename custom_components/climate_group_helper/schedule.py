@@ -62,6 +62,7 @@ class SlotContext:
     bypass_payload: dict[str, Any]
     bypass_active: bool
     active_layer: str = "none"
+    bypass_unavailable: bool = False
 
 
 class SlotResolver:
@@ -300,6 +301,7 @@ class BaseScheduleHandler(ABC):
 
         bypass_data = self.parse_entity_state(bypass_state) if (bypass_state and bypass_state.state == "on") else {}
         bypass_on = bypass_state is not None and bypass_state.state == "on"
+        bypass_unavailable = bypass_state is not None and not is_available(bypass_state)
 
         _LOGGER.debug(
             "[%s] Slot change: main=%s, bypass=%s (bypass_on=%s)",
@@ -320,7 +322,13 @@ class BaseScheduleHandler(ABC):
         # Nothing reads this back for schedule decisions.
         layer = "bypass" if bypass_active else main_layer
 
-        return SlotContext(main_payload, bypass_payload, bypass_active, layer)
+        return SlotContext(
+            main_payload,
+            bypass_payload,
+            bypass_active,
+            layer,
+            bypass_unavailable,
+        )
 
     def _publish_active_layer(self, ctx: SlotContext) -> None:
         """Write the display-only schedule layer to run_state and refresh the entity.
@@ -388,10 +396,17 @@ class MainScheduleHandler(BaseScheduleHandler):
         by the bypass handler's own event (see `BypassScheduleHandler`). A run here
         during an active bypass records the main in the background and sends
         nothing; the bypass layer owns the members until it lets go.
+
+        A bypass that is unavailable leaves claims behind that `record()`
+        releases here; its own end event never arrives, so this run is the only
+        place the released values can still reach the members. Sending the full
+        target only in that case keeps a startup run with an inactive bypass
+        from turning restored claims into an extra push.
         """
         async with self.slot_transition_lock:
             ctx = await self._read_slots()
             self._publish_active_layer(ctx)
+            had_claims = bool(self._group.run_state.schedule_bypass_claims)
             record = self.slot_resolver.record(ctx)
             # The hold defers only the main slot's own climate payload:
             # `_read_slots()` has already run the meta-keys and `record()` its
@@ -410,7 +425,11 @@ class MainScheduleHandler(BaseScheduleHandler):
                 return
             self._update_state(record)
             if not ctx.bypass_active:
-                await self._call_members(ctx.main_payload)
+                await self._call_members(
+                    SYNC_TARGET
+                    if had_claims and ctx.bypass_unavailable
+                    else ctx.main_payload
+                )
 
     async def async_setup(self) -> None:
         """Subscribe to the schedule entity."""
@@ -481,6 +500,9 @@ class MainScheduleHandler(BaseScheduleHandler):
             self._subscribe()
         if apply:
             await self.on_slot_change()
+        # Unconditional and last: the group does not poll, so nothing else
+        # publishes the new entity when the slot run writes no state of its own.
+        self._group.async_defer_or_update_ha_state()
 
     async def update_fallback_payload(self, new_payload: Any = None, apply: bool = True) -> None:
         """Switch or reset the fallback slot payload at runtime (service: set_schedule_fallback_payload).
@@ -687,6 +709,8 @@ class BypassScheduleHandler(BaseScheduleHandler):
             self._subscribe()
         if apply or was_active:
             await self.on_slot_change(was_active=was_active)
+        # Unconditional and last: see `MainScheduleHandler.update_schedule_entity()`.
+        self._group.async_defer_or_update_ha_state()
 
 
 class ScheduleHoldManager:

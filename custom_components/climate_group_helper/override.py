@@ -125,7 +125,12 @@ class BaseOverrideManager:
             _LOGGER.debug("[%s] %s timer cancelled", self._group.entity_id, self.OVERRIDE_NAME)
 
     def _block(self) -> None:
-        """Add OVERRIDE_NAME to blocking_sources, stamping when it began."""
+        """Add OVERRIDE_NAME to blocking_sources, stamping when it began.
+
+        Publishes the block itself: a block with nothing to send (group already
+        off) gets no member echo, and the group does not poll. The main switch
+        block is restored after a restart from this published attribute.
+        """
         run_state = self._group.run_state
         since = dict(run_state.blocking_since)
         # setdefault: a re-assert of an already-active block keeps the original
@@ -136,9 +141,10 @@ class BaseOverrideManager:
             blocking_sources=run_state.blocking_sources | {self.OVERRIDE_NAME},
             blocking_since=MappingProxyType(since),
         )
+        self._group.async_defer_or_update_ha_state()
 
     def _unblock(self) -> None:
-        """Remove OVERRIDE_NAME from blocking_sources and its timestamp."""
+        """Remove OVERRIDE_NAME from blocking_sources and its timestamp; publish like `_block()`."""
         run_state = self._group.run_state
         since = dict(run_state.blocking_since)
         since.pop(self.OVERRIDE_NAME, None)
@@ -147,6 +153,7 @@ class BaseOverrideManager:
             blocking_sources=run_state.blocking_sources - {self.OVERRIDE_NAME},
             blocking_since=MappingProxyType(since),
         )
+        self._group.async_defer_or_update_ha_state()
 
     def _any_member_not_off(self) -> bool:
         """Return True if any reachable, non-isolated member has an HVAC mode other than OFF."""
@@ -375,9 +382,6 @@ class SwitchOverrideManager(BaseOverrideManager):
         drop_all_claims(self._group)
         self._block()
         self._notify_switch_entity()
-        # The persisted `blocking_sources` attribute restores the block after a
-        # restart; without this write it would depend on a member echo.
-        self._group.async_defer_or_update_ha_state()
         if (payload := self._active_data()) is not None:
             await self.call_handler.call_immediate(payload)
 
@@ -389,7 +393,6 @@ class SwitchOverrideManager(BaseOverrideManager):
         """
         self._unblock()
         self._notify_switch_entity()
-        self._group.async_defer_or_update_ha_state()
         # Cancel our own pending debounced enforce call — it carries a stale payload
         # that must not land after the restore or the cascade re-assert.
         await self.enforce_call_handler.async_cancel_all()
@@ -441,6 +444,18 @@ class WindowOverrideManager(BaseOverrideManager):
                 self._group.entity_id,
             )
         return {"hvac_mode": HVACMode.OFF}
+
+    def request_full_restore(self) -> None:
+        """Ask the close for the full target because an overlay left a mode behind.
+
+        A window under restore scope `action` normally sends only the setting
+        its own action changed. When that payload carries no mode, an overlay
+        released under the block (isolation) would otherwise stay in its mode;
+        the full target is the only push left. The decision stays here, in the
+        manager that owns the payload, not in the releasing overlay.
+        """
+        if ATTR_HVAC_MODE not in self._active_data():
+            self._full_restore_due = True
 
     def _restore_payload(self) -> dict[str, Any] | SyncTarget:
         """Return what a closing window sends: the target, or only what the action changed."""

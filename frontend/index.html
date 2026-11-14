@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Climate Group Helper Card — demo</title>
+    <!--
+      Dev playground for `npm run dev`. Outside Home Assistant there is no theme
+      and no ha-card styling: the card renders into its own shadow root, so only
+      inherited custom properties reach it. The values below approximate HA's
+      default theme; the real look is only in HA.
+    -->
+    <style>
+      :root {
+        color-scheme: light dark;
+        --primary-text-color: #212121;
+        --secondary-text-color: #727272;
+        --primary-color: #009ac7;
+        --disabled-color: #bdbdbd;
+        --divider-color: rgba(0, 0, 0, 0.12);
+        --card-background-color: #ffffff;
+        --secondary-background-color: #e5e5e5;
+        --primary-background-color: #fafafa;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --primary-text-color: #e1e1e1;
+          --secondary-text-color: #9b9b9b;
+          --primary-color: #009ac7;
+          --disabled-color: #6f6f6f;
+          --divider-color: rgba(225, 225, 225, 0.12);
+          --card-background-color: #1c1c1c;
+          --secondary-background-color: #282828;
+          --primary-background-color: #111111;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        background: var(--primary-background-color);
+        color: var(--primary-text-color);
+        font-family: Roboto, system-ui, sans-serif;
+      }
+      #card {
+        max-width: 420px;
+        margin: 0 auto;
+      }
+      /* Stands in for ha-card, which the page cannot reach inside the card. */
+      climate-group-helper-card {
+        display: block;
+        overflow: hidden;
+        border: 1px solid var(--divider-color);
+        border-radius: 12px;
+        background: var(--card-background-color);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="card"></div>
+    <script type="module" src="/src/demo-main.ts"></script>
+  </body>
+</html>

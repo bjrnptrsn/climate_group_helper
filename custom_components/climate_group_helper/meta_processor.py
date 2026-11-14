@@ -476,7 +476,7 @@ class SlotMetaProcessor:
             elif context and key not in _HA_SYSTEM_ATTRS:
                 _LOGGER.warning(
                     "[%s] %s contains unknown meta-key '%s' — ignored. Valid meta-keys: %s",
-                    self._group.entity_id, context, key, sorted(META_STATE_KEYS)
+                    self._group.log_id, context, key, sorted(META_STATE_KEYS)
                 )
         return valid
 
@@ -501,7 +501,7 @@ class SlotMetaProcessor:
                 _LOGGER.warning(
                     "[%s] Invalid value for meta-key 'presence_mode': %s "
                     "(expected 'disabled' or 'away') — ignored",
-                    self._group.entity_id, value,
+                    self._group.log_id, value,
                 )
                 return None
             return value
@@ -514,7 +514,7 @@ class SlotMetaProcessor:
             if value != META_VALUE_DISABLED:
                 _LOGGER.warning(
                     "[%s] Invalid value for meta-key '%s': %s (expected 'disabled') — ignored",
-                    self._group.entity_id, key, value,
+                    self._group.log_id, key, value,
                 )
                 return None
             return value
@@ -531,7 +531,7 @@ class SlotMetaProcessor:
             ):
                 _LOGGER.warning(
                     "[%s] Invalid value for meta-key 'sync_attributes': %s (expected a list of attribute names) — ignored",
-                    self._group.entity_id, value,
+                    self._group.log_id, value,
                 )
                 return None
             return value
@@ -548,7 +548,7 @@ class SlotMetaProcessor:
             except (TypeError, ValueError):
                 _LOGGER.warning(
                     "[%s] Invalid value for meta-key 'sync_mode': %s — ignored",
-                    self._group.entity_id, value,
+                    self._group.log_id, value,
                 )
                 return None
             return value
@@ -562,7 +562,7 @@ class SlotMetaProcessor:
         # run_state.group_offset, which always is: a raw value makes the clamping
         # itself (slot 50 vs. stored 5.0) look like a user takeover.
         if key == META_KEY_GROUP_OFFSET:
-            return clean_offset(value, self._group.entity_id)
+            return clean_offset(value, self._group.log_id)
 
         return value
 
@@ -592,7 +592,7 @@ class SlotMetaProcessor:
                 _LOGGER.warning(
                     "[%s] Invalid value for meta-key 'isolation_bypass': %s "
                     "(expected 'all', or rule slot numbers 1-4) — ignored",
-                    self._group.entity_id, value,
+                    self._group.log_id, value,
                 )
                 return None
             slots.append(item)
@@ -600,7 +600,7 @@ class SlotMetaProcessor:
         if not slots:
             _LOGGER.warning(
                 "[%s] Empty value for meta-key 'isolation_bypass' — ignored",
-                self._group.entity_id,
+                self._group.log_id,
             )
             return None
         return sorted(set(slots))

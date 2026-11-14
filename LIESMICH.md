@@ -433,7 +433,7 @@ Was bei ausgeschaltetem Schalter mit den Geräten passiert, legt die **Aktion de
 
 Eine dedizierte `number`-Entität erlaubt dir, eine globale Temperaturverschiebung (±5,0 °C) auf alle Gruppenmitglieder anzuwenden. Nutze sie, um das Komfortniveau des Raums vorübergehend anzupassen, ohne deinen zugrunde liegenden Zeitplan oder deine Zieleinstellungen zu ändern. Der Offset wirkt als nicht-destruktive Ebene: Ein Offset von +1,5 °C verschiebt einen morgendlichen Sollwert von 20 °C auf 21,5 °C und folgt automatisch einem Zeitplan-Übergang auf 23,5 °C am Abend.
 
-*   **Automatisches Zurücksetzen:** Wird eine Temperatur direkt an der Gruppe gesetzt (über UI oder Dienst), wird der Offset automatisch auf `0` zurückgesetzt.
+*   **Automatisches Zurücksetzen:** Wird eine Temperatur direkt an der Gruppe gesetzt (über UI oder Dienst), wird der Offset automatisch auf `0` zurückgesetzt. Die Wahl eines Gruppen-Presets nicht: Wie bei einem Zeitblock wird dessen Temperatur um den Offset verschoben.
 *   **Persistenz:** Der Offset-Wert übersteht Home-Assistant-Neustarts.
 
 ## Dashboard-Karte
@@ -443,15 +443,18 @@ Karte hinzu — sie erscheint im Karten-Picker als **Climate Group Helper Card**
 und braucht weder einen zusätzlichen Resource-Eintrag noch ein separates
 Repository.
 
-*   **Steuert** die üblichen Klimaeinstellungen: Modus, Temperatur, Luftfeuchte, Preset, Lüfter und Schwenk. Im Karten-Editor lässt sich der ganze Regler ausblenden, oder nur seine −/+-Tasten bzw. der Umschalter Temperatur/Luftfeuchte.
-*   **Hauptschalter** oben links bedient den Hauptschalter der Gruppe (Gruppen mit „Erweiterte Funktionen“). Im Karten-Editor lässt er sich ein- und ausblenden.
-*   **Zurücksetzen**: Eine Kachel setzt vorübergehende Änderungen mit einem Tipp zurück, etwa eine manuelle Änderung gegenüber dem Zeitplan, einen Boost oder den Offset (Gruppen mit „Erweiterte Funktionen“). Was sie zurücksetzt, wählst du im Karten-Editor.
-*   **Zeigt**, was Climate Group Helper gerade tut: den aktiven Blocker und seit wann, Boost- und Hold-Countdowns, die Mitglieder sowie isolierte oder außerhalb des Bereichs liegende Geräte. Das ist reine Anzeige — Offset und Boost stellst du über die eigenen Entitäten der Gruppe und die Dienste ein.
-*   **Badges** stehen für je eine Funktion: Sie leuchten, solange sie eingreift, und werden grau, solange ein Zeitblock oder ein Preset sie pausiert.
-*   **Mitglieder-Punkte** stehen für je ein Gerät, daneben die Zahl der aktiven Mitglieder; ein Tipp darauf zeigt die vollständige Liste. Der größere Punkt ist das Master-Gerät.
-*   **Der Statusbereich** nennt, woher das Ziel der Gruppe kommt — beim Zeitplan auch die Ebene: Haupt-Zeitplan, Bypass oder Fallback — und zeigt einen aktiven Gruppen-Offset. Die Mitgliederliste ergänzt den eigenen Offset jedes Geräts und, solange die Geräte uneinig sind, ihre Einstellungen — hervorgehoben, wo sie von der Vorgabe der Gruppe abweichen; der Punkt eines solchen Geräts bekommt einen Warnring.
+*   **Kopfzeile**: Im Karten-Editor lässt sich der Name ausblenden, damit sich die Karte leichter mit anderen Karten kombinieren lässt; Hauptschalter und Menü-Schaltfläche rutschen dann neben den Regler. Auch die Menü-Schaltfläche lässt sich ausblenden.
+*   **Steuert** die üblichen Klimaeinstellungen: Modus, Temperatur, Luftfeuchte, Preset, Lüfter und Schwenk, dazu den Gruppen-Offset. Im Karten-Editor lässt sich der ganze Regler ausblenden, oder nur seine −/+-Tasten, und du wählst, welche Ansichten sein Umschalter anbietet.
+*   **Hauptschalter** oben links bedient den Hauptschalter der Gruppe. Im Karten-Editor lässt er sich ein- und ausblenden.
+*   **Boost**: Eine Kachel startet einen Boost mit festen Werten und beendet ihn beim nächsten Tipp. Temperatur und Dauer legst du im Karten-Editor fest.
+*   **Zurücksetzen**: Eine Kachel setzt vorübergehende Änderungen mit einem Tipp zurück, etwa eine manuelle Änderung gegenüber dem Zeitplan, einen Boost oder den Offset. Was sie zurücksetzt, wählst du im Karten-Editor.
+*   **Zeigt**, was Climate Group Helper gerade tut: den aktiven Blocker und seit wann, Boost- und Hold-Countdowns, die Mitglieder sowie isolierte oder außerhalb des Bereichs liegende Geräte.
+*   **Badges** stehen für je eine Funktion: Sie leuchten, solange sie eingreift, und verblassen, solange ein Zeitblock oder ein Preset sie pausiert.
+*   **Mitglieder-Punkte** stehen für je ein Gerät, daneben die Zahl der aktiven Mitglieder; ein Tipp darauf zeigt die vollständige Liste, ein Tipp auf ein Gerät dort öffnet dessen Details. Der größere Punkt ist das Master-Gerät.
+*   **Der Statusbereich** nennt, woher das Ziel der Gruppe kommt — beim Zeitplan auch die Ebene (Haupt-Zeitplan, Bypass oder Fallback) und welcher Kalender oder Zeitplan aktiv ist, markiert mit „Dienst“, wenn ein Dienstaufruf ihn anstelle des konfigurierten gesetzt hat — und zeigt einen aktiven Gruppen-Offset. Die Mitgliederliste ergänzt den eigenen Offset jedes Geräts und, solange die Geräte uneinig sind, ihre Einstellungen — hervorgehoben, wo sie von der Vorgabe der Gruppe abweichen; der Punkt eines solchen Geräts bekommt einen Warnring.
 *   **Batterien**: Ein Batteriesymbol oben links im Statusbereich zeigt die schwächste Batterie der Gruppe, eingefärbt wie in Home Assistant. Geräte mit schwacher Batterie markiert die Karte zusätzlich in der Mitgliederliste und nennt sie unter dem Status. Die Batterie jedes Geräts findet sie selbst — Geräte ohne Batterie zeigen einfach nichts. Im Karten-Editor lässt sich die Batterieanzeige abschalten.
 *   **Der Demo-Modus** füllt die Karte mit erfundenen Daten, damit du ohne Einrichtung siehst, was sie alles anzeigen kann.
+*   **Entwickler-Anleitung**: Der Quellcode der Karte und eine [Anleitung für eigene Karten oder Änderungen an dieser](frontend/README.md) (englisch) liegen im Repository.
 
 ## Was die Gruppe über sich selbst berichtet
 
@@ -475,6 +478,12 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 *   **Isolierte und offline Geräte bleiben außen vor.** Ein isoliertes Gerät soll abweichen — würde es mitzählen, meldete die Gruppe eine Abweichung, solange die Isolation dauert.
 *   **Mitglieder-Offsets werden berücksichtigt.** Sind Offsets konfiguriert, wird auf der logischen Einstellung verglichen, während die aufgeführten Werte die tatsächlichen der Geräte bleiben. Zwei Thermostate mit +1 und −1 gelten deshalb als einig — dieser Unterschied ist ja genau der gewünschte.
 
+Dazu listet die Gruppe ihre Geräte auf:
+
+*   **`member_entities`** — alle Mitgliedsgeräte, immer vorhanden. Mit **Mitgliederliste bereitstellen** erscheint dieselbe Liste zusätzlich als `entity_id`, damit der Dialog „Mehr Details" die Mitglieder anzeigt.
+*   **`member_offsets`** — die konfigurierten Temperatur-Offsets je Gerät, nur die ungleich 0. Erklärt, warum ein Gerät auf einem anderen Sollwert läuft als die Gruppe. Fehlt, wenn es keine gibt.
+*   **`current_hvac_modes`** — die Modi der Geräte, die die Gruppe gerade mitzählt, ohne isolierte und offline Geräte.
+
 ### Warum die Gruppe nicht das tut, was du erwartest
 
 *   **`blocking_sources`** — vorhanden, sobald etwas die Gruppe zurückhält, samt Angabe wodurch: `window`, `presence`, `switch`. Solange dort etwas steht, gibt die Gruppe keine Änderungen an ihre Geräte weiter. Blockiert nichts, fehlt das Attribut.
@@ -482,9 +491,10 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 *   **`main_switch_entity_id`** — der Hauptschalter der Gruppe, damit ein Dashboard oder eine Automation ihn findet, ohne seinen Namen raten zu müssen.
 *   **`main_switch_action`** — wie sich der Hauptschalter im ausgeschalteten Zustand verhält: `off`, `temperature` oder `release`. Wird zusammen mit `main_switch_entity_id` bereitgestellt.
 *   **`isolated_members`** — Geräte, die eine Isolationsregel gerade ausschließt. Sie behalten ihren eigenen Zustand und bleiben aus den Werten der Gruppe heraus.
-*   **`oob_members`** — Geräte, die dem letzten Ziel nicht folgen konnten, weil es außerhalb ihres eigenen Temperaturbereichs liegt.
+*   **`oob_members`** — Geräte, deren eigener Temperaturbereich das Gruppenziel nicht einschließt.
 *   **`master_entity_id`** — welches Gerät gerade als Master-Entität der Gruppe festgelegt ist. Nur vorhanden, wenn eine konfiguriert ist.
 *   **`master_fallback_active`** — die konfigurierte Master-Entität ist nicht verfügbar und die Gruppe rechnet ohne sie.
+*   **`presence_fallback`** — die Anwesenheitssteuerung hält die Gruppe zurück, während einer ihrer Anwesenheitssensoren nicht verfügbar ist: ein ausgefallener Sensor statt eines leeren Hauses.
 
 ### Was die Gruppe vorhat und woher es kam
 
@@ -492,12 +502,18 @@ Sind sich alle einig, ist es leer. Zwei Details machen es verlässlich:
 *   **`last_source`, `last_entity`, `last_changed`** — was den Zielzustand zuletzt geändert hat: ein Zeitplan, ein direkter Befehl, ein Gerät unter Mirror-Sync — und wann.
 *   **`last_active_hvac_mode`** — der letzte Modus außer `off`. Damit werden Geräte geweckt, wenn ein Boost auf einer ausgeschalteten Gruppe startet.
 *   **`active_member_count` / `total_member_count`** — wie viele Geräte tatsächlich laufen, von wie vielen konfigurierten.
+*   **`group_offset`** — der aktuelle **Gruppen-Offset**, immer vorhanden, auch bei 0. Die Geräte laufen auf dem Sollwert der Gruppe plus diesem Offset.
+*   **`offset_entity_id`** — die Entität des Gruppen-Offset-Reglers, damit ein Dashboard sie findet. Vorhanden, wenn der Regler existiert.
 
 ### Was gerade in Kraft ist
 
 *   **`enabled_features`** — welche Funktionen überhaupt konfiguriert sind (`window`, `presence`, `schedule`, `sync`, `isolation`, `range_template`, `calibration`, `master`), damit ein Dashboard „aus" von „nicht eingerichtet" unterscheiden kann.
 *   **`effective_sync_mode` / `effective_sync_attributes`** — die Sync-Einstellungen, die *jetzt gerade* gelten, inklusive einer vorübergehenden Übersteuerung durch Zeitplan-Slot oder Preset — nicht zwingend das, was die Einstellungsseite zeigt.
 *   **`config_overrides`** — die Pausen-Schlüssel, die ein Slot oder Preset gerade anwendet.
+*   **`active_schedule_entity` / `active_schedule_bypass_entity`** — der Zeitplan bzw. Kalender und der Bypass-Kalender, denen die Gruppe gerade folgt.
+*   **`schedule_entity_overridden` / `schedule_bypass_entity_overridden`** — vorhanden, solange ein Dienstaufruf die konfigurierte Zeitplan- bzw. Bypass-Entität ersetzt hat.
+*   **`active_schedule_layer`** — woher der aktuelle Zeitblock kommt: `main`, `bypass`, `fallback` oder `none`.
+*   **`schedule_fallback_payload_active`** — der Fallback-Zustand gilt, weil der Zeitplan gerade keinen aktiven Zeitblock hat.
 *   **`active_schedule_slot_title`** — der Titel des laufenden Kalendereintrags, wenn ein Kalender den Zeitplan steuert.
 *   **`active_virtual_preset`** — das aktive Gruppen-Preset, falls eines gewählt ist.
 *   **`runtime_group_presets`** — die aktuell per Dienst gesetzten Laufzeit-Presets mit ihren Werten. Fehlt, wenn keine gesetzt sind.
@@ -676,6 +692,8 @@ Befehle zeitlich zu strecken, statt sie alle gleichzeitig zu senden.
 | **Konfigurations-Sensor bereitstellen** | Erstellt eine diagnostische Konfigurations-Sensor-Entität (`sensor.*_configuration`), die einen portablen JSON-Schnappschuss aller Gruppeneinstellungen unter dem Attribut `settings_json` enthält. |
 | **Alle Sektionen standardmäßig aufklappen** | Hält standardmäßig alle Konfigurationsabschnitte im Optionsdialog aufgeklappt. |
 
+---
+
 ## Dienste
 
 ### `climate_group_helper.boost`
@@ -728,6 +746,8 @@ data:
 | `schedule_entity` | Nein | Die Entitäts-ID des neuen Zeitplans oder Kalenders (z. B. `schedule.*` oder `calendar.*`). Wenn weggelassen, kehrt die Gruppe zu ihrer konfigurierten Standard-Zeitplan-Entität zurück. |
 
 Wird dieser Dienst **ohne** Entität aufgerufen, kehrt die Gruppe zu ihrem konfigurierten Zeitplan zurück (eine zuvor über diesen Dienst gesetzte Entität wird dabei verworfen) und der aktuelle Zeitblock wird erneut angewendet. Um andere temporäre Überschreibungen wie Boost oder Offset zurückzusetzen, wird der Dienst `climate_group_helper.reset` verwendet.
+
+Das Zeitplan-Feld in den Einstellungen der Gruppe zeigt immer den konfigurierten Zeitplan, nicht den hier gesetzten. Der aktive steht im Statusbereich der Dashboard-Karte und in den Attributen der Gruppe. Ohne **Per Dienst geänderte Werte beibehalten (Zeitplan)** kehrt die Gruppe nach einem Neustart oder beim Speichern ihrer Einstellungen zum konfigurierten Zeitplan zurück.
 
 **Beispiel:**
 ```yaml

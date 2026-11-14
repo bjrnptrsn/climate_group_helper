@@ -133,7 +133,7 @@
             },
             "data_description": {
               "window_mode": "Pauzeert het verwarmen of verlaagt de temperatuur zodra een bewaakt raam wordt geopend.",
-              "window_adopt_manual_changes": "Wijzigingen die bij open ramen worden gedaan bewaren en toepassen zodra de ramen sluiten. Tot dan geldt de actie bij open raam.",
+              "window_adopt_manual_changes": "Bewaar wijzigingen die worden gemaakt terwijl ramen open staan; bij het sluiten van de ramen worden ze alleen toegepast met ‘Volledige doelstatus’. Tot dan geldt de actie bij open raam.",
               "window_action": "Wat te doen als een raam opent: Volledig uitschakelen of een specifieke temperatuur instellen (bijv. vorstbeveiliging).",
               "window_temperature": "Doeltemperatuur wanneer de actie 'Temperatuur instellen' is geselecteerd.",
               "window_restore_scope": "Wat wordt hersteld als het raam sluit: de volledige doelstatus of alleen de instelling die de Actie bij open raam heeft gewijzigd.",

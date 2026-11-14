@@ -1,0 +1,29 @@
+{
+  "name": "climate-group-helper-card",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tsc": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "happy-dom": "^21.0.4",
+    "typescript": "^5.4.0",
+    "vite": "^6.0.0",
+    "vite-plugin-css-injected-by-js": "^3.3.1",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@mdi/js": "^7.4.47",
+    "lit": "^3.3.2"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "fsevents": true
+  }
+}
