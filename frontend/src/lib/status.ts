@@ -30,21 +30,38 @@ const TEMPERATURE_ATTRS = ['temperature', 'target_temp_low', 'target_temp_high']
 // The backend's FLOAT_TOLERANCE.
 const FLOAT_TOLERANCE = 0.05
 
-/** How long after a target change members may still be catching up. */
+/** How long a divergence must last before the card shows it. */
 export const DEVIATION_QUIET_MS = 3000
 
+/** Whether the group reports members that disagree on any setting. */
+export function hasDivergence(group: Record<string, unknown> | undefined): boolean {
+  const divergence = group?.member_divergence as Record<string, unknown> | undefined
+  return !!divergence && Object.keys(divergence).length > 0
+}
+
 /**
- * Milliseconds left in the quiet window after the group's last target change
- * (`last_changed`), 0 once it is over. Members report a new command one after
- * another; until they have, the slow ones are not deviating yet.
+ * Milliseconds left in the quiet window, 0 once it is over. It runs from the
+ * moment a divergence appeared where there was none (`since`): members take a
+ * new command one after another, and a divergence that clears within the
+ * window was never one. While a divergence is shown, changes to it show at
+ * once — whatever caused them.
  */
-export function deviationQuietRemaining(
+export function deviationQuietRemaining(since?: number, now: number = Date.now()): number {
+  if (since === undefined) return 0
+  return Math.max(0, since + DEVIATION_QUIET_MS - now)
+}
+
+/**
+ * `member_divergence` as the card shows it: nothing while the quiet window
+ * runs, the backend's undamped snapshot otherwise. Dots, member list and
+ * deviations area all read it through here, so they never disagree.
+ */
+export function settledDivergence(
   group: Record<string, unknown> | undefined,
-  now: number = Date.now()
-): number {
-  const changed = Date.parse(String(group?.last_changed ?? ''))
-  if (Number.isNaN(changed)) return 0
-  return Math.max(0, changed + DEVIATION_QUIET_MS - now)
+  quiet: boolean
+): Record<string, Record<string, unknown>> {
+  if (quiet) return {}
+  return (group?.member_divergence as Record<string, Record<string, unknown>> | undefined) ?? {}
 }
 
 /**
@@ -56,21 +73,19 @@ export function deviationQuietRemaining(
  * on purpose, a Range Template moves covered members onto a band edge the card
  * cannot tell apart, and an off group may park members on their minimum. A
  * member that does not offer the target mode was switched off by the group
- * itself (`member` carries its attributes). Right after a target change the
- * members are still catching up (`deviationQuietRemaining()`).
+ * itself (`member` carries its attributes). The quiet window is not checked
+ * here: it empties the divergence itself (`settledDivergence()`).
  */
 export function deviatesFromTarget(
   group: Record<string, unknown> | undefined,
   id: string,
   attr: string,
   value: unknown,
-  member?: Record<string, unknown>,
-  now: number = Date.now()
+  member?: Record<string, unknown>
 ): boolean {
   if (!group) return false
   if (((group.blocking_sources as string[] | undefined) ?? []).length) return false
   if (group.boost_until) return false
-  if (deviationQuietRemaining(group, now) > 0) return false
   const target = (group.target_state as Record<string, unknown> | undefined) ?? {}
   const expected = target[attr]
   if (expected == null || value == null) return false
@@ -114,6 +129,20 @@ export function divergenceValue(
 }
 
 /**
+ * Features with a runtime state worth a badge, in the order of the badge row.
+ * Range Template and Master are configuration only — a failed master shows on
+ * its member dot instead. Boost and hold add a badge of their own while they run.
+ */
+export const BADGE_FEATURES = [
+  'window',
+  'presence',
+  'schedule',
+  'sync',
+  'isolation',
+  'calibration',
+] as const
+
+/**
  * Priority of the status panel: the highest active state wins, otherwise the
  * component falls back to the target's source. Mirrors the group's blocking
  * hierarchy (`switch > window > presence`) followed by boost, hold, schedule.
@@ -150,14 +179,15 @@ export interface MemberDot {
 
 /**
  * Members that miss the group target on at least one disputed attribute —
- * `deviatesFromTarget()` applied across `member_divergence`.
+ * `deviatesFromTarget()` applied across `member_divergence`, none while the
+ * quiet window runs.
  */
 export function deviatingMembers(
   group: Record<string, unknown> | undefined,
-  states: Record<string, HassEntity | undefined> = {}
+  states: Record<string, HassEntity | undefined> = {},
+  quiet = false
 ): string[] {
-  const divergence =
-    (group?.member_divergence as Record<string, Record<string, unknown>> | undefined) ?? {}
+  const divergence = settledDivergence(group, quiet)
   const ids = new Set<string>()
   for (const [attr, members] of Object.entries(divergence)) {
     for (const [id, value] of Object.entries(members)) {
@@ -189,18 +219,28 @@ export function memberDots(
   }))
 }
 
+/** A state that says the device cannot be reached: the hollow dot. */
+const unreachable = (state: string): boolean => state === 'unavailable' || state === 'unknown'
+
+/**
+ * Members the group cannot reach, in member order: `unavailable`, `unknown`,
+ * or no state at all — the members whose dot is hollow.
+ */
+export function unavailableMembers(
+  members: readonly string[],
+  states: Record<string, HassEntity | undefined>
+): string[] {
+  return members.filter((id) => unreachable(states[id]?.state ?? 'unavailable'))
+}
+
 /**
  * CSS classes for a dot: activity state plus the isolated/OOB/deviation/master
  * markers.
- * An offline master is the master fallback — its dot is the card's only hint.
+ * An offline master is the master fallback — its dot carries the master mark.
  */
 export function memberDotClass(dot: MemberDot): string {
   const activity =
-    dot.state === 'off'
-      ? 'off'
-      : dot.state === 'unavailable' || dot.state === 'unknown'
-        ? 'unavailable'
-        : 'active'
+    dot.state === 'off' ? 'off' : unreachable(dot.state) ? 'unavailable' : 'active'
   const marks = [
     dot.isolated ? 'isolated' : '',
     dot.oob ? 'oob' : '',

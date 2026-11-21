@@ -1,0 +1,799 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "空調群組助手",
+        "description": "建立一個虛擬控制器，同步控制多台冷暖設備。這個群組在儀表板與自動化中就像單一的智慧實體，彙整各裝置的狀態與指令。",
+        "data": {
+          "name": "群組名稱",
+          "entities": "空調裝置"
+        },
+        "data_description": {
+          "name": "為群組取個好記的名稱（例如「客廳」或「全屋」）。",
+          "entities": "選擇要加入此群組的空調裝置（溫控器、冷氣）。"
+        }
+      }
+    },
+    "error": {
+      "no_entities": "至少需要選擇一台空調裝置。",
+      "empty_name": "請輸入群組名稱。"
+    },
+    "abort": {
+      "already_configured": "此群組已經設定過了。",
+      "single_instance_allowed": "只允許一個實例。",
+      "no_changes": "未做任何變更。"
+    }
+  },
+  "options": {
+    "flow_title": "設定群組",
+    "step": {
+      "init": {
+        "title": "設定空調群組",
+        "sections": {
+          "members_section": {
+            "name": "成員與模式",
+            "description": "新增空調裝置，並選擇如何合併各裝置的功能。啟用進階功能後可指定主控實體。",
+            "data": {
+              "entities": "空調裝置",
+              "master_entity": "主控實體",
+              "hvac_mode_strategy": "HVAC 模式策略",
+              "feature_strategy": "功能策略",
+              "union_out_of_bounds_action": "超出範圍時的動作",
+              "union_unsupported_hvac_action": "不支援 HVAC 模式時的動作"
+            },
+            "data_description": {
+              "entities": "新增或移除裝置。移除後，該裝置將不再受群組控制。",
+              "master_entity": "指定一個成員作為主控實體（領導者），用於「主控/鎖定」同步及集中顯示目標值。",
+              "hvac_mode_strategy": "根據成員狀態計算群組狀態的方式（例如一台為「暖氣」、另一台為「關閉」時）。",
+              "feature_strategy": "當成員的功能不同時，決定群組提供哪些功能（例如預置模式、風速模式）。",
+              "union_out_of_bounds_action": "對無法達到目標溫度的成員要如何處理。僅在功能策略設為「聯集」時適用。",
+              "union_unsupported_hvac_action": "對技術上不支援群組目標 HVAC 模式的成員要如何處理（例如開暖氣時的冷氣機）。僅在功能策略設為「聯集」時適用。"
+            }
+          },
+          "temperature_section": {
+            "name": "溫度設定",
+            "description": "設定溫度的彙整方式與精度。啟用進階功能後可使用外部感測器、校正及防凍保護。",
+            "data": {
+              "temp_target_avg": "目標溫度",
+              "temp_use_master": "使用主控實體的目標溫度",
+              "temp_target_round": "目標溫度精度",
+              "temp_current_avg": "目前溫度",
+              "min_temp_off": "關閉時使用最低溫度",
+              "temp_sensors": "外部溫度感測器",
+              "temp_update_targets": "將外部溫度寫入實體",
+              "temp_calibration_mode": "校正模式",
+              "temp_inverted_offset_targets": "反向偏移的校正目標",
+              "calibration_heartbeat": "校正心跳間隔（分鐘）",
+              "calibration_ignore_off": "忽略已關閉的成員",
+              "ignore_off_members_temperature": "溫度計算排除已關閉的成員"
+            },
+            "data_description": {
+              "temp_target_avg": "群組如何彙整各成員的目標設定溫度。",
+              "temp_use_master": "以主控實體的設定溫度作為群組的目標溫度，而非成員平均值。主控實體無法使用時改用平均值。這只影響群組狀態的顯示方式，不會控制或同步成員（如需同步，請使用同步模式「主控/鎖定」）。",
+              "temp_target_round": "只套用於傳送給裝置的數值，不影響目前值或顯示值。",
+              "temp_current_avg": "群組如何彙整各成員的感測器讀數。",
+              "min_temp_off": "關閉群組時，傳送裝置的最低溫度（例如 5°C），確保閥門完全關閉並具防凍保護。",
+              "temp_sensors": "以外部感測器取代成員的讀數，作為群組溫度的唯一依據。",
+              "temp_update_targets": "將外部感測器的數值寫入數字實體（例如恆溫閥的校正偏移），讓溫控器得知實際室溫。",
+              "temp_calibration_mode": "絕對值：直接傳送數值。偏移：傳送差值（外部 − 恆溫閥內部）。縮放：以整數 ×100 傳送（例如 21.5 → 2150）。",
+              "temp_inverted_offset_targets": "運作方向相反的裝置的校正實體：偏移值越高，回報的溫度反而越低。僅用於偏移模式。",
+              "calibration_heartbeat": "即使溫度沒有變化，也定期強制將校正值同步到實體。設為 0 可停用。",
+              "calibration_ignore_off": "不對目前關閉的成員傳送校正更新。",
+              "ignore_off_members_temperature": "計算目前溫度與目標溫度時，排除目前關閉的成員。"
+            }
+          },
+          "humidity_section": {
+            "name": "濕度設定",
+            "description": "設定濕度的彙整方式與精度。啟用進階功能後可使用外部感測器。",
+            "data": {
+              "humidity_target_avg": "目標濕度",
+              "humidity_use_master": "使用主控實體的目標濕度",
+              "humidity_target_round": "目標濕度精度",
+              "humidity_current_avg": "目前濕度",
+              "humidity_sensors": "外部濕度感測器",
+              "humidity_update_targets": "將外部濕度寫入實體"
+            },
+            "data_description": {
+              "humidity_target_avg": "群組如何彙整各成員的目標濕度設定值。",
+              "humidity_use_master": "以主控實體的設定值作為群組的目標濕度，而非成員平均值。主控實體無法使用時改用平均值。這只影響群組狀態的顯示方式，不會控制或同步成員（如需同步，請使用同步模式「主控/鎖定」）。",
+              "humidity_target_round": "只套用於傳送給裝置的數值，不影響目前值或顯示值。",
+              "humidity_current_avg": "群組如何彙整各成員的感測器讀數。",
+              "humidity_sensors": "以外部感測器取代成員的讀數，作為群組濕度的唯一依據。",
+              "humidity_update_targets": "將外部感測器的數值寫入數字實體，適用於除濕機校正。"
+            }
+          },
+          "sync_section": {
+            "name": "同步模式",
+            "description": "定義成員裝置被直接變更時（例如透過它自己的 App 或實體按鍵）的處理方式，不包括您控制群組本身的情況。請選擇要強制同步的屬性。",
+            "data": {
+              "sync_mode": "同步模式",
+              "sync_attributes": "同步屬性",
+              "ignore_off_members_sync": "保留成員的關閉狀態（同步）"
+            },
+            "data_description": {
+              "sync_mode": "成員在群組外被變更時要如何處理。停用：忽略。鏡像：同步變更到其他成員。鎖定：還原變更。鏡像/鎖定：鏡像所選屬性，還原未選屬性。主控/鎖定：鏡像主控實體，還原其他成員。僅採納：採納變更，但不傳給其他成員。",
+              "sync_attributes": "定義同步模式作用於哪些屬性。已選與未選屬性的處理方式（鏡像、還原或忽略）取決於所選模式。",
+              "ignore_off_members_sync": "手動關閉的成員將維持原狀，其狀態既不會被鏡像，也不會被還原。注意：無論此設定為何，直接對群組下的指令一律會送達所有成員。"
+            }
+          },
+          "window_section": {
+            "name": "窗戶控制",
+            "description": "開窗時關閉或設定指定溫度，關窗後還原。",
+            "data": {
+              "window_mode": "窗戶控制模式",
+              "window_adopt_manual_changes": "採納手動變更",
+              "window_action": "開窗時的動作",
+              "window_temperature": "開窗溫度",
+              "window_restore_scope": "關窗時還原的內容",
+              "room_sensor": "房間窗戶感測器",
+              "zone_sensor": "區域窗戶感測器",
+              "room_open_delay": "房間開窗延遲（秒）",
+              "zone_open_delay": "區域開窗延遲（秒）",
+              "close_delay": "關窗延遲（秒）"
+            },
+            "data_description": {
+              "window_mode": "啟用或停用窗戶控制：當監控的窗戶開啟時，暫停暖氣或降低溫度。",
+              "window_adopt_manual_changes": "保留開窗期間所做的變更。只有在「完整目標」時，關窗才會套用這些變更；在那之前，套用開窗時的動作。",
+              "window_action": "開窗時要做什麼：完全關閉，或設定指定溫度（例如防凍保護）。",
+              "window_temperature": "選擇「溫度」動作時要設定的目標溫度。",
+              "window_restore_scope": "關窗時要還原什麼：完整目標，或僅還原開窗動作所變更的設定。",
+              "room_sensor": "（選填）房間本身窗戶/門的二進位感測器、input_boolean 或窗簾/遮蔽實體。",
+              "zone_sensor": "（選填）區域/樓層中窗戶/門的二進位感測器、input_boolean 或窗簾/遮蔽實體。區域感測器必須包含房間感測器。",
+              "room_open_delay": "房間窗戶開啟後，等待多久才觸發開窗動作。",
+              "zone_open_delay": "區域窗戶開啟後，等待多久才觸發開窗動作。",
+              "close_delay": "所有窗戶關閉後，等待多久才還原先前的狀態。"
+            }
+          },
+          "presence_section": {
+            "name": "在場控制",
+            "description": "依房間是否有人管理空調設定。偵測到無人達設定的時間後，觸發離家動作；回來時還原先前的設定。",
+            "data": {
+              "presence_mode": "在場控制模式",
+              "presence_sensor": "在場觸發來源",
+              "presence_zone": "在場區域",
+              "presence_action": "離家動作",
+              "presence_away_offset": "離家溫度偏移",
+              "presence_away_temperature": "離家溫度",
+              "presence_away_preset": "離家預置",
+              "presence_away_delay": "離家延遲（秒）",
+              "presence_return_delay": "回家延遲（秒）",
+              "ignore_off_members_presence": "保留成員的關閉狀態（在場）"
+            },
+            "data_description": {
+              "presence_mode": "啟用或停用偵測到無人時的自動離家備援。",
+              "presence_sensor": "回報房間是否有人的實體。可選擇多個感測器（例如動作感測器與手機）。任何「開啟」或「在家」狀態都視為有人。",
+              "presence_zone": "（選填）選擇計入在場的區域。若有設定，人員只在這些區域內時才算「在場」；若留空，人員位於任何區域（「not_home」除外）時都算「在場」。",
+              "presence_action": "偵測到無人時要執行的備援動作。",
+              "presence_away_offset": "離家時相對於目前目標的偏移（例如 -2° 或 +2°）。離家期間的排程變更會自動套用。",
+              "presence_away_temperature": "離家時設定的固定溫度。",
+              "presence_away_preset": "離家時啟用的預置模式。",
+              "presence_away_delay": "感測器回報無人後，等待多久才啟用離家模式。",
+              "presence_return_delay": "感測器回報有人後，等待多久才還原。",
+              "ignore_off_members_presence": "不去動已關閉的成員：離家時、回家時，或兩者皆是。離家動作為「關閉」時不適用，因為成員是群組自己關閉的。"
+            }
+          },
+          "schedule_section": {
+            "name": "排程自動化",
+            "description": "連結排程或行事曆實體以自動調整空調設定。時段資料可包含空調屬性（temperature、hvac_mode）及中繼鍵（turn_off、sync_mode、sync_attributes），以便依時段調整群組行為。",
+            "data": {
+              "schedule_entity": "主排程/行事曆實體",
+              "schedule_fallback_payload": "主排程/行事曆未啟用時的備援狀態（YAML）",
+              "schedule_bypass_entity": "例外排程/行事曆實體",
+              "retain_service_changes_schedule": "保留透過服務所做的變更（排程）",
+              "ignore_off_members_schedule": "保留成員的關閉狀態（排程）",
+              "schedule_hold_duration": "手動保持時間"
+            },
+            "data_description": {
+              "schedule_entity": "選擇 schedule.* 或 calendar.* 實體。排程實體的時段資料讀取自時段的屬性；行事曆實體的時段資料則以 YAML 讀取自活動的說明欄位。支援的鍵：空調屬性與中繼鍵。",
+              "schedule_fallback_payload": "在主排程的時段之外代替主排程，因此不需要全天無間斷的排程。例外排程照常運作，啟用時會覆蓋它。YAML 格式同上（例如 temperature: 17, hvac_mode: heat）。",
+              "schedule_bypass_entity": "選填的較高優先層（例如休假行事曆）。啟用時，其時段資料會覆蓋主排程。時段資料的讀取方式相同：schedule.* 實體讀取屬性，calendar.* 實體讀取 YAML 說明。",
+              "retain_service_changes_schedule": "重新啟動後保留透過服務對主排程、例外排程、備援狀態及手動保持時間所做的變更；否則會重設為設定的預設值。",
+              "ignore_off_members_schedule": "排程「不會」開啟目前關閉的成員。",
+              "schedule_hold_duration": "手動變更（例如溫度，或開關群組）要保持多久，排程才以當時的時段繼續執行。設為 0 則停用保持。"
+            }
+          },
+          "presets_section": {
+            "name": "群組預置",
+            "description": "為群組定義自訂名稱的預置（例如節能、訪客、通風）。選擇後會一次將其屬性套用到所有成員。群組預置會覆蓋成員本身同名的預置。透過 set_group_preset 服務設定的執行期預置會加入這裡輸入的預置，同名時以執行期預置為優先。",
+            "data": {
+              "group_presets": "群組預置（YAML）",
+              "retain_service_changes_presets": "保留透過服務所做的變更（預置）"
+            },
+            "data_description": {
+              "group_presets": "以 YAML 撰寫的預置：每個預置可自由命名，並列出要套用的屬性（temperature、hvac_mode、fan_mode、swing_mode）。預置只會套用它所列出的屬性。格式說明及可直接複製的範例請參閱說明文件。",
+              "retain_service_changes_presets": "重新啟動後保留透過 set_group_preset 服務設定的執行期預置。若不保留，群組啟動時只有這裡輸入的預置。"
+            }
+          },
+          "temp_offsets_section": {
+            "name": "成員偏移",
+            "description": "為個別成員設定溫度偏移，讓特定成員比群組的目標設定溫度稍暖或稍涼。",
+            "data": {
+              "member_offset_correction": "修正成員偏移"
+            },
+            "data_description": {
+              "member_offset_correction": "啟用後，平均前會先扣除各成員的偏移，讓群組顯示邏輯上的設定溫度，而非實際的原始平均值。"
+            }
+          },
+          "isolation_section": {
+            "name": "成員隔離",
+            "description": "在觸發條件成立期間暫時隔離特定成員。被隔離的成員會執行隔離動作（預設為關閉），並排除在群組計算之外。",
+            "data": {
+              "isolation_rule_count": "規則數量",
+              "isolation_rule_1_entities": "要隔離的實體",
+              "isolation_rule_1_trigger": "觸發類型",
+              "isolation_rule_1_sensor": "隔離感測器",
+              "isolation_rule_1_hvac_modes": "HVAC 模式觸發",
+              "isolation_rule_1_activate_delay": "啟用延遲（秒）",
+              "isolation_rule_1_restore_delay": "還原延遲（秒）",
+              "isolation_rule_1_action_type": "隔離動作",
+              "isolation_rule_1_action_hvac_mode": "HVAC 模式",
+              "isolation_rule_1_action_preset_mode": "預置模式"
+            },
+            "data_description": {
+              "isolation_rule_count": "要顯示幾條獨立的隔離規則。變更後請儲存，以顯示或隱藏其他規則欄位。",
+              "isolation_rule_1_entities": "觸發條件成立時要隔離的群組成員。",
+              "isolation_rule_1_trigger": "選擇啟動隔離的條件：二進位感測器、群組的特定 HVAC 模式，或成員被手動關閉。",
+              "isolation_rule_1_sensor": "（感測器觸發）開啟時觸發隔離的二進位感測器。",
+              "isolation_rule_1_hvac_modes": "（HVAC 模式觸發）群組的目標模式為其中之一時啟動隔離。",
+              "isolation_rule_1_activate_delay": "（僅限感測器/HVAC 模式觸發）觸發後等待多久才隔離成員。",
+              "isolation_rule_1_restore_delay": "（僅限感測器/HVAC 模式觸發）觸發解除後等待多久，才將成員還原為群組的目標狀態。",
+              "isolation_rule_1_action_type": "選擇此成員被隔離時要做什麼：設定 HVAC 模式或預置模式。",
+              "isolation_rule_1_action_hvac_mode": "套用到被隔離成員的 HVAC 模式。",
+              "isolation_rule_1_action_preset_mode": "套用到被隔離成員的預置模式。"
+            }
+          },
+          "isolation_rule_2_section": {
+            "name": "成員隔離 – 規則 2",
+            "description": "選填的第二條隔離規則，具有獨立的觸發條件與成員清單。",
+            "data": {
+              "isolation_rule_2_entities": "要隔離的實體",
+              "isolation_rule_2_trigger": "觸發類型",
+              "isolation_rule_2_sensor": "隔離感測器",
+              "isolation_rule_2_hvac_modes": "HVAC 模式觸發",
+              "isolation_rule_2_activate_delay": "啟用延遲（秒）",
+              "isolation_rule_2_restore_delay": "還原延遲（秒）",
+              "isolation_rule_2_action_type": "隔離動作",
+              "isolation_rule_2_action_hvac_mode": "HVAC 模式",
+              "isolation_rule_2_action_preset_mode": "預置模式"
+            },
+            "data_description": {
+              "isolation_rule_2_entities": "觸發條件成立時要隔離的群組成員。",
+              "isolation_rule_2_trigger": "選擇啟動隔離的條件：二進位感測器、群組的特定 HVAC 模式，或成員被手動關閉。",
+              "isolation_rule_2_sensor": "（感測器觸發）開啟時觸發隔離的二進位感測器。",
+              "isolation_rule_2_hvac_modes": "（HVAC 模式觸發）群組的目標模式為其中之一時啟動隔離。",
+              "isolation_rule_2_activate_delay": "（僅限感測器/HVAC 模式觸發）觸發後等待多久才隔離成員。",
+              "isolation_rule_2_restore_delay": "（僅限感測器/HVAC 模式觸發）觸發解除後等待多久，才將成員還原為群組的目標狀態。",
+              "isolation_rule_2_action_type": "選擇此成員被隔離時要做什麼：設定 HVAC 模式或預置模式。",
+              "isolation_rule_2_action_hvac_mode": "套用到被隔離成員的 HVAC 模式。",
+              "isolation_rule_2_action_preset_mode": "套用到被隔離成員的預置模式。"
+            }
+          },
+          "isolation_rule_3_section": {
+            "name": "成員隔離 – 規則 3",
+            "description": "選填的第三條隔離規則，具有獨立的觸發條件與成員清單。",
+            "data": {
+              "isolation_rule_3_entities": "要隔離的實體",
+              "isolation_rule_3_trigger": "觸發類型",
+              "isolation_rule_3_sensor": "隔離感測器",
+              "isolation_rule_3_hvac_modes": "HVAC 模式觸發",
+              "isolation_rule_3_activate_delay": "啟用延遲（秒）",
+              "isolation_rule_3_restore_delay": "還原延遲（秒）",
+              "isolation_rule_3_action_type": "隔離動作",
+              "isolation_rule_3_action_hvac_mode": "HVAC 模式",
+              "isolation_rule_3_action_preset_mode": "預置模式"
+            },
+            "data_description": {
+              "isolation_rule_3_entities": "觸發條件成立時要隔離的群組成員。",
+              "isolation_rule_3_trigger": "選擇啟動隔離的條件：二進位感測器、群組的特定 HVAC 模式，或成員被手動關閉。",
+              "isolation_rule_3_sensor": "（感測器觸發）開啟時觸發隔離的二進位感測器。",
+              "isolation_rule_3_hvac_modes": "（HVAC 模式觸發）群組的目標模式為其中之一時啟動隔離。",
+              "isolation_rule_3_activate_delay": "（僅限感測器/HVAC 模式觸發）觸發後等待多久才隔離成員。",
+              "isolation_rule_3_restore_delay": "（僅限感測器/HVAC 模式觸發）觸發解除後等待多久，才將成員還原為群組的目標狀態。",
+              "isolation_rule_3_action_type": "選擇此成員被隔離時要做什麼：設定 HVAC 模式或預置模式。",
+              "isolation_rule_3_action_hvac_mode": "套用到被隔離成員的 HVAC 模式。",
+              "isolation_rule_3_action_preset_mode": "套用到被隔離成員的預置模式。"
+            }
+          },
+          "isolation_rule_4_section": {
+            "name": "成員隔離 – 規則 4",
+            "description": "選填的第四條隔離規則，具有獨立的觸發條件與成員清單。",
+            "data": {
+              "isolation_rule_4_entities": "要隔離的實體",
+              "isolation_rule_4_trigger": "觸發類型",
+              "isolation_rule_4_sensor": "隔離感測器",
+              "isolation_rule_4_hvac_modes": "HVAC 模式觸發",
+              "isolation_rule_4_activate_delay": "啟用延遲（秒）",
+              "isolation_rule_4_restore_delay": "還原延遲（秒）",
+              "isolation_rule_4_action_type": "隔離動作",
+              "isolation_rule_4_action_hvac_mode": "HVAC 模式",
+              "isolation_rule_4_action_preset_mode": "預置模式"
+            },
+            "data_description": {
+              "isolation_rule_4_entities": "觸發條件成立時要隔離的群組成員。",
+              "isolation_rule_4_trigger": "選擇啟動隔離的條件：二進位感測器、群組的特定 HVAC 模式，或成員被手動關閉。",
+              "isolation_rule_4_sensor": "（感測器觸發）開啟時觸發隔離的二進位感測器。",
+              "isolation_rule_4_hvac_modes": "（HVAC 模式觸發）群組的目標模式為其中之一時啟動隔離。",
+              "isolation_rule_4_activate_delay": "（僅限感測器/HVAC 模式觸發）觸發後等待多久才隔離成員。",
+              "isolation_rule_4_restore_delay": "（僅限感測器/HVAC 模式觸發）觸發解除後等待多久，才將成員還原為群組的目標狀態。",
+              "isolation_rule_4_action_type": "選擇此成員被隔離時要做什麼：設定 HVAC 模式或預置模式。",
+              "isolation_rule_4_action_hvac_mode": "套用到被隔離成員的 HVAC 模式。",
+              "isolation_rule_4_action_preset_mode": "套用到被隔離成員的預置模式。"
+            }
+          },
+          "member_template_section": {
+            "name": "成員範本",
+            "description": "讓成員具備裝置本身未提供的功能。範圍範本：只有單一設定溫度的成員可當作冷暖範圍裝置使用，範圍指令會依各成員的目前溫度轉為暖氣或冷氣。關閉範本：沒有關閉模式的暖氣機，會以暖氣模式設在其最低溫度來代替關閉。",
+            "data": {
+              "range_template_enabled": "啟用範圍範本",
+              "range_template_deadband_action": "死區動作",
+              "range_template_heat_entities": "暖氣裝置",
+              "range_template_cool_entities": "冷氣裝置",
+              "range_template_conditional": "有條件提供暖氣/冷氣",
+              "range_template_humidity_enabled": "死區內除濕",
+              "range_template_humidity_action": "濕度動作",
+              "range_template_humidity_hysteresis": "濕度遲滯",
+              "range_template_humidity_deactivation_delay": "停用延遲",
+              "off_template_enabled": "啟用關閉範本"
+            },
+            "data_description": {
+              "range_template_enabled": "自動將所有只有單一設定溫度的成員（不具原生冷暖模式）轉為虛擬的範圍模式裝置。",
+              "range_template_deadband_action": "目前溫度位於目標範圍內（死區）時要執行的動作。「無」不會變更模式，但會讓持續加熱或冷卻的裝置停在對應的上下限。",
+              "range_template_heat_entities": "允許開暖氣的成員。未列出的成員不受限制（依實際功能而定）。角色只能限制、不能擴充裝置的功能。",
+              "range_template_cool_entities": "允許開冷氣的成員。未列出的成員不受限制（依實際功能而定）。角色只能限制、不能擴充裝置的功能。",
+              "range_template_conditional": "只有在至少一個可連線的成員能開暖氣、另一個能開冷氣時，才提供「暖氣/冷氣」及溫度範圍。",
+              "range_template_humidity_enabled": "位於目標溫度範圍內時，若目前濕度超過目標濕度，就切換到濕度動作。",
+              "range_template_humidity_action": "位於死區內且目前濕度超過目標濕度時要執行的動作。",
+              "range_template_humidity_hysteresis": "在目標濕度周圍設定史密特觸發遲滯區間，避免頻繁切換。",
+              "range_template_humidity_deactivation_delay": "濕度降到門檻以下後，等待多久才停用濕度動作。",
+              "off_template_enabled": "群組關閉時，沒有關閉模式的暖氣機會以暖氣模式設在其最低溫度；停在最低溫度的暖氣機即視為關閉。具有關閉模式的裝置請改用「關閉時使用最低溫度」。"
+            }
+          },
+          "advanced_section": {
+            "name": "進階設定",
+            "description": "選擇總開關關閉時的動作，微調指令時序與重試行為，並切換診斷屬性與設定感測器。",
+            "data": {
+              "switch_action": "總開關動作",
+              "switch_temperature": "總開關溫度",
+              "debounce_delay": "防彈跳延遲（秒）",
+              "retry_attempts": "重試次數",
+              "retry_delay": "重試延遲（秒）",
+              "force_retry": "強制重試",
+              "member_command_delay": "成員指令間隔（秒）",
+              "grace_period": "介面樂觀顯示寬限時間（秒）",
+              "expose_smart_sensors": "提供智慧感測器",
+              "expose_member_entities": "提供成員清單",
+              "expose_config": "提供設定感測器"
+            },
+            "data_description": {
+              "switch_action": "總開關關閉時裝置要怎麼處理：關閉、設定溫度（固定的設定溫度，例如防凍保護，只會變更運轉中裝置的設定溫度），或釋放裝置（群組不再管理裝置，由您直接控制）。",
+              "switch_temperature": "選擇「設定溫度」動作時要設定的目標溫度。",
+              "debounce_delay": "傳送指令前的等待時間。數值越高越能避免拖動控制項時連續發送指令，但反應會感覺較慢。",
+              "retry_attempts": "裝置沒有回應時重新傳送指令的次數。設為 0 可停用。",
+              "retry_delay": "每次重試之間的間隔。給裝置一點時間恢復可提升可靠性。",
+              "force_retry": "即使成員已回報目標狀態，仍一律對所有成員重試傳送指令。",
+              "member_command_delay": "對每個成員傳送指令之間的間隔。同時控制多台裝置會造成網路或橋接器過載時很有用（例如紅外線發射器、部分 Zigbee 協調器）。設為 0 可停用。",
+              "grace_period": "群組顯示指令值多久後才改為顯示成員平均值。可避免反應慢的裝置（雲端橋接器、Zigbee）回傳舊狀態時介面閃爍。設為 0 可停用。",
+              "expose_smart_sensors": "為群組的溫度與濕度建立額外的感測器實體（方便製作圖表）。",
+              "expose_member_entities": "新增列出所有成員的「entity_id」屬性，讓更多資訊對話框顯示成員清單。",
+              "expose_config": "建立診斷用感測器（sensor.*_configuration），以 JSON 屬性提供可移植的設定，方便透過自動化在群組間複製設定。"
+            }
+          }
+        },
+        "data": {
+          "advanced_mode": "進階功能",
+          "expand_sections": "預設展開所有區段"
+        }
+      }
+    },
+    "error": {
+      "no_entities": "群組中至少要保留一台空調裝置。",
+      "master_not_in_members": "主控實體必須是群組的成員。",
+      "master_refresh_notice": "已新增主控實體，可使用新選項。",
+      "master_options_notice": "此區段提供主控實體的新選項。",
+      "isolation_all_selected": "至少要有一個成員不在隔離中。",
+      "isolation_entity_overlap": "每個成員只能出現在一條隔離規則中。",
+      "isolation_action_preset_required": "請為隔離動作選擇預置模式。",
+      "isolation_sensor_required": "請為隔離規則選擇感測器，或將觸發類型設為「停用」。",
+      "isolation_hvac_modes_required": "請為隔離規則至少選擇一個模式，或將觸發類型設為「停用」。",
+      "window_temperature_required": "請設定開窗溫度，或變更開窗動作。",
+      "switch_temperature_required": "請設定總開關溫度，或變更總開關動作。",
+      "presence_action_value_required": "請為所選的離家動作設定數值，或變更動作。",
+      "schedule_fallback_payload_invalid": "備援排程資料的 YAML 格式無效，必須是有效的鍵值對應。",
+      "group_presets_invalid": "群組預置的 YAML 格式無效，必須是有效的鍵值對應。",
+      "preset_name_collision_notice": "有群組預置與成員原生的預置同名，將以群組的定義為準。",
+      "sensor_loop_protection": "不能將空調群組助手的實體作為外部感測器或校正目標，否則會形成回饋迴圈。"
+    },
+    "abort": {
+      "no_changes": "沒有偵測到變更。"
+    }
+  },
+  "selector": {
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "一般 – 群組採用成員中最常見的模式",
+        "off_priority": "關閉優先 – 只要有成員關閉，整個群組即為關閉",
+        "auto": "自動 – 在一般與關閉優先之間智慧切換"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "交集 – 只提供「所有」成員都具備的功能",
+        "union": "聯集 – 提供「任一」成員具備的所有功能"
+      }
+    },
+    "temp_target_avg": {
+      "options": {
+        "mean": "平均值",
+        "median": "中位數",
+        "min": "最小值（最低）",
+        "max": "最大值（最高）"
+      }
+    },
+    "temp_target_round": {
+      "options": {
+        "none": "不四捨五入（精確值）",
+        "half": "半度（0.5°）",
+        "integer": "整數（1°）"
+      }
+    },
+    "temp_current_avg": {
+      "options": {
+        "mean": "平均值",
+        "median": "中位數（忽略離群值）",
+        "min": "最小值（最低）",
+        "max": "最大值（最高）"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "絕對值 – 直接傳送數值（標準）",
+        "offset": "偏移 – 傳送差值（外部 − 恆溫閥內部）",
+        "scaled": "縮放 – 整數 ×100（Danfoss Ally）"
+      }
+    },
+    "humidity_target_avg": {
+      "options": {
+        "mean": "平均值",
+        "median": "中位數",
+        "min": "最小值（最低）",
+        "max": "最大值（最高）"
+      }
+    },
+    "humidity_target_round": {
+      "options": {
+        "none": "不四捨五入（精確值）",
+        "half": "半個百分點（0.5%）",
+        "integer": "整數（1%）"
+      }
+    },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "平均值",
+        "median": "中位數（忽略離群值）",
+        "min": "最小值（最低）",
+        "max": "最大值（最高）"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "disabled": "停用 – 成員之間不自動同步",
+        "mirror": "鏡像 – 單一裝置的手動變更會更新所有成員",
+        "lock": "鎖定 – 還原手動變更以符合群組狀態",
+        "mirror_lock": "鏡像/鎖定 – 所選屬性會被鏡像，其他屬性嚴格鎖定",
+        "master_lock": "主控/鎖定 – 只有主控實體能變更群組目標",
+        "adopt_only": "僅採納 – 群組採納裝置的手動變更，但不傳給其他成員"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "HVAC 模式",
+        "preset_mode": "預置模式",
+        "temperature": "溫度（目標）",
+        "target_temp_high": "目標溫度上限（範圍）",
+        "target_temp_low": "目標溫度下限（範圍）",
+        "fan_mode": "風速模式",
+        "swing_mode": "垂直擺動",
+        "swing_horizontal_mode": "水平擺動",
+        "humidity": "濕度（目標）"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "disabled": "停用 – 窗戶控制未啟用",
+        "enabled": "啟用 – 窗戶控制已啟用"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "關閉 – 捨棄變更",
+        "all": "全部 – 保留變更，待關窗時套用",
+        "master_only": "僅主控 – 只保留主控裝置上的變更"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "關閉",
+        "temperature": "設定溫度"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "完整目標",
+        "action": "僅已變更的設定"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "關閉",
+        "temperature": "設定溫度",
+        "release": "釋放裝置"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "關閉",
+        "clamp": "限制在上下限"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "忽略",
+        "off": "關閉"
+      }
+    },
+    "isolation_rule_count": {
+      "options": {
+        "1": "1 條規則",
+        "2": "2 條規則",
+        "3": "3 條規則",
+        "4": "4 條規則"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "disabled": "停用 – 成員隔離已停用",
+        "sensor": "二進位感測器 – 感測器開啟時隔離",
+        "hvac_mode": "HVAC 模式 – 群組模式符合時隔離",
+        "member_off": "成員關閉 – 成員被手動關閉時隔離"
+      }
+    },
+    "isolation_action_type": {
+      "options": {
+        "hvac_mode": "設定 HVAC 模式",
+        "preset_mode": "設定預置模式"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "停用 – 在場控制未啟用",
+        "enabled": "啟用 – 離家備援"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "關閉",
+        "away_offset": "離家偏移",
+        "away_temperature": "離家溫度",
+        "away_preset": "離家預置"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "停用 – 已關閉的成員會被開啟",
+        "away": "離家時",
+        "home": "回家時",
+        "away_home": "離家與回家時"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "none": "無",
+        "off": "關閉",
+        "fan_only": "僅送風"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "僅送風",
+        "dry": "除濕"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group_helper": {
+        "name": "空調群組",
+        "state_attributes": {
+          "last_active_hvac_mode": {
+            "name": "上次使用的模式"
+          },
+          "target_hvac_mode": {
+            "name": "目標 HVAC 模式"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "節能",
+              "away": "離家",
+              "home": "在家",
+              "sleep": "睡眠",
+              "comfort": "舒適",
+              "activity": "活動",
+              "standby": "待機",
+              "economy": "經濟",
+              "building_protection": "建築防凍保護",
+              "boost": "全速"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "群組偏移"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "溫度"
+      },
+      "humidity": {
+        "name": "濕度"
+      },
+      "configuration": {
+        "name": "設定"
+      }
+    },
+    "switch": {
+      "main_switch": {
+        "name": "總開關"
+      }
+    }
+  },
+  "services": {
+    "set_schedule_entity": {
+      "name": "設定排程實體",
+      "description": "在執行期間切換使用中的排程或行事曆實體。若省略或設為 null，群組會回到設定的預設值，並重新套用目前的時段。",
+      "fields": {
+        "schedule_entity": {
+          "name": "排程/行事曆實體",
+          "description": "要啟用的 schedule.* 或 calendar.* 實體（例如 schedule.holiday 或 calendar.vacation）。設為 null 或留空可還原設定的預設值。"
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "設定例外排程實體",
+      "description": "在執行期間切換使用中的例外排程實體（例如在不同的休假行事曆之間切換）。設為 null 可還原設定的預設值。",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "例外排程實體",
+          "description": "作為例外排程的 schedule.* 或 calendar.* 實體（例如 calendar.vacation）。設為 null 或留空可還原設定的預設值。"
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "設定排程備援資料",
+      "description": "設定或清除主排程關閉時套用的備援資料，會覆蓋設定中的備援資料。",
+      "fields": {
+        "fallback_payload": {
+          "name": "備援資料",
+          "description": "以 YAML 或對應格式提供的備援空調資料（例如「temperature: 17.0\\nhvac_mode: heat」）。設為 null 或留空可還原設定的預設值。"
+        }
+      }
+    },
+    "set_schedule_hold_duration": {
+      "name": "設定排程保持時間",
+      "description": "設定或清除手動保持時間：手動變更要保持多久，排程才繼續執行。會覆蓋設定中的時間。改為 0 會立即結束進行中的保持。",
+      "fields": {
+        "duration": {
+          "name": "持續時間（分鐘）",
+          "description": "保持時間（分鐘）。設為 0 則停用保持；留空可還原設定的時間。"
+        }
+      }
+    },
+    "set_group_preset": {
+      "name": "設定群組預置",
+      "description": "設定、變更或移除群組的執行期預置。它們會加入群組設定中的預置，同名時以執行期預置為優先。",
+      "fields": {
+        "payload": {
+          "name": "資料內容",
+          "description": "要設定的執行期預置，以 YAML 或對應格式提供。設為 null 或留空的預置會被移除；資料內容為空時會移除所有執行期預置。格式說明與範例請參閱說明文件。"
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "在固定時間內暫時將群組設為某個目標溫度。計時結束後，群組會自動還原為使用中的排程時段（若有設定）或先前的目標狀態。",
+      "fields": {
+        "hvac_mode": {
+          "name": "HVAC 模式",
+          "description": "Boost 執行時使用的模式。預設為群組目前的模式（已關閉的群組會以上次使用的模式啟動）。沒有單一設定溫度的模式會改用暖氣。沒有任何成員能執行的 Boost 會被拒絕。"
+        },
+        "temperature": {
+          "name": "溫度",
+          "description": "Boost 期間的絕對目標溫度（例如 24.0）。不可與 temperature_offset 同時使用。"
+        },
+        "temperature_offset": {
+          "name": "溫度偏移",
+          "description": "加在目前目標溫度上的相對偏移（例如 +3.0 或 -2.0）。不可與 temperature 同時使用。"
+        },
+        "duration": {
+          "name": "持續時間（分鐘）",
+          "description": "Boost 要持續幾分鐘。"
+        }
+      }
+    },
+    "apply_config": {
+      "name": "套用設定",
+      "description": "將可移植的 JSON 設定套用到群組，適合在群組間複製邏輯設定或還原備份。識別鍵（名稱）受到保護。套用後，請開啟群組設定並儲存一次，設定對話框會再檢查套用的組合是否合理。",
+      "fields": {
+        "settings": {
+          "name": "設定（JSON）",
+          "description": "要套用的 JSON 設定物件。請使用設定感測器的「settings_json」屬性。"
+        },
+        "include_member_list": {
+          "name": "包含成員清單",
+          "description": "若為 true，也會覆寫成員實體與隔離實體的清單。"
+        },
+        "include_entity_selectors": {
+          "name": "包含實體選擇器",
+          "description": "若為 true，也會覆寫連結的感測器（溫度、濕度、在場、窗戶等）及各成員的偏移。"
+        }
+      }
+    },
+    "reset": {
+      "name": "重設",
+      "description": "將暫時覆蓋與執行期狀態（Boost、偏移、排程、例外排程、備援、預置）重設為設定的預設值。請至少選擇一個選項，或使用「全部」。",
+      "fields": {
+        "everything": {
+          "name": "全部",
+          "description": "一次重設下列所有項目，個別開關將被忽略。"
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "中止進行中的 Boost 並還原目標狀態。"
+        },
+        "offset": {
+          "name": "溫度偏移",
+          "description": "將群組溫度偏移重設為 0.0。"
+        },
+        "schedule": {
+          "name": "排程實體",
+          "description": "將使用中的排程實體與手動保持時間還原為設定的預設值，並結束手動保持。"
+        },
+        "bypass": {
+          "name": "例外排程實體",
+          "description": "將使用中的例外排程實體還原為設定的預設值，並撤銷例外排程所做的調整。"
+        },
+        "fallback": {
+          "name": "備援資料",
+          "description": "將排程備援資料還原為設定的預設值。"
+        },
+        "presets": {
+          "name": "群組預置",
+          "description": "移除所有執行期預置，設定中的預置維持不變。"
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC 模式已變更",
+      "temperature_target_changed": "目標溫度已變更",
+      "current_temperature_changed": "目前溫度已變更",
+      "group_turned_on": "群組已開啟",
+      "group_turned_off": "群組已關閉"
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC 模式為",
+      "is_temperature_above": "溫度高於",
+      "is_temperature_below": "溫度低於",
+      "is_group_available": "群組可使用"
+    },
+    "action_type": {
+      "set_hvac_mode": "設定 HVAC 模式",
+      "set_temperature": "設定溫度",
+      "turn_on": "開啟",
+      "turn_off": "關閉"
+    }
+  }
+}

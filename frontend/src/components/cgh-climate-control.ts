@@ -6,12 +6,10 @@ import { MDI_PLUS_MINUS_VARIANT, MDI_THERMOMETER, MDI_WATER_PERCENT } from '../l
 import './cgh-climate-humidity'
 import './cgh-climate-offset'
 import './cgh-climate-temperature'
-import type { Control, HassEntity, HomeAssistant } from '../types'
+import type { Control, HassEntity, HomeAssistant, View } from '../types'
 
 // ClimateEntityFeature bit (kept local — no HA frontend package dependency).
 const FEATURE_TARGET_HUMIDITY = 4
-
-export type View = 'offset' | 'temperature' | 'humidity'
 
 const SEGMENTS: Record<View, { icon: string; label: TranslationKey }> = {
   offset: { icon: MDI_PLUS_MINUS_VARIANT, label: 'offset.label' },
@@ -31,13 +29,15 @@ const SEGMENTS: Record<View, { icon: string; label: TranslationKey }> = {
 export class CghClimateControl extends LocalizeMixin(LitElement) {
   @property({ attribute: false }) public hass?: HomeAssistant
   @property({ attribute: false }) public stateObj?: HassEntity
-  @property({ attribute: false }) public controls: Control[] = ['slider', 'buttons', 'toggle']
-  /** The group offset entity; set only when its segment should show. */
+  @property({ attribute: false }) public controls: Control[] = ['slider', 'buttons']
+  /** The group offset entity, where the group has one (Advanced Mode). */
   @property({ attribute: false }) public offsetObj?: HassEntity
-  /** `false` leaves out the temperature view. */
-  @property({ attribute: false }) public showTemperature = true
-  /** `false` leaves out the humidity view, even where the entity offers it. */
-  @property({ attribute: false }) public showHumidity = true
+  /**
+   * The views the card wants, in segment order; empty = temperature alone. A
+   * view shows only where it exists: offset with `offsetObj`, humidity with a
+   * humidity setpoint.
+   */
+  @property({ attribute: false }) public views: View[] = ['offset', 'temperature', 'humidity']
 
   @state() private _view: View = 'temperature'
 
@@ -50,16 +50,19 @@ export class CghClimateControl extends LocalizeMixin(LitElement) {
   }
 
   /**
-   * The dial's views, in segment order. Never empty: with nothing selected
-   * left (e.g. only humidity on an entity without a humidity setpoint) the
-   * dial falls back to temperature, which every climate entity has.
+   * The dial's views: wanted and offered, in segment order. Never empty: with
+   * nothing left (e.g. only humidity on an entity without a humidity setpoint)
+   * the dial falls back to temperature, which every climate entity has.
    */
   private get _views(): View[] {
-    const views: View[] = [
-      ...(this.offsetObj ? (['offset'] as const) : []),
-      ...(this.showTemperature ? (['temperature'] as const) : []),
-      ...(this.showHumidity && this._hasHumidity ? (['humidity'] as const) : []),
-    ]
+    const offered: Record<View, boolean> = {
+      offset: !!this.offsetObj,
+      temperature: true,
+      humidity: this._hasHumidity,
+    }
+    const views = (['offset', 'temperature', 'humidity'] as const).filter(
+      (v) => this.views.includes(v) && offered[v]
+    )
     return views.length ? views : ['temperature']
   }
 
@@ -89,13 +92,11 @@ export class CghClimateControl extends LocalizeMixin(LitElement) {
 
   protected render() {
     // `slider` is the whole dial block (ring, readings, buttons); the card
-    // drops its cell then. The view selection belongs to the switch: without
-    // it the dial shows temperature alone, whatever views are configured. A
-    // single view needs no switch. Start on temperature, or the first view
-    // when temperature is left out — and go there when the selected view has
-    // gone.
+    // drops its cell then. A single view needs no switch. Start on
+    // temperature, or the first view when temperature is left out — and go
+    // there when the selected view has gone.
     const dial = this.controls.includes('slider')
-    const views: View[] = this.controls.includes('toggle') ? this._views : ['temperature']
+    const views = this._views
     const toggle = dial && views.length >= 2
     const home: View = views.includes('temperature') ? 'temperature' : views[0]
     const view: View = toggle && views.includes(this._view) ? this._view : home

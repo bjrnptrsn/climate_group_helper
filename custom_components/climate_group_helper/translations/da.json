@@ -132,8 +132,8 @@
               "close_delay": "Lukke Forsinkelse (s)"
             },
             "data_description": {
-              "window_mode": "Sætter opvarmning på pause eller sænker temperaturen, når et overvåget vindue åbnes.",
-              "window_adopt_manual_changes": "Behold ændringer, der laves, mens vinduerne er åbne; når vinduerne lukkes, anvendes de kun med „Hele måltilstanden“. Indtil da gælder handlingen ved åbent vindue.",
+              "window_mode": "Slår vinduesstyring til eller fra: sætter opvarmning på pause eller sænker temperaturen, når et overvåget vindue åbnes.",
+              "window_adopt_manual_changes": "Behold ændringer, der laves, mens vinduerne er åbne. Når vinduerne lukkes, anvendes de kun med „Hele måltilstanden“. Indtil da gælder handlingen ved åbent vindue.",
               "window_action": "Hvad der skal ske, når et vindue åbnes: Sluk helt eller indstil en bestemt temperatur (f.eks. frostbeskyttelse).",
               "window_temperature": "Måltemperatur når 'Indstil temperatur' er valgt.",
               "window_restore_scope": "Hvad der gendannes, når vinduet lukkes: hele måltilstanden eller kun den indstilling, som Handling ved åbent vindue ændrede.",
@@ -696,7 +696,7 @@
       "fields": {
         "payload": {
           "name": "Nyttelast",
-          "description": "Kørselstidsforudindstillingerne, der skal sættes, som YAML eller mapping. En forudindstilling sat til null eller tom fjernes; en tom payload fjerner alle kørselstidsforudindstillinger. Format og eksempler se dokumentationen."
+          "description": "Kørselstidsforudindstillingerne, der skal sættes, som YAML eller mapping. En forudindstilling sat til null eller tom fjernes. En tom payload fjerner alle kørselstidsforudindstillinger. Format og eksempler se dokumentationen."
         }
       }
     },
@@ -706,7 +706,7 @@
       "fields": {
         "hvac_mode": {
           "name": "HVAC-tilstand",
-          "description": "Den tilstand, boostet kører i. Som standard gruppens aktuelle tilstand (en slukket gruppe vågner i sin sidste aktive tilstand). Tilstande uden et enkelt sætpunkt, eller et boost intet medlem kan tage, afvises."
+          "description": "Den tilstand, boostet kører i. Som standard gruppens aktuelle tilstand (en slukket gruppe vågner i sin sidste aktive tilstand). Tilstande uden et enkelt sætpunkt falder tilbage til Varme. Et boost, intet medlem kan tage, afvises."
         },
         "temperature": {
           "name": "Temperatur",

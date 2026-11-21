@@ -150,6 +150,19 @@ class MemberIsolationHandler:
         return value == META_VALUE_ALL or self._slot in value
 
     @property
+    def trigger_sensor_id(self) -> str | None:
+        """Return the watched sensor, or None when the rule does not read it.
+
+        A rule keeps a sensor id in its config after switching to another
+        trigger, and keeps it when its last target leaves the group; only a
+        SENSOR rule with targets subscribes to it (`async_setup()`), so only
+        then may it be reported as watched.
+        """
+        if self._trigger != IsolationTrigger.SENSOR or not self._isolation_entity_ids:
+            return None
+        return self._sensor_id
+
+    @property
     def _effective_active(self) -> bool:
         """Return whether this rule currently claims its entities.
 

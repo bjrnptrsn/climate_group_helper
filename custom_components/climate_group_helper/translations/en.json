@@ -132,8 +132,8 @@
               "close_delay": "Close Delay (seconds)"
             },
             "data_description": {
-              "window_mode": "Pause heating or lower the temperature when a monitored window opens.",
-              "window_adopt_manual_changes": "Keep changes made while windows are open; closing the windows applies them only with Full Target. Until then, the Window Open Action applies.",
+              "window_mode": "Enable or disable window control: pause heating or lower the temperature when a monitored window opens.",
+              "window_adopt_manual_changes": "Keep changes made while windows are open. Closing the windows applies them only with Full Target. Until then, the Window Open Action applies.",
               "window_action": "What to do when window opens: Turn Off completely or set a specific Temperature (e.g. frost protection).",
               "window_temperature": "Target temperature to set when 'Temperature' action is selected.",
               "window_restore_scope": "What closing the window restores: the whole target, or only the setting the Window Open Action changed.",
@@ -676,7 +676,7 @@
       "fields": {
         "fallback_payload": {
           "name": "Fallback Payload",
-          "description": "The fallback climate payload as YAML or mapping (e.g. 'temperature: 17.0\nhvac_mode: heat'). Set to null or empty to restore the configured default."
+          "description": "The fallback climate payload as YAML or mapping (e.g. 'temperature: 17.0\\nhvac_mode: heat'). Set to null or empty to restore the configured default."
         }
       }
     },
@@ -696,7 +696,7 @@
       "fields": {
         "payload": {
           "name": "Payload",
-          "description": "The runtime presets to set, as YAML or mapping. A preset set to null or empty is removed; an empty payload removes all runtime presets. See the documentation for the format and examples."
+          "description": "The runtime presets to set, as YAML or mapping. A preset set to null or empty is removed. An empty payload removes all runtime presets. See the documentation for the format and examples."
         }
       }
     },
@@ -706,7 +706,7 @@
       "fields": {
         "hvac_mode": {
           "name": "HVAC Mode",
-          "description": "The mode the boost runs in. Defaults to the group's current mode (an OFF group wakes in its last active mode). Modes without a single setpoint, or a boost no member can take, are rejected."
+          "description": "The mode the boost runs in. Defaults to the group's current mode (an OFF group wakes in its last active mode). Modes without a single setpoint fall back to Heat. A boost no member can take is rejected."
         },
         "temperature": {
           "name": "Temperature",

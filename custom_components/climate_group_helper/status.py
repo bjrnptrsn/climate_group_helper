@@ -55,7 +55,6 @@ from .const import (
     ATTR_OFFSET_ENTITY_ID,
     ATTR_OOB_MEMBERS,
     ATTR_OOB_OFF_MEMBERS,
-    ATTR_PRESENCE_FALLBACK,
     ATTR_RUNTIME_GROUP_PRESETS,
     ATTR_SCHEDULE_BYPASS_CLAIMS,
     ATTR_SCHEDULE_BYPASS_ENTITY_OVERRIDDEN,
@@ -66,13 +65,16 @@ from .const import (
     ATTR_SCHEDULE_HOLD_UNTIL,
     ATTR_TARGET_STATE,
     ATTR_TOTAL_MEMBER_COUNT,
+    ATTR_UNAVAILABLE_SENSORS,
     CONF_PRESENCE_MODE,
     CONF_PRESENCE_SENSOR,
+    CONF_ROOM_SENSOR,
     CONF_SCHEDULE_BYPASS_ENTITY,
     CONF_SCHEDULE_ENTITY,
     CONF_SWITCH_ACTION,
     CONF_SYNC_MODE,
     CONF_WINDOW_MODE,
+    CONF_ZONE_SENSOR,
     FLOAT_TOLERANCE,
     IsolationTrigger,
     PresenceMode,
@@ -184,6 +186,38 @@ def _compute_member_divergence(group: ClimateGroupHelper) -> dict[str, dict[str,
     return divergence
 
 
+def watched_sensor_ids(group: ClimateGroupHelper) -> list[str]:
+    """Return the sorted, deduplicated sensors the group reads for its features.
+
+    Only sensors of a feature that runs are included — Advanced Mode on and the
+    feature configured. External temperature and humidity sensors count whenever
+    they are configured: they feed the group's current reading also without
+    calibration targets, so the `calibration` feature flag (which is about the
+    targets) must not gate them.
+    """
+    cfg = group.config
+    sensors: set[str] = set()
+    if group.advanced_mode:
+        if cfg.get(CONF_PRESENCE_MODE, PresenceMode.DISABLED) != PresenceMode.DISABLED:
+            sensors.update(cfg.get(CONF_PRESENCE_SENSOR, []))
+        if cfg.get(CONF_WINDOW_MODE, WindowControlMode.DISABLED) != WindowControlMode.DISABLED:
+            for key in (CONF_ROOM_SENSOR, CONF_ZONE_SENSOR):
+                if sensor_id := cfg.get(key):
+                    sensors.add(sensor_id)
+        # Populated from the advanced config only and filtered for own CGH
+        # entities by filter_sensor_entities() before the entity is added.
+        sensors.update(group.temp_sensor_entity_ids)
+        sensors.update(group.humidity_sensor_entity_ids)
+    # The handlers exist only for the rules up to the configured count; rules
+    # beyond it are hidden and must not be reported.
+    sensors.update(
+        sensor_id
+        for handler in group.member_isolation_handlers
+        if (sensor_id := handler.trigger_sensor_id) is not None
+    )
+    return sorted(sensors)
+
+
 def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     """Collect all status, analytics, and source data into a single dict."""
     run_state = group.run_state
@@ -248,14 +282,16 @@ def build_extra_state_attributes(group: ClimateGroupHelper) -> dict[str, Any]:
     if run_state.master_fallback_active:
         attrs[ATTR_MASTER_FALLBACK_ACTIVE] = True
 
-    if "presence" in run_state.blocking_sources:
-        sensors: list[str] = group.config.get(CONF_PRESENCE_SENSOR, [])
-        if any(
-            (state := group.hass.states.get(sensor_id)) is not None
-            and not is_available(state)
-            for sensor_id in sensors
-        ):
-            attrs[ATTR_PRESENCE_FALLBACK] = True
+    # --- Sensor health ---
+    # A sensor the group cannot read changes its decision silently: presence
+    # counts it as present, window keeps the last value, readings fall back to
+    # the members. Reported by name, without requiring an active block.
+    if unavailable := [
+        sensor_id
+        for sensor_id in watched_sensor_ids(group)
+        if not is_available(group.hass.states.get(sensor_id))
+    ]:
+        attrs[ATTR_UNAVAILABLE_SENSORS] = unavailable
 
     # --- Isolated / OOB members ---
     if run_state.isolated_members:

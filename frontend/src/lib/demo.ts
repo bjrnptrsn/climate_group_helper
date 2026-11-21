@@ -1,5 +1,5 @@
 import type { HassEntity, HomeAssistant } from '../types'
-import { LOW_BATTERY_THRESHOLD } from './battery'
+import { LOW_BATTERY_THRESHOLD, lowBatteryMembers } from './battery'
 import { translate, type TranslationKey } from './i18n'
 
 /** Synthetic entity ids used by the demo mode. */
@@ -9,6 +9,8 @@ export const DEMO_CALENDAR_ENTITY = 'calendar.demo_calendar'
 export const DEMO_BYPASS_ENTITY = 'calendar.demo_vacation'
 export const DEMO_MAIN_SWITCH_ENTITY = 'switch.demo_main_switch'
 export const DEMO_OFFSET_ENTITY = 'number.demo_group_offset'
+export const DEMO_WINDOW_SENSOR = 'binary_sensor.demo_window'
+export const DEMO_PRESENCE_SENSOR = 'person.demo_resident'
 
 /** Demo re-render / scenario step interval. */
 export const DEMO_TICK_MS = 3500
@@ -48,11 +50,6 @@ export const DEMO_ENTITIES: NonNullable<HomeAssistant['entities']> = Object.from
 )
 // With Master enabled, the first member is the master entity.
 const MASTER = MEMBERS[0].id
-// On some ticks (Advanced Mode only) one member runs with a configured offset:
-// its setpoints carry it, and the group compares and averages them without it,
-// like the backend.
-const OFFSET_MEMBER = MEMBERS[2].id
-const MEMBER_OFFSET = 1
 
 const FEATURE_TARGET_TEMPERATURE = 1
 const FEATURE_TARGET_TEMPERATURE_RANGE = 2
@@ -65,7 +62,9 @@ const FEATURE_SWING_HORIZONTAL_MODE = 512
 const MODES = ['heat', 'cool', 'heat_cool', 'auto', 'dry', 'fan_only', 'off']
 const ACTIVE_MODES = MODES.filter((m) => m !== 'off')
 const PRESETS = ['none', 'eco', 'comfort', 'away']
-const FANS = ['low', 'medium', 'high']
+const FANS = ['auto', 'low', 'medium', 'high']
+const SWINGS = ['off', 'on', 'vertical', 'horizontal', 'both']
+const SWING_HS = ['off', 'on']
 const ALL_FEATURES = [
   'window',
   'presence',
@@ -82,14 +81,17 @@ const WINDOW_TEMPERATURE = 12
 const SWITCH_TEMPERATURE = 15
 const AWAY_TEMPERATURE = 16
 const AWAY_OFFSET = 2
-const BOOST_TEMPERATURE = 25
 
 /**
  * One situation per tick. Everything else — member states, the aggregate,
  * divergence, badges — is derived from it, so the demo only ever shows states
- * the integration can actually reach.
+ * the integration can actually reach. `full` forces a dense showcase tick (all
+ * features, capabilities, views, tiles, offsets, low battery, active main
+ * schedule and multi-attribute deviations) while leaving mutually exclusive
+ * blocks, boost, hold, bypass, virtual preset and offline members off.
  */
 type Situation =
+  | 'full'
   | 'normal'
   | 'off'
   | 'boost'
@@ -176,7 +178,13 @@ const divergenceOf = (
       result[attr] = Object.fromEntries(members.map((m) => [m.entity_id, m.attributes[attr]]))
     }
   }
-  for (const attr of ['fan_mode', 'preset_mode']) {
+  for (const attr of [
+    'fan_mode',
+    'preset_mode',
+    'swing_mode',
+    'swing_horizontal_mode',
+    'humidity',
+  ]) {
     const values = Object.fromEntries(
       counted
         .filter((m) => m.attributes[attr] != null)
@@ -206,48 +214,64 @@ export const demoStates = (
     list[Math.floor(rand(salt) * list.length)]
 
   // --- Configuration: capabilities and configured features ----------------
-  const supportsRange = chance(0.6, 2)
-  const supportsPreset = chance(0.8, 16)
-  const supportsFan = chance(0.7, 15)
-  const enabled = ALL_FEATURES.filter((_, i) => chance(0.5, 100 + i))
-  const has = (feature: string): boolean => enabled.includes(feature)
-  // The main switch exists in Advanced Mode, which every feature requires.
-  const advanced = enabled.length > 0
+  let supportsRange = chance(0.6, 2)
+  let supportsHumidity = chance(0.6, 14)
+  let supportsPreset = chance(0.8, 16)
+  let supportsFan = chance(0.7, 15)
+  let supportsSwing = chance(0.55, 17)
+  let supportsSwingH = chance(0.5, 18)
+  let enabled = ALL_FEATURES.filter((_, i) => chance(0.55, 100 + i))
+  const hasInit = (feature: string): boolean => enabled.includes(feature)
+  const advancedInit = enabled.length > 0
 
   // --- The situation of this tick -----------------------------------------
   const candidates: [Situation, number][] = [
-    ['normal', 10],
+    ['full', 2],
+    ['normal', 5],
     ['off', 1],
-    ['boost', 1],
-    ['hold', has('schedule') ? 1 : 0],
-    ['window_off', has('window') ? 1 : 0],
-    ['window_temperature', has('window') ? 1 : 0],
-    ['presence_off', has('presence') ? 1 : 0],
-    ['presence_offset', has('presence') ? 1 : 0],
-    ['presence_temperature', has('presence') ? 1 : 0],
-    ['presence_preset', has('presence') && supportsPreset ? 1 : 0],
-    ['switch_off', advanced ? 1 : 0],
-    ['switch_temperature', advanced ? 1 : 0],
-    ['switch_release', advanced ? 1 : 0],
+    ['boost', 2],
+    ['hold', hasInit('schedule') ? 2 : 0],
+    ['window_off', hasInit('window') ? 1 : 0],
+    ['window_temperature', hasInit('window') ? 1 : 0],
+    ['presence_off', hasInit('presence') ? 1 : 0],
+    ['presence_offset', hasInit('presence') ? 1 : 0],
+    ['presence_temperature', hasInit('presence') ? 1 : 0],
+    ['presence_preset', hasInit('presence') && supportsPreset ? 1 : 0],
+    ['switch_off', advancedInit ? 1 : 0],
+    ['switch_temperature', advancedInit ? 1 : 0],
+    ['switch_release', advancedInit ? 1 : 0],
   ]
   const weight = candidates.reduce((sum, [, w]) => sum + w, 0)
   let roll = rand(1) * weight
   const situation = (candidates.find(([, w]) => (roll -= w) < 0) ??
     candidates[0])[0]
-  const settled = situation === 'normal' || situation === 'hold'
+  const full = situation === 'full'
+  if (full) {
+    enabled = [...ALL_FEATURES]
+    supportsRange = true
+    supportsHumidity = true
+    supportsPreset = true
+    supportsFan = true
+    supportsSwing = true
+    supportsSwingH = true
+  }
+  const has = (feature: string): boolean => enabled.includes(feature)
+  // The main switch exists in Advanced Mode, which every feature requires.
+  const advanced = enabled.length > 0
+  const settled = situation === 'normal' || situation === 'hold' || full
 
   // --- Blocks: the dominant one drives the members, a lower one may stack --
   const blocking: string[] = []
   if (situation.startsWith('switch')) blocking.push('switch')
   if (situation.startsWith('window')) blocking.push('window')
   if (situation.startsWith('presence')) blocking.push('presence')
-  if (situation.startsWith('switch') && has('window') && chance(0.3, 131)) {
+  if (situation.startsWith('switch') && has('window') && chance(0.35, 131)) {
     blocking.push('window')
   }
   if (
     (situation.startsWith('switch') || situation.startsWith('window')) &&
     has('presence') &&
-    chance(0.3, 132)
+    chance(0.35, 132)
   ) {
     blocking.push('presence')
   }
@@ -255,24 +279,52 @@ export const demoStates = (
     blocking.includes(b)
   )
 
+  // --- A sensor the group cannot read --------------------------------------
+  // Only a sensor of a running feature: the backend watches only those. The
+  // sensor entity's own state follows below, so the demo stays coherent. A
+  // dead presence sensor counts as present, so it never comes with an away
+  // block; a dead window sensor keeps its last value, block or not.
+  const sensorFeature: Record<string, string> = {
+    [DEMO_WINDOW_SENSOR]: 'window',
+    [DEMO_PRESENCE_SENSOR]: 'presence',
+  }
+  const watchedSensors = Object.keys(sensorFeature).filter(
+    (id) =>
+      has(sensorFeature[id]) &&
+      !(id === DEMO_PRESENCE_SENSOR && blocking.includes('presence'))
+  )
+  const unavailableSensors: string[] =
+    watchedSensors.length && chance(0.3, 160) ? [pick(watchedSensors, 161)] : []
+
   // --- Pauses a slot or preset applies (meta-key overrides) ---------------
   // A paused feature does not act: no window/presence block, no isolation.
   const overrides: Record<string, unknown> = {}
-  if (has('window') && !blocking.includes('window') && chance(0.2, 140)) {
-    overrides.window_mode = 'disabled'
+  if (full) {
+    // Pause calibration so the badges row shows lit, plain and paused at once
+    // without suppressing isolation or sync.
+    overrides.calibration_mode = 'disabled'
+  } else {
+    if (has('window') && !blocking.includes('window') && chance(0.25, 140)) {
+      overrides.window_mode = 'disabled'
+    }
+    if (has('presence') && !blocking.includes('presence') && chance(0.25, 141)) {
+      overrides.presence_mode = 'disabled'
+    }
+    if (has('calibration') && chance(0.25, 142)) overrides.calibration_mode = 'disabled'
+    if (has('isolation') && chance(0.25, 143)) overrides.isolation_bypass = 'all'
+    if (has('sync') && chance(0.25, 144)) overrides.sync_mode = 'disabled'
   }
-  if (has('presence') && !blocking.includes('presence') && chance(0.2, 141)) {
-    overrides.presence_mode = 'disabled'
-  }
-  if (has('calibration') && chance(0.2, 142)) overrides.calibration_mode = 'disabled'
-  if (has('isolation') && chance(0.2, 143)) overrides.isolation_bypass = 'all'
-  if (has('sync') && chance(0.2, 144)) overrides.sync_mode = 'disabled'
   // LOCK only enforces; every other mode adopts member changes into the target.
   const syncMode = !has('sync')
     ? 'disabled'
     : overrides.sync_mode === 'disabled'
       ? 'disabled'
-      : pick(['lock', 'mirror', 'mirror_lock', 'master_lock', 'adopt_only'], 145)
+      : pick(
+          full
+            ? ['mirror', 'mirror_lock', 'master_lock', 'adopt_only']
+            : ['lock', 'mirror', 'mirror_lock', 'master_lock', 'adopt_only'],
+          145
+        )
   const syncSource =
     syncMode === 'disabled' || syncMode === 'lock'
       ? []
@@ -286,20 +338,52 @@ export const demoStates = (
     situation === 'presence_offset' ||
     situation === 'presence_temperature' ||
     situation === 'presence_preset'
-  // A boost wakes a group that is off, with `heat`.
+  // A boost wakes a group that is off, or runs on heat/cool.
   const boostWakes = situation === 'boost' && chance(0.3, 3)
+  const boostCool = situation === 'boost' && !boostWakes && chance(0.25, 95)
+  const boostTemperature = boostCool
+    ? pick([17, 18, 19], 96)
+    : pick([24, 25, 26, 28], 96)
+  // A manual schedule hold outlives a boost started on top of it, so a boost
+  // may run under one — the only way the badge row fills all eight places.
+  const holding =
+    situation === 'hold' || (situation === 'boost' && has('schedule') && chance(0.35, 97))
   const intendedMode =
     situation === 'off' || boostWakes
       ? 'off'
-      : heatOnly || situation === 'boost'
-        ? 'heat'
-        : pick(ACTIVE_MODES, 4)
+      : boostCool
+        ? 'cool'
+        : heatOnly || situation === 'boost'
+          ? 'heat'
+          : full
+            ? pick(['heat', 'cool', 'heat_cool'], 4)
+            : pick(ACTIVE_MODES, 4)
   const range = intendedMode === 'heat_cool' && supportsRange
   const setpoint = half(18 + rand(5) * 6)
   const low = range ? setpoint - 1.5 : undefined
   const high = range ? setpoint + 1.5 : undefined
-  const intendedPreset = supportsPreset ? pick(['none', 'none', 'eco', 'comfort'], 6) : undefined
-  const intendedFan = supportsFan ? pick(FANS, 11) : undefined
+  const intendedPreset = supportsPreset
+    ? pick(full ? ['eco', 'comfort'] : ['none', 'none', 'eco', 'comfort'], 6)
+    : undefined
+  const virtualPreset = advanced && supportsPreset ? t('demo.vacation') : undefined
+  const presetModes = virtualPreset ? [...PRESETS, virtualPreset] : PRESETS
+  const activeVirtualPreset =
+    !full &&
+    situation !== 'presence_preset' &&
+    virtualPreset &&
+    chance(0.2, 65)
+      ? virtualPreset
+      : undefined
+  const intendedFan = supportsFan
+    ? pick(full ? ['low', 'medium', 'high'] : FANS, 11)
+    : undefined
+  const intendedSwing = supportsSwing
+    ? pick(full ? SWINGS.filter((s) => s !== 'off') : SWINGS, 12)
+    : undefined
+  const intendedSwingH = supportsSwingH
+    ? (full ? 'on' : pick(SWING_HS, 13))
+    : undefined
+  const intendedHumidity = supportsHumidity ? 40 + Math.round(rand(9) * 25) : undefined
 
   // --- What reaches every counted member ----------------------------------
   let pushMode = intendedMode
@@ -315,8 +399,8 @@ export const demoStates = (
       pushTemp = SWITCH_TEMPERATURE
       break
     case 'boost':
-      pushMode = 'heat'
-      pushTemp = BOOST_TEMPERATURE
+      pushMode = boostCool ? 'cool' : 'heat'
+      pushTemp = boostTemperature
       break
     case 'window_temperature':
       pushTemp = WINDOW_TEMPERATURE
@@ -337,11 +421,17 @@ export const demoStates = (
   }
 
   // --- Members ------------------------------------------------------------
-  const room = r1(19 + rand(7) * 5)
-  const offlineIndex = chance(0.12, 20) ? Math.floor(rand(21) * MEMBERS.length) : -1
-  const isolatedIndex =
-    has('isolation') && !overrides.isolation_bypass && chance(0.5, 22)
-      ? [0, 1, 2, 3].filter((i) => i !== offlineIndex)[Math.floor(rand(23) * 3)]
+  const room = full
+    ? intendedMode === 'cool'
+      ? r1((high ?? setpoint) + 1.5 + rand(7))
+      : r1((low ?? setpoint) - 1.5 - rand(7))
+    : r1(19 + rand(7) * 5)
+  const offlineIndex = !full && chance(0.2, 20) ? Math.floor(rand(21) * MEMBERS.length) : -1
+  const isolatedPool = [0, 1, 2, 3].filter((i) => i !== offlineIndex)
+  const isolatedIndex = full
+    ? 1
+    : has('isolation') && !overrides.isolation_bypass && chance(0.5, 22)
+      ? pick(isolatedPool, 23)
       : -1
   const others = [0, 1, 2, 3].filter((i) => i !== offlineIndex && i !== isolatedIndex)
   // A settled, running group — or one whose switch leaves the devices alone —
@@ -349,35 +439,72 @@ export const demoStates = (
   // same payload to everyone.
   const running = settled && pushMode !== 'off'
   const canDiverge = (settled || situation === 'switch_release') && pushMode !== 'off'
-  const oobIndex = running && chance(0.15, 24) ? pick(others, 25) : -1
+  const oobIndex = full
+    ? 3
+    : running && chance(0.3, 24)
+      ? pick(others, 25)
+      : -1
   const userOffIndex =
-    canDiverge && chance(0.3, 26) ? pick(others.filter((i) => i !== oobIndex), 27) : -1
-  const driftIndex =
-    canDiverge && chance(0.5, 28)
-      ? pick(others.filter((i) => i !== oobIndex && i !== userOffIndex), 29)
+    !full && canDiverge && chance(0.3, 26)
+      ? pick(
+          others.filter((i) => i !== oobIndex),
+          27
+        )
+      : -1
+  const runningOthers = others.filter((i) => i !== oobIndex && i !== userOffIndex)
+  const driftIndex = full
+    ? 2
+    : canDiverge && runningOthers.length && chance(0.55, 28)
+      ? pick(runningOthers, 29)
       : -1
   const drift = chance(0.5, 30) ? 0.5 : -0.5
-  // A running member set to its own preset or fan speed by hand. It may be the
-  // drifting one too, so a row can carry several disputed values.
-  const runningOthers = others.filter((i) => i !== oobIndex && i !== userOffIndex)
-  const presetDriftIndex =
-    canDiverge && supportsPreset && chance(0.4, 31) ? pick(runningOthers, 32) : -1
+  // Running members set to their own options by hand. Several attributes may
+  // diverge at once so both multi-row and single-row wrapping show up.
+  const pickDrifter = (salt: number, p: number, allowed: boolean): number => {
+    if (!allowed || !runningOthers.length) return -1
+    if (full) return pick(runningOthers, salt)
+    return canDiverge && chance(p, salt - 1) ? pick(runningOthers, salt) : -1
+  }
+  const presetDriftIndex = pickDrifter(32, 0.45, supportsPreset && !activeVirtualPreset)
   const presetDrift = pick(
     PRESETS.filter((p) => p !== pushPreset && p !== 'away'),
     33
   )
-  const fanDriftIndex = canDiverge && supportsFan && chance(0.4, 34) ? pick(runningOthers, 35) : -1
+  const fanDriftIndex = pickDrifter(35, 0.45, supportsFan)
   const fanDrift = pick(
     FANS.filter((f) => f !== intendedFan),
     36
   )
+  const swingDriftIndex = pickDrifter(162, 0.4, supportsSwing)
+  const swingDrift = pick(
+    SWINGS.filter((s) => s !== intendedSwing),
+    163
+  )
+  const swingHDriftIndex = pickDrifter(165, 0.35, supportsSwingH)
+  const swingHDrift = intendedSwingH === 'on' ? 'off' : 'on'
+  const humidityDriftIndex = pickDrifter(167, 0.35, supportsHumidity)
+  const humidityDrift =
+    intendedHumidity != null ? (intendedHumidity >= 60 ? intendedHumidity - 5 : intendedHumidity + 5) : undefined
   // The backend keeps the offset through a boost or block but does not apply
   // it; the demo only sets one while it takes effect — then it reaches every
   // member's setpoint.
   const groupOffset =
-    advanced && settled && chance(0.3, 82) ? pick([0.5, 1, 1.5, -0.5], 84) : 0
-  const memberOffsets: Record<string, number> =
-    advanced && chance(0.4, 85) ? { [OFFSET_MEMBER]: MEMBER_OFFSET } : {}
+    advanced && settled && (full || chance(0.45, 82))
+      ? pick([0.5, 1, 1.5, -0.5, -1], 84)
+      : 0
+  const memberOffsets: Record<string, number> = {}
+  if (advanced && (full || chance(0.5, 85))) {
+    const candidatesOff = MEMBERS.filter((_, i) => i !== offlineIndex)
+    const primary = full ? MEMBERS[2] : pick(candidatesOff, 86)
+    memberOffsets[primary.id] = pick([0.5, 1, 1.5, -0.5, -1], 87)
+    if (chance(full ? 0.5 : 0.3, 88)) {
+      const secondary = pick(
+        candidatesOff.filter((m) => m.id !== primary.id),
+        89
+      )
+      if (secondary) memberOffsets[secondary.id] = pick([0.5, -0.5, 1], 90)
+    }
+  }
 
   const memberStates: Record<string, HassEntity> = {}
   const counted: HassEntity[] = []
@@ -407,6 +534,9 @@ export const demoStates = (
       target_temp_high: memberHigh,
       preset_mode: i === presetDriftIndex ? presetDrift : pushPreset,
       fan_mode: i === fanDriftIndex ? fanDrift : intendedFan,
+      swing_mode: i === swingDriftIndex ? swingDrift : intendedSwing,
+      swing_horizontal_mode: i === swingHDriftIndex ? swingHDrift : intendedSwingH,
+      humidity: i === humidityDriftIndex ? humidityDrift : intendedHumidity,
       hvac_action: actionFor(mode, current, temperature, memberLow, memberHigh),
     })
     memberStates[member.id] = state
@@ -417,7 +547,11 @@ export const demoStates = (
   const runningCounted = counted.filter((m) => m.state !== 'off')
   const groupMode = runningCounted.length ? pushMode : 'off'
   // Setpoints are averaged without the member offsets (offset correction).
-  const mean = (attr: string, corrected = true): number | undefined => {
+  const mean = (
+    attr: string,
+    corrected = true,
+    round: (value: number) => number = r1
+  ): number | undefined => {
     const value = avg(
       counted
         .filter((m) => m.attributes[attr] != null)
@@ -427,23 +561,28 @@ export const demoStates = (
             (corrected ? (memberOffsets[m.entity_id] ?? 0) : 0)
         )
     )
-    return value != null ? r1(value) : undefined
+    return value != null ? round(value) : undefined
   }
   const current = mean('current_temperature', false) ?? room
-  const temperature = range ? undefined : mean('temperature')
-  const groupLow = range ? mean('target_temp_low') : undefined
-  const groupHigh = range ? mean('target_temp_high') : undefined
+  // Rounded to half degrees, as the backend does with that rounding option set:
+  // one drifting member must not leave the group on an odd tenth.
+  const temperature = range ? undefined : mean('temperature', true, half)
+  const groupLow = range ? mean('target_temp_low', true, half) : undefined
+  const groupHigh = range ? mean('target_temp_high', true, half) : undefined
+  const rawHumidityMean = supportsHumidity ? mean('humidity', false) : undefined
+  const groupHumidity =
+    supportsHumidity ? (rawHumidityMean != null ? Math.round(rawHumidityMean) : intendedHumidity) : undefined
   const divergence = divergenceOf(counted, memberOffsets)
   const activeCount = Object.values(memberStates).filter(
     (m) => m.state !== 'off' && m.state !== 'unavailable'
   ).length
 
   // --- Schedule -----------------------------------------------------------
-  const calendar = chance(0.5, 50)
+  const calendar = full ? false : chance(0.5, 50)
   const scheduleEntity = calendar ? DEMO_CALENDAR_ENTITY : DEMO_SCHEDULE_ENTITY
-  const scheduleOn = has('schedule') && (situation === 'hold' || chance(0.6, 51))
+  const scheduleOn = has('schedule') && (full || holding || chance(0.6, 51))
   // A bypass run ends a manual hold, so the two never coexist.
-  const bypassOn = has('schedule') && situation !== 'hold' && chance(0.2, 52)
+  const bypassOn = !full && has('schedule') && !holding && chance(0.25, 52)
   const fallbackConfigured = has('schedule') && chance(0.5, 53)
   const layer = !has('schedule')
     ? undefined
@@ -457,8 +596,9 @@ export const demoStates = (
 
   // --- Where the target came from -----------------------------------------
   const manualSources = ['ui', 'group', ...syncSource]
-  const source =
-    situation === 'hold'
+  const source = full
+    ? 'schedule'
+    : holding
       ? pick(manualSources, 60)
       : layer && layer !== 'none' && chance(0.6, 61)
         ? 'schedule'
@@ -476,28 +616,29 @@ export const demoStates = (
     target_temp_low: groupLow,
     target_temp_high: groupHigh,
     current_humidity: 35 + Math.round(rand(8) * 30),
-    humidity: 40 + Math.round(rand(9) * 25),
+    humidity: groupHumidity ?? 40 + Math.round(rand(9) * 25),
     min_humidity: 0,
     max_humidity: 100,
     target_humidity_step: 1,
     hvac_action: actionFor(groupMode, current, temperature, groupLow, groupHigh),
     hvac_modes: MODES,
-    preset_modes: PRESETS,
-    preset_mode: pushPreset,
+    preset_modes: presetModes,
+    preset_mode: activeVirtualPreset ?? pushPreset,
+    active_virtual_preset: activeVirtualPreset,
     fan_modes: FANS,
     fan_mode: intendedFan,
-    swing_modes: ['off', 'on'],
-    swing_mode: pick(['off', 'on'], 12),
-    swing_horizontal_modes: ['off', 'on'],
-    swing_horizontal_mode: pick(['off', 'on'], 13),
+    swing_modes: SWINGS,
+    swing_mode: intendedSwing ?? pick(SWINGS, 12),
+    swing_horizontal_modes: SWING_HS,
+    swing_horizontal_mode: intendedSwingH ?? pick(SWING_HS, 13),
     supported_features:
       FEATURE_TARGET_TEMPERATURE |
       (supportsRange ? FEATURE_TARGET_TEMPERATURE_RANGE : 0) |
-      (chance(0.6, 14) ? FEATURE_TARGET_HUMIDITY : 0) |
+      (supportsHumidity ? FEATURE_TARGET_HUMIDITY : 0) |
       (supportsFan ? FEATURE_FAN_MODE : 0) |
       (supportsPreset ? FEATURE_PRESET_MODE : 0) |
-      (chance(0.5, 17) ? FEATURE_SWING_MODE : 0) |
-      (chance(0.4, 18) ? FEATURE_SWING_HORIZONTAL_MODE : 0),
+      (supportsSwing ? FEATURE_SWING_MODE : 0) |
+      (supportsSwingH ? FEATURE_SWING_HORIZONTAL_MODE : 0),
     active_member_count: activeCount,
     total_member_count: MEMBERS.length,
     member_entities: MEMBERS.map((member) => member.id),
@@ -524,13 +665,11 @@ export const demoStates = (
     assumed_state: Object.keys(divergence).length > 0,
     last_source: source,
     last_entity: source === 'sync_mode' || source === 'adopt_only' ? pick(MEMBERS, 63).id : undefined,
-    // At least a minute ago: a change inside the tick would hold back the
-    // deviation marks for the card's quiet window.
     last_changed: new Date(now - (1 + Math.round(rand(64) * 9)) * 60000).toISOString(),
     active_schedule_entity: has('schedule') ? scheduleEntity : undefined,
     // Set by a service in place of the configured one: the card adds its pill.
     // Often, since the pill only shows while the schedule panel does.
-    schedule_entity_overridden: has('schedule') && chance(0.6, 54) ? true : undefined,
+    schedule_entity_overridden: has('schedule') && (full || chance(0.6, 54)) ? true : undefined,
     active_schedule_bypass_entity: has('schedule') ? DEMO_BYPASS_ENTITY : undefined,
     schedule_bypass_entity_overridden: bypassOn && chance(0.5, 55) ? true : undefined,
     active_schedule_layer: layer,
@@ -542,13 +681,13 @@ export const demoStates = (
         : undefined,
     schedule_fallback_payload: fallbackConfigured ? { temperature: 17 } : undefined,
     schedule_fallback_payload_active: layer === 'fallback' ? true : undefined,
-    boost_temperature: situation === 'boost' ? BOOST_TEMPERATURE : undefined,
+    boost_temperature: situation === 'boost' ? boostTemperature : undefined,
     boost_until:
       situation === 'boost'
         ? new Date(now + (1 + rand(80) * 15) * 60000).toISOString()
         : undefined,
     schedule_hold_until:
-      situation === 'hold'
+      holding
         ? new Date(now + (5 + rand(81) * 55) * 60000).toISOString()
         : undefined,
     group_offset: groupOffset,
@@ -560,32 +699,52 @@ export const demoStates = (
       target_temp_high: high,
       preset_mode: intendedPreset,
       fan_mode: intendedFan,
+      swing_mode: intendedSwing,
+      swing_horizontal_mode: intendedSwingH,
+      humidity: intendedHumidity,
     },
     member_offsets: Object.keys(memberOffsets).length ? memberOffsets : undefined,
     master_entity_id: has('master') ? MASTER : undefined,
     master_fallback_active: has('master') && offlineIndex === 0,
-    // Only reported while a presence sensor is offline.
-    presence_fallback: has('presence') && chance(0.2, 83) ? true : undefined,
+    unavailable_sensors: unavailableSensors.length ? unavailableSensors : undefined,
   })
 
+  // The next change: the running slot's end while on, the next slot's start while off.
+  const nextChange = new Date(now + (1 + rand(90) * 90) * 60000)
+  // A calendar reports local wall-clock time without an offset, as HA formats it.
+  const calendarTime = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(
+      d.getHours()
+    )}:${p(d.getMinutes())}:00`
+  }
   const schedule = calendar
     ? entity(DEMO_CALENDAR_ENTITY, scheduleOn ? 'on' : 'off', {
         friendly_name: t('demo.schedule'),
-        message: scheduleOn ? t('demo.slot') : undefined,
+        // On: the running event; off: the next one — a calendar shows one at a time.
+        message: t('demo.slot'),
+        all_day: false,
+        [scheduleOn ? 'end_time' : 'start_time']: calendarTime(nextChange),
       })
     : entity(DEMO_SCHEDULE_ENTITY, scheduleOn ? 'on' : 'off', {
         friendly_name: t('demo.schedule'),
-        next_event: new Date(now + (1 + rand(90) * 90) * 60000).toISOString(),
+        next_event: nextChange.toISOString(),
       })
 
+  // A vacation is all-day: it ends at the midnight after its last day.
+  const vacationEnd = new Date(now)
+  vacationEnd.setHours(0, 0, 0, 0)
+  vacationEnd.setDate(vacationEnd.getDate() + 2 + Math.floor(rand(91) * 10))
   const bypass = entity(DEMO_BYPASS_ENTITY, bypassOn ? 'on' : 'off', {
     friendly_name: t('demo.vacation'),
     message: bypassOn ? t('demo.vacation') : undefined,
+    all_day: bypassOn ? true : undefined,
+    end_time: bypassOn ? calendarTime(vacationEnd) : undefined,
   })
 
   // --- Batteries: independent of the situation, one runs low on some ticks --
   const withBattery = MEMBERS.filter((member) => member.battery)
-  const lowBattery = chance(0.3, 150) ? pick(withBattery, 151).id : undefined
+  const lowBattery = full || chance(0.35, 150) ? pick(withBattery, 151).id : undefined
   const batteryStates: Record<string, HassEntity> = {}
   MEMBERS.forEach((member, i) => {
     if (!member.battery) return
@@ -602,6 +761,28 @@ export const demoStates = (
           { device_class: 'battery', unit_of_measurement: '%' }
         )
   })
+
+  // --- Feature sensors: always present for their names, following the block --
+  const featureSensors: Record<string, HassEntity> = {
+    [DEMO_WINDOW_SENSOR]: entity(
+      DEMO_WINDOW_SENSOR,
+      unavailableSensors.includes(DEMO_WINDOW_SENSOR)
+        ? 'unavailable'
+        : blocking.includes('window')
+          ? 'on'
+          : 'off',
+      { friendly_name: t('demo.window_sensor'), device_class: 'window' }
+    ),
+    [DEMO_PRESENCE_SENSOR]: entity(
+      DEMO_PRESENCE_SENSOR,
+      unavailableSensors.includes(DEMO_PRESENCE_SENSOR)
+        ? 'unavailable'
+        : blocking.includes('presence')
+          ? 'not_home'
+          : 'home',
+      { friendly_name: t('demo.presence_sensor') }
+    ),
+  }
 
   // Off exactly while the situation carries the switch block, like the backend
   // derives `is_on` from `blocking_sources`.
@@ -628,5 +809,45 @@ export const demoStates = (
     ...(has('schedule') ? { [DEMO_BYPASS_ENTITY]: bypass } : {}),
     ...memberStates,
     ...batteryStates,
+    ...featureSensors,
   }
+}
+
+/**
+ * Whether `states` represents a `full` showcase tick. Every search for one —
+ * the dev playground's `?state=full` included — goes through this check, so a
+ * new feature flag never drifts them apart.
+ */
+export const isShowcaseTick = (states: Record<string, HassEntity>): boolean => {
+  const group = states[DEMO_ENTITY]
+  const attrs = group?.attributes
+  if (!group || !attrs) return false
+  const enabled = (attrs.enabled_features as string[] | undefined) ?? []
+  const members = (attrs.member_entities as string[] | undefined) ?? []
+  const hasSetpoint =
+    attrs.temperature != null ||
+    (attrs.target_temp_low != null && attrs.target_temp_high != null)
+  const sched = states[DEMO_SCHEDULE_ENTITY]
+  return (
+    enabled.length === ALL_FEATURES.length &&
+    group.state !== 'off' &&
+    hasSetpoint &&
+    attrs.humidity != null &&
+    !attrs.blocking_reason &&
+    !attrs.boost_until &&
+    !attrs.schedule_hold_until &&
+    !!attrs.group_offset &&
+    Object.keys((attrs.member_offsets as Record<string, number>) ?? {}).length > 0 &&
+    ((attrs.isolated_members as string[]) ?? []).length > 0 &&
+    ((attrs.oob_members as string[]) ?? []).length > 0 &&
+    Object.keys(lowBatteryMembers(members, { states, entities: DEMO_ENTITIES })).length > 0 &&
+    Object.keys((attrs.member_divergence as Record<string, unknown>) ?? {}).length >= 5 &&
+    (attrs.config_overrides as Record<string, unknown> | undefined)?.calibration_mode ===
+      'disabled' &&
+    attrs.active_schedule_entity === DEMO_SCHEDULE_ENTITY &&
+    attrs.active_schedule_layer === 'main' &&
+    attrs.schedule_entity_overridden === true &&
+    sched?.state === 'on' &&
+    !!sched.attributes?.next_event
+  )
 }

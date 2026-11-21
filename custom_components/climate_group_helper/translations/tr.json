@@ -132,8 +132,8 @@
               "close_delay": "Kapanma Gecikmesi (saniye)"
             },
             "data_description": {
-              "window_mode": "İzlenen bir pencere açıldığında ısıtmayı duraklatır veya sıcaklığı düşürür.",
-              "window_adopt_manual_changes": "Pencereler açıkken yapılan değişiklikleri sakla; pencereler kapanırken bunlar yalnızca \"Tüm Hedef Durum\" ile uygulanır. O zamana kadar Pencere Açık Eylemi geçerlidir.",
+              "window_mode": "Pencere kontrolünü açar veya kapatır: izlenen bir pencere açıldığında ısıtmayı duraklatır veya sıcaklığı düşürür.",
+              "window_adopt_manual_changes": "Pencereler açıkken yapılan değişiklikleri sakla. Pencereler kapanırken bunlar yalnızca \"Tüm Hedef Durum\" ile uygulanır. O zamana kadar Pencere Açık Eylemi geçerlidir.",
               "window_action": "Pencere açıldığında ne yapılacağı: tamamen kapat veya belirli bir sıcaklık ayarla (örn. donma koruması).",
               "window_temperature": "'Sıcaklık' eylemi seçildiğinde ayarlanacak hedef sıcaklık.",
               "window_restore_scope": "Pencere kapandığında neyin geri yükleneceği: tüm hedef durum veya yalnızca Pencere Açık Eylemi'nin değiştirdiği ayar.",
@@ -189,7 +189,7 @@
               "schedule_bypass_entity": "İsteğe bağlı daha yüksek öncelikli katman (örn. bir tatil takvimi). Etkin olduğunda, zaman aralığı verileri ana programı geçersiz kılar. Zaman aralığı verileri aynı şekilde okunur: schedule.* varlıkları için öznitelikler, calendar.* varlıkları için YAML açıklaması.",
               "retain_service_changes_schedule": "Hizmet aracılığıyla değiştirilen ana programı, baypası, yedek durumu ve manuel tutma süresini yeniden başlatmadan sonra korur. Aksi takdirde yapılandırılmış varsayılanlara sıfırlanır.",
               "ignore_off_members_schedule": "Program, şu anda kapalı olan üyeleri AÇMAZ.",
-              "schedule_hold_duration": "Manuel bir değişikliğin (örn. sıcaklık veya grubu elle açıp kapatma) ne kadar süre tutulacağı; bu sürenin sonunda program o sırada geçerli olan zaman dilimiyle devam eder. 0 değeri tutmayı devre dışı bırakır."
+              "schedule_hold_duration": "Manuel bir değişikliğin (örn. sıcaklık veya grubu elle açıp kapatma) ne kadar süre tutulacağı. Bu sürenin sonunda program o sırada geçerli olan zaman dilimiyle devam eder. 0 değeri tutmayı devre dışı bırakır."
             }
           },
           "presets_section": {
@@ -696,7 +696,7 @@
       "fields": {
         "payload": {
           "name": "Veri Yükü",
-          "description": "Ayarlanacak çalışma zamanı ön ayarları, YAML veya harita olarak. null veya boş olarak ayarlanan bir ön ayar kaldırılır; boş bir payload tüm çalışma zamanı ön ayarlarını kaldırır. Biçim ve örnekler için belgelere bakın."
+          "description": "Ayarlanacak çalışma zamanı ön ayarları, YAML veya harita olarak. null veya boş olarak ayarlanan bir ön ayar kaldırılır. Boş bir payload tüm çalışma zamanı ön ayarlarını kaldırır. Biçim ve örnekler için belgelere bakın."
         }
       }
     },
@@ -706,7 +706,7 @@
       "fields": {
         "hvac_mode": {
           "name": "HVAC modu",
-          "description": "Boostun çalıştığı mod. Varsayılan: grubun mevcut modu (kapalı bir grup son aktif modunda uyanır). Tek ayar noktası olmayan modlar veya hiçbir üyenin kabul edemeyeceği bir boost reddedilir."
+          "description": "Boostun çalıştığı mod. Varsayılan: grubun mevcut modu (kapalı bir grup son aktif modunda uyanır). Tek ayar noktası olmayan modlar Isıtma moduna döner. Hiçbir üyenin kabul edemeyeceği bir boost reddedilir."
         },
         "temperature": {
           "name": "Sıcaklık",

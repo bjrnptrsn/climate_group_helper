@@ -1,0 +1,799 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Klímacsoport-segéd",
+        "description": "Hozz létre egy virtuális vezérlőt, amely több fűtő/hűtő egységet hangol össze. A csoport egyetlen okos entitásként jelenik meg az irányítópulton és az automatizálásokban, összesítve az állapotokat és a parancsokat.",
+        "data": {
+          "name": "Csoport neve",
+          "entities": "Klímaeszközök"
+        },
+        "data_description": {
+          "name": "Egy könnyen felismerhető név a csoportnak (pl. 'Nappali' vagy 'Egész ház').",
+          "entities": "Válaszd ki a csoportba tartozó klímaeszközöket (termosztátok, légkondicionálók)."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Legalább egy klímaeszközt ki kell választanod.",
+      "empty_name": "Adj meg egy nevet a csoportnak."
+    },
+    "abort": {
+      "already_configured": "Ez a csoport már be van állítva.",
+      "single_instance_allowed": "Csak egy példány engedélyezett.",
+      "no_changes": "Nem történt változtatás."
+    }
+  },
+  "options": {
+    "flow_title": "Csoport beállítása",
+    "step": {
+      "init": {
+        "title": "Klímacsoport beállítása",
+        "sections": {
+          "members_section": {
+            "name": "Tagok és módok",
+            "description": "Adj hozzá klímaeszközöket, és válaszd ki, hogyan egyesüljenek a képességeik. A Speciális funkciókkal fő entitást is megadhatsz.",
+            "data": {
+              "entities": "Klímaeszközök",
+              "master_entity": "Fő entitás",
+              "hvac_mode_strategy": "HVAC mód stratégia",
+              "feature_strategy": "Funkció stratégia",
+              "union_out_of_bounds_action": "Tartományon kívüli művelet",
+              "union_unsupported_hvac_action": "Nem támogatott HVAC mód művelet"
+            },
+            "data_description": {
+              "entities": "Eszközök hozzáadása vagy eltávolítása. Az eltávolított eszközöket a csoport többé nem vezérli.",
+              "master_entity": "Jelölj ki egy tagot fő entitásnak (vezetőnek). Ezt használja a Fő/Zárolás szinkronizálás és a cél központi megjelenítése.",
+              "hvac_mode_strategy": "Stratégia a csoport állapotának kiszámítására a tagokból (pl. ha az egyik 'fűtés', a másik 'ki').",
+              "feature_strategy": "Meghatározza, mely funkciók (pl. profilok, ventilátor módok) érhetők el a csoporton, ha a tagok képességei eltérnek.",
+              "union_out_of_bounds_action": "Mi történjen azokkal a tagokkal, amelyek nem tudják elérni a célhőmérsékletet. Csak akkor érvényes, ha a Funkció stratégia Unió.",
+              "union_unsupported_hvac_action": "Mi történjen azokkal a tagokkal, amelyek technikailag nem támogatják a csoport cél HVAC módját (pl. légkondi fűtéskor). Csak akkor érvényes, ha a Funkció stratégia Unió."
+            }
+          },
+          "temperature_section": {
+            "name": "Hőmérséklet-beállítások",
+            "description": "A hőmérséklet összesítésének és pontosságának beállítása. A Speciális funkciók külső érzékelőket, kalibrációt és fagyvédelmet adnak hozzá.",
+            "data": {
+              "temp_target_avg": "Célhőmérséklet",
+              "temp_use_master": "A fő entitás célhőmérsékletének használata",
+              "temp_target_round": "Célhőmérséklet pontossága",
+              "temp_current_avg": "Aktuális hőmérséklet",
+              "min_temp_off": "Minimális hőmérséklet kikapcsoláskor",
+              "temp_sensors": "Külső hőmérséklet-érzékelők",
+              "temp_update_targets": "Külső hőmérséklet írása entitásokba",
+              "temp_calibration_mode": "Kalibrációs mód",
+              "temp_inverted_offset_targets": "Fordított eltolású célok",
+              "calibration_heartbeat": "Kalibrációs szívverés (perc)",
+              "calibration_ignore_off": "Kikapcsolt tagok figyelmen kívül hagyása",
+              "ignore_off_members_temperature": "Kikapcsolt tagok kizárása a hőmérsékletből"
+            },
+            "data_description": {
+              "temp_target_avg": "Hogyan összesíti a csoport a tagok célértékeit.",
+              "temp_use_master": "A csoport célhőmérsékleteként a fő entitás célértékét mutatja a tagok átlaga helyett. Ha a fő entitás nem érhető el, visszaáll az átlagra. Csak a csoport állapotának megjelenítését befolyásolja — nem vezérli és nem szinkronizálja a tagokat (ehhez használd a Szinkronizálási mód: Fő/Zárolás beállítást).",
+              "temp_target_round": "Csak az eszközöknek küldött értékekre vonatkozik, az aktuális/megjelenített értékekre nem.",
+              "temp_current_avg": "Hogyan összesíti a csoport a tagok érzékelőinek méréseit.",
+              "min_temp_off": "A csoport kikapcsolásakor az eszköz minimális hőmérsékletét küldi (pl. 5°C). Így a szelepek fagyvédelem céljából teljesen zárva maradnak.",
+              "temp_sensors": "Külső érzékelők használata a tagok mérései helyett. Ezek lesznek a csoport hőmérsékletének egyetlen forrásai.",
+              "temp_update_targets": "A külső érzékelő értékének írása szám entitásokba (pl. termosztátfejek kalibrációs eltolásai). Hasznos, hogy a termosztátok ismerjék a tényleges szobahőmérsékletet.",
+              "temp_calibration_mode": "Abszolút: az érték közvetlen küldése. Eltolás: a különbség küldése (külső - termosztátfej belső). Skálázott: egész számként x100 (pl. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Fordítva működő eszközök kalibrációs entitásai: nagyobb eltolásnál alacsonyabb hőmérsékletet jelentenek. Csak Eltolás módban használatos.",
+              "calibration_heartbeat": "A kalibráció rendszeres, kényszerített szinkronizálása az entitásokba akkor is, ha a hőmérséklet nem változott. 0 esetén kikapcsolva.",
+              "calibration_ignore_off": "Ne küldjön kalibrációs frissítést a jelenleg kikapcsolt tagoknak.",
+              "ignore_off_members_temperature": "A jelenleg kikapcsolt tagok kizárása az aktuális és a célhőmérséklet számításából."
+            }
+          },
+          "humidity_section": {
+            "name": "Páratartalom-beállítások",
+            "description": "A páratartalom összesítésének és pontosságának beállítása. A Speciális funkciók külső érzékelőket adnak hozzá.",
+            "data": {
+              "humidity_target_avg": "Cél páratartalom",
+              "humidity_use_master": "A fő entitás cél páratartalmának használata",
+              "humidity_target_round": "Cél páratartalom pontossága",
+              "humidity_current_avg": "Aktuális páratartalom",
+              "humidity_sensors": "Külső páratartalom-érzékelők",
+              "humidity_update_targets": "Külső páratartalom írása entitásokba"
+            },
+            "data_description": {
+              "humidity_target_avg": "Hogyan összesíti a csoport a tagok cél páratartalom-értékeit.",
+              "humidity_use_master": "A csoport cél páratartalmaként a fő entitás célértékét mutatja a tagok átlaga helyett. Ha a fő entitás nem érhető el, visszaáll az átlagra. Csak a csoport állapotának megjelenítését befolyásolja — nem vezérli és nem szinkronizálja a tagokat (ehhez használd a Szinkronizálási mód: Fő/Zárolás beállítást).",
+              "humidity_target_round": "Csak az eszközöknek küldött értékekre vonatkozik, az aktuális/megjelenített értékekre nem.",
+              "humidity_current_avg": "Hogyan összesíti a csoport a tagok érzékelőinek méréseit.",
+              "humidity_sensors": "Külső érzékelők használata a tagok mérései helyett. Ezek lesznek a csoport páratartalmának egyetlen forrásai.",
+              "humidity_update_targets": "A külső érzékelő értékének írása szám entitásokba. Hasznos párátlanítók kalibrálásához."
+            }
+          },
+          "sync_section": {
+            "name": "Szinkronizálási mód",
+            "description": "Meghatározza, mi történik, ha egy tageszközt közvetlenül módosítanak (pl. a saját alkalmazásával vagy a gombjaival) — nem akkor, amikor magát a csoportot vezérled. Válaszd ki, mely attribútumokat érvényesítse.",
+            "data": {
+              "sync_mode": "Szinkronizálási mód",
+              "sync_attributes": "Szinkronizált attribútumok",
+              "ignore_off_members_sync": "Kikapcsolt tagok tiszteletben tartása (szinkronizálás)"
+            },
+            "data_description": {
+              "sync_mode": "Mi történjen, ha egy tagot a csoporton kívül módosítanak. Kikapcsolva: figyelmen kívül hagyja. Tükrözés: tükrözi a változásokat. Zárolás: visszavonja a változásokat. Tükrözés/Zárolás: a kiválasztott attribútumokat tükrözi, a többit visszavonja. Fő/Zárolás: a fő entitást tükrözi, a többit visszavonja. Csak átvétel: átveszi a változásokat, de nem adja tovább.",
+              "sync_attributes": "Meghatározza, mely attribútumokra hat a Szinkronizálási mód. A kiválasztott és nem kiválasztott attribútumok kezelése (tükrözés, visszavonás vagy figyelmen kívül hagyás) a választott módtól függ.",
+              "ignore_off_members_sync": "A kézzel kikapcsolt tagokhoz nem nyúl. Állapotukat sem nem tükrözi, sem nem vonja vissza. Megjegyzés: a csoportnak adott közvetlen parancsok ettől a beállítástól függetlenül mindig minden taghoz eljutnak."
+            }
+          },
+          "window_section": {
+            "name": "Ablakvezérlés",
+            "description": "Kikapcsolás vagy külön hőmérséklet beállítása, ha az ablak kinyílik. Visszaállítás, ha bezárul.",
+            "data": {
+              "window_mode": "Ablakvezérlési mód",
+              "window_adopt_manual_changes": "Kézi változtatások átvétele",
+              "window_action": "Művelet ablaknyitáskor",
+              "window_temperature": "Hőmérséklet nyitott ablaknál",
+              "window_restore_scope": "Visszaállítás ablakzáráskor",
+              "room_sensor": "Szoba ablakérzékelője",
+              "zone_sensor": "Zóna ablakérzékelője",
+              "room_open_delay": "Szoba nyitási késleltetése (másodperc)",
+              "zone_open_delay": "Zóna nyitási késleltetése (másodperc)",
+              "close_delay": "Zárási késleltetés (másodperc)"
+            },
+            "data_description": {
+              "window_mode": "Az ablakvezérlés be- vagy kikapcsolása: a fűtés szüneteltetése vagy a hőmérséklet csökkentése, ha egy figyelt ablak kinyílik.",
+              "window_adopt_manual_changes": "A nyitott ablak alatt végzett változtatások megtartása. Ablakzáráskor csak Teljes cél esetén alkalmazza őket. Addig a Művelet ablaknyitáskor érvényes.",
+              "window_action": "Mi történjen ablaknyitáskor: teljes kikapcsolás vagy egy adott hőmérséklet beállítása (pl. fagyvédelem).",
+              "window_temperature": "A beállítandó célhőmérséklet, ha a 'Hőmérséklet' művelet van kiválasztva.",
+              "window_restore_scope": "Mit állít vissza az ablak bezárása: a teljes célt, vagy csak azt a beállítást, amelyet a Művelet ablaknyitáskor megváltoztatott.",
+              "room_sensor": "(Opcionális) Bináris érzékelő, input_boolean vagy árnyékoló entitás a szoba saját ablakához/ajtajához.",
+              "zone_sensor": "(Opcionális) Bináris érzékelő, input_boolean vagy árnyékoló entitás a zóna/emelet ablakaihoz/ajtajaihoz. A zóna érzékelőjének tartalmaznia kell a szoba érzékelőjét.",
+              "room_open_delay": "Várakozási idő a szoba ablakának kinyílása után az ablakművelet indításáig.",
+              "zone_open_delay": "Várakozási idő egy zónaablak kinyílása után az ablakművelet indításáig.",
+              "close_delay": "Várakozási idő az összes ablak bezárása után az előző állapot visszaállításáig."
+            }
+          },
+          "presence_section": {
+            "name": "Jelenlét-vezérlés",
+            "description": "A klímabeállítások kezelése a szobai jelenlét alapján. Ha a beállított ideig távollét észlelhető, elindul a távolléti művelet. Visszatéréskor az előző beállítások visszaállnak.",
+            "data": {
+              "presence_mode": "Jelenlét-vezérlési mód",
+              "presence_sensor": "Jelenlét-eseményindító",
+              "presence_zone": "Jelenléti zóna",
+              "presence_action": "Távolléti művelet",
+              "presence_away_offset": "Távolléti hőmérséklet-eltolás",
+              "presence_away_temperature": "Távolléti hőmérséklet",
+              "presence_away_preset": "Távolléti profil",
+              "presence_away_delay": "Távolléti késleltetés (másodperc)",
+              "presence_return_delay": "Visszatérési késleltetés (másodperc)",
+              "ignore_off_members_presence": "Kikapcsolt tagok tiszteletben tartása (jelenlét)"
+            },
+            "data_description": {
+              "presence_mode": "Automatikus távolléti mód be- vagy kikapcsolása távollét észlelésekor.",
+              "presence_sensor": "A szobai jelenlétet jelző entitás. Több érzékelőt is kiválaszthatsz (pl. mozgásérzékelő és telefon). Bármely 'be' vagy 'otthon' állapot jelenlétnek számít.",
+              "presence_zone": "(Opcionális) Válaszd ki azokat a zónákat, ahol a jelenlét számít. Ha meg vannak adva, egy személy csak akkor 'jelen van', ha valamelyik ilyen zónában tartózkodik. Ha üres, a személy bármely zónában 'jelen van' (kivéve 'not_home').",
+              "presence_action": "A tartalék művelet, amely távollét észlelésekor fut le.",
+              "presence_away_offset": "Eltolás az aktuális célhoz képest távollétkor (pl. -2° vagy +2°). A távollét alatti ütemezés-változások automatikusan érvényesülnek.",
+              "presence_away_temperature": "Rögzített hőmérséklet távollétkor.",
+              "presence_away_preset": "Távollétkor aktiválandó profil.",
+              "presence_away_delay": "Várakozási idő, miután az érzékelő távollétet jelez, a távolléti mód aktiválásáig.",
+              "presence_return_delay": "Várakozási idő, miután az érzékelő jelenlétet jelez, a visszaállításig.",
+              "ignore_off_members_presence": "A kikapcsolt tagokhoz nem nyúl — távozáskor, visszatéréskor vagy mindkettőkor. Nem érvényes, ha a Távolléti művelet \"Kikapcsolás\", mert ilyenkor maga a csoport kapcsolta ki a tagokat."
+            }
+          },
+          "schedule_section": {
+            "name": "Ütemezés-automatizálás",
+            "description": "Kapcsolj hozzá egy ütemezés- vagy naptárentitást a klímabeállítások automatizálásához. Az idősávok adatai klíma-attribútumokat (temperature, hvac_mode) és meta-kulcsokat (turn_off, sync_mode, sync_attributes) tartalmazhatnak, amelyekkel idősávonként módosítható a csoport viselkedése.",
+            "data": {
+              "schedule_entity": "Fő ütemezés / naptár entitás",
+              "schedule_fallback_payload": "Tartalék állapot inaktív fő ütemezés / naptár esetén (YAML)",
+              "schedule_bypass_entity": "Kivételütemezés / naptár entitás",
+              "retain_service_changes_schedule": "Szolgáltatással végzett változtatások megtartása (ütemezés)",
+              "ignore_off_members_schedule": "Kikapcsolt tagok tiszteletben tartása (ütemezés)",
+              "schedule_hold_duration": "Kézi tartás időtartama"
+            },
+            "data_description": {
+              "schedule_entity": "Válassz egy schedule.* vagy calendar.* entitást. Ütemezés entitásoknál az idősáv adatai az idősáv attribútumaiból származnak. Naptár entitásoknál az idősáv adatai az esemény leírásmezőjéből, YAML-ként olvasódnak be. Támogatott kulcsok: klíma-attribútumok és meta-kulcsok.",
+              "schedule_fallback_payload": "A fő ütemezés helyett lép érvénybe annak aktív idősávjain kívül, így nincs szükség hézagmentes 24/7 ütemezésekre. A kivételréteg a megszokott módon működik tovább, és aktív állapotban felülírja. Ugyanaz a YAML formátum, mint fent (pl. temperature: 17, hvac_mode: heat).",
+              "schedule_bypass_entity": "Opcionális, magasabb prioritású réteg (pl. szabadságnaptár). Aktív állapotban az idősávja felülírja a fő ütemezést. Az idősáv adatai ugyanígy olvasódnak be: attribútumok schedule.* entitásoknál, YAML leírás calendar.* entitásoknál.",
+              "retain_service_changes_schedule": "A fő ütemezés, a kivételütemezés, a tartalék állapot és a kézi tartás időtartamának szolgáltatással végzett változtatásai újraindítás után is megmaradnak. Különben visszaállnak a beállított alapértékekre.",
+              "ignore_off_members_schedule": "Az ütemezés NEM kapcsolja be a jelenleg kikapcsolt tagokat.",
+              "schedule_hold_duration": "Mennyi ideig marad érvényben egy kézi változtatás (pl. hőmérséklet, vagy a csoport be-/kikapcsolása), mielőtt az ütemezés az akkor érvényes idősávval folytatódik. 0 esetén nincs tartás."
+            }
+          },
+          "presets_section": {
+            "name": "Csoportprofilok",
+            "description": "Saját, névvel ellátott profilok a csoporthoz (pl. eco, vendég, szellőztetés). Kiválasztáskor az attribútumai egyszerre minden tagra érvényesülnek. Egy csoportprofil felülírja a tag azonos nevű saját profilját. A set_group_preset szolgáltatással beállított futásidejű profilok kiegészítik az itt megadottakat, és elsőbbséget élveznek az azonos nevűvel szemben.",
+            "data": {
+              "group_presets": "Csoportprofilok (YAML)",
+              "retain_service_changes_presets": "Szolgáltatással végzett változtatások megtartása (profilok)"
+            },
+            "data_description": {
+              "group_presets": "A profiljaid YAML-ben: profilonként egy szabadon választott név, mindegyik azokkal az attribútumokkal, amelyeket alkalmaznia kell (temperature, hvac_mode, fan_mode, swing_mode). Egy profil csak a felsorolt attribútumokat alkalmazza. A formátumot és a másolható példákat a dokumentációban találod.",
+              "retain_service_changes_presets": "A set_group_preset szolgáltatással beállított futásidejű profilok megtartása újraindítás után. Enélkül a csoport csak az itt megadott profilokkal indul."
+            }
+          },
+          "temp_offsets_section": {
+            "name": "Tagok eltolásai",
+            "description": "Egyéni hőmérséklet-eltolások, hogy bizonyos tagok arányosan melegebben vagy hűvösebben működjenek a csoport célértékénél.",
+            "data": {
+              "member_offset_correction": "Tageltolás korrigálása"
+            },
+            "data_description": {
+              "member_offset_correction": "Bekapcsolva az átlagolás előtt levonja az egyes tagok eltolását, így a csoport a logikai célértéket mutatja a nyers fizikai átlag helyett."
+            }
+          },
+          "isolation_section": {
+            "name": "Tagok elkülönítése",
+            "description": "Bizonyos tagok ideiglenes elkülönítése, amíg egy eseményindító aktív. Az elkülönített tagok megkapják az elkülönítési műveletet (alapértelmezés szerint kikapcsolás), és kimaradnak a csoport számításaiból.",
+            "data": {
+              "isolation_rule_count": "Szabályok száma",
+              "isolation_rule_1_entities": "Elkülönítendő entitások",
+              "isolation_rule_1_trigger": "Eseményindító típusa",
+              "isolation_rule_1_sensor": "Elkülönítési érzékelő",
+              "isolation_rule_1_hvac_modes": "HVAC mód eseményindító",
+              "isolation_rule_1_activate_delay": "Aktiválási késleltetés (másodperc)",
+              "isolation_rule_1_restore_delay": "Visszaállítási késleltetés (másodperc)",
+              "isolation_rule_1_action_type": "Elkülönítési művelet",
+              "isolation_rule_1_action_hvac_mode": "HVAC mód",
+              "isolation_rule_1_action_preset_mode": "Profil"
+            },
+            "data_description": {
+              "isolation_rule_count": "Hány független elkülönítési szabály jelenjen meg. Módosítás után mentsd el a további szabályhelyek megjelenítéséhez vagy elrejtéséhez.",
+              "isolation_rule_1_entities": "Az elkülönítendő csoporttagok, amíg az eseményindító aktív.",
+              "isolation_rule_1_trigger": "Válaszd ki, mi aktiválja az elkülönítést: egy bináris érzékelő, a csoport egy adott HVAC módja, vagy egy kézzel kikapcsolt tag.",
+              "isolation_rule_1_sensor": "(Érzékelő eseményindító) Bináris érzékelő, amely BE állapotban elkülönítést indít.",
+              "isolation_rule_1_hvac_modes": "(HVAC mód eseményindító) Az elkülönítés akkor aktiválódik, ha a csoport célmódja ezek egyike.",
+              "isolation_rule_1_activate_delay": "(Csak érzékelő / HVAC mód eseményindító) Várakozási idő az eseményindító aktiválódása után a tagok elkülönítéséig.",
+              "isolation_rule_1_restore_delay": "(Csak érzékelő / HVAC mód eseményindító) Várakozási idő az eseményindító megszűnése után, mielőtt a tagok visszaállnak a csoport célállapotára.",
+              "isolation_rule_1_action_type": "Válaszd ki, mi történjen, ha ez a tag el van különítve: HVAC mód vagy profil beállítása.",
+              "isolation_rule_1_action_hvac_mode": "Az elkülönített tagra alkalmazandó HVAC mód.",
+              "isolation_rule_1_action_preset_mode": "Az elkülönített tagra alkalmazandó profil."
+            }
+          },
+          "isolation_rule_2_section": {
+            "name": "Tagok elkülönítése – 2. szabály",
+            "description": "Opcionális második elkülönítési szabály saját eseményindítóval és taglistával.",
+            "data": {
+              "isolation_rule_2_entities": "Elkülönítendő entitások",
+              "isolation_rule_2_trigger": "Eseményindító típusa",
+              "isolation_rule_2_sensor": "Elkülönítési érzékelő",
+              "isolation_rule_2_hvac_modes": "HVAC mód eseményindító",
+              "isolation_rule_2_activate_delay": "Aktiválási késleltetés (másodperc)",
+              "isolation_rule_2_restore_delay": "Visszaállítási késleltetés (másodperc)",
+              "isolation_rule_2_action_type": "Elkülönítési művelet",
+              "isolation_rule_2_action_hvac_mode": "HVAC mód",
+              "isolation_rule_2_action_preset_mode": "Profil"
+            },
+            "data_description": {
+              "isolation_rule_2_entities": "Az elkülönítendő csoporttagok, amíg az eseményindító aktív.",
+              "isolation_rule_2_trigger": "Válaszd ki, mi aktiválja az elkülönítést: egy bináris érzékelő, a csoport egy adott HVAC módja, vagy egy kézzel kikapcsolt tag.",
+              "isolation_rule_2_sensor": "(Érzékelő eseményindító) Bináris érzékelő, amely BE állapotban elkülönítést indít.",
+              "isolation_rule_2_hvac_modes": "(HVAC mód eseményindító) Az elkülönítés akkor aktiválódik, ha a csoport célmódja ezek egyike.",
+              "isolation_rule_2_activate_delay": "(Csak érzékelő / HVAC mód eseményindító) Várakozási idő az eseményindító aktiválódása után a tagok elkülönítéséig.",
+              "isolation_rule_2_restore_delay": "(Csak érzékelő / HVAC mód eseményindító) Várakozási idő az eseményindító megszűnése után, mielőtt a tagok visszaállnak a csoport célállapotára.",
+              "isolation_rule_2_action_type": "Válaszd ki, mi történjen, ha ez a tag el van különítve: HVAC mód vagy profil beállítása.",
+              "isolation_rule_2_action_hvac_mode": "Az elkülönített tagra alkalmazandó HVAC mód.",
+              "isolation_rule_2_action_preset_mode": "Az elkülönített tagra alkalmazandó profil."
+            }
+          },
+          "isolation_rule_3_section": {
+            "name": "Tagok elkülönítése – 3. szabály",
+            "description": "Opcionális harmadik elkülönítési szabály saját eseményindítóval és taglistával.",
+            "data": {
+              "isolation_rule_3_entities": "Elkülönítendő entitások",
+              "isolation_rule_3_trigger": "Eseményindító típusa",
+              "isolation_rule_3_sensor": "Elkülönítési érzékelő",
+              "isolation_rule_3_hvac_modes": "HVAC mód eseményindító",
+              "isolation_rule_3_activate_delay": "Aktiválási késleltetés (másodperc)",
+              "isolation_rule_3_restore_delay": "Visszaállítási késleltetés (másodperc)",
+              "isolation_rule_3_action_type": "Elkülönítési művelet",
+              "isolation_rule_3_action_hvac_mode": "HVAC mód",
+              "isolation_rule_3_action_preset_mode": "Profil"
+            },
+            "data_description": {
+              "isolation_rule_3_entities": "Az elkülönítendő csoporttagok, amíg az eseményindító aktív.",
+              "isolation_rule_3_trigger": "Válaszd ki, mi aktiválja az elkülönítést: egy bináris érzékelő, a csoport egy adott HVAC módja, vagy egy kézzel kikapcsolt tag.",
+              "isolation_rule_3_sensor": "(Érzékelő eseményindító) Bináris érzékelő, amely BE állapotban elkülönítést indít.",
+              "isolation_rule_3_hvac_modes": "(HVAC mód eseményindító) Az elkülönítés akkor aktiválódik, ha a csoport célmódja ezek egyike.",
+              "isolation_rule_3_activate_delay": "(Csak érzékelő / HVAC mód eseményindító) Várakozási idő az eseményindító aktiválódása után a tagok elkülönítéséig.",
+              "isolation_rule_3_restore_delay": "(Csak érzékelő / HVAC mód eseményindító) Várakozási idő az eseményindító megszűnése után, mielőtt a tagok visszaállnak a csoport célállapotára.",
+              "isolation_rule_3_action_type": "Válaszd ki, mi történjen, ha ez a tag el van különítve: HVAC mód vagy profil beállítása.",
+              "isolation_rule_3_action_hvac_mode": "Az elkülönített tagra alkalmazandó HVAC mód.",
+              "isolation_rule_3_action_preset_mode": "Az elkülönített tagra alkalmazandó profil."
+            }
+          },
+          "isolation_rule_4_section": {
+            "name": "Tagok elkülönítése – 4. szabály",
+            "description": "Opcionális negyedik elkülönítési szabály saját eseményindítóval és taglistával.",
+            "data": {
+              "isolation_rule_4_entities": "Elkülönítendő entitások",
+              "isolation_rule_4_trigger": "Eseményindító típusa",
+              "isolation_rule_4_sensor": "Elkülönítési érzékelő",
+              "isolation_rule_4_hvac_modes": "HVAC mód eseményindító",
+              "isolation_rule_4_activate_delay": "Aktiválási késleltetés (másodperc)",
+              "isolation_rule_4_restore_delay": "Visszaállítási késleltetés (másodperc)",
+              "isolation_rule_4_action_type": "Elkülönítési művelet",
+              "isolation_rule_4_action_hvac_mode": "HVAC mód",
+              "isolation_rule_4_action_preset_mode": "Profil"
+            },
+            "data_description": {
+              "isolation_rule_4_entities": "Az elkülönítendő csoporttagok, amíg az eseményindító aktív.",
+              "isolation_rule_4_trigger": "Válaszd ki, mi aktiválja az elkülönítést: egy bináris érzékelő, a csoport egy adott HVAC módja, vagy egy kézzel kikapcsolt tag.",
+              "isolation_rule_4_sensor": "(Érzékelő eseményindító) Bináris érzékelő, amely BE állapotban elkülönítést indít.",
+              "isolation_rule_4_hvac_modes": "(HVAC mód eseményindító) Az elkülönítés akkor aktiválódik, ha a csoport célmódja ezek egyike.",
+              "isolation_rule_4_activate_delay": "(Csak érzékelő / HVAC mód eseményindító) Várakozási idő az eseményindító aktiválódása után a tagok elkülönítéséig.",
+              "isolation_rule_4_restore_delay": "(Csak érzékelő / HVAC mód eseményindító) Várakozási idő az eseményindító megszűnése után, mielőtt a tagok visszaállnak a csoport célállapotára.",
+              "isolation_rule_4_action_type": "Válaszd ki, mi történjen, ha ez a tag el van különítve: HVAC mód vagy profil beállítása.",
+              "isolation_rule_4_action_hvac_mode": "Az elkülönített tagra alkalmazandó HVAC mód.",
+              "isolation_rule_4_action_preset_mode": "Az elkülönített tagra alkalmazandó profil."
+            }
+          },
+          "member_template_section": {
+            "name": "Tagsablon",
+            "description": "Olyan képességekkel jeleníti meg a tagokat, amelyeket az eszközük natívan nem kínál. Tartománysablon: az egyetlen célértékű tagok fűtés/hűtés tartományos eszközként működnek — a tartományparancsok minden tag aktuális hőmérséklete szerint fűtéssé vagy hűtéssé válnak. Kikapcsolási sablon: a kikapcsolt mód nélküli fűtőtesteket úgy kapcsolja ki, hogy fűtésre állítja őket a saját minimális hőmérsékletükön.",
+            "data": {
+              "range_template_enabled": "Tartománysablon engedélyezése",
+              "range_template_deadband_action": "Holtsáv művelet",
+              "range_template_heat_entities": "Fűtőeszközök",
+              "range_template_cool_entities": "Hűtőeszközök",
+              "range_template_conditional": "Feltételes Fűtés/Hűtés",
+              "range_template_humidity_enabled": "Párátlanítás a holtsávban",
+              "range_template_humidity_action": "Páratartalom művelet",
+              "range_template_humidity_hysteresis": "Páratartalom hiszterézis",
+              "range_template_humidity_deactivation_delay": "Kikapcsolási késleltetés",
+              "off_template_enabled": "Kikapcsolási sablon engedélyezése"
+            },
+            "data_description": {
+              "range_template_enabled": "Az összes egyetlen célértékű tag (natív fűtés/hűtés nélkül) automatikus megjelenítése virtuális tartományos eszközként.",
+              "range_template_deadband_action": "A végrehajtandó művelet, ha az aktuális hőmérséklet a céltartományon (holtsávon) belül van. A 'Nincs' nem vált módot, de a megfelelő határon tartja azt az eszközt, amely tovább fűt vagy hűt.",
+              "range_template_heat_entities": "Fűtésre jogosult tagok. A nem felsorolt tagok korlátozás nélküliek (a fizikai képesség dönt). Egy szerep csak korlátozhatja, de soha nem bővítheti egy eszköz képességeit.",
+              "range_template_cool_entities": "Hűtésre jogosult tagok. A nem felsorolt tagok korlátozás nélküliek (a fizikai képesség dönt). Egy szerep csak korlátozhatja, de soha nem bővítheti egy eszköz képességeit.",
+              "range_template_conditional": "A Fűtés/Hűtés és a hőmérséklet-tartomány csak akkor érhető el, ha legalább egy elérhető tag tud fűteni és egy tud hűteni.",
+              "range_template_humidity_enabled": "A céltartományon belül váltás a páratartalom műveletre, ha az aktuális páratartalom meghaladja a cél páratartalmat.",
+              "range_template_humidity_action": "A végrehajtandó művelet, ha a holtsávon belül az aktuális páratartalom meghaladja a cél páratartalmat.",
+              "range_template_humidity_hysteresis": "Schmitt-trigger hiszterézissáv a cél páratartalom körül a gyakori ki-be kapcsolgatás elkerülésére.",
+              "range_template_humidity_deactivation_delay": "Késleltetés a páratartalom művelet kikapcsolása előtt, miután a páratartalom a küszöb alá esett.",
+              "off_template_enabled": "A kikapcsolt mód nélküli fűtőtestek a csoport kikapcsolásakor fűtésre állnak a saját minimális hőmérsékletükön. A minimális hőmérsékleten álló fűtőtest ezután kikapcsoltnak számít. Kikapcsolt móddal rendelkező eszközöknél inkább a 'Minimális hőmérséklet kikapcsoláskor' beállítást használd."
+            }
+          },
+          "advanced_section": {
+            "name": "Speciális beállítások",
+            "description": "Válaszd ki, mit csináljon a főkapcsoló kikapcsolt állapotban. A parancsok időzítésének és az újrapróbálkozásoknak a finomhangolása. Diagnosztikai attribútumok és konfigurációs érzékelők be- és kikapcsolása.",
+            "data": {
+              "switch_action": "Főkapcsoló művelet",
+              "switch_temperature": "Főkapcsoló hőmérséklet",
+              "debounce_delay": "Debounce késleltetés (másodperc)",
+              "retry_attempts": "Újrapróbálkozások száma",
+              "retry_delay": "Újrapróbálkozási késleltetés (másodperc)",
+              "force_retry": "Kényszerített újrapróbálkozás",
+              "member_command_delay": "Tagok közötti parancskésleltetés (másodperc)",
+              "grace_period": "Optimista felület türelmi ideje (másodperc)",
+              "expose_smart_sensors": "Okos érzékelők közzététele",
+              "expose_member_entities": "Taglista közzététele",
+              "expose_config": "Konfigurációs érzékelő közzététele"
+            },
+            "data_description": {
+              "switch_action": "Mit kapnak az eszközök, amíg a főkapcsoló ki van kapcsolva: Kikapcsolás, Hőmérséklet beállítása (rögzített célérték, pl. fagyvédelem — csak a működő eszközök célértékét módosítja) vagy Eszközök elengedése (a csoport nem nyúl az eszközökhöz, és te vezérled őket közvetlenül).",
+              "switch_temperature": "A beállítandó célhőmérséklet, ha a 'Hőmérséklet beállítása' művelet van kiválasztva.",
+              "debounce_delay": "Várakozási idő a parancsok elküldése előtt. Nagyobb érték megakadályozza a csúszkák húzásakor a gyors egymásutánban küldött parancsokat, de lassabbnak tűnik.",
+              "retry_attempts": "Hányszor küldje el újra a parancsot, ha egy eszköz nem válaszol. 0 esetén kikapcsolva.",
+              "retry_delay": "Szünet az újrapróbálkozások között. Ha az eszközök kapnak egy kis időt a helyreállásra, az javíthatja a megbízhatóságot.",
+              "force_retry": "Mindig újraküldi a parancsokat minden tagnak, akkor is, ha már a célállapotot jelentik.",
+              "member_command_delay": "Szünet az egyes tagoknak küldött parancsok között. Segít, ha több eszköz egyidejű vezérlése túlterheli a hálózatot vagy a hidat (pl. IR-adók, egyes Zigbee koordinátorok). 0 esetén kikapcsolva.",
+              "grace_period": "Mennyi ideig mutatja a csoport a kiküldött értéket, mielőtt a tagok átlagára vált. Megakadályozza a felület villogását, ha lassú eszközök (felhős hidak, Zigbee) visszaküldik a régi állapotukat. 0 esetén kikapcsolva.",
+              "expose_smart_sensors": "Külön érzékelő entitásokat hoz létre a csoport hőmérsékletéhez és páratartalmához (hasznos grafikonokhoz).",
+              "expose_member_entities": "Hozzáadja az összes tagot felsoroló 'entity_id' attribútumot, így a részletek párbeszédablak megjeleníti a taglistát.",
+              "expose_config": "Diagnosztikai érzékelőt hoz létre (sensor.*_configuration), amely JSON attribútumként teszi közzé a hordozható beállításokat. Hasznos a beállítások csoportok közötti másolásához automatizálásokkal."
+            }
+          }
+        },
+        "data": {
+          "advanced_mode": "Speciális funkciók",
+          "expand_sections": "Minden szakasz kinyitása alapértelmezés szerint"
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Legalább egy klímaeszköznek a csoportban kell maradnia.",
+      "master_not_in_members": "A fő entitásnak a csoport tagjának kell lennie.",
+      "master_refresh_notice": "Fő entitás hozzáadva. Új beállítások érhetők el.",
+      "master_options_notice": "Ebben a szakaszban új beállítások érhetők el a fő entitáshoz.",
+      "isolation_all_selected": "Legalább egy tagnak az elkülönítésen kívül kell maradnia.",
+      "isolation_entity_overlap": "Minden tag csak egy elkülönítési szabályban szerepelhet.",
+      "isolation_action_preset_required": "Válassz profilt az elkülönítési művelethez.",
+      "isolation_sensor_required": "Válassz érzékelőt az elkülönítési szabályhoz, vagy állítsd az eseményindítóját Kikapcsolva értékre.",
+      "isolation_hvac_modes_required": "Válassz legalább egy módot az elkülönítési szabályhoz, vagy állítsd az eseményindítóját Kikapcsolva értékre.",
+      "window_temperature_required": "Adj meg ablakhőmérsékletet, vagy módosítsd az ablakműveletet.",
+      "switch_temperature_required": "Adj meg főkapcsoló-hőmérsékletet, vagy módosítsd a főkapcsoló műveletét.",
+      "presence_action_value_required": "Adj meg értéket a kiválasztott távolléti művelethez, vagy módosítsd a műveletet.",
+      "schedule_fallback_payload_invalid": "Érvénytelen YAML formátum az ütemezés tartalék állapotában. Érvényes kulcs-érték leképezésnek kell lennie.",
+      "group_presets_invalid": "Érvénytelen YAML formátum a csoportprofilokban. Érvényes kulcs-érték leképezésnek kell lennie.",
+      "preset_name_collision_notice": "Egy vagy több csoportprofil neve megegyezik a tagok saját profiljainak nevével. A csoport definíciója felülírja őket.",
+      "sensor_loop_protection": "Climate Group Helper entitás nem használható külső érzékelőként vagy kalibrációs célként — ez visszacsatolási hurkot hozna létre."
+    },
+    "abort": {
+      "no_changes": "Nem észlelhető változás."
+    }
+  },
+  "selector": {
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normál – A csoport a tagok leggyakoribb módját veszi át",
+        "off_priority": "Ki elsőbbsége – Ha bármelyik tag Ki, az egész csoport Ki",
+        "auto": "Automatikus – Okos váltás a Normál és a Ki elsőbbsége között"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Metszet – Csak azok a funkciók, amelyek MINDEN tagnál megvannak",
+        "union": "Unió – Minden funkció, amely BÁRMELYIK tagnál megvan"
+      }
+    },
+    "temp_target_avg": {
+      "options": {
+        "mean": "Átlag",
+        "median": "Medián (középső érték)",
+        "min": "Minimum (legkisebb)",
+        "max": "Maximum (legnagyobb)"
+      }
+    },
+    "temp_target_round": {
+      "options": {
+        "none": "Nincs kerekítés (pontos)",
+        "half": "Fél fok (0.5°)",
+        "integer": "Egész számok (1°)"
+      }
+    },
+    "temp_current_avg": {
+      "options": {
+        "mean": "Átlag",
+        "median": "Medián (kiugró értékek figyelmen kívül hagyása)",
+        "min": "Minimum (legkisebb)",
+        "max": "Maximum (legnagyobb)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Abszolút – Az érték közvetlen küldése (alapértelmezett)",
+        "offset": "Eltolás – A különbség küldése (külső - termosztátfej belső)",
+        "scaled": "Skálázott – Egész szám x100 (Danfoss Ally)"
+      }
+    },
+    "humidity_target_avg": {
+      "options": {
+        "mean": "Átlag",
+        "median": "Medián (középső érték)",
+        "min": "Minimum (legkisebb)",
+        "max": "Maximum (legnagyobb)"
+      }
+    },
+    "humidity_target_round": {
+      "options": {
+        "none": "Nincs kerekítés (pontos)",
+        "half": "Fél százalék (0.5%)",
+        "integer": "Egész számok (1%)"
+      }
+    },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "Átlag",
+        "median": "Medián (kiugró értékek figyelmen kívül hagyása)",
+        "min": "Minimum (legkisebb)",
+        "max": "Maximum (legnagyobb)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "disabled": "Kikapcsolva – Nincs automatikus szinkronizálás a tagok között",
+        "mirror": "Tükrözés – Egy eszközön végzett kézi változtatás minden tagot frissít",
+        "lock": "Zárolás – Visszavonja a kézi változtatásokat a csoport állapotára",
+        "mirror_lock": "Tükrözés/Zárolás – A kiválasztott attribútumok tükröződnek, a többi szigorúan zárolt",
+        "master_lock": "Fő/Zárolás – Csak a fő entitás módosíthatja a csoport célját",
+        "adopt_only": "Csak átvétel – A csoport átveszi egy eszköz kézi változtatásait, de nem adja tovább a többinek"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "HVAC mód",
+        "preset_mode": "Profil",
+        "temperature": "Hőmérséklet (cél)",
+        "target_temp_high": "Felső célhőmérséklet (tartomány)",
+        "target_temp_low": "Alsó célhőmérséklet (tartomány)",
+        "fan_mode": "Ventilátor mód",
+        "swing_mode": "Függőleges legyezés",
+        "swing_horizontal_mode": "Vízszintes legyezés",
+        "humidity": "Páratartalom (cél)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "disabled": "Kikapcsolva – Az ablakvezérlés inaktív",
+        "enabled": "Bekapcsolva – Az ablakvezérlés aktív"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Ki – Változtatások elvetése",
+        "all": "Mind – Változtatások megtartása az ablakok bezárásáig",
+        "master_only": "Csak fő – Csak a fő eszközön végzett változtatások megtartása"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Kikapcsolás",
+        "temperature": "Hőmérséklet beállítása"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Teljes cél",
+        "action": "Csak a módosított beállítás"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "Kikapcsolás",
+        "temperature": "Hőmérséklet beállítása",
+        "release": "Eszközök elengedése"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Kikapcsolás",
+        "clamp": "Korlátozás a határra"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Figyelmen kívül hagyás",
+        "off": "Kikapcsolás"
+      }
+    },
+    "isolation_rule_count": {
+      "options": {
+        "1": "1 szabály",
+        "2": "2 szabály",
+        "3": "3 szabály",
+        "4": "4 szabály"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "disabled": "Kikapcsolva – A tagok elkülönítése ki van kapcsolva",
+        "sensor": "Bináris érzékelő – Elkülönítés, ha az érzékelő BE",
+        "hvac_mode": "HVAC mód – Elkülönítés, ha a csoport módja egyezik",
+        "member_off": "Kikapcsolt tag – Elkülönítés, ha egy tagot kézzel kikapcsolnak"
+      }
+    },
+    "isolation_action_type": {
+      "options": {
+        "hvac_mode": "HVAC mód beállítása",
+        "preset_mode": "Profil beállítása"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Kikapcsolva – A jelenlét-vezérlés inaktív",
+        "enabled": "Bekapcsolva – Távolléti mód"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Kikapcsolás",
+        "away_offset": "Távolléti eltolás",
+        "away_temperature": "Távolléti hőmérséklet",
+        "away_preset": "Távolléti profil"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Kikapcsolva – A kikapcsolt tagok bekapcsolnak",
+        "away": "Távozáskor",
+        "home": "Visszatéréskor",
+        "away_home": "Távozáskor és visszatéréskor"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "none": "Nincs",
+        "off": "Kikapcsolás",
+        "fan_only": "Csak ventilátor"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Csak ventilátor",
+        "dry": "Párátlanítás"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group_helper": {
+        "name": "Klímacsoport",
+        "state_attributes": {
+          "last_active_hvac_mode": {
+            "name": "Utolsó aktív mód"
+          },
+          "target_hvac_mode": {
+            "name": "Cél HVAC mód"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Távol",
+              "home": "Otthon",
+              "sleep": "Alvás",
+              "comfort": "Komfort",
+              "activity": "Tevékenység",
+              "standby": "Készenlét",
+              "economy": "Takarékos",
+              "building_protection": "Épületvédelem",
+              "boost": "Boost"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Csoporteltolás"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Hőmérséklet"
+      },
+      "humidity": {
+        "name": "Páratartalom"
+      },
+      "configuration": {
+        "name": "Konfiguráció"
+      }
+    },
+    "switch": {
+      "main_switch": {
+        "name": "Főkapcsoló"
+      }
+    }
+  },
+  "services": {
+    "set_schedule_entity": {
+      "name": "Ütemezés entitás beállítása",
+      "description": "Az aktív ütemezés- vagy naptárentitás váltása futás közben. Ha nincs megadva vagy null, a csoport visszaáll a beállított alapértékre, és újra alkalmazza az aktuális idősávot.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Ütemezés / naptár entitás",
+          "description": "Az aktiválandó schedule.* vagy calendar.* entitás (pl. schedule.holiday vagy calendar.vacation). null vagy üres érték esetén visszaáll a beállított alapértékre."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Kivételütemezés entitás beállítása",
+      "description": "Az aktív kivétel-entitás váltása futás közben (pl. különböző szabadságnaptárak közötti cseréhez). null esetén visszaáll a beállított alapértékre.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Kivétel-entitás",
+          "description": "A kivételként használandó schedule.* vagy calendar.* entitás (pl. calendar.vacation). null vagy üres érték esetén visszaáll a beállított alapértékre."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Ütemezés tartalék állapotának beállítása",
+      "description": "Beállítja vagy törli a tartalék állapotot, amely akkor érvényes, ha a fő ütemezés ki van kapcsolva. Felülírja a beállított tartalék állapotot.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Tartalék állapot",
+          "description": "A tartalék klímaállapot YAML-ként vagy leképezésként (pl. 'temperature: 17.0\\nhvac_mode: heat'). null vagy üres érték esetén visszaáll a beállított alapértékre."
+        }
+      }
+    },
+    "set_schedule_hold_duration": {
+      "name": "Ütemezés tartási idejének beállítása",
+      "description": "Beállítja vagy törli a kézi tartás időtartamát: mennyi ideig marad érvényben egy kézi változtatás, mielőtt az ütemezés folytatódik. Felülírja a beállított időtartamot. 0-ra váltás azonnal befejezi a futó tartást.",
+      "fields": {
+        "duration": {
+          "name": "Időtartam (perc)",
+          "description": "Tartás időtartama percben. 0 esetén nincs tartás. Hagyd üresen a beállított időtartam visszaállításához."
+        }
+      }
+    },
+    "set_group_preset": {
+      "name": "Csoportprofil beállítása",
+      "description": "Beállítja, módosítja vagy eltávolítja a csoport futásidejű profiljait. Ezek kiegészítik a csoportbeállításokban megadott profilokat, és elsőbbséget élveznek az azonos nevűvel szemben.",
+      "fields": {
+        "payload": {
+          "name": "Adatok",
+          "description": "A beállítandó futásidejű profilok YAML-ként vagy leképezésként. A null vagy üres értékű profil törlődik. Üres adat az összes futásidejű profilt törli. A formátumot és a példákat a dokumentációban találod."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "A csoport ideiglenes beállítása egy célhőmérsékletre meghatározott időre. Az idő lejártával a csoport automatikusan visszaáll az ütemezés aktív idősávjára (ha be van állítva) vagy az előző célállapotára.",
+      "fields": {
+        "hvac_mode": {
+          "name": "HVAC mód",
+          "description": "A mód, amelyben a boost fut. Alapértelmezés szerint a csoport aktuális módja (egy kikapcsolt csoport az utolsó aktív módjában indul). Egyetlen célérték nélküli módok helyett Fűtés lesz. Az a boost, amelyet egyik tag sem tud végrehajtani, elutasításra kerül."
+        },
+        "temperature": {
+          "name": "Hőmérséklet",
+          "description": "Abszolút célhőmérséklet a boost alatt (pl. 24.0). Nem használható együtt a temperature_offset mezővel."
+        },
+        "temperature_offset": {
+          "name": "Hőmérséklet-eltolás",
+          "description": "Az aktuális célhőmérséklethez hozzáadott relatív eltolás (pl. +3.0 vagy -2.0). Nem használható együtt a temperature mezővel."
+        },
+        "duration": {
+          "name": "Időtartam (perc)",
+          "description": "Hány percig tartson a boost."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Konfiguráció alkalmazása",
+      "description": "Hordozható JSON konfiguráció alkalmazása egy csoportra. Hasznos a logikai beállítások csoportok közötti másolásához vagy egy biztonsági mentés visszaállításához. Az azonosító kulcsok (név) védettek. Utána nyisd meg a csoport beállításait, és ments egyszer — a beállítások párbeszédablak azt is ellenőrzi, hogy az alkalmazott kombináció értelmes-e.",
+      "fields": {
+        "settings": {
+          "name": "Beállítások (JSON)",
+          "description": "Az alkalmazandó JSON konfigurációs objektum. Használd egy konfigurációs érzékelő 'settings_json' attribútumát."
+        },
+        "include_member_list": {
+          "name": "Taglista belefoglalása",
+          "description": "Ha igaz, a tagentitások és az elkülönítési entitások listáját is felülírja."
+        },
+        "include_entity_selectors": {
+          "name": "Entitásválasztók belefoglalása",
+          "description": "Ha igaz, a csatolt érzékelőket (hőmérséklet, páratartalom, jelenlét, ablak stb.) és a tagonkénti eltolásokat is felülírja."
+        }
+      }
+    },
+    "reset": {
+      "name": "Visszaállítás",
+      "description": "Visszaállítja az ideiglenes felülbírálásokat és a futásidejű állapotot (boost, eltolás, ütemezés, kivétel, tartalék, profilok) a beállított alapértékekre. Válassz legalább egy lehetőséget, vagy használd a \"Minden\" opciót.",
+      "fields": {
+        "everything": {
+          "name": "Minden",
+          "description": "Egyszerre visszaállít mindent, ami alább szerepel. Az egyes kapcsolókat ilyenkor figyelmen kívül hagyja."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Megszakítja az aktív boostot, és visszaállítja a célállapotot."
+        },
+        "offset": {
+          "name": "Hőmérséklet-eltolás",
+          "description": "A csoport hőmérséklet-eltolását 0.0-ra állítja vissza."
+        },
+        "schedule": {
+          "name": "Ütemezés entitás",
+          "description": "Visszaállítja az aktív ütemezés-entitást és a kézi tartás időtartamát a beállított alapértékekre, és befejezi a kézi tartást."
+        },
+        "bypass": {
+          "name": "Kivétel-entitás",
+          "description": "Visszaállítja az aktív kivétel-entitást a beállított alapértékre, és visszavonja a kivétel módosításait."
+        },
+        "fallback": {
+          "name": "Tartalék állapot",
+          "description": "Visszaállítja az ütemezés tartalék állapotát a beállított alapértékre."
+        },
+        "presets": {
+          "name": "Csoportprofilok",
+          "description": "Eltávolítja az összes futásidejű profilt. A beállításokban megadott profilok változatlanok maradnak."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "HVAC mód megváltozott",
+      "temperature_target_changed": "Célhőmérséklet megváltozott",
+      "current_temperature_changed": "Aktuális hőmérséklet megváltozott",
+      "group_turned_on": "Csoport bekapcsolt",
+      "group_turned_off": "Csoport kikapcsolt"
+    },
+    "condition_type": {
+      "is_hvac_mode": "HVAC mód",
+      "is_temperature_above": "Hőmérséklet nagyobb mint",
+      "is_temperature_below": "Hőmérséklet kisebb mint",
+      "is_group_available": "Csoport elérhető"
+    },
+    "action_type": {
+      "set_hvac_mode": "HVAC mód beállítása",
+      "set_temperature": "Hőmérséklet beállítása",
+      "turn_on": "Bekapcsolás",
+      "turn_off": "Kikapcsolás"
+    }
+  }
+}

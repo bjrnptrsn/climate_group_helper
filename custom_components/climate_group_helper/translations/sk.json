@@ -132,8 +132,8 @@
               "close_delay": "Oneskorenie zatvorenia (s)"
             },
             "data_description": {
-              "window_mode": "Pozastaví vykurovanie alebo zníži teplotu, akonáhle sa otvorí sledované okno.",
-              "window_adopt_manual_changes": "Zmeny vykonané pri otvorených oknách si zapamätať; pri zatvorení okien sa použijú iba s možnosťou „Celý cieľový stav“. Dovtedy platí akcia pri otvorení okna.",
+              "window_mode": "Zapne alebo vypne ovládanie okien: pozastaví vykurovanie alebo zníži teplotu, akonáhle sa otvorí sledované okno.",
+              "window_adopt_manual_changes": "Zmeny vykonané pri otvorených oknách si zapamätať. Pri zatvorení okien sa použijú iba s možnosťou „Celý cieľový stav“. Dovtedy platí akcia pri otvorení okna.",
               "window_action": "Čo urobiť pri otvorení okna: Úplne vypnúť alebo nastaviť konkrétnu teplotu (napr. ochrana pred mrazom).",
               "window_temperature": "Cieľová teplota pri výbere akcie 'Nastaviť teplotu'.",
               "window_restore_scope": "Čo sa obnoví pri zatvorení okna: celý cieľový stav, alebo iba nastavenie, ktoré zmenila Akcia pri otvorení okna.",
@@ -696,7 +696,7 @@
       "fields": {
         "payload": {
           "name": "Dátová časť",
-          "description": "Predvoľby za behu, ktoré sa majú nastaviť, ako YAML alebo mapovanie. Predvoľba nastavená na null alebo prázdna sa odstráni; prázdny payload odstráni všetky predvoľby za behu. Formát a príklady nájdete v dokumentácii."
+          "description": "Predvoľby za behu, ktoré sa majú nastaviť, ako YAML alebo mapovanie. Predvoľba nastavená na null alebo prázdna sa odstráni. Prázdny payload odstráni všetky predvoľby za behu. Formát a príklady nájdete v dokumentácii."
         }
       }
     },
@@ -706,7 +706,7 @@
       "fields": {
         "hvac_mode": {
           "name": "Režim HVAC",
-          "description": "Režim, v ktorom boost beží. Štandardne aktuálny režim skupiny (vypnutá skupina sa prebudí do posledného aktívneho režimu). Režimy bez jednotného cieľa alebo boost, ktorý nemôže prijať žiadny člen, sa odmietajú."
+          "description": "Režim, v ktorom boost beží. Štandardne aktuálny režim skupiny (vypnutá skupina sa prebudí do posledného aktívneho režimu). Režimy bez jednotného cieľa prejdú na Kúrenie. Boost, ktorý nemôže prijať žiadny člen, sa odmietne."
         },
         "temperature": {
           "name": "Teplota",

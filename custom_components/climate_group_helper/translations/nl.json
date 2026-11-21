@@ -132,8 +132,8 @@
               "close_delay": "Vertraging Sluiten (s)"
             },
             "data_description": {
-              "window_mode": "Pauzeert het verwarmen of verlaagt de temperatuur zodra een bewaakt raam wordt geopend.",
-              "window_adopt_manual_changes": "Bewaar wijzigingen die worden gemaakt terwijl ramen open staan; bij het sluiten van de ramen worden ze alleen toegepast met ‘Volledige doelstatus’. Tot dan geldt de actie bij open raam.",
+              "window_mode": "Schakelt de raambesturing in of uit: pauzeert het verwarmen of verlaagt de temperatuur zodra een bewaakt raam wordt geopend.",
+              "window_adopt_manual_changes": "Bewaar wijzigingen die worden gemaakt terwijl ramen open staan. Bij het sluiten van de ramen worden ze alleen toegepast met ‘Volledige doelstatus’. Tot dan geldt de actie bij open raam.",
               "window_action": "Wat te doen als een raam opent: Volledig uitschakelen of een specifieke temperatuur instellen (bijv. vorstbeveiliging).",
               "window_temperature": "Doeltemperatuur wanneer de actie 'Temperatuur instellen' is geselecteerd.",
               "window_restore_scope": "Wat wordt hersteld als het raam sluit: de volledige doelstatus of alleen de instelling die de Actie bij open raam heeft gewijzigd.",
@@ -696,7 +696,7 @@
       "fields": {
         "payload": {
           "name": "Payload",
-          "description": "De in te stellen runtime-voorinstellingen als YAML of mapping. Een voorinstelling die op null of leeg wordt gezet, wordt verwijderd; een lege payload verwijdert alle runtime-voorinstellingen. Zie de documentatie voor het formaat en voorbeelden."
+          "description": "De in te stellen runtime-voorinstellingen als YAML of mapping. Een voorinstelling die op null of leeg wordt gezet, wordt verwijderd. Een lege payload verwijdert alle runtime-voorinstellingen. Zie de documentatie voor het formaat en voorbeelden."
         }
       }
     },
@@ -706,7 +706,7 @@
       "fields": {
         "hvac_mode": {
           "name": "HVAC-modus",
-          "description": "De modus waarin de boost wordt uitgevoerd. Standaard de huidige modus van de groep (een uitgeschakelde groep wordt wakker in de laatste actieve modus). Modussen zonder enkel streefpunt, of een boost die geen enkel lid kan aannemen, worden afgewezen."
+          "description": "De modus waarin de boost wordt uitgevoerd. Standaard de huidige modus van de groep (een uitgeschakelde groep wordt wakker in de laatste actieve modus). Modussen zonder enkel streefpunt vallen terug op Verwarmen. Een boost die geen enkel lid kan aannemen, wordt afgewezen."
         },
         "temperature": {
           "name": "Temperatuur",

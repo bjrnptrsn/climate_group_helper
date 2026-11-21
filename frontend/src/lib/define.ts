@@ -1,3 +1,5 @@
+import type { CustomCardEntry } from '../types'
+
 /**
  * Registration that tolerates the bundle being executed twice (a reload of the
  * integration hands the frontend a new bundle URL while the page keeps the old
@@ -32,13 +34,6 @@ export const customElement =
     if (haReady) void haReady.then(() => define(name, cls))
     else define(name, cls)
   }
-
-export interface CustomCardEntry {
-  type: string
-  name: string
-  description?: string
-  preview?: boolean
-}
 
 /** Add the card to HA's card picker once, however often the bundle runs. */
 export const registerCustomCard = (card: CustomCardEntry): void => {

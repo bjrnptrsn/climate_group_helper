@@ -1,14 +1,10 @@
 set_schedule_entity:
-  name: Set Schedule Entity
-  description: Changes the active schedule entity used by the Climate Group.
   target:
     entity:
       integration: climate_group_helper
       domain: climate
   fields:
     schedule_entity:
-      name: Schedule Entity
-      description: The new schedule entity to use (e.g. schedule.holiday). Set to null or empty to restore the configured default schedule.
       selector:
         entity:
           filter:
@@ -17,16 +13,12 @@ set_schedule_entity:
       required: false
 
 set_schedule_bypass_entity:
-  name: Set Schedule Bypass Entity
-  description: Switch the active bypass entity at runtime (e.g. to swap between different vacation calendars). Set to null to restore the configured default.
   target:
     entity:
       integration: climate_group_helper
       domain: climate
   fields:
     schedule_bypass_entity:
-      name: Bypass Entity
-      description: The schedule.* or calendar.* entity to use as bypass (e.g. calendar.vacation). Set to null or empty to restore the configured default.
       selector:
         entity:
           filter:
@@ -35,31 +27,23 @@ set_schedule_bypass_entity:
       required: false
 
 set_schedule_fallback_payload:
-  name: Set Schedule Fallback Payload
-  description: Sets or clears a runtime fallback payload applied when the main schedule is off. Overrides the configured fallback payload.
   target:
     entity:
       integration: climate_group_helper
       domain: climate
   fields:
     fallback_payload:
-      name: Fallback Payload
-      description: "The fallback climate payload as YAML or mapping (e.g. 'temperature: 17.0\\nhvac_mode: heat'). Set to null or empty to restore the configured default."
       selector:
         object:
       required: false
 
 set_schedule_hold_duration:
-  name: Set Schedule Hold Duration
-  description: "Sets or clears a manual hold duration: how long a manual change holds before the schedule resumes. Overrides the configured duration. Switching to 0 ends a running hold right away."
   target:
     entity:
       integration: climate_group_helper
       domain: climate
   fields:
     duration:
-      name: Duration (minutes)
-      description: Hold duration in minutes. 0 disables the hold. Leave empty to restore the configured duration.
       required: false
       selector:
         number:
@@ -69,31 +53,23 @@ set_schedule_hold_duration:
           unit_of_measurement: "min"
 
 set_group_preset:
-  name: Set Group Preset
-  description: Sets, changes, or removes the group's runtime presets. They add to the config presets from the group settings and take precedence over one of the same name.
   target:
     entity:
       integration: climate_group_helper
       domain: climate
   fields:
     payload:
-      name: Payload
-      description: "The runtime presets to set, as YAML or mapping. A preset set to null or empty is removed; an empty payload removes all runtime presets. See the documentation for the format and examples."
       selector:
         object:
       required: false
 
 boost:
-  name: Boost
-  description: Temporarily sets the group to a target temperature for a specified duration, then restores the previous state. Specify either an absolute temperature or a relative offset.
   target:
     entity:
       integration: climate_group_helper
       domain: climate
   fields:
     hvac_mode:
-      name: HVAC Mode
-      description: The mode the boost runs in. Defaults to the group's current mode (an OFF group wakes in its last active mode). Modes without a single setpoint, or a boost no member can take, are rejected.
       required: false
       selector:
         select:
@@ -104,8 +80,6 @@ boost:
             - fan_only
           mode: dropdown
     temperature:
-      name: Temperature
-      description: Absolute target temperature during the boost (e.g. 24.0). Mutually exclusive with temperature_offset.
       required: false
       selector:
         number:
@@ -114,8 +88,6 @@ boost:
           step: 0.5
           unit_of_measurement: "°C"
     temperature_offset:
-      name: Temperature Offset
-      description: Relative offset added to the current target temperature (e.g. +3.0 or -2.0). Mutually exclusive with temperature.
       required: false
       selector:
         number:
@@ -124,8 +96,6 @@ boost:
           step: 0.5
           unit_of_measurement: "°C"
     duration:
-      name: Duration
-      description: How long the boost should last (in minutes).
       required: true
       selector:
         number:
@@ -135,87 +105,63 @@ boost:
           unit_of_measurement: "min"
 
 apply_config:
-  name: Apply Configuration
-  description: Overwrites existing group settings with a JSON configuration template. Identity keys (name) are always protected. Afterwards, open the group's settings and save once — the settings dialog additionally checks that the applied combination makes sense.
   target:
     entity:
       integration: climate_group_helper
       domain: climate
   fields:
     settings:
-      name: Settings (JSON)
-      description: The JSON configuration object to apply. Use the 'settings_json' attribute from a Configuration Sensor.
       required: true
       selector:
         template:
     include_member_list:
-      name: Include Member List
-      description: If true, also overwrites the list of member entities and isolation entities.
       required: true
       default: false
       selector:
         boolean:
     include_entity_selectors:
-      name: Include Entity Selectors
-      description: If true, also overwrites linked sensors (temp, humidity, presence, window, etc.) and per-member offsets.
       required: true
       default: false
       selector:
         boolean:
 
 reset:
-  name: Reset
-  description: Resets temporary overrides and runtime state (boost, offset, schedule, bypass, fallback, presets) back to configured defaults. Select at least one option, or use "Everything".
   target:
     entity:
       integration: climate_group_helper
       domain: climate
   fields:
     everything:
-      name: Everything
-      description: Resets everything below at once. The individual switches are then ignored.
       selector:
         boolean:
       default: false
       required: false
     boost:
-      name: Boost
-      description: Aborts an active boost override and restores target state.
       selector:
         boolean:
       default: false
       required: false
     offset:
-      name: Temperature Offset
-      description: Resets the group temperature offset to 0.0.
       selector:
         boolean:
       default: false
       required: false
     schedule:
-      name: Schedule Entity
-      description: Reverts the active schedule entity and the manual hold duration to the configured defaults and ends a manual hold.
       selector:
         boolean:
       default: false
       required: false
     bypass:
-      name: Bypass Entity
-      description: Reverts the active bypass entity to the configured default and unwinds bypass adjustments.
       selector:
         boolean:
       default: false
       required: false
     fallback:
-      name: Fallback Payload
-      description: Reverts the schedule fallback payload to the configured default.
       selector:
         boolean:
       default: false
       required: false
     presets:
-      name: Group Presets
-      description: Removes all runtime presets. The config presets stay as they are.
       selector:
         boolean:
       default: false

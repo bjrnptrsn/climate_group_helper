@@ -431,8 +431,8 @@ ATTR_LAST_ENTITY = "last_entity"
 # Analytics
 ATTR_ACTIVE_MEMBER_COUNT = "active_member_count"
 ATTR_TOTAL_MEMBER_COUNT = "total_member_count"
-# Fallback flags
-ATTR_PRESENCE_FALLBACK = "presence_fallback"
+# Sensor health
+ATTR_UNAVAILABLE_SENSORS = "unavailable_sensors"
 # Effective config
 ATTR_EFFECTIVE_SYNC_MODE = "effective_sync_mode"
 ATTR_EFFECTIVE_SYNC_ATTRIBUTES = "effective_sync_attributes"

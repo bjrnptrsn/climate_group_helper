@@ -33,6 +33,9 @@ export const numberLocale = (
  * sniff uses the raw language tag so `en-GB` resolves as its own 24-hour locale
  * instead of falling back to 12-hour `en`. `hourCycle: 'h23'` (not
  * `hour12: false`) keeps midnight as `00`, never `24`.
+ *
+ * `system` decides only the clock: the text (a weekday, a month) is always in
+ * the UI language, like HA's own formatters — the system's would mix languages.
  */
 export const formatTime = (
   date: Date | string | number,
@@ -50,13 +53,39 @@ export const formatTime = (
         .toLocaleString(sniffLang)
         .includes('10'))
   try {
-    return new Intl.DateTimeFormat(timeFormat === 'system' ? undefined : language, {
+    return new Intl.DateTimeFormat(language, {
       hourCycle: amPm ? 'h12' : 'h23',
       ...options,
     }).format(d)
   } catch {
     return d.toLocaleTimeString()
   }
+}
+
+/**
+ * A schedule event's start or end for the status line: the time alone today,
+ * with the weekday within the coming week, with the date beyond — a bare
+ * "18:30" must not stand for tomorrow or next month. `dateOnly` (an all-day
+ * event) drops the time.
+ */
+export const formatEventTime = (
+  date: Date,
+  hass?: HomeAssistant,
+  dateOnly = false,
+  now: number = Date.now()
+): string => {
+  const midnight = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  // Rounded: a DST change makes a calendar day 23 or 25 hours long.
+  const days = Math.round(
+    (midnight(date).getTime() - midnight(new Date(now)).getTime()) / 86400000
+  )
+  const time: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
+  const day: Intl.DateTimeFormatOptions =
+    days > 0 && days < 7
+      ? { weekday: 'short' }
+      : { day: 'numeric', month: 'numeric' }
+  if (dateOnly) return formatTime(date, hass, day)
+  return formatTime(date, hass, days === 0 ? time : { ...day, ...time })
 }
 
 /**
@@ -82,6 +111,28 @@ export const formatElapsedDuration = (
     unit,
     unitDisplay: 'short',
   }).format(Math.max(1, Math.floor(value)))
+}
+
+/**
+ * A localized countdown of a whole number of minutes: minutes below an hour,
+ * then hours and the minutes left — unlike `formatElapsedDuration()`, which
+ * drops the rest, a countdown must not read "1 h" with nearly two to go.
+ */
+export const formatRemainingDuration = (
+  minutes: number,
+  hass?: HomeAssistant
+): string => {
+  const fmt = (value: number, unit: 'hour' | 'minute') =>
+    new Intl.NumberFormat(hass?.locale?.language ?? hass?.language, {
+      style: 'unit',
+      unit,
+      unitDisplay: 'short',
+    }).format(value)
+  const whole = Math.max(1, Math.round(minutes))
+  if (whole < 60) return fmt(whole, 'minute')
+  const rest = whole % 60
+  const hours = fmt(Math.floor(whole / 60), 'hour')
+  return rest ? `${hours} ${fmt(rest, 'minute')}` : hours
 }
 
 /**

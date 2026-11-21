@@ -52,9 +52,9 @@ Von oben nach unten entscheidet die erste Regel, die zutrifft, was die Geräte b
 
 | Regel | Was die Geräte bekommen | Änderungen am Zielzustand währenddessen | Wenn sie endet |
 |---|---|---|---|
-| **Hauptschalter aus** | Je nach gewählter Aktion: alle aus (Standard), eine feste Temperatur oder gar nichts — die Geräte sind für den Handbetrieb freigegeben. | Werden zurückgehalten. | Der Zielzustand wird wieder geschickt. |
-| **Fenster offen** | Aus, oder die Zieltemperatur bei offenem Fenster. | Werden zurückgehalten, außer **Manuelle Änderungen übernehmen** lässt sie für später durch — das gilt nur, solange das Fenster die einzige aktive Regel ist. | Der Zielzustand wird wieder geschickt, oder nur das, was die Aktion bei offenem Fenster geändert hat. |
-| **Niemand zu Hause** | Die Abwesenheits-Aktion: aus, ein Versatz, eine feste Temperatur oder ein Preset. | Werden zurückgehalten. | Der Zielzustand wird wieder geschickt. |
+| **Hauptschalter aus** | Je nach gewählter Aktion: alle aus (Standard), eine feste Temperatur oder gar nichts — die Geräte sind für den Handbetrieb freigegeben. | Werden nicht übernommen. | Der Zielzustand wird wieder geschickt. |
+| **Fenster offen** | Aus, oder die Zieltemperatur bei offenem Fenster. | Werden nicht übernommen, außer **Manuelle Änderungen übernehmen** merkt sie für später — das gilt nur, solange das Fenster die einzige aktive Regel ist. | Der Zielzustand wird wieder geschickt, oder nur das, was die Aktion bei offenem Fenster geändert hat. |
+| **Niemand zu Hause** | Die Abwesenheits-Aktion: aus, ein Versatz, eine feste Temperatur oder ein Preset. | Werden nicht übernommen. | Der Zielzustand wird wieder geschickt. |
 | **Boost** | Die Boost-Temperatur, so lange wie angefordert. | Ein direkter Befehl an die Gruppe beendet den Boost, ebenso ein `aus` am Gerät, wenn der Sync-Modus dieses `aus` ohnehin übernehmen würde. Andere Geräteänderungen werden während eines Boosts ignoriert. | Der Zielzustand wird wieder geschickt, einschließlich des Zeitblocks, der dann gerade aktiv ist. |
 
 Die ersten drei sind **Sperren**. Ein paar Dinge solltest du über sie wissen:

@@ -29,7 +29,13 @@ from homeassistant.const import (
     CONF_ENTITIES,
     CONF_NAME,
 )
-from homeassistant.core import Event, HomeAssistant, State, callback
+from homeassistant.core import (
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    State,
+    callback,
+)
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -144,8 +150,9 @@ from .state import (
     SyncModeStateManager,
     TargetState,
     WindowControlStateManager,
+    is_available,
 )
-from .status import build_extra_state_attributes
+from .status import build_extra_state_attributes, watched_sensor_ids
 from .sync_mode import SyncModeHandler
 from .window_control import WindowControlHandler
 
@@ -496,6 +503,7 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
 
         filter_sensor_entities(self)
         warn_missing_entities(self.hass, self.config, self.entity_id)
+        self._watch_sensor_availability()
 
         _LOGGER.debug(
             "[%s] Registering core listeners: members=%s, temp_sensors=%s, humidity_sensors=%s",
@@ -649,6 +657,32 @@ class ClimateGroupHelper(GroupEntity, ClimateEntity, RestoreEntity):
             self.window_control_handler.async_teardown()
 
         await super().async_will_remove_from_hass()
+
+    @callback
+    def _watch_sensor_availability(self) -> None:
+        """Refresh the group state when a feature sensor changes availability.
+
+        Keeps `unavailable_sensors` current. Not from the feature listeners:
+        they return early on exactly these transitions (missing state,
+        unreadable value, bypass, unchanged mode). Temperature and humidity
+        sensors are in `_entity_ids` and refresh through the member listener.
+        """
+        sensors = [sensor for sensor in watched_sensor_ids(self) if sensor not in self._entity_ids]
+        if not sensors:
+            return
+
+        @callback
+        def _availability_changed(event: Event[EventStateChangedData]) -> None:
+            old_state = event.data.get("old_state")
+            new_state = event.data.get("new_state")
+            if is_available(old_state) == is_available(new_state):
+                return
+            self.async_defer_or_update_ha_state()
+
+        self.async_on_remove(
+            async_track_state_change_event(self.hass, sensors, _availability_changed)
+        )
+        _LOGGER.debug("[%s] Watching sensor availability: %s", self.entity_id, sensors)
 
     @callback
     def _state_change_listener(self, event: Event | None = None) -> None:

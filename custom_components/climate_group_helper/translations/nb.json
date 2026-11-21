@@ -132,8 +132,8 @@
               "close_delay": "Forsinkelse Lukking (s)"
             },
             "data_description": {
-              "window_mode": "Setter oppvarming på pause eller senker temperaturen når et overvåket vindu åpnes.",
-              "window_adopt_manual_changes": "Behold endringer som gjøres mens vinduene er åpne; når vinduene lukkes, brukes de bare med «Hele måltilstanden». Inntil da gjelder handlingen ved åpent vindu.",
+              "window_mode": "Slår vinduskontroll av eller på: setter oppvarming på pause eller senker temperaturen når et overvåket vindu åpnes.",
+              "window_adopt_manual_changes": "Behold endringer som gjøres mens vinduene er åpne. Når vinduene lukkes, brukes de bare med «Hele måltilstanden». Inntil da gjelder handlingen ved åpent vindu.",
               "window_action": "Hva som skal skje når et vindu åpnes: Slå av helt eller sett en bestemt temperatur (f.eks. frostsikring).",
               "window_temperature": "Måltemperatur når 'Sett temperatur' er valgt.",
               "window_restore_scope": "Hva som gjenopprettes når vinduet lukkes: hele måltilstanden eller bare innstillingen som Handling ved åpent vindu endret.",
@@ -696,7 +696,7 @@
       "fields": {
         "payload": {
           "name": "Nyttelast",
-          "description": "Kjøretidsforhåndsinnstillingene som skal settes, som YAML eller tilordning. En forhåndsinnstilling satt til null eller tom fjernes; en tom payload fjerner alle kjøretidsforhåndsinnstillinger. Se dokumentasjonen for format og eksempler."
+          "description": "Kjøretidsforhåndsinnstillingene som skal settes, som YAML eller tilordning. En forhåndsinnstilling satt til null eller tom fjernes. En tom payload fjerner alle kjøretidsforhåndsinnstillinger. Se dokumentasjonen for format og eksempler."
         }
       }
     },
@@ -706,7 +706,7 @@
       "fields": {
         "hvac_mode": {
           "name": "HVAC-modus",
-          "description": "Modusen boosten kjører i. Som standard gruppens gjeldende modus (en slått av gruppe våkner i sin siste aktive modus). Moduser uten enkelt settpunkt, eller en boost ingen medlemmer kan ta, avvises."
+          "description": "Modusen boosten kjører i. Som standard gruppens gjeldende modus (en slått av gruppe våkner i sin siste aktive modus). Moduser uten enkelt settpunkt faller tilbake til Varme. En boost ingen medlemmer kan ta, avvises."
         },
         "temperature": {
           "name": "Temperatur",

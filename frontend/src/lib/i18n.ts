@@ -4,8 +4,19 @@ import type { HomeAssistant } from '../types'
 
 export type { TranslationKey }
 
-const languageOf = (locale?: string): string =>
-  (locale ?? 'en').split('-')[0].toLowerCase()
+// Chinese is told apart by its script: Traditional for zh-Hant and the regions
+// that write it, Simplified (`zh`) for every other zh tag. Brazilian Portuguese
+// has its own dictionary; every other pt tag gets European Portuguese.
+const TRADITIONAL_CHINESE = /^zh-(hant|tw|hk|mo)\b/
+const BRAZILIAN_PORTUGUESE = /^pt-br\b/
+
+/** The registry key for a locale: its language part, `zh-Hant` or `pt-BR`. */
+const languageOf = (locale?: string): string => {
+  const tag = (locale ?? 'en').toLowerCase()
+  if (TRADITIONAL_CHINESE.test(tag)) return 'zh-Hant'
+  if (BRAZILIAN_PORTUGUESE.test(tag)) return 'pt-BR'
+  return tag.split('-')[0]
+}
 
 /** Look up a translation for the given language, falling back to English. */
 export const translate = (

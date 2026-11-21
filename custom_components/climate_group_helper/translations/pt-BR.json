@@ -1,0 +1,799 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Assistente de Grupo de Climatização",
+        "description": "Crie um controlador virtual que sincroniza várias unidades de aquecimento/resfriamento. Este grupo funciona como uma única entidade inteligente no seu painel e nas suas automações, reunindo estados e comandos.",
+        "data": {
+          "name": "Nome do grupo",
+          "entities": "Dispositivos de climatização"
+        },
+        "data_description": {
+          "name": "Um nome amigável para o seu grupo (ex.: 'Sala de estar' ou 'Casa inteira').",
+          "entities": "Selecione os dispositivos de climatização (termostatos, ar-condicionados) que farão parte deste grupo."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Você precisa selecionar pelo menos um dispositivo de climatização.",
+      "empty_name": "Insira um nome para o grupo."
+    },
+    "abort": {
+      "already_configured": "Este grupo já está configurado.",
+      "single_instance_allowed": "Apenas uma instância é permitida.",
+      "no_changes": "Nenhuma alteração foi feita."
+    }
+  },
+  "options": {
+    "flow_title": "Configurar grupo",
+    "step": {
+      "init": {
+        "title": "Configurar grupo de climatização",
+        "sections": {
+          "members_section": {
+            "name": "Membros e modos",
+            "description": "Adicione dispositivos de climatização e escolha como os recursos são combinados. Os Recursos avançados permitem definir uma Entidade mestre.",
+            "data": {
+              "entities": "Dispositivos de climatização",
+              "master_entity": "Entidade mestre",
+              "hvac_mode_strategy": "Estratégia de modo HVAC",
+              "feature_strategy": "Estratégia de recursos",
+              "union_out_of_bounds_action": "Ação fora dos limites",
+              "union_unsupported_hvac_action": "Ação para modo HVAC não suportado"
+            },
+            "data_description": {
+              "entities": "Adicione ou remova dispositivos. Dispositivos removidos deixam de ser controlados pelo grupo.",
+              "master_entity": "Defina um membro como Entidade mestre (líder). Ela é usada na sincronização Mestre/Bloqueio e na exibição centralizada do alvo.",
+              "hvac_mode_strategy": "Estratégia para calcular o estado do grupo a partir dos membros (ex.: se um está em 'aquecer' e outro em 'desligado').",
+              "feature_strategy": "Define quais recursos (ex.: predefinições, modos de ventilação) ficam disponíveis no grupo quando os membros têm capacidades diferentes.",
+              "union_out_of_bounds_action": "O que fazer com membros que não conseguem atingir a temperatura alvo. Só se aplica quando a Estratégia de recursos está em União.",
+              "union_unsupported_hvac_action": "O que fazer com membros que tecnicamente não suportam o modo HVAC alvo do grupo (ex.: ar-condicionado durante o aquecimento). Só se aplica quando a Estratégia de recursos está em União."
+            }
+          },
+          "temperature_section": {
+            "name": "Configurações de temperatura",
+            "description": "Configure como a temperatura é agregada e com que precisão. Os Recursos avançados acrescentam sensores externos, calibração e proteção contra congelamento.",
+            "data": {
+              "temp_target_avg": "Temperatura alvo",
+              "temp_use_master": "Usar temperatura alvo da entidade mestre",
+              "temp_target_round": "Precisão da temperatura alvo",
+              "temp_current_avg": "Temperatura atual",
+              "min_temp_off": "Temperatura mínima ao desligar",
+              "temp_sensors": "Sensores de temperatura externos",
+              "temp_update_targets": "Gravar temperatura externa nas entidades",
+              "temp_calibration_mode": "Modo de calibração",
+              "temp_inverted_offset_targets": "Alvos com deslocamento invertido",
+              "calibration_heartbeat": "Intervalo de calibração (min)",
+              "calibration_ignore_off": "Ignorar membros desligados",
+              "ignore_off_members_temperature": "Excluir membros desligados da temperatura"
+            },
+            "data_description": {
+              "temp_target_avg": "Como o grupo resume as temperaturas alvo dos seus membros.",
+              "temp_use_master": "Exibe a temperatura alvo da entidade mestre como temperatura alvo do grupo, em vez da média dos membros. Volta à média se a entidade mestre estiver indisponível. Afeta apenas a exibição do estado do grupo — não controla nem sincroniza os membros (para isso, use o Modo de sincronização: Mestre/Bloqueio).",
+              "temp_target_round": "Aplica-se apenas aos valores enviados aos dispositivos, não aos valores atuais/exibidos.",
+              "temp_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
+              "min_temp_off": "Envia a temperatura mínima do dispositivo (ex.: 5°C) ao desligar o grupo. Isso garante que as válvulas fiquem totalmente fechadas para proteção contra congelamento.",
+              "temp_sensors": "Use sensores externos em vez das leituras dos membros. Eles passam a ser a única referência para a temperatura do grupo.",
+              "temp_update_targets": "Grava o valor do sensor externo em entidades numéricas (ex.: deslocamentos de calibração de válvulas termostáticas). Útil para que os termostatos conheçam a temperatura real do ambiente.",
+              "temp_calibration_mode": "Absoluto: envia o valor diretamente. Deslocamento: envia a diferença (externa - interna da válvula). Escalado: envia como inteiro x100 (ex.: 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Entidades de calibração de dispositivos que funcionam ao contrário: um deslocamento maior faz com que informem uma temperatura menor. Usado apenas no modo Deslocamento.",
+              "calibration_heartbeat": "Força periodicamente a sincronização da calibração nas entidades, mesmo que a temperatura não tenha mudado. Defina 0 para desativar.",
+              "calibration_ignore_off": "Não envia atualizações de calibração para membros que estão desligados.",
+              "ignore_off_members_temperature": "Exclui os membros desligados do cálculo da temperatura atual e da temperatura alvo."
+            }
+          },
+          "humidity_section": {
+            "name": "Configurações de umidade",
+            "description": "Configure como a umidade é agregada e com que precisão. Os Recursos avançados acrescentam sensores externos.",
+            "data": {
+              "humidity_target_avg": "Umidade alvo",
+              "humidity_use_master": "Usar umidade alvo da entidade mestre",
+              "humidity_target_round": "Precisão da umidade alvo",
+              "humidity_current_avg": "Umidade atual",
+              "humidity_sensors": "Sensores de umidade externos",
+              "humidity_update_targets": "Gravar umidade externa nas entidades"
+            },
+            "data_description": {
+              "humidity_target_avg": "Como o grupo resume as umidades alvo dos seus membros.",
+              "humidity_use_master": "Exibe o valor alvo da entidade mestre como umidade alvo do grupo, em vez da média dos membros. Volta à média se a entidade mestre estiver indisponível. Afeta apenas a exibição do estado do grupo — não controla nem sincroniza os membros (para isso, use o Modo de sincronização: Mestre/Bloqueio).",
+              "humidity_target_round": "Aplica-se apenas aos valores enviados aos dispositivos, não aos valores atuais/exibidos.",
+              "humidity_current_avg": "Como o grupo resume as leituras dos sensores dos seus membros.",
+              "humidity_sensors": "Use sensores externos em vez das leituras dos membros. Eles passam a ser a única referência para a umidade do grupo.",
+              "humidity_update_targets": "Grava o valor do sensor externo em entidades numéricas. Útil para calibrar desumidificadores."
+            }
+          },
+          "sync_section": {
+            "name": "Modo de sincronização",
+            "description": "Define o que acontece quando um dispositivo membro é alterado diretamente (ex.: pelo próprio app ou pelos botões físicos) — não quando você controla o próprio grupo. Escolha quais atributos são impostos.",
+            "data": {
+              "sync_mode": "Modo de sincronização",
+              "sync_attributes": "Atributos de sincronização",
+              "ignore_off_members_sync": "Respeitar membros desligados (sincronização)"
+            },
+            "data_description": {
+              "sync_mode": "O que fazer quando um membro é alterado fora do grupo. Desativado: ignorar. Espelhar: espelhar as alterações. Bloquear: reverter as alterações. Espelhar/Bloquear: espelhar os atributos selecionados, reverter os não selecionados. Mestre/Bloqueio: espelhar a entidade mestre, reverter os demais. Apenas adotar: adotar as alterações sem repassá-las.",
+              "sync_attributes": "Define sobre quais atributos o Modo de sincronização atua. O tratamento dos atributos selecionados e não selecionados (espelhar, reverter ou ignorar) depende do modo escolhido.",
+              "ignore_off_members_sync": "Membros desligados manualmente são deixados como estão. O estado deles não é espelhado nem revertido. Observação: comandos diretos ao grupo sempre chegam a todos os membros, independentemente desta configuração."
+            }
+          },
+          "window_section": {
+            "name": "Controle de janelas",
+            "description": "Desliga ou define uma temperatura própria quando as janelas abrem. Restaura quando fecham.",
+            "data": {
+              "window_mode": "Modo de controle de janelas",
+              "window_adopt_manual_changes": "Adotar alterações manuais",
+              "window_action": "Ação ao abrir a janela",
+              "window_temperature": "Temperatura com janela aberta",
+              "window_restore_scope": "Restaurar ao fechar a janela",
+              "room_sensor": "Sensor de janela do cômodo",
+              "zone_sensor": "Sensor de janela da zona",
+              "room_open_delay": "Atraso de abertura do cômodo (segundos)",
+              "zone_open_delay": "Atraso de abertura da zona (segundos)",
+              "close_delay": "Atraso de fechamento (segundos)"
+            },
+            "data_description": {
+              "window_mode": "Ativa ou desativa o controle de janelas: pausa o aquecimento ou reduz a temperatura quando uma janela monitorada abre.",
+              "window_adopt_manual_changes": "Mantém as alterações feitas com as janelas abertas. Ao fechar as janelas, elas só são aplicadas com Alvo completo. Até lá, vale a Ação ao abrir a janela.",
+              "window_action": "O que fazer quando a janela abre: desligar completamente ou definir uma temperatura específica (ex.: proteção contra congelamento).",
+              "window_temperature": "Temperatura alvo a definir quando a ação 'Temperatura' está selecionada.",
+              "window_restore_scope": "O que é restaurado ao fechar a janela: o alvo completo ou apenas a configuração que a Ação ao abrir a janela alterou.",
+              "room_sensor": "(Opcional) Sensor binário, input_boolean ou entidade de cobertura para a própria janela/porta do cômodo.",
+              "zone_sensor": "(Opcional) Sensor binário, input_boolean ou entidade de cobertura para janelas/portas da zona/andar. O sensor da zona deve incluir o sensor do cômodo.",
+              "room_open_delay": "Tempo de espera após a janela do cômodo abrir antes de acionar a ação da janela.",
+              "zone_open_delay": "Tempo de espera após uma janela da zona abrir antes de acionar a ação da janela.",
+              "close_delay": "Tempo de espera após todas as janelas fecharem antes de restaurar o estado anterior."
+            }
+          },
+          "presence_section": {
+            "name": "Controle de presença",
+            "description": "Gerencia as configurações de climatização com base na presença no cômodo. Depois que a ausência é detectada pelo tempo configurado, a ação de ausência é acionada. As configurações anteriores são restauradas no retorno.",
+            "data": {
+              "presence_mode": "Modo de controle de presença",
+              "presence_sensor": "Gatilho de presença",
+              "presence_zone": "Zona de presença",
+              "presence_action": "Ação de ausência",
+              "presence_away_offset": "Deslocamento de temperatura na ausência",
+              "presence_away_temperature": "Temperatura na ausência",
+              "presence_away_preset": "Predefinição na ausência",
+              "presence_away_delay": "Atraso de ausência (segundos)",
+              "presence_return_delay": "Atraso de retorno (segundos)",
+              "ignore_off_members_presence": "Respeitar membros desligados (presença)"
+            },
+            "data_description": {
+              "presence_mode": "Ativa ou desativa o modo de ausência automático quando a ausência é detectada.",
+              "presence_sensor": "A entidade que informa a presença no cômodo. Você pode selecionar vários sensores (ex.: sensor de movimento e celular). Qualquer estado 'ligado' ou 'em casa' conta como presente.",
+              "presence_zone": "(Opcional) Selecione as zonas em que a presença é contada. Se definidas, uma pessoa só está 'presente' quando estiver em uma dessas zonas. Se vazio, a pessoa está 'presente' em qualquer zona (exceto 'not_home').",
+              "presence_action": "A ação alternativa a executar quando a ausência é detectada.",
+              "presence_away_offset": "Deslocamento em relação ao alvo atual durante a ausência (ex.: -2° ou +2°). Mudanças da agenda durante a ausência são aplicadas automaticamente.",
+              "presence_away_temperature": "Temperatura fixa a definir durante a ausência.",
+              "presence_away_preset": "Predefinição a ativar durante a ausência.",
+              "presence_away_delay": "Tempo de espera após o sensor informar ausência antes de ativar o modo de ausência.",
+              "presence_return_delay": "Tempo de espera após o sensor informar presença antes de restaurar.",
+              "ignore_off_members_presence": "Deixa como estão os membros que estão desligados — ao sair, ao voltar ou em ambos os casos. Não se aplica quando a Ação de ausência é \"Desligar\", pois foi o próprio grupo que desligou os membros."
+            }
+          },
+          "schedule_section": {
+            "name": "Automação por agenda",
+            "description": "Vincule uma entidade de agenda ou calendário para automatizar as configurações de climatização. Os dados de um intervalo podem conter atributos de climatização (temperature, hvac_mode) e meta-chaves (turn_off, sync_mode, sync_attributes) para ajustar o comportamento do grupo por intervalo.",
+            "data": {
+              "schedule_entity": "Entidade de agenda / calendário principal",
+              "schedule_fallback_payload": "Estado alternativo com agenda / calendário principal inativo (YAML)",
+              "schedule_bypass_entity": "Entidade de agenda / calendário de exceção",
+              "retain_service_changes_schedule": "Manter alterações feitas via serviço (agenda)",
+              "ignore_off_members_schedule": "Respeitar membros desligados (agenda)",
+              "schedule_hold_duration": "Duração da retenção manual"
+            },
+            "data_description": {
+              "schedule_entity": "Selecione uma entidade schedule.* ou calendar.*. Em entidades de agenda, os dados do intervalo são lidos dos atributos do intervalo. Em entidades de calendário, os dados do intervalo são lidos como YAML do campo de descrição do evento. Chaves suportadas: atributos de climatização e meta-chaves.",
+              "schedule_fallback_payload": "Substitui a agenda principal fora dos seus intervalos ativos, para que você não precise de agendas contínuas 24/7. A camada de exceção continua funcionando normalmente e tem prioridade enquanto estiver ativa. Mesmo formato YAML de cima (ex.: temperature: 17, hvac_mode: heat).",
+              "schedule_bypass_entity": "Camada opcional de maior prioridade (ex.: um calendário de férias). Quando ativa, os dados do seu intervalo substituem a agenda principal. Os dados do intervalo são lidos da mesma forma: atributos para entidades schedule.*, descrição em YAML para entidades calendar.*.",
+              "retain_service_changes_schedule": "Mantém após uma reinicialização as alterações feitas via serviço na agenda principal, na agenda de exceção, no estado alternativo e na duração da retenção manual. Caso contrário, voltam aos padrões configurados.",
+              "ignore_off_members_schedule": "A agenda NÃO liga membros que estão desligados.",
+              "schedule_hold_duration": "Por quanto tempo uma alteração manual (ex.: temperatura, ou ligar/desligar o grupo) é mantida antes que a agenda retome com o intervalo vigente naquele momento. 0 desativa a retenção."
+            }
+          },
+          "presets_section": {
+            "name": "Predefinições do grupo",
+            "description": "Defina predefinições personalizadas com nome para o grupo (ex.: eco, visita, ventilar). Ao selecionar uma, seus atributos são aplicados a todos os membros de uma vez. Uma predefinição do grupo substitui a predefinição de mesmo nome de um membro. Predefinições de execução definidas pelo serviço set_group_preset somam-se às inseridas aqui e têm prioridade sobre uma de mesmo nome.",
+            "data": {
+              "group_presets": "Predefinições do grupo (YAML)",
+              "retain_service_changes_presets": "Manter alterações feitas via serviço (predefinições)"
+            },
+            "data_description": {
+              "group_presets": "Suas predefinições em YAML: um nome livre por predefinição, cada uma com os atributos que deve aplicar (temperature, hvac_mode, fan_mode, swing_mode). Uma predefinição aplica apenas os atributos que lista. Consulte a documentação para o formato e exemplos prontos para copiar.",
+              "retain_service_changes_presets": "Mantém após uma reinicialização as predefinições de execução definidas pelo serviço set_group_preset. Sem isso, o grupo inicia apenas com as predefinições inseridas aqui."
+            }
+          },
+          "temp_offsets_section": {
+            "name": "Deslocamentos dos membros",
+            "description": "Aplica deslocamentos de temperatura individuais para que determinados membros funcionem proporcionalmente mais quentes ou mais frios que a temperatura alvo do grupo.",
+            "data": {
+              "member_offset_correction": "Corrigir deslocamento dos membros"
+            },
+            "data_description": {
+              "member_offset_correction": "Quando ativado, o deslocamento de cada membro é subtraído antes de calcular a média, para que o grupo exiba a temperatura alvo lógica em vez da média física bruta."
+            }
+          },
+          "isolation_section": {
+            "name": "Isolamento de membros",
+            "description": "Isola temporariamente determinados membros enquanto um gatilho está ativo. Membros isolados recebem a ação de isolamento (desligar, por padrão) e são excluídos dos cálculos do grupo.",
+            "data": {
+              "isolation_rule_count": "Número de regras",
+              "isolation_rule_1_entities": "Entidades a isolar",
+              "isolation_rule_1_trigger": "Tipo de gatilho",
+              "isolation_rule_1_sensor": "Sensor de isolamento",
+              "isolation_rule_1_hvac_modes": "Gatilho por modo HVAC",
+              "isolation_rule_1_activate_delay": "Atraso de ativação (segundos)",
+              "isolation_rule_1_restore_delay": "Atraso de restauração (segundos)",
+              "isolation_rule_1_action_type": "Ação de isolamento",
+              "isolation_rule_1_action_hvac_mode": "Modo HVAC",
+              "isolation_rule_1_action_preset_mode": "Predefinição"
+            },
+            "data_description": {
+              "isolation_rule_count": "Quantas regras de isolamento independentes mostrar. Salve após alterar para exibir ou ocultar regras adicionais.",
+              "isolation_rule_1_entities": "Membros do grupo a isolar quando o gatilho estiver ativo.",
+              "isolation_rule_1_trigger": "Escolha o que ativa o isolamento: um sensor binário, um modo HVAC específico do grupo ou um membro desligado manualmente.",
+              "isolation_rule_1_sensor": "(Gatilho por sensor) Sensor binário que aciona o isolamento quando LIGADO.",
+              "isolation_rule_1_hvac_modes": "(Gatilho por modo HVAC) O isolamento é ativado quando o modo alvo do grupo é um destes.",
+              "isolation_rule_1_activate_delay": "(Somente gatilho por sensor / modo HVAC) Tempo de espera após o gatilho ativar antes de isolar os membros.",
+              "isolation_rule_1_restore_delay": "(Somente gatilho por sensor / modo HVAC) Tempo de espera após o gatilho desativar antes de restaurar os membros ao estado alvo do grupo.",
+              "isolation_rule_1_action_type": "Escolha o que fazer quando este membro estiver isolado: definir um modo HVAC ou uma predefinição.",
+              "isolation_rule_1_action_hvac_mode": "Modo HVAC a aplicar ao membro isolado.",
+              "isolation_rule_1_action_preset_mode": "Predefinição a aplicar ao membro isolado."
+            }
+          },
+          "isolation_rule_2_section": {
+            "name": "Isolamento de membros – Regra 2",
+            "description": "Segunda regra de isolamento opcional, com gatilho e lista de membros independentes.",
+            "data": {
+              "isolation_rule_2_entities": "Entidades a isolar",
+              "isolation_rule_2_trigger": "Tipo de gatilho",
+              "isolation_rule_2_sensor": "Sensor de isolamento",
+              "isolation_rule_2_hvac_modes": "Gatilho por modo HVAC",
+              "isolation_rule_2_activate_delay": "Atraso de ativação (segundos)",
+              "isolation_rule_2_restore_delay": "Atraso de restauração (segundos)",
+              "isolation_rule_2_action_type": "Ação de isolamento",
+              "isolation_rule_2_action_hvac_mode": "Modo HVAC",
+              "isolation_rule_2_action_preset_mode": "Predefinição"
+            },
+            "data_description": {
+              "isolation_rule_2_entities": "Membros do grupo a isolar quando o gatilho estiver ativo.",
+              "isolation_rule_2_trigger": "Escolha o que ativa o isolamento: um sensor binário, um modo HVAC específico do grupo ou um membro desligado manualmente.",
+              "isolation_rule_2_sensor": "(Gatilho por sensor) Sensor binário que aciona o isolamento quando LIGADO.",
+              "isolation_rule_2_hvac_modes": "(Gatilho por modo HVAC) O isolamento é ativado quando o modo alvo do grupo é um destes.",
+              "isolation_rule_2_activate_delay": "(Somente gatilho por sensor / modo HVAC) Tempo de espera após o gatilho ativar antes de isolar os membros.",
+              "isolation_rule_2_restore_delay": "(Somente gatilho por sensor / modo HVAC) Tempo de espera após o gatilho desativar antes de restaurar os membros ao estado alvo do grupo.",
+              "isolation_rule_2_action_type": "Escolha o que fazer quando este membro estiver isolado: definir um modo HVAC ou uma predefinição.",
+              "isolation_rule_2_action_hvac_mode": "Modo HVAC a aplicar ao membro isolado.",
+              "isolation_rule_2_action_preset_mode": "Predefinição a aplicar ao membro isolado."
+            }
+          },
+          "isolation_rule_3_section": {
+            "name": "Isolamento de membros – Regra 3",
+            "description": "Terceira regra de isolamento opcional, com gatilho e lista de membros independentes.",
+            "data": {
+              "isolation_rule_3_entities": "Entidades a isolar",
+              "isolation_rule_3_trigger": "Tipo de gatilho",
+              "isolation_rule_3_sensor": "Sensor de isolamento",
+              "isolation_rule_3_hvac_modes": "Gatilho por modo HVAC",
+              "isolation_rule_3_activate_delay": "Atraso de ativação (segundos)",
+              "isolation_rule_3_restore_delay": "Atraso de restauração (segundos)",
+              "isolation_rule_3_action_type": "Ação de isolamento",
+              "isolation_rule_3_action_hvac_mode": "Modo HVAC",
+              "isolation_rule_3_action_preset_mode": "Predefinição"
+            },
+            "data_description": {
+              "isolation_rule_3_entities": "Membros do grupo a isolar quando o gatilho estiver ativo.",
+              "isolation_rule_3_trigger": "Escolha o que ativa o isolamento: um sensor binário, um modo HVAC específico do grupo ou um membro desligado manualmente.",
+              "isolation_rule_3_sensor": "(Gatilho por sensor) Sensor binário que aciona o isolamento quando LIGADO.",
+              "isolation_rule_3_hvac_modes": "(Gatilho por modo HVAC) O isolamento é ativado quando o modo alvo do grupo é um destes.",
+              "isolation_rule_3_activate_delay": "(Somente gatilho por sensor / modo HVAC) Tempo de espera após o gatilho ativar antes de isolar os membros.",
+              "isolation_rule_3_restore_delay": "(Somente gatilho por sensor / modo HVAC) Tempo de espera após o gatilho desativar antes de restaurar os membros ao estado alvo do grupo.",
+              "isolation_rule_3_action_type": "Escolha o que fazer quando este membro estiver isolado: definir um modo HVAC ou uma predefinição.",
+              "isolation_rule_3_action_hvac_mode": "Modo HVAC a aplicar ao membro isolado.",
+              "isolation_rule_3_action_preset_mode": "Predefinição a aplicar ao membro isolado."
+            }
+          },
+          "isolation_rule_4_section": {
+            "name": "Isolamento de membros – Regra 4",
+            "description": "Quarta regra de isolamento opcional, com gatilho e lista de membros independentes.",
+            "data": {
+              "isolation_rule_4_entities": "Entidades a isolar",
+              "isolation_rule_4_trigger": "Tipo de gatilho",
+              "isolation_rule_4_sensor": "Sensor de isolamento",
+              "isolation_rule_4_hvac_modes": "Gatilho por modo HVAC",
+              "isolation_rule_4_activate_delay": "Atraso de ativação (segundos)",
+              "isolation_rule_4_restore_delay": "Atraso de restauração (segundos)",
+              "isolation_rule_4_action_type": "Ação de isolamento",
+              "isolation_rule_4_action_hvac_mode": "Modo HVAC",
+              "isolation_rule_4_action_preset_mode": "Predefinição"
+            },
+            "data_description": {
+              "isolation_rule_4_entities": "Membros do grupo a isolar quando o gatilho estiver ativo.",
+              "isolation_rule_4_trigger": "Escolha o que ativa o isolamento: um sensor binário, um modo HVAC específico do grupo ou um membro desligado manualmente.",
+              "isolation_rule_4_sensor": "(Gatilho por sensor) Sensor binário que aciona o isolamento quando LIGADO.",
+              "isolation_rule_4_hvac_modes": "(Gatilho por modo HVAC) O isolamento é ativado quando o modo alvo do grupo é um destes.",
+              "isolation_rule_4_activate_delay": "(Somente gatilho por sensor / modo HVAC) Tempo de espera após o gatilho ativar antes de isolar os membros.",
+              "isolation_rule_4_restore_delay": "(Somente gatilho por sensor / modo HVAC) Tempo de espera após o gatilho desativar antes de restaurar os membros ao estado alvo do grupo.",
+              "isolation_rule_4_action_type": "Escolha o que fazer quando este membro estiver isolado: definir um modo HVAC ou uma predefinição.",
+              "isolation_rule_4_action_hvac_mode": "Modo HVAC a aplicar ao membro isolado.",
+              "isolation_rule_4_action_preset_mode": "Predefinição a aplicar ao membro isolado."
+            }
+          },
+          "member_template_section": {
+            "name": "Modelo de membro",
+            "description": "Apresenta membros com recursos que o dispositivo não oferece nativamente. Modelo de faixa: membros com um único valor alvo funcionam como dispositivos de faixa aquecer/resfriar — comandos de faixa viram aquecer ou resfriar conforme a temperatura atual de cada membro. Modelo de desligamento: aquecedores sem modo desligado são desligados colocando-os em aquecer na sua própria temperatura mínima.",
+            "data": {
+              "range_template_enabled": "Ativar modelo de faixa",
+              "range_template_deadband_action": "Ação na zona morta",
+              "range_template_heat_entities": "Dispositivos de aquecimento",
+              "range_template_cool_entities": "Dispositivos de resfriamento",
+              "range_template_conditional": "Aquecer/Resfriar condicional",
+              "range_template_humidity_enabled": "Desumidificar na zona morta",
+              "range_template_humidity_action": "Ação de umidade",
+              "range_template_humidity_hysteresis": "Histerese de umidade",
+              "range_template_humidity_deactivation_delay": "Atraso de desativação",
+              "off_template_enabled": "Ativar modelo de desligamento"
+            },
+            "data_description": {
+              "range_template_enabled": "Apresenta automaticamente todos os membros com um único valor alvo (sem aquecer/resfriar nativo) como dispositivos virtuais de faixa.",
+              "range_template_deadband_action": "Ação a executar quando a temperatura atual está dentro da faixa alvo (zona morta). 'Nenhum' não muda o modo, mas segura no limite correspondente um dispositivo que continua aquecendo ou resfriando.",
+              "range_template_heat_entities": "Membros que podem aquecer. Membros não listados não têm restrição (a capacidade física decide). Uma função só pode restringir, nunca ampliar os recursos de um dispositivo.",
+              "range_template_cool_entities": "Membros que podem resfriar. Membros não listados não têm restrição (a capacidade física decide). Uma função só pode restringir, nunca ampliar os recursos de um dispositivo.",
+              "range_template_conditional": "Oferece Aquecer/Resfriar e a faixa de temperatura apenas enquanto pelo menos um membro acessível puder aquecer e outro puder resfriar.",
+              "range_template_humidity_enabled": "Dentro da faixa de temperatura alvo, muda para a ação de umidade se a umidade atual ultrapassar a umidade alvo.",
+              "range_template_humidity_action": "Ação a executar quando a umidade atual ultrapassa a umidade alvo dentro da zona morta.",
+              "range_template_humidity_hysteresis": "Faixa de histerese (gatilho Schmitt) em torno da umidade alvo, para evitar ligar e desligar com frequência.",
+              "range_template_humidity_deactivation_delay": "Atraso antes de desativar a ação de umidade depois que a umidade cai abaixo do limite.",
+              "off_template_enabled": "Aquecedores sem modo desligado são colocados em aquecer na sua própria temperatura mínima quando o grupo desliga. Um aquecedor na sua temperatura mínima passa a contar como desligado. Para dispositivos com modo desligado, use 'Temperatura mínima ao desligar'."
+            }
+          },
+          "advanced_section": {
+            "name": "Configurações avançadas",
+            "description": "Escolha o que o interruptor principal faz enquanto está desligado. Ajuste os tempos dos comandos e as novas tentativas. Ative atributos de diagnóstico e sensores de configuração.",
+            "data": {
+              "switch_action": "Ação do interruptor principal",
+              "switch_temperature": "Temperatura do interruptor principal",
+              "debounce_delay": "Atraso de debounce (segundos)",
+              "retry_attempts": "Novas tentativas",
+              "retry_delay": "Intervalo entre tentativas (segundos)",
+              "force_retry": "Forçar novas tentativas",
+              "member_command_delay": "Atraso entre comandos aos membros (segundos)",
+              "grace_period": "Período de tolerância da interface otimista (segundos)",
+              "expose_smart_sensors": "Expor sensores inteligentes",
+              "expose_member_entities": "Expor lista de membros",
+              "expose_config": "Expor sensor de configuração"
+            },
+            "data_description": {
+              "switch_action": "O que os dispositivos recebem enquanto o interruptor principal está desligado: Desligar, Definir temperatura (um valor fixo, ex.: proteção contra congelamento — só altera o valor alvo dos dispositivos em funcionamento) ou Liberar dispositivos (o grupo deixa os dispositivos de lado e você os controla diretamente).",
+              "switch_temperature": "Temperatura alvo a definir quando a ação 'Definir temperatura' está selecionada.",
+              "debounce_delay": "Tempo de espera antes de enviar comandos. Valores maiores evitam comandos em rajada ao mover controles deslizantes, mas a resposta parece mais lenta.",
+              "retry_attempts": "Quantas vezes reenviar um comando se um dispositivo não responder. Defina 0 para desativar.",
+              "retry_delay": "Pausa entre as tentativas. Dar um momento para os dispositivos se recuperarem pode melhorar a confiabilidade.",
+              "force_retry": "Sempre tenta reenviar os comandos a todos os membros, mesmo que já informem o estado alvo.",
+              "member_command_delay": "Pausa entre os comandos para cada membro. Ajuda quando comandar vários dispositivos ao mesmo tempo sobrecarrega sua rede ou ponte (ex.: emissores IR, alguns coordenadores Zigbee). Defina 0 para desativar.",
+              "grace_period": "Por quanto tempo o grupo mostra o valor comandado antes de passar para a média dos membros. Evita que a interface pisque quando dispositivos lentos (pontes na nuvem, Zigbee) devolvem o estado antigo. Defina 0 para desativar.",
+              "expose_smart_sensors": "Cria entidades de sensor extras para a temperatura e a umidade do grupo (úteis para gráficos).",
+              "expose_member_entities": "Adiciona o atributo 'entity_id' com todos os membros, para que a janela de detalhes mostre a lista de membros.",
+              "expose_config": "Cria um sensor de diagnóstico (sensor.*_configuration) que expõe as configurações portáteis como atributo JSON. Útil para copiar configurações entre grupos por meio de automações."
+            }
+          }
+        },
+        "data": {
+          "advanced_mode": "Recursos avançados",
+          "expand_sections": "Expandir todas as seções por padrão"
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Pelo menos um dispositivo de climatização precisa permanecer no grupo.",
+      "master_not_in_members": "A entidade mestre precisa ser membro do grupo.",
+      "master_refresh_notice": "Entidade mestre adicionada. Novas opções disponíveis.",
+      "master_options_notice": "Novas opções para a entidade mestre estão disponíveis nesta seção.",
+      "isolation_all_selected": "Pelo menos um membro precisa ficar fora do isolamento.",
+      "isolation_entity_overlap": "Cada membro só pode aparecer em uma regra de isolamento.",
+      "isolation_action_preset_required": "Selecione uma predefinição para a ação de isolamento.",
+      "isolation_sensor_required": "Selecione um sensor para a regra de isolamento ou defina o gatilho como Desativado.",
+      "isolation_hvac_modes_required": "Selecione pelo menos um modo para a regra de isolamento ou defina o gatilho como Desativado.",
+      "window_temperature_required": "Defina uma temperatura para a janela ou altere a ação da janela.",
+      "switch_temperature_required": "Defina uma temperatura para o interruptor principal ou altere a ação do interruptor principal.",
+      "presence_action_value_required": "Defina um valor para a ação de ausência selecionada ou altere a ação.",
+      "schedule_fallback_payload_invalid": "Formato YAML inválido no estado alternativo da agenda. Precisa ser um mapeamento chave-valor válido.",
+      "group_presets_invalid": "Formato YAML inválido nas predefinições do grupo. Precisa ser um mapeamento chave-valor válido.",
+      "preset_name_collision_notice": "Uma ou mais predefinições do grupo têm o mesmo nome de predefinições nativas dos membros. A definição do grupo vai substituí-las.",
+      "sensor_loop_protection": "Não é possível usar uma entidade do Climate Group Helper como sensor externo ou alvo de calibração — isso criaria um ciclo de realimentação."
+    },
+    "abort": {
+      "no_changes": "Nenhuma alteração detectada."
+    }
+  },
+  "selector": {
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal – O grupo adota o modo mais comum entre os membros",
+        "off_priority": "Prioridade para desligado – Se algum membro estiver desligado, o grupo todo fica desligado",
+        "auto": "Automático – Alterna de forma inteligente entre Normal e Prioridade para desligado"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Interseção – Oferece recursos apenas se TODOS os membros os tiverem",
+        "union": "União – Oferece todos os recursos presentes em QUALQUER membro"
+      }
+    },
+    "temp_target_avg": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (valor central)",
+        "min": "Mínimo (menor)",
+        "max": "Máximo (maior)"
+      }
+    },
+    "temp_target_round": {
+      "options": {
+        "none": "Sem arredondamento (exato)",
+        "half": "Meio grau (0.5°)",
+        "integer": "Números inteiros (1°)"
+      }
+    },
+    "temp_current_avg": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (ignora valores atípicos)",
+        "min": "Mínimo (menor)",
+        "max": "Máximo (maior)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absoluto – Envia o valor diretamente (padrão)",
+        "offset": "Deslocamento – Envia a diferença (externa - interna da válvula)",
+        "scaled": "Escalado – Inteiro x100 (Danfoss Ally)"
+      }
+    },
+    "humidity_target_avg": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (valor central)",
+        "min": "Mínimo (menor)",
+        "max": "Máximo (maior)"
+      }
+    },
+    "humidity_target_round": {
+      "options": {
+        "none": "Sem arredondamento (exato)",
+        "half": "Meio por cento (0.5%)",
+        "integer": "Números inteiros (1%)"
+      }
+    },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "Média",
+        "median": "Mediana (ignora valores atípicos)",
+        "min": "Mínimo (menor)",
+        "max": "Máximo (maior)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "disabled": "Desativado – Sem sincronização automática entre os membros",
+        "mirror": "Espelhar – Alterações manuais em um dispositivo atualizam todos os membros",
+        "lock": "Bloquear – Reverte alterações manuais para corresponder ao estado do grupo",
+        "mirror_lock": "Espelhar/Bloquear – Atributos selecionados são espelhados, os demais ficam bloqueados",
+        "master_lock": "Mestre/Bloqueio – Somente a entidade mestre pode alterar o alvo do grupo",
+        "adopt_only": "Apenas adotar – O grupo assume alterações manuais de um dispositivo, sem repassá-las aos demais"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "Modo HVAC",
+        "preset_mode": "Predefinição",
+        "temperature": "Temperatura (alvo)",
+        "target_temp_high": "Temperatura alvo máxima (faixa)",
+        "target_temp_low": "Temperatura alvo mínima (faixa)",
+        "fan_mode": "Modo de ventilação",
+        "swing_mode": "Oscilação vertical",
+        "swing_horizontal_mode": "Oscilação horizontal",
+        "humidity": "Umidade (alvo)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "disabled": "Desativado – O controle de janelas está inativo",
+        "enabled": "Ativado – O controle de janelas está ativo"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Desligado – Descartar alterações",
+        "all": "Todas – Manter as alterações para quando as janelas fecharem",
+        "master_only": "Somente mestre – Manter apenas as alterações no dispositivo mestre"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Desligar",
+        "temperature": "Definir temperatura"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Alvo completo",
+        "action": "Apenas a configuração alterada"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "Desligar",
+        "temperature": "Definir temperatura",
+        "release": "Liberar dispositivos"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Desligar",
+        "clamp": "Limitar ao limite"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Ignorar",
+        "off": "Desligar"
+      }
+    },
+    "isolation_rule_count": {
+      "options": {
+        "1": "1 regra",
+        "2": "2 regras",
+        "3": "3 regras",
+        "4": "4 regras"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "disabled": "Desativado – O isolamento de membros está desativado",
+        "sensor": "Sensor binário – Isolar quando o sensor estiver LIGADO",
+        "hvac_mode": "Modo HVAC – Isolar quando o modo do grupo corresponder",
+        "member_off": "Membro desligado – Isolar quando um membro for desligado manualmente"
+      }
+    },
+    "isolation_action_type": {
+      "options": {
+        "hvac_mode": "Definir modo HVAC",
+        "preset_mode": "Definir predefinição"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Desativado – O controle de presença está inativo",
+        "enabled": "Ativado – Modo de ausência"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Desligar",
+        "away_offset": "Deslocamento na ausência",
+        "away_temperature": "Temperatura na ausência",
+        "away_preset": "Predefinição na ausência"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Desativado – Membros desligados são ligados",
+        "away": "Ao sair",
+        "home": "Ao voltar",
+        "away_home": "Ao sair e ao voltar"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "none": "Nenhum",
+        "off": "Desligar",
+        "fan_only": "Apenas ventilar"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Apenas ventilar",
+        "dry": "Secar"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group_helper": {
+        "name": "Grupo de climatização",
+        "state_attributes": {
+          "last_active_hvac_mode": {
+            "name": "Último modo ativo"
+          },
+          "target_hvac_mode": {
+            "name": "Modo HVAC alvo"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Ausente",
+              "home": "Em casa",
+              "sleep": "Dormir",
+              "comfort": "Conforto",
+              "activity": "Atividade",
+              "standby": "Em espera",
+              "economy": "Econômico",
+              "building_protection": "Proteção da edificação",
+              "boost": "Boost"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Deslocamento do grupo"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatura"
+      },
+      "humidity": {
+        "name": "Umidade"
+      },
+      "configuration": {
+        "name": "Configuração"
+      }
+    },
+    "switch": {
+      "main_switch": {
+        "name": "Interruptor principal"
+      }
+    }
+  },
+  "services": {
+    "set_schedule_entity": {
+      "name": "Definir entidade de agenda",
+      "description": "Troca a entidade de agenda ou calendário ativa em tempo de execução. Se omitida ou definida como null, o grupo volta ao padrão configurado e reaplica o intervalo atual.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Entidade de agenda / calendário",
+          "description": "A entidade schedule.* ou calendar.* a ativar (ex.: schedule.holiday ou calendar.vacation). Defina como null ou vazio para restaurar o padrão configurado."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Definir entidade de agenda de exceção",
+      "description": "Troca a entidade de exceção ativa em tempo de execução (ex.: para alternar entre diferentes calendários de férias). Defina como null para restaurar o padrão configurado.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Entidade de exceção",
+          "description": "A entidade schedule.* ou calendar.* a usar como exceção (ex.: calendar.vacation). Defina como null ou vazio para restaurar o padrão configurado."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Definir estado alternativo da agenda",
+      "description": "Define ou limpa um estado alternativo aplicado quando a agenda principal está desligada. Substitui o estado alternativo configurado.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Estado alternativo",
+          "description": "O estado alternativo de climatização como YAML ou mapeamento (ex.: 'temperature: 17.0\\nhvac_mode: heat'). Defina como null ou vazio para restaurar o padrão configurado."
+        }
+      }
+    },
+    "set_schedule_hold_duration": {
+      "name": "Definir duração da retenção da agenda",
+      "description": "Define ou limpa uma duração de retenção manual: por quanto tempo uma alteração manual é mantida antes que a agenda retome. Substitui a duração configurada. Mudar para 0 encerra imediatamente uma retenção em andamento.",
+      "fields": {
+        "duration": {
+          "name": "Duração (minutos)",
+          "description": "Duração da retenção em minutos. 0 desativa a retenção. Deixe vazio para restaurar a duração configurada."
+        }
+      }
+    },
+    "set_group_preset": {
+      "name": "Definir predefinição do grupo",
+      "description": "Define, altera ou remove as predefinições de execução do grupo. Elas somam-se às predefinições das configurações do grupo e têm prioridade sobre uma de mesmo nome.",
+      "fields": {
+        "payload": {
+          "name": "Dados",
+          "description": "As predefinições de execução a definir, como YAML ou mapeamento. Uma predefinição definida como null ou vazia é removida. Dados vazios removem todas as predefinições de execução. Consulte a documentação para o formato e exemplos."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Define temporariamente o grupo para uma temperatura alvo por um tempo fixo. Quando o tempo acaba, o grupo volta automaticamente ao intervalo ativo da agenda (se configurada) ou ao estado alvo anterior.",
+      "fields": {
+        "hvac_mode": {
+          "name": "Modo HVAC",
+          "description": "O modo em que o boost funciona. Por padrão, o modo atual do grupo (um grupo desligado liga no último modo ativo). Modos sem um único valor alvo usam Aquecer. Um boost que nenhum membro consegue executar é rejeitado."
+        },
+        "temperature": {
+          "name": "Temperatura",
+          "description": "Temperatura alvo absoluta durante o boost (ex.: 24.0). Não pode ser usada junto com temperature_offset."
+        },
+        "temperature_offset": {
+          "name": "Deslocamento de temperatura",
+          "description": "Deslocamento relativo somado à temperatura alvo atual (ex.: +3.0 ou -2.0). Não pode ser usado junto com temperature."
+        },
+        "duration": {
+          "name": "Duração (minutos)",
+          "description": "Quantos minutos o boost deve durar."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Aplicar configuração",
+      "description": "Aplica uma configuração JSON portátil a um grupo. Útil para copiar configurações lógicas entre grupos ou restaurar um backup. Chaves de identidade (nome) são protegidas. Depois, abra as configurações do grupo e salve uma vez — a janela de configurações verifica também se a combinação aplicada faz sentido.",
+      "fields": {
+        "settings": {
+          "name": "Configurações (JSON)",
+          "description": "O objeto de configuração JSON a aplicar. Use o atributo 'settings_json' de um sensor de configuração."
+        },
+        "include_member_list": {
+          "name": "Incluir lista de membros",
+          "description": "Se verdadeiro, também sobrescreve a lista de entidades membro e de entidades de isolamento."
+        },
+        "include_entity_selectors": {
+          "name": "Incluir seletores de entidade",
+          "description": "Se verdadeiro, também sobrescreve os sensores vinculados (temperatura, umidade, presença, janela etc.) e os deslocamentos por membro."
+        }
+      }
+    },
+    "reset": {
+      "name": "Redefinir",
+      "description": "Redefine substituições temporárias e o estado de execução (boost, deslocamento, agenda, exceção, estado alternativo, predefinições) para os padrões configurados. Selecione pelo menos uma opção ou use \"Tudo\".",
+      "fields": {
+        "everything": {
+          "name": "Tudo",
+          "description": "Redefine de uma vez tudo o que está abaixo. Os interruptores individuais são então ignorados."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Interrompe um boost ativo e restaura o estado alvo."
+        },
+        "offset": {
+          "name": "Deslocamento de temperatura",
+          "description": "Redefine o deslocamento de temperatura do grupo para 0.0."
+        },
+        "schedule": {
+          "name": "Entidade de agenda",
+          "description": "Restaura a entidade de agenda ativa e a duração da retenção manual para os padrões configurados e encerra uma retenção manual."
+        },
+        "bypass": {
+          "name": "Entidade de exceção",
+          "description": "Restaura a entidade de exceção ativa para o padrão configurado e desfaz os ajustes da exceção."
+        },
+        "fallback": {
+          "name": "Estado alternativo",
+          "description": "Restaura o estado alternativo da agenda para o padrão configurado."
+        },
+        "presets": {
+          "name": "Predefinições do grupo",
+          "description": "Remove todas as predefinições de execução. As predefinições da configuração permanecem como estão."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "Modo HVAC alterado",
+      "temperature_target_changed": "Temperatura alvo alterada",
+      "current_temperature_changed": "Temperatura atual alterada",
+      "group_turned_on": "Grupo ligado",
+      "group_turned_off": "Grupo desligado"
+    },
+    "condition_type": {
+      "is_hvac_mode": "Modo HVAC é",
+      "is_temperature_above": "Temperatura está acima de",
+      "is_temperature_below": "Temperatura está abaixo de",
+      "is_group_available": "Grupo está disponível"
+    },
+    "action_type": {
+      "set_hvac_mode": "Definir modo HVAC",
+      "set_temperature": "Definir temperatura",
+      "turn_on": "Ligar",
+      "turn_off": "Desligar"
+    }
+  }
+}

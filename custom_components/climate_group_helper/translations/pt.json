@@ -132,8 +132,8 @@
               "close_delay": "Atraso Fechamento (s)"
             },
             "data_description": {
-              "window_mode": "Pausa o aquecimento ou baixa a temperatura quando uma janela monitorizada é aberta.",
-              "window_adopt_manual_changes": "Guarda as alterações feitas com as janelas abertas; ao fechar as janelas, só são aplicadas com «Estado alvo completo». Até lá, aplica-se a ação ao abrir janela.",
+              "window_mode": "Ativa ou desativa o controlo de janelas: pausa o aquecimento ou baixa a temperatura quando uma janela monitorizada é aberta.",
+              "window_adopt_manual_changes": "Guarda as alterações feitas com as janelas abertas. Ao fechar as janelas, só são aplicadas com «Estado alvo completo». Até lá, aplica-se a ação ao abrir janela.",
               "window_action": "O que fazer ao abrir uma janela: Desligar completamente ou definir uma temperatura específica (ex: proteção contra gelo).",
               "window_temperature": "Temperatura alvo quando a ação 'Definir temperatura' é selecionada.",
               "window_restore_scope": "O que é restaurado ao fechar a janela: todo o estado alvo ou apenas a definição alterada pela Ação ao abrir janela.",
@@ -696,7 +696,7 @@
       "fields": {
         "payload": {
           "name": "Carga útil",
-          "description": "As predefinições de execução a definir, como YAML ou mapeamento. Uma predefinição definida como null ou vazia é removida; um payload vazio remove todas as predefinições de execução. Consulte a documentação para formato e exemplos."
+          "description": "As predefinições de execução a definir, como YAML ou mapeamento. Uma predefinição definida como null ou vazia é removida. Um payload vazio remove todas as predefinições de execução. Consulte a documentação para formato e exemplos."
         }
       }
     },
@@ -706,7 +706,7 @@
       "fields": {
         "hvac_mode": {
           "name": "Modo HVAC",
-          "description": "O modo em que o boost é executado. Por padrão, o modo atual do grupo (um grupo desligado desperta no seu último modo ativo). Modos sem um único ponto de ajuste, ou um boost que nenhum membro possa aceitar, são rejeitados."
+          "description": "O modo em que o boost é executado. Por padrão, o modo atual do grupo (um grupo desligado desperta no seu último modo ativo). Modos sem um único ponto de ajuste passam para Aquecer. Um boost que nenhum membro possa aceitar é rejeitado."
         },
         "temperature": {
           "name": "Temperatura",

@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Default-orange.svg" alt="HACS - Home Assistant Community Store"/></a>
   <a href="https://github.com/bjrnptrsn/climate_group_helper/releases"><img src="https://img.shields.io/github/v/release/bjrnptrsn/climate_group_helper" alt="Release"/></a>
+  <a href="https://github.com/bjrnptrsn/climate_group_helper/stargazers"><img src="https://img.shields.io/github/stars/bjrnptrsn/climate_group_helper?style=flat" alt="GitHub-Sterne"/></a>
 </p>
 
 <p align="center">
@@ -35,6 +36,10 @@
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate-Group-Helper-Karte neben ihrem Editor" width="600"/>
+</p>
+
+<p align="center">
+  ⭐ <b>Gefällt dir Climate Group Helper?</b> Ein <a href="https://github.com/bjrnptrsn/climate_group_helper">Stern auf GitHub</a> zeigt es — und hilft anderen, die Integration zu finden.
 </p>
 
 ---
@@ -221,7 +226,7 @@ Zeitpläne können per Dienst live umgeschaltet werden (z. B. für "Urlaub"- ode
 *   **Fallback bei inaktivem Zeitplan:** Ein optionaler Zustand (z. B. Nachtabsenkung oder Ausschalten), der außerhalb der aktiven Zeitblöcke für den Haupt-Zeitplan einspringt — lückenlose 24/7-Zeitpläne sind damit unnötig. Die Bypass-Ebene arbeitet unverändert weiter und überschreibt ihn, solange sie aktiv ist.
 *   **Per Dienst geänderte Werte beibehalten (Zeitplan):** Stellt sicher, dass per Dienst geänderter Haupt-Zeitplan, Bypass-Entität, Fallback-Zustand und manuelle Haltezeit einen Home-Assistant-Neustart überstehen. Wenn deaktiviert, kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück.
 *   **Respektiere Aus-Status der Mitglieder (Zeitplan):** Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet.
-*   **Manuelle Haltezeit:** Eine manuelle Anpassung (Temperaturänderung oder die Gruppe von Hand ein-/ausschalten) hält für eine konfigurierbare Dauer, danach übernimmt der Zeitplan wieder mit dem *dann* aktuellen Zeitblock. Eine Dauer von `0` deaktiviert die Haltezeit — deine Änderung bleibt dann bis zum Beginn des nächsten Zeitblocks bestehen. Setzt du den Zeitplan mit dem Reset-Dienst zurück, endet eine laufende Haltezeit vorzeitig. Die Dauer lässt sich auch zur Laufzeit per Dienst ändern.
+*   **Manuelle Haltezeit:** Eine manuelle Änderung an der Gruppe — jede Einstellung, auch eine, die der Sync-Modus von einem Gerät übernimmt — hält für eine konfigurierbare Dauer, danach übernimmt der Zeitplan wieder mit dem *dann* aktuellen Zeitblock. Eine Dauer von `0` deaktiviert die Haltezeit — deine Änderung bleibt dann bis zum Beginn des nächsten Zeitblocks bestehen. Setzt du den Zeitplan mit dem Reset-Dienst zurück, endet eine laufende Haltezeit vorzeitig. Die Dauer lässt sich auch zur Laufzeit per Dienst ändern.
 
 > **Hinweis — Ausschalten außerhalb aktiver Zeitblöcke:** Um die Gruppe in der inaktiven Phase abzuschalten, setze `hvac_mode: off` im Fallback. Verwende hier **nicht** den `turn_off`-Meta-Key — er ist ein einmaliger Auslöser für die Hauptschalter-Sperre, die aktiv bleibt, bis ein Zeitblock sie explizit mit `turn_off: false` freigibt. Ein `turn_off: true` im Fallback würde also den nächsten Heiz-Zeitblock blockiert lassen.
 
@@ -268,7 +273,7 @@ Du kannst Attribute weglassen, die du nicht brauchst — verwende z. B. nur `hva
 | `target_temp_low` | `19.0` | Untere Grenze (Doppel-Sollwert) |
 | `target_temp_high` | `24.0` | Obere Grenze (Doppel-Sollwert) |
 | `humidity` | `50` | Ziel-Luftfeuchtigkeit (%) |
-| `preset_mode` | `eco`, `comfort` | Geräteabhängig |
+| `preset_mode` | `eco`, `comfort` | Geräteabhängig, oder ein [Gruppen-Preset](#gruppen-presets) |
 | `fan_mode` | `auto`, `high` | Geräteabhängig |
 | `swing_mode` | `on`, `off` | Geräteabhängig |
 | `swing_horizontal_mode` | `on`, `off` | Geräteabhängig |
@@ -417,7 +422,7 @@ Neben der Haupt-Klima-Entität erstellt die Integration zusätzliche Helfer-Enti
 
 ### Hauptschalter
 
-Eine dedizierte `switch`-Entität fungiert als **zentraler Ein-/Aus-Schalter** für die gesamte Gruppe. Nutze ihn für die Sommermonate, längere Abwesenheiten, Frostschutz oder immer dann, wenn ein Raum vorübergehend im Handbetrieb direkt an den Thermostaten bedient werden soll, ohne dass du deine Zeitpläne oder Zieleinstellungen anfassen musst. Während der Schalter `aus` ist, ruht die gesamte Gruppen-Automatik — Zeitplan, Fenster- und Anwesenheitssteuerung, Sync, Boost und Isolationsregeln pausieren, und Befehle an die Gruppe selbst werden zurückgehalten (Ausschalten kommt weiterhin durch).
+Eine dedizierte `switch`-Entität fungiert als **zentraler Ein-/Aus-Schalter** für die gesamte Gruppe. Nutze ihn für die Sommermonate, längere Abwesenheiten, Frostschutz oder immer dann, wenn ein Raum vorübergehend im Handbetrieb direkt an den Thermostaten bedient werden soll, ohne dass du deine Zeitpläne oder Zieleinstellungen anfassen musst. Während der Schalter `aus` ist, ruht die gesamte Gruppen-Automatik — Zeitplan, Fenster- und Anwesenheitssteuerung, Sync, Boost und Isolationsregeln pausieren, und Befehle an die Gruppe selbst werden nicht übernommen (Ausschalten kommt weiterhin durch).
 
 Was bei ausgeschaltetem Schalter mit den Geräten passiert, legt die **Aktion des Hauptschalters** fest (Erweiterte Einstellungen):
 
@@ -439,22 +444,28 @@ Eine dedizierte `number`-Entität erlaubt dir, eine globale Temperaturverschiebu
 ## Dashboard-Karte
 
 Die Integration bringt eine eigene Dashboard-Karte mit. Füge sie wie jede andere
-Karte hinzu — sie erscheint im Karten-Picker als **Climate Group Helper Card**
-und braucht weder einen zusätzlichen Resource-Eintrag noch ein separates
-Repository.
+Karte hinzu — sie erscheint im Karten-Picker als **Climate Group Helper Card**,
+und unter **Nach Entität** wird sie für jede Gruppe vorgeschlagen. Sie braucht
+weder einen zusätzlichen Resource-Eintrag noch ein separates Repository.
 
-*   **Kopfzeile**: Im Karten-Editor lässt sich der Name ausblenden, damit sich die Karte leichter mit anderen Karten kombinieren lässt; Hauptschalter und Menü-Schaltfläche rutschen dann neben den Regler. Auch die Menü-Schaltfläche lässt sich ausblenden.
-*   **Steuert** die üblichen Klimaeinstellungen: Modus, Temperatur, Luftfeuchte, Preset, Lüfter und Schwenk, dazu den Gruppen-Offset. Im Karten-Editor lässt sich der ganze Regler ausblenden, oder nur seine −/+-Tasten, und du wählst, welche Ansichten sein Umschalter anbietet.
-*   **Hauptschalter** oben links bedient den Hauptschalter der Gruppe. Im Karten-Editor lässt er sich ein- und ausblenden.
-*   **Boost**: Eine Kachel startet einen Boost mit festen Werten und beendet ihn beim nächsten Tipp. Temperatur und Dauer legst du im Karten-Editor fest.
-*   **Zurücksetzen**: Eine Kachel setzt vorübergehende Änderungen mit einem Tipp zurück, etwa eine manuelle Änderung gegenüber dem Zeitplan, einen Boost oder den Offset. Was sie zurücksetzt, wählst du im Karten-Editor.
-*   **Zeigt**, was Climate Group Helper gerade tut: den aktiven Blocker und seit wann, Boost- und Hold-Countdowns, die Mitglieder sowie isolierte oder außerhalb des Bereichs liegende Geräte.
-*   **Badges** stehen für je eine Funktion: Sie leuchten, solange sie eingreift, und verblassen, solange ein Zeitblock oder ein Preset sie pausiert.
-*   **Mitglieder-Punkte** stehen für je ein Gerät, daneben die Zahl der aktiven Mitglieder; ein Tipp darauf zeigt die vollständige Liste, ein Tipp auf ein Gerät dort öffnet dessen Details. Der größere Punkt ist das Master-Gerät.
-*   **Der Statusbereich** nennt, woher das Ziel der Gruppe kommt — beim Zeitplan auch die Ebene (Haupt-Zeitplan, Bypass oder Fallback) und welcher Kalender oder Zeitplan aktiv ist, markiert mit „Dienst“, wenn ein Dienstaufruf ihn anstelle des konfigurierten gesetzt hat — und zeigt einen aktiven Gruppen-Offset. Die Mitgliederliste ergänzt den eigenen Offset jedes Geräts und, solange die Geräte uneinig sind, ihre Einstellungen — hervorgehoben, wo sie von der Vorgabe der Gruppe abweichen; der Punkt eines solchen Geräts bekommt einen Warnring.
-*   **Batterien**: Ein Batteriesymbol oben links im Statusbereich zeigt die schwächste Batterie der Gruppe, eingefärbt wie in Home Assistant. Geräte mit schwacher Batterie markiert die Karte zusätzlich in der Mitgliederliste und nennt sie unter dem Status. Die Batterie jedes Geräts findet sie selbst — Geräte ohne Batterie zeigen einfach nichts. Im Karten-Editor lässt sich die Batterieanzeige abschalten.
-*   **Der Demo-Modus** füllt die Karte mit erfundenen Daten, damit du ohne Einrichtung siehst, was sie alles anzeigen kann.
-*   **Entwickler-Anleitung**: Der Quellcode der Karte und eine [Anleitung für eigene Karten oder Änderungen an dieser](frontend/README.md) (englisch) liegen im Repository.
+Jeder Teil lässt sich im Karten-Editor ein- und ausblenden:
+
+*   **Kopfzeile**
+    *   **Name** — der Name der Gruppe oder ein eigener
+    *   **Hauptschalter**
+    *   **Verlauf**-, **Einstellungen**- und **Mehr-Infos**-Schaltfläche
+*   **Bedienelemente**
+    *   **Schieberegler** mit **−/+-Tasten** und einem **Ansichtsumschalter** zwischen Temperatur, Luftfeuchte und Gruppen-Offset
+    *   **Funktionskacheln** — Modus, Preset, Lüfter und Schwenk
+    *   **Boost-Schaltfläche** — startet einen Boost mit festgelegter Temperatur und Dauer; der nächste Tipp beendet ihn.
+    *   **Reset-Schaltfläche** — setzt vorübergehende Änderungen zurück, etwa eine manuelle Änderung gegenüber dem Zeitplan, einen Boost oder den Offset.
+*   **Statusbereich**
+    *   **Panel** — was die Gruppe blockiert oder woher ihr Ziel kommt, der Zeitplan, die Mitglieder und die schwächste **Batterie**. Ein Tipp auf die Mitglieder-Punkte oder die Batterie zeigt die Liste der Geräte, mit der Batterie jedes Geräts. „Dienst“ markiert einen per Dienstaufruf gesetzten Zeitplan. Das **Abweichungs-Badge** öffnet die Abweichungen über der Karte.
+    *   **Badges** — eins pro Funktion: leuchtet, solange sie eingreift, verblasst mit Pausenzeichen, solange ein Zeitblock oder ein Preset sie pausiert.
+    *   **Abweichungen** — isolierte, außerhalb des Bereichs liegende oder nicht erreichbare Geräte, Sensoren, die die Gruppe nicht lesen kann, schwache Batterien und Einstellungen, bei denen die Geräte uneinig sind.
+*   **Demo-Modus** — die Karte mit erfundenen Daten, ohne Gruppe.
+
+**Entwickler-Anleitung**: Der Quellcode der Karte und eine [Anleitung für eigene Karten oder Änderungen an dieser](frontend/README.md) (englisch) liegen im Repository.
 
 ## Was die Gruppe über sich selbst berichtet
 
@@ -494,7 +505,7 @@ Dazu listet die Gruppe ihre Geräte auf:
 *   **`oob_members`** — Geräte, deren eigener Temperaturbereich das Gruppenziel nicht einschließt.
 *   **`master_entity_id`** — welches Gerät gerade als Master-Entität der Gruppe festgelegt ist. Nur vorhanden, wenn eine konfiguriert ist.
 *   **`master_fallback_active`** — die konfigurierte Master-Entität ist nicht verfügbar und die Gruppe rechnet ohne sie.
-*   **`presence_fallback`** — die Anwesenheitssteuerung hält die Gruppe zurück, während einer ihrer Anwesenheitssensoren nicht verfügbar ist: ein ausgefallener Sensor statt eines leeren Hauses.
+*   **`unavailable_sensors`** — die Sensoren, die die Gruppe nicht lesen kann: fehlend, unbekannt oder nicht verfügbar. Sind alle lesbar, fehlt das Attribut.
 
 ### Was die Gruppe vorhat und woher es kam
 
@@ -592,6 +603,7 @@ Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assi
 
 | Option | Beschreibung |
 |--------|-------------|
+| **Fenstersteuerungs-Modus** | **Deaktiviert** (Standard) oder **Aktiviert**. |
 | **Aktion bei offenem Fenster** | **Ausschalten** (Standard) oder **Temperatur setzen**. Nützlich für Frostschutz. |
 | **Wiederherstellung beim Fensterschließen** | Was das Schließen des Fensters sendet: **Gesamter Zielzustand** (Standard) oder **Nur die geänderte Einstellung** (nur den Modus oder die Temperatur, die die Aktion bei offenem Fenster geändert hat). |
 | **Manuelle Änderungen übernehmen** | Was mit Änderungen passiert, die bei offenem Fenster gemacht werden: **Aus** (verwerfen), **Alle** (merken; beim Schließen mit **Gesamter Zielzustand** angewendet) oder **Nur Master** *(erfordert Master-Entität)*. |
@@ -625,7 +637,7 @@ Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assi
 | **Bypass-Zeitplan / Kalenderentität** | *(Optional)* Eine zweite `schedule.*`- oder `calendar.*`-Entität, die als Prioritätsebene fungiert. Ist ein Bypass-Zeitblock aktiv, überschreibt er den Haupt-Zeitplan. |
 | **Respektiere 'Aus'-Status der Mitglieder (Zeitplan)** | Mitglieder, die manuell `aus` geschaltet wurden, werden bei geplanten Änderungen übersprungen — sie werden nicht zurück eingeschaltet. Direkte Gruppenbefehle erreichen unabhängig von dieser Einstellung immer alle Mitglieder. |
 | **Per Dienst geänderte Werte beibehalten (Zeitplan)** | Behält Haupt-Zeitplan, Bypass-Entität, Fallback-Zustand und manuelle Haltezeit über Neustarts hinweg bei, wenn sie über einen Dienst geändert wurden. Ohne diese Option kehrt die Gruppe nach einem Neustart immer zu ihren konfigurierten Standardwerten zurück. |
-| **Manuelle Haltezeit** | Wie lange eine manuelle Anpassung (Temperatur oder die Gruppe von Hand ein-/ausschalten) hält, bevor der Zeitplan mit dem dann aktuellen Zeitblock wieder übernimmt. `0` deaktiviert die Haltezeit. Lässt sich zur Laufzeit per Dienst überschreiben. |
+| **Manuelle Haltezeit** | Wie lange eine manuelle Änderung an der Gruppe (jede Einstellung, auch eine vom Sync-Modus übernommene) hält, bevor der Zeitplan mit dem dann aktuellen Zeitblock wieder übernimmt. `0` deaktiviert die Haltezeit. Lässt sich zur Laufzeit per Dienst überschreiben. |
 
 ### Gruppen-Presets
 
@@ -661,6 +673,7 @@ Im Offset-Modus wird jede Entität, in die geschrieben wird, über das Home-Assi
 | Option | Beschreibung |
 |--------|-------------|
 | **Bereichsvorlage aktivieren** | Aktiviert automatische `heat_cool`-Bereichssteuerung für alle Mitglieder, die `heat_cool` nicht nativ melden. Keine manuelle Auswahl nötig — die Gruppe erkennt geeignete Mitglieder automatisch. |
+| **Geräte, die heizen dürfen** / **Geräte, die kühlen dürfen** | *(Optional)* Schränkt ein, welche Mitglieder heizen oder kühlen dürfen. Nicht gelistete Mitglieder tun, was sie können. Eine Rolle kann ein Gerät nur einschränken, nie erweitern. |
 | **Bedingtes Heizen/Kühlen** | Bietet Heizen/Kühlen und die Bereichssteuerung nur an, solange mindestens ein erreichbares Mitglied heizen und eines kühlen kann. |
 | **Deadband-Aktion** | Was zu tun ist, wenn die Raumtemperatur bereits innerhalb des Zielbandes liegt (zwischen unterem und oberem Sollwert). **Keine** (Standard — kein Moduswechsel; ein Gerät, das weiter heizt oder kühlt, wird auf dem passenden Sollwert gehalten: Heizen auf dem unteren, Kühlen auf dem oberen), **Ausschalten** oder **Nur Lüftung**. |
 | **Im Totband entfeuchten** | Schaltet im Temperatur-Totband automatisch auf Entfeuchtung oder Luftzirkulation um, wenn die Raumfeuchtigkeit die Zielfeuchtigkeit überschreitet. Setzt einen Feuchtigkeitswert von einem Mitglied oder einem Feuchtigkeitssensor voraus. |

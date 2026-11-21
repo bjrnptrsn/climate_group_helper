@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Default-orange.svg" alt="HACS - Home Assistant Community Store"/></a>
   <a href="https://github.com/bjrnptrsn/climate_group_helper/releases"><img src="https://img.shields.io/github/v/release/bjrnptrsn/climate_group_helper" alt="Release"/></a>
+  <a href="https://github.com/bjrnptrsn/climate_group_helper/stargazers"><img src="https://img.shields.io/github/stars/bjrnptrsn/climate_group_helper?style=flat" alt="GitHub stars"/></a>
 </p>
 
 <p align="center">
@@ -35,6 +36,10 @@
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bjrnptrsn/climate_group_helper/main/assets/card_demo.png" alt="Climate Group Helper card next to its editor" width="600"/>
+</p>
+
+<p align="center">
+  ⭐ <b>Like Climate Group Helper?</b> A <a href="https://github.com/bjrnptrsn/climate_group_helper">star on GitHub</a> shows it — and helps others find it.
 </p>
 
 ---
@@ -221,7 +226,7 @@ Schedules can be switched on the fly via service (e.g. for "Vacation" or "Guest"
 *   **Inactive Schedule Fallback:** An optional state (e.g. night setback or turning off) that stands in for the main schedule outside its active slots — no need for gapless 24/7 schedules. The bypass layer keeps working as usual and overrides it while active.
 *   **Retain Changes Made via Service (Schedule):** Ensures that the main schedule, bypass entity, fallback state and manual hold duration — when changed via service — survive a Home Assistant restart. If disabled, the group always reverts to its configured defaults after a restart.
 *   **Respect Member Off State (Schedule):** Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on.
-*   **Manual Hold:** A manual adjustment (temperature change, or switching the group on/off) holds for a configurable duration, after which the schedule resumes with the slot that is current *then*. A duration of `0` disables the hold — your change then stays until the next slot starts. Resetting the schedule with the reset service ends a running hold early. The duration can also be changed at runtime via service.
+*   **Manual Hold:** A manual change to the group — any setting, also one the Sync Mode adopts from a device — holds for a configurable duration, after which the schedule resumes with the slot that is current *then*. A duration of `0` disables the hold — your change then stays until the next slot starts. Resetting the schedule with the reset service ends a running hold early. The duration can also be changed at runtime via service.
 
 > **Note — turning off outside active slots:** to shut the group down in the inactive period, set `hvac_mode: off` in the fallback. Do **not** use the `turn_off` meta-key here — it is a one-shot trigger for the Main Switch block that stays active until a slot explicitly releases it with `turn_off: false`, so a `turn_off: true` fallback would keep the next heating slot blocked.
 
@@ -268,7 +273,7 @@ You can omit attributes you don't need — for example, use only `hvac_mode: off
 | `target_temp_low` | `19.0` | Lower bound (dual setpoint) |
 | `target_temp_high` | `24.0` | Upper bound (dual setpoint) |
 | `humidity` | `50` | Target humidity (%) |
-| `preset_mode` | `eco`, `comfort` | Device-specific |
+| `preset_mode` | `eco`, `comfort` | Device-specific, or a [Group Preset](#group-presets) |
 | `fan_mode` | `auto`, `high` | Device-specific |
 | `swing_mode` | `on`, `off` | Device-specific |
 | `swing_horizontal_mode` | `on`, `off` | Device-specific |
@@ -417,7 +422,7 @@ Alongside the main climate entity, the integration creates additional helper ent
 
 ### Main Switch
 
-A dedicated `switch` entity acts as a **master toggle** for the entire group. Use it for summer months, extended absences, frost protection, or whenever you want to hand a room over to manual control at the thermostats without touching your schedules or target settings. While the switch is `off`, all group automation stands still — schedule, window and presence control, sync, boost and isolation rules are all paused, and commands to the group itself are held back (turning it off still gets through).
+A dedicated `switch` entity acts as a **master toggle** for the entire group. Use it for summer months, extended absences, frost protection, or whenever you want to hand a room over to manual control at the thermostats without touching your schedules or target settings. While the switch is `off`, all group automation stands still — schedule, window and presence control, sync, boost and isolation rules are all paused, and commands to the group itself are not applied (turning it off still gets through).
 
 What the devices get while the switch is off is set by **Main Switch Action** (Advanced Settings):
 
@@ -439,21 +444,28 @@ A dedicated `number` entity allows you to apply a global temperature shift (±5.
 ## Dashboard Card
 
 The integration ships its own dashboard card. Add it like any other card — it
-appears in the card picker as **Climate Group Helper Card** and needs no extra
-resource entry or separate repository.
+appears in the card picker as **Climate Group Helper Card**, and under **By
+entity** it is suggested for every group. It needs no extra resource entry or
+separate repository.
 
-*   **Header**: the card editor can hide the name, so the card combines more easily with other cards; the main switch and the menu button then move down beside the dial. The menu button can be hidden too.
-*   **Controls** the usual climate settings: mode, temperature, humidity, preset, fan and swing, plus the group offset. The card editor can hide the whole dial, or just its −/+ buttons, and choose which views its switch offers.
-*   **Main switch** at the top left operates the group's main switch. The card editor shows or hides it.
-*   **Boost**: a tile starts a boost with fixed values and ends it with the next tap. The card editor sets its temperature and duration.
-*   **Reset**: a tile resets temporary changes with one tap, such as a manual change against the schedule, a boost or the offset. The card editor chooses what it resets.
-*   **Shows** what Climate Group Helper is doing: the active blocker and for how long, boost and hold countdowns, the members, and devices that are isolated or out of bounds.
-*   **Badges** show one feature each: they light up while it is acting and fade while a schedule slot or preset pauses it.
-*   **Member dots** stand for one device each, next to the count of active members; tap them for the full list, and tap a device there to open its details. The larger dot is the master device.
-*   **The status area** names where the group's target comes from — for the schedule also which layer (main schedule, bypass or fallback) and which calendar or schedule is active, marked "Service" when a service call set it in place of the configured one — and shows an active group offset. The member list adds each device's own offset and, while the devices disagree, their settings, highlighting those that differ from what the group has set; the dot of such a device gets a warning ring.
-*   **Batteries**: a battery symbol at the top left of the status area shows the group's weakest battery, coloured as in Home Assistant. Devices with a low battery are also marked in the member list and named below the status. The card finds each device's battery by itself — devices without one simply show nothing. The card editor can turn the battery display off.
-*   **Demo mode** fills the card with made-up data, so you can see everything it can show without setting anything up.
-*   **Developer guide**: the card's source code and a [guide for building your own card or changing this one](frontend/README.md) are in the repository.
+Each part can be shown or hidden in the card editor:
+
+*   **Header**
+    *   **Name** — the group's name or your own
+    *   **Main switch**
+    *   **History**, **Settings** and **More info** buttons
+*   **Controls**
+    *   **Slider** with **−/+ buttons** and a **view switch** between temperature, humidity and group offset
+    *   **Feature tiles** — mode, preset, fan and swing
+    *   **Boost button** — starts a boost with a set temperature and duration; the next tap ends it.
+    *   **Reset button** — resets temporary changes, such as a manual change against the schedule, a boost or the offset.
+*   **Status area**
+    *   **Panel** — what blocks the group or where its target comes from, the schedule, the members and the weakest **battery**. Tap the member dots or the battery for the list of devices, with each device's battery. "Service" marks a schedule set by a service call. The **deviations badge** opens the deviations over the card.
+    *   **Badges** — one per feature: lit while it acts, faded with a pause sign while a schedule slot or preset pauses it.
+    *   **Deviations** — isolated, out-of-bounds or unreachable devices, sensors the group cannot read, low batteries and settings the devices disagree on.
+*   **Demo mode** — the card with made-up data, without a group.
+
+**Developer guide**: the card's source code and a [guide for building your own card or changing this one](frontend/README.md) are in the repository.
 
 ## What the Group Reports About Itself
 
@@ -493,7 +505,7 @@ Around it, the group lists its devices:
 *   **`oob_members`** — devices whose own temperature range the group target lies outside of.
 *   **`master_entity_id`** — which device is currently set as the group's Master Entity. Present only when one is configured.
 *   **`master_fallback_active`** — the configured master entity is unavailable and the group is aggregating without it.
-*   **`presence_fallback`** — Presence Control is holding the group back while one of its presence sensors is unavailable: a dead sensor rather than an empty house.
+*   **`unavailable_sensors`** — the sensors the group cannot read: missing, unknown or unavailable. Absent when all of them can be read.
 
 ### What the group intends, and where it came from
 
@@ -591,6 +603,7 @@ In Offset mode, each entity you write to is matched automatically — through th
 
 | Option | Description |
 |--------|-------------|
+| **Window Control Mode** | **Disabled** (default) or **Enabled**. |
 | **Window Open Action** | **Turn Off** (Default) or **Set Temperature**. Useful for frost protection. |
 | **Restore When Window Closes** | What closing the window sends: **Full Target** (default) or **Only the Changed Setting** (just the mode or the temperature the Window Open Action changed). |
 | **Adopt Manual Changes** | What happens to changes made while windows are open: **Off** (discard), **All** (keep; applied at close with **Full Target**), or **Master Only** *(requires Master Entity)*. |
@@ -624,7 +637,7 @@ In Offset mode, each entity you write to is matched automatically — through th
 | **Bypass Schedule / Calendar Entity** | *(Optional)* A second `schedule.*` or `calendar.*` entity acting as a priority layer. When a bypass slot is active, it overrides the main schedule. |
 | **Respect Member Off State (Schedule)** | Members that are manually turned `off` are skipped during scheduled changes — they are not forced back on. Direct group commands always reach all members regardless of this setting. |
 | **Retain Changes Made via Service (Schedule)** | Keep the main schedule, bypass entity, fallback state and manual hold duration across restarts when changed via service. Without this, the group always reverts to its configured defaults on restart. |
-| **Manual Hold Duration** | How long a manual adjustment (temperature, or switching the group on/off) holds before the schedule resumes with the then-current slot. `0` disables the hold. Can be overridden at runtime via service. |
+| **Manual Hold Duration** | How long a manual change to the group (any setting, also one the Sync Mode adopts from a device) holds before the schedule resumes with the then-current slot. `0` disables the hold. Can be overridden at runtime via service. |
 
 ### Group Presets
 
@@ -660,6 +673,7 @@ In Offset mode, each entity you write to is matched automatically — through th
 | Option | Description |
 |--------|-------------|
 | **Enable Range Template** | Enables automatic `heat_cool` range control for all members that do not natively advertise `heat_cool`. No manual selection needed — the group detects eligible members automatically. |
+| **Heating Devices** / **Cooling Devices** | *(Optional)* Restrict which members may heat or cool. Unlisted members do whatever they can. A role can only restrict a device, never extend it. |
 | **Conditional Heat/Cool** | Offer Heat/Cool and the temperature range only while at least one reachable member can heat and one can cool. |
 | **Deadband Action** | What to do when the room temperature is already within the target band (between the low and the high setpoint). **None** (default — no mode change; a device that keeps heating or cooling is held on the matching setpoint: heating on the low one, cooling on the high one), **Turn Off**, or **Fan Only**. |
 | **Dehumidify in Deadband** | Automatically switch to dehumidification or fan circulation when inside the temperature deadband if room humidity exceeds the target humidity. Requires a humidity reading from a member or a humidity sensor. |

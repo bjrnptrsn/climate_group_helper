@@ -8,11 +8,14 @@ import {
   DEFAULT_RESET_FIELDS,
   FEATURE_TILES,
   MAX_BOOST_DURATION,
+  VIEWS,
   boostEnabled,
   boostLimits,
   boostParams,
+  boostValues,
   defaultBoost,
   defaultBoostTemperature,
+  dialViews,
   RESET_FIELDS,
   RESET_LABEL_KEYS,
   STATUS_SECTIONS,
@@ -21,18 +24,18 @@ import {
   resetEnabled,
   resetFields,
   showBattery,
-  showHumidityView,
+  showDeviationsBadge,
+  showHistory,
   showMainSwitch,
   showMoreInfo,
-  showOffset,
-  showTemperatureView,
+  showSettings,
   showTitle,
   statusSections,
 } from '../lib/config'
+import { migrateConfig } from '../lib/config-migrations'
 import { preloadHaComponents } from '../lib/ha-helpers'
 import { MDI_CHEVRON_RIGHT, MDI_INFORMATION_OUTLINE } from '../lib/icons'
 import { LocalizeMixin, type TranslationKey } from '../lib/i18n'
-import type { View as DialView } from './cgh-climate-control'
 import type {
   BoostConfig,
   Control,
@@ -41,6 +44,7 @@ import type {
   LovelaceCardConfig,
   ResetField,
   StatusSection,
+  View,
 } from '../types'
 
 const SECTION_LABEL_KEYS: Record<StatusSection, TranslationKey> = {
@@ -52,25 +56,52 @@ const SECTION_LABEL_KEYS: Record<StatusSection, TranslationKey> = {
 const CONTROL_LABEL_KEYS: Record<Control, TranslationKey> = {
   slider: 'editor.control.slider',
   buttons: 'editor.control.buttons',
-  toggle: 'editor.control.toggle',
 }
 
-/** Rows of the Header and Controls lists that expand to their options. */
-type Branch = 'title' | 'slider' | 'boost' | 'reset'
+/** Rows that expand to their options. */
+type Branch = 'title' | 'slider' | 'views' | 'features' | 'boost' | 'reset' | 'panel'
 
 const BRANCH_LABEL_KEYS: Record<Branch, TranslationKey> = {
   title: 'editor.name',
   slider: 'editor.control.slider',
+  views: 'editor.control.toggle',
+  features: 'editor.features',
   boost: 'editor.boost',
   reset: 'editor.reset',
+  panel: 'editor.section.panel',
 }
 
-/** The dial's own options, shown under "Slider". */
+/** The dial's own options besides the view switch, shown under "Slider". */
 const DIAL_OPTIONS: Control[] = CONTROLS.filter((control) => control !== 'slider')
 
-/** The dial's views, the children of the view switch in the editor. */
-const NO_VIEWS: Record<DialView, boolean> = { offset: false, temperature: false, humidity: false }
-const ALL_VIEWS: Record<DialView, boolean> = { offset: true, temperature: true, humidity: true }
+const VIEW_LABEL_KEYS: Record<View, TranslationKey> = {
+  offset: 'editor.offset',
+  temperature: 'common.temperature',
+  humidity: 'common.humidity',
+}
+
+/** Boolean options: on is the default, so only `false` is ever written. */
+const OPT_OUT_KEYS = [
+  'title',
+  'more_info',
+  'history',
+  'settings',
+  'battery',
+  'deviations_badge',
+  'main_switch',
+] as const
+
+/** List options, each with the selection that absence stands for. */
+const LIST_DEFAULTS = {
+  status: STATUS_SECTIONS,
+  features: FEATURE_TILES,
+  views: VIEWS,
+  reset: DEFAULT_RESET_FIELDS,
+} as const
+
+/** The same selection, whatever the order — a hand-written list may repeat items. */
+const sameItems = (a: readonly unknown[], b: readonly unknown[]): boolean =>
+  a.every((item) => b.includes(item)) && b.every((item) => a.includes(item))
 
 const FEATURE_LABEL_KEYS: Record<FeatureTile, TranslationKey> = {
   mode: 'tile.mode',
@@ -94,12 +125,17 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
   @state() private _open: Record<Branch, boolean> = {
     title: false,
     slider: false,
+    views: false,
+    features: false,
     boost: false,
     reset: false,
+    panel: false,
   }
 
+  // Edits build on the current schema: the first change writes the migrated
+  // config, `config_version` included.
   public setConfig(config: LovelaceCardConfig): void {
-    this._config = config
+    this._config = migrateConfig(config)
   }
 
   connectedCallback(): void {
@@ -111,18 +147,23 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
     if (!this._config) return
     const config: LovelaceCardConfig = { ...this._config, ...patch }
     if (config.name === '') delete config.name
-    // Shown is the default: only `false` is written.
-    if (config.title !== false) delete config.title
-    if (config.more_info !== false) delete config.more_info
-    if (config.battery !== false) delete config.battery
-    if (config.temperature !== false) delete config.temperature
-    if (config.humidity !== false) delete config.humidity
-    // Off is the default: unticking removes the key instead of leaving
-    // `reset: undefined` behind.
-    if (config.reset === undefined) delete config.reset
-    if (config.boost === undefined) delete config.boost
-    if (config.main_switch !== true) delete config.main_switch
-    if (config.offset !== true) delete config.offset
+    for (const key of OPT_OUT_KEYS) if (config[key] !== false) delete config[key]
+    // A list that is empty is the option off; one that is the standard
+    // selection is no key at all, so a later standard reaches this card too.
+    for (const key of Object.keys(LIST_DEFAULTS) as (keyof typeof LIST_DEFAULTS)[]) {
+      const value = config[key]
+      if (!Array.isArray(value)) continue
+      if (!value.length) config[key] = false
+      else if (sameItems(value, LIST_DEFAULTS[key])) delete config[key]
+    }
+    // `[]` hides the dial, so only the full set goes.
+    if (Array.isArray(config.controls) && sameItems(config.controls, CONTROLS)) {
+      delete config.controls
+    }
+    // `boost`: `false` and a custom object stay; `undefined` restores the default.
+    for (const key of Object.keys(config) as (keyof LovelaceCardConfig)[]) {
+      if (config[key] === undefined) delete config[key]
+    }
     this.dispatchEvent(
       new CustomEvent('config-changed', {
         detail: { config },
@@ -138,6 +179,11 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
 
   private _titleChanged(ev: Event): void {
     this._emit({ title: (ev.target as HTMLInputElement).checked })
+  }
+
+  /** One of the top right corner's buttons: history, settings, ⋮. */
+  private _cornerChanged(key: 'history' | 'settings', ev: Event): void {
+    this._emit({ [key]: this._checked(ev) })
   }
 
   private _moreInfoChanged(ev: Event): void {
@@ -159,88 +205,73 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
     this._emit({ demo: on })
   }
 
-  // `status: false` from YAML resolves to no sections, so ticking one starts a
-  // list with just that section.
+  /**
+   * A list option's next selection after one item was (un)ticked, in canonical
+   * order. Off (`false`) reads as nothing selected, so ticking an item there
+   * starts a list with just that item. `_emit()` turns an empty list into
+   * `false` and the standard selection into no key.
+   */
+  private static _toggled<T>(all: readonly T[], current: readonly T[], item: T, on: boolean): T[] {
+    return all.filter((i) => (i === item ? on : current.includes(i)))
+  }
+
+  private _checked(ev: Event): boolean {
+    return (ev.target as HTMLInputElement).checked
+  }
+
   private _sectionChanged(section: StatusSection, ev: Event): void {
-    const on = (ev.target as HTMLInputElement).checked
     const current = statusSections(this._config) ?? []
     this._emit({
-      status: on
-        ? [...current, section]
-        : current.filter((s) => s !== section),
+      status: ClimateGroupHelperCardEditor._toggled(STATUS_SECTIONS, current, section, this._checked(ev)),
     })
   }
 
   private _batteryChanged(ev: Event): void {
-    this._emit({ battery: (ev.target as HTMLInputElement).checked })
+    this._emit({ battery: this._checked(ev) })
+  }
+
+  private _deviationsBadgeChanged(ev: Event): void {
+    this._emit({ deviations_badge: this._checked(ev) })
   }
 
   private _controlChanged(control: Control, ev: Event): void {
-    const on = (ev.target as HTMLInputElement).checked
-    if (control === 'toggle') {
-      // The view switch is the parent of the views: ticked, all of them are
-      // on; unticked, it is the same as no view ticked.
-      this._emit(this._viewsPatch(on ? ALL_VIEWS : NO_VIEWS))
-      return
-    }
     const current = controls(this._config)
     this._emit({
-      controls: on ? [...current, control] : current.filter((c) => c !== control),
+      controls: ClimateGroupHelperCardEditor._toggled(CONTROLS, current, control, this._checked(ev)),
     })
   }
 
   /**
-   * The views as ticked in the editor: none while the view switch is off —
-   * the dial then shows temperature alone. Like the feature tiles, a view
-   * the entity cannot show stays selectable; the card leaves it out.
+   * The view switch is its views' parent: ticked, all of them (the default);
+   * unticked, none — the dial shows temperature alone. Like the feature
+   * tiles, a view the entity cannot show stays selectable; the card leaves it
+   * out.
    */
-  private _viewsOn(): Record<DialView, boolean> {
-    const switchOn = controls(this._config).includes('toggle')
-    return {
-      offset: switchOn && showOffset(this._config),
-      temperature: switchOn && showTemperatureView(this._config),
-      humidity: switchOn && showHumidityView(this._config),
-    }
+  private _viewsChanged(ev: Event): void {
+    this._emit({ views: this._checked(ev) ? undefined : false })
   }
 
-  /**
-   * The view switch and its views as one config patch. No view ticked is the
-   * switch off; the views are then left at their defaults, so a switched-off
-   * card carries no stale view keys.
-   */
-  private _viewsPatch(views: Record<DialView, boolean>): Partial<LovelaceCardConfig> {
-    const others = controls(this._config).filter((c) => c !== 'toggle')
-    if (!Object.values(views).some(Boolean)) {
-      return { controls: others, offset: false, temperature: undefined, humidity: undefined }
-    }
-    return {
-      controls: [...others, 'toggle'],
-      offset: views.offset,
-      temperature: views.temperature,
-      humidity: views.humidity,
-    }
-  }
-
-  /** Ticking a view while the switch is off switches it on with that view alone. */
-  private _viewChanged(view: DialView, ev: Event): void {
-    const checked = (ev.target as HTMLInputElement).checked
-    const switchOn = controls(this._config).includes('toggle')
-    const views = switchOn ? this._viewsOn() : { ...NO_VIEWS }
-    views[view] = checked
-    this._emit(this._viewsPatch(views))
+  private _viewChanged(view: View, ev: Event): void {
+    this._emit({
+      views: ClimateGroupHelperCardEditor._toggled(VIEWS, dialViews(this._config), view, this._checked(ev)),
+    })
   }
 
   private _mainSwitchChanged(ev: Event): void {
-    this._emit({ main_switch: (ev.target as HTMLInputElement).checked })
+    this._emit({ main_switch: this._checked(ev) })
+  }
+
+  private _featuresChanged(ev: Event): void {
+    this._emit({ features: this._checked(ev) ? undefined : false })
   }
 
   private get _unit(): string {
     return (this.hass?.config?.unit_system?.temperature as string) ?? '°C'
   }
 
-  /** The boost as configured, read leniently: a hand-written one may be off. */
+  /** The boost as configured (the default while absent), read leniently. */
   private get _boostRaw(): Record<string, unknown> {
-    return boostEnabled(this._config) ? (this._config!.boost as Record<string, unknown>) : {}
+    return boostEnabled(this._config) ? boostValues(this._config, this._unit) : {}
   }
 
   private get _boostAbsolute(): boolean {
@@ -256,10 +287,10 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
       : DEFAULT_BOOST_DURATION
   }
 
-  // A copy, so the config never shares the default object.
+  // Ticked again, the tile starts from the default (no key) — in the unit of
+  // whichever system the card is shown on.
   private _boostChanged(ev: Event): void {
-    const on = (ev.target as HTMLInputElement).checked
-    this._emit({ boost: on ? { ...defaultBoost(this._unit) } : undefined })
+    this._emit({ boost: this._checked(ev) ? undefined : false })
   }
 
   // Switching the kind starts it on its default value; the duration stays.
@@ -325,28 +356,30 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
     this.requestUpdate()
   }
 
-  // A copy, so the config never shares the constant's array.
   private _resetChanged(ev: Event): void {
-    const on = (ev.target as HTMLInputElement).checked
-    this._emit({ reset: on ? [...DEFAULT_RESET_FIELDS] : undefined })
+    this._emit({ reset: this._checked(ev) ? undefined : false })
   }
 
-  // Written in canonical order. The list stays even when the last field goes:
-  // the tile is still switched on, it just has nothing to send (the editor
-  // says so).
+  // The last field unticked switches the tile off: it would have nothing to send.
   private _resetFieldChanged(field: ResetField, ev: Event): void {
-    const on = (ev.target as HTMLInputElement).checked
-    const current = resetFields(this._config)
     this._emit({
-      reset: RESET_FIELDS.filter((f) => (f === field ? on : current.includes(f))),
+      reset: ClimateGroupHelperCardEditor._toggled(
+        RESET_FIELDS,
+        resetFields(this._config),
+        field,
+        this._checked(ev)
+      ),
     })
   }
 
   private _tileChanged(tile: FeatureTile, ev: Event): void {
-    const on = (ev.target as HTMLInputElement).checked
-    const current = featureTiles(this._config)
     this._emit({
-      features: on ? [...current, tile] : current.filter((t) => t !== tile),
+      features: ClimateGroupHelperCardEditor._toggled(
+        FEATURE_TILES,
+        featureTiles(this._config),
+        tile,
+        this._checked(ev)
+      ),
     })
   }
 
@@ -387,8 +420,10 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
     const shownControls = controls(this._config)
     const dialShown = shownControls.includes('slider')
     const mainSwitchOn = showMainSwitch(this._config)
-    // The views are the view switch's children: ticked only while it is on.
-    const viewsOn = this._viewsOn()
+    const views = dialViews(this._config)
+    const viewsOn = views.length > 0
+    const featuresOn = tiles.length > 0
+    const panelOn = sections?.includes('panel') ?? false
     const resetOn = resetEnabled(this._config)
     const reset = resetFields(this._config)
     const boostOn = boostEnabled(this._config)
@@ -396,6 +431,17 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
     const boostRaw = this._boostRaw
     const boostValue = boostAbsolute ? boostRaw.temperature : boostRaw.temperature_offset
     const boostDuration = boostRaw.duration
+    // A row that is on but has a ticked-off box somewhere below it shows the
+    // mixed mark, so a collapsed row still tells. Display only: the box stays
+    // checked underneath, and a click switches the row off as before.
+    const viewsMixed = viewsOn && views.length < VIEWS.length
+    const sliderMixed =
+      dialShown &&
+      (DIAL_OPTIONS.some((control) => !shownControls.includes(control)) || !viewsOn || viewsMixed)
+    const featuresMixed = featuresOn && tiles.length < FEATURE_TILES.length
+    const resetMixed = resetOn && reset.length < RESET_FIELDS.length
+    const panelMixed =
+      panelOn && !(showBattery(this._config) && showDeviationsBadge(this._config))
 
     return html`
       <div class="form">
@@ -454,12 +500,6 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
                   </div>`
                 : nothing
             }
-          </div>
-        </fieldset>
-
-        <fieldset class="controls">
-          <legend>${this.t('editor.controls')}</legend>
-          <div class="sub">
             ${this._row(html`<label class="check">
               <input
                 type="checkbox"
@@ -472,17 +512,43 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
             ${this._row(html`<label class="check">
               <input
                 type="checkbox"
+                class="history-toggle"
+                .checked=${showHistory(this._config)}
+                @change=${(e: Event) => this._cornerChanged('history', e)}
+              />
+              <span>${this.t('editor.history')}</span>
+            </label>`)}
+            ${this._row(html`<label class="check">
+              <input
+                type="checkbox"
+                class="settings-toggle"
+                .checked=${showSettings(this._config)}
+                @change=${(e: Event) => this._cornerChanged('settings', e)}
+              />
+              <span>${this.t('editor.settings')}</span>
+            </label>`)}
+            ${this._row(html`<label class="check">
+              <input
+                type="checkbox"
                 class="more-info-toggle"
                 .checked=${showMoreInfo(this._config)}
                 @change=${this._moreInfoChanged}
               />
               <span>${this.t('editor.more_info')}</span>
             </label>`)}
+          </div>
+        </fieldset>
+
+        <fieldset class="controls">
+          <legend>${this.t('editor.controls')}</legend>
+          <div class="sub">
             ${this._row(
               html`<label class="check">
                 <input
                   type="checkbox"
+                  class="slider-toggle"
                   .checked=${dialShown}
+                  .indeterminate=${live(sliderMixed)}
                   @change=${(e: Event) => this._controlChanged('slider', e)}
                 />
                 <span>${this.t(CONTROL_LABEL_KEYS.slider)}</span>
@@ -492,64 +558,90 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
             ${
               this._open.slider
                 ? html`<div class="children">
-                    ${DIAL_OPTIONS.map(
-                      (control) => html`
+                    ${DIAL_OPTIONS.map((control) =>
+                      this._row(html`
                         <label class="check ${dialShown ? '' : 'off'}">
                           <input
                             type="checkbox"
+                            class="control-${control}"
                             .checked=${shownControls.includes(control)}
                             ?disabled=${!dialShown}
                             @change=${(e: Event) => this._controlChanged(control, e)}
                           />
                           <span>${this.t(CONTROL_LABEL_KEYS[control])}</span>
                         </label>
-                      `
+                      `)
                     )}
-                    <label class="check nested ${dialShown ? '' : 'off'}">
-                      <input
-                        type="checkbox"
-                        class="offset"
-                        .checked=${viewsOn.offset}
-                        ?disabled=${!dialShown}
-                        @change=${(e: Event) => this._viewChanged('offset', e)}
-                      />
-                      <span>${this.t('editor.offset')}</span>
-                    </label>
-                    <label class="check nested ${dialShown ? '' : 'off'}">
-                      <input
-                        type="checkbox"
-                        class="view-temperature"
-                        .checked=${viewsOn.temperature}
-                        ?disabled=${!dialShown}
-                        @change=${(e: Event) => this._viewChanged('temperature', e)}
-                      />
-                      <span>${this.t('common.temperature')}</span>
-                    </label>
-                    <label class="check nested ${dialShown ? '' : 'off'}">
-                      <input
-                        type="checkbox"
-                        class="view-humidity"
-                        .checked=${viewsOn.humidity}
-                        ?disabled=${!dialShown}
-                        @change=${(e: Event) => this._viewChanged('humidity', e)}
-                      />
-                      <span>${this.t('common.humidity')}</span>
-                    </label>
+                    ${this._row(
+                      html`<label class="check ${dialShown ? '' : 'off'}">
+                        <input
+                          type="checkbox"
+                          class="views-toggle"
+                          .checked=${viewsOn}
+                          .indeterminate=${live(viewsMixed)}
+                          ?disabled=${!dialShown}
+                          @change=${this._viewsChanged}
+                        />
+                        <span>${this.t('editor.control.toggle')}</span>
+                      </label>`,
+                      'views'
+                    )}
+                    ${
+                      this._open.views
+                        ? html`<div class="children">
+                            ${VIEWS.map(
+                              (view) => html`
+                                <label class="check ${dialShown && viewsOn ? '' : 'off'}">
+                                  <input
+                                    type="checkbox"
+                                    class="view-${view}"
+                                    .checked=${views.includes(view)}
+                                    ?disabled=${!dialShown || !viewsOn}
+                                    @change=${(e: Event) => this._viewChanged(view, e)}
+                                  />
+                                  <span>${this.t(VIEW_LABEL_KEYS[view])}</span>
+                                </label>
+                              `
+                            )}
+                          </div>`
+                        : nothing
+                    }
                   </div>`
                 : nothing
             }
-            ${FEATURE_TILES.map(
-              (tile) => this._row(html`
-                <label class="check">
-                  <input
-                    type="checkbox"
-                    .checked=${tiles.includes(tile)}
-                    @change=${(e: Event) => this._tileChanged(tile, e)}
-                  />
-                  <span>${this.t(FEATURE_LABEL_KEYS[tile])}</span>
-                </label>
-              `)
+            ${this._row(
+              html`<label class="check">
+                <input
+                  type="checkbox"
+                  class="features-toggle"
+                  .checked=${featuresOn}
+                  .indeterminate=${live(featuresMixed)}
+                  @change=${this._featuresChanged}
+                />
+                <span>${this.t('editor.features')}</span>
+              </label>`,
+              'features'
             )}
+            ${
+              this._open.features
+                ? html`<div class="children">
+                    ${FEATURE_TILES.map(
+                      (tile) => html`
+                        <label class="check ${featuresOn ? '' : 'off'}">
+                          <input
+                            type="checkbox"
+                            class="tile-${tile}"
+                            .checked=${tiles.includes(tile)}
+                            ?disabled=${!featuresOn}
+                            @change=${(e: Event) => this._tileChanged(tile, e)}
+                          />
+                          <span>${this.t(FEATURE_LABEL_KEYS[tile])}</span>
+                        </label>
+                      `
+                    )}
+                  </div>`
+                : nothing
+            }
             ${this._row(
               html`<label class="check">
                 <input
@@ -631,6 +723,7 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
                   type="checkbox"
                   class="reset"
                   .checked=${resetOn}
+                  .indeterminate=${live(resetMixed)}
                   @change=${this._resetChanged}
                 />
                 <span>${this.t('editor.reset')}</span>
@@ -657,11 +750,6 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
                   </div>`
                 : nothing
             }
-            ${
-              resetOn && !reset.length
-                ? html`<div class="hint reset-hint indent">${this.t('editor.reset_empty')}</div>`
-                : nothing
-            }
           </div>
         </fieldset>
 
@@ -670,25 +758,47 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
           <div class="sub">
             ${STATUS_SECTIONS.map(
               (section) => html`
-                <label class="check">
-                  <input
-                    type="checkbox"
-                    .checked=${sections?.includes(section) ?? false}
-                    @change=${(e: Event) => this._sectionChanged(section, e)}
-                  />
-                  <span>${this.t(SECTION_LABEL_KEYS[section])}</span>
-                </label>
+                ${this._row(
+                  html`<label class="check">
+                    <input
+                      type="checkbox"
+                      class="section-${section}"
+                      .checked=${sections?.includes(section) ?? false}
+                      .indeterminate=${live(section === 'panel' && panelMixed)}
+                      @change=${(e: Event) => this._sectionChanged(section, e)}
+                    />
+                    <span>${this.t(SECTION_LABEL_KEYS[section])}</span>
+                  </label>`,
+                  section === 'panel' ? 'panel' : undefined
+                )}
+                ${
+                  section === 'panel' && this._open.panel
+                    ? html`<div class="children">
+                        <label class="check ${panelOn ? '' : 'off'}">
+                          <input
+                            type="checkbox"
+                            class="battery"
+                            .checked=${showBattery(this._config)}
+                            ?disabled=${!panelOn}
+                            @change=${this._batteryChanged}
+                          />
+                          <span>${this.t('editor.battery')}</span>
+                        </label>
+                        <label class="check ${panelOn ? '' : 'off'}">
+                          <input
+                            type="checkbox"
+                            class="deviations-badge"
+                            .checked=${showDeviationsBadge(this._config)}
+                            ?disabled=${!panelOn}
+                            @change=${this._deviationsBadgeChanged}
+                          />
+                          <span>${this.t('editor.deviations_badge')}</span>
+                        </label>
+                      </div>`
+                    : nothing
+                }
               `
             )}
-            <label class="check">
-              <input
-                type="checkbox"
-                class="battery"
-                .checked=${showBattery(this._config)}
-                @change=${this._batteryChanged}
-              />
-              <span>${this.t('editor.battery')}</span>
-            </label>
           </div>
         </fieldset>
       </div>
@@ -728,6 +838,9 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
       display: flex;
       align-items: center;
       gap: 8px;
+      /* Starts where a checkbox or radio does: theirs carry the browser's
+         default left margin. */
+      padding-left: 4px;
     }
     .number > span:first-child {
       min-width: 6em;
@@ -799,16 +912,20 @@ export class ClimateGroupHelperCardEditor extends LocalizeMixin(LitElement) {
       border-left: 1px dashed
         var(--divider-color, color-mix(in srgb, var(--primary-text-color) 20%, transparent));
     }
-    /* The views are the view switch's segments. */
-    .nested {
-      padding-left: 24px;
+    /* A row inside the options (one that expands further, and its siblings)
+       puts its chevron column into the indent, so its checkbox lines up with
+       every other option at that level (gutter 20px + gap 4px). Its own
+       options then hang off that chevron: 9px in from it, not from the
+       checkbox. */
+    .children > .row {
+      margin-left: -24px;
+    }
+    .children > .children {
+      margin-left: -15px;
     }
     /* Hints stay outside the collapsed options, at their level. */
     .indent {
       padding-left: 48px;
-    }
-    .indent-2 {
-      padding-left: 72px;
     }
     .hint {
       font-size: var(--ha-font-size-s, 0.75rem);

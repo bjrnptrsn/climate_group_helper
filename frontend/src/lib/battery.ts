@@ -97,16 +97,59 @@ export const lowBatteryMembers = (
   return result
 }
 
-/** The group's weakest battery, or `undefined` when no member reports a level. */
+/**
+ * A battery's reading as HA formats it (level, or Low/Normal); without HA's
+ * formatter the raw level, or `lowLabel` for a binary sensor that is `on`.
+ */
+export const batteryText = (
+  battery: HassEntity,
+  hass: Pick<HomeAssistant, 'formatEntityState'> | undefined,
+  lowLabel: string
+): string => {
+  const formatted = hass?.formatEntityState?.(battery, battery.state)
+  if (formatted) return formatted
+  if (!isBinary(battery)) return `${battery.state} %`
+  return battery.state === 'on' ? lowLabel : battery.state
+}
+
+/** A member's battery as the member list shows it. */
+export interface MemberBattery {
+  state: HassEntity
+  level: number
+}
+
+/**
+ * Each member's weakest battery; members without one are left out. At equal
+ * level a reading beats a plain on/off: the tooltip shows it.
+ */
+export const batteryByMember = (
+  members: readonly string[],
+  hass?: Hass
+): Record<string, MemberBattery> => {
+  const result: Record<string, MemberBattery> = {}
+  for (const [member, batteries] of memberBatteries(members, hass)) {
+    result[member] = batteries.reduce((weakest, b) =>
+      b.level < weakest.level ||
+      (b.level === weakest.level && isBinary(weakest.state) && !isBinary(b.state))
+        ? b
+        : weakest
+    )
+  }
+  return result
+}
+
+/**
+ * The group's weakest battery, or `undefined` when no member reports a level.
+ * Picked from `batteryByMember()`, so it is the battery the member list shows
+ * for that member.
+ */
 export const weakestBattery = (
   members: readonly string[],
   hass?: Hass
 ): { member: string; state: HassEntity; level: number } | undefined => {
   let weakest: { member: string; state: HassEntity; level: number } | undefined
-  for (const [member, batteries] of memberBatteries(members, hass)) {
-    for (const battery of batteries) {
-      if (!weakest || battery.level < weakest.level) weakest = { member, ...battery }
-    }
+  for (const [member, battery] of Object.entries(batteryByMember(members, hass))) {
+    if (!weakest || battery.level < weakest.level) weakest = { member, ...battery }
   }
   return weakest
 }

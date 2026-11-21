@@ -2,6 +2,7 @@
 import {
   mdiAccountArrowRight,
   mdiAccountGroup,
+  mdiAlert,
   mdiAlertOutline,
   mdiArrowOscillating,
   mdiBattery,
@@ -21,11 +22,15 @@ import {
   mdiCrownOutline,
   mdiCalendarClock,
   mdiDotsVertical,
+  mdiChartBoxOutline,
+  mdiCogOutline,
   mdiFan,
   mdiFire,
   mdiGestureTap,
   mdiInformationOutline,
+  mdiLanDisconnect,
   mdiLockOutline,
+  mdiPause,
   mdiPlusMinusVariant,
   mdiPower,
   mdiRestore,
@@ -47,6 +52,8 @@ export const MDI_THERMOSTAT = mdiThermostat
 export const MDI_RESTORE = mdiRestore
 export const MDI_WATER_PERCENT = mdiWaterPercent
 export const MDI_DOTS_VERTICAL = mdiDotsVertical
+export const MDI_CHART_BOX_OUTLINE = mdiChartBoxOutline
+export const MDI_COG_OUTLINE = mdiCogOutline
 export const MDI_CHEVRON_RIGHT = mdiChevronRight
 export const MDI_PLUS_MINUS_VARIANT = mdiPlusMinusVariant
 export const MDI_FIRE = mdiFire
@@ -62,10 +69,13 @@ export const MDI_ACCOUNT_ARROW_RIGHT = mdiAccountArrowRight
 export const MDI_ROCKET_LAUNCH = mdiRocketLaunch
 export const MDI_TIMER_SAND = mdiTimerSand
 export const MDI_LOCK_OUTLINE = mdiLockOutline
+export const MDI_LAN_DISCONNECT = mdiLanDisconnect
+export const MDI_ALERT = mdiAlert
 export const MDI_ALERT_OUTLINE = mdiAlertOutline
 export const MDI_INFORMATION_OUTLINE = mdiInformationOutline
 export const MDI_CROWN_OUTLINE = mdiCrownOutline
 export const MDI_CALENDAR_CLOCK = mdiCalendarClock
+export const MDI_PAUSE = mdiPause
 export const MDI_SYNC = mdiSync
 export const MDI_GESTURE_TAP = mdiGestureTap
 export const MDI_ACCOUNT_GROUP = mdiAccountGroup

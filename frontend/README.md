@@ -35,7 +35,11 @@ npm run dev
 opens a playground (`index.html`) with the card in demo mode: made-up groups
 and members that change every few seconds, no Home Assistant needed. Add
 `?lang=de` (or any other supported language) to the URL to switch the
-language; light and dark follow your system.
+language; light and dark follow your system. Add `?state=full` (or `boost`,
+`hold`, `window`, `presence`, `switch`, `off`, `range`, `bypass`, `fallback`,
+`virtual_preset`) to search forward from the current time and freeze on the
+first matching tick, or `?now=<timestamp>` to freeze an exact timestamp
+(`?now=` takes precedence over `?state=`).
 
 The playground only approximates Home Assistant: there is no theme and no
 `ha-card` styling, so `index.html` sets a few theme variables and draws the
@@ -97,13 +101,18 @@ What is specific to a group:
 | `master_entity_id` | The configured master device; missing without one. |
 | `master_fallback_active` | `true` while the master is offline and the group computes without it. |
 
+### Sensors
+
+| Attribute | |
+|---|---|
+| `unavailable_sensors` | Entity IDs of the sensors the group cannot read: missing (deleted or renamed), `unknown` or `unavailable`. Only sensors of a running feature — presence, window, external temperature/humidity, isolation. Present only while the list is non-empty. |
+
 ### Why the group is not acting
 
 | Attribute | |
 |---|---|
 | `blocking_reason` | `{"source": "...", "since": "<ISO>"}` — the blocker in charge, already prioritised (`switch` > `window` > `presence`). Render this; do not derive the priority yourself. After a restart, `since` counts from the restart. Missing when nothing blocks. |
 | `blocking_sources` | All active blockers, sorted alphabetically, not by priority: `presence`, `switch`, `window`. The raw list, for badges. |
-| `presence_fallback` | `true` while presence blocks and a presence sensor is offline — "sensor dead" rather than "away". |
 | `main_switch_entity_id` | The group's Main Switch (`switch.*`). Advanced Mode; missing until the switch is set up. |
 | `main_switch_action` | What the Main Switch does to the devices while off: `off`, `temperature` or `release`. Present together with `main_switch_entity_id`. |
 
@@ -227,7 +236,10 @@ window.customCards.push({ type: 'my-group-card', name: 'My group card' })
 ```
 
 `window.customCards` puts the card into the card picker; a static
-`getStubConfig()` can fill in a first group. Home Assistant's developer
+`getStubConfig()` can fill in a first group, and a `getEntitySuggestion(hass,
+entityId)` in the entry (returning `{ label, config }` or `null`) offers the
+card in the picker's "By entity" tab — a group is recognised by its
+`enabled_features` attribute. Home Assistant's developer
 documentation on custom cards covers the rest:
 <https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card>.
 

@@ -132,8 +132,8 @@
               "close_delay": "Délai Fermeture (s)"
             },
             "data_description": {
-              "window_mode": "Met le chauffage en pause ou abaisse la température lorsqu'une fenêtre surveillée est ouverte.",
-              "window_adopt_manual_changes": "Conserve les modifications faites pendant que les fenêtres sont ouvertes ; à la fermeture des fenêtres, elles ne sont appliquées qu'avec « État cible complet ». D'ici là, l'action fenêtre ouverte s'applique.",
+              "window_mode": "Active ou désactive le contrôle des fenêtres : met le chauffage en pause ou abaisse la température lorsqu'une fenêtre surveillée est ouverte.",
+              "window_adopt_manual_changes": "Conserve les modifications faites pendant que les fenêtres sont ouvertes. À la fermeture des fenêtres, elles ne sont appliquées qu'avec « État cible complet ». D'ici là, l'action fenêtre ouverte s'applique.",
               "window_action": "Action à effectuer lors de l'ouverture d'une fenêtre : Éteindre complètement ou définir une température spécifique (ex. protection contre le gel).",
               "window_temperature": "Température cible lorsque l'action 'Définir la température' est sélectionnée.",
               "window_restore_scope": "Ce qui est restauré à la fermeture de la fenêtre : l'état cible complet ou uniquement le réglage modifié par l'action fenêtre ouverte.",
@@ -696,7 +696,7 @@
       "fields": {
         "payload": {
           "name": "Charge utile",
-          "description": "Les préréglages d'exécution à définir, sous forme de YAML ou de mappage. Un préréglage défini sur null ou vide est supprimé ; un payload vide supprime tous les préréglages d'exécution. Voir la documentation pour le format et les exemples."
+          "description": "Les préréglages d'exécution à définir, sous forme de YAML ou de mappage. Un préréglage défini sur null ou vide est supprimé. Un payload vide supprime tous les préréglages d'exécution. Voir la documentation pour le format et les exemples."
         }
       }
     },
@@ -706,7 +706,7 @@
       "fields": {
         "hvac_mode": {
           "name": "Mode HVAC",
-          "description": "Le mode dans lequel le boost fonctionne. Par défaut, le mode actuel du groupe (un groupe éteint se réveille dans son dernier mode actif). Les modes sans point de consigne unique, ou un boost qu'aucun membre ne peut prendre, sont rejetés."
+          "description": "Le mode dans lequel le boost fonctionne. Par défaut, le mode actuel du groupe (un groupe éteint se réveille dans son dernier mode actif). Les modes sans point de consigne unique passent en Chauffage. Un boost qu'aucun membre ne peut prendre est rejeté."
         },
         "temperature": {
           "name": "Température",

@@ -17,7 +17,9 @@ export const tileStyles = css`
     padding: 6px 10px 6px 8px;
     box-sizing: border-box;
     border: 1px solid color-mix(in srgb, var(--primary-text-color) 8%, transparent);
-    border-radius: var(--ha-border-radius-lg, 16px);
+    /* Follows a rounder card (--cgh-surface-radius); a radius past half the
+       height draws a pill. */
+    border-radius: var(--cgh-surface-radius, var(--ha-border-radius-lg, 16px));
     background: color-mix(in srgb, var(--primary-text-color) 6%, transparent);
     color: var(--primary-text-color);
     font: inherit;

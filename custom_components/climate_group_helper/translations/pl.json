@@ -132,8 +132,8 @@
               "close_delay": "Opóźnienie Zamknięcia (s)"
             },
             "data_description": {
-              "window_mode": "Wstrzymuje ogrzewanie lub obniża temperaturę po otwarciu monitorowanego okna.",
-              "window_adopt_manual_changes": "Zachowaj zmiany wprowadzone przy otwartych oknach; po zamknięciu okien są stosowane tylko z „Cały stan docelowy”. Do tego czasu obowiązuje akcja po otwarciu okna.",
+              "window_mode": "Włącza lub wyłącza sterowanie oknami: wstrzymuje ogrzewanie lub obniża temperaturę po otwarciu monitorowanego okna.",
+              "window_adopt_manual_changes": "Zachowaj zmiany wprowadzone przy otwartych oknach. Po zamknięciu okien są stosowane tylko z „Cały stan docelowy”. Do tego czasu obowiązuje akcja po otwarciu okna.",
               "window_action": "Co zrobić po otwarciu okna: Wyłącz całkowicie lub ustaw określoną temperaturę (np. ochronę przed mrozem).",
               "window_temperature": "Temperatura docelowa, gdy wybrana jest akcja 'Ustaw temperaturę'.",
               "window_restore_scope": "Co jest przywracane po zamknięciu okna: cały stan docelowy lub tylko ustawienie zmienione przez Akcję po otwarciu okna.",
@@ -696,7 +696,7 @@
       "fields": {
         "payload": {
           "name": "Ładunek",
-          "description": "Profile czasu działania do ustawienia, jako YAML lub mapowanie. Profil ustawiony na null lub pusty zostaje usunięty; pusty payload usuwa wszystkie profile czasu działania. Zobacz dokumentację, aby zapoznać się z formatem i przykładami."
+          "description": "Profile czasu działania do ustawienia, jako YAML lub mapowanie. Profil ustawiony na null lub pusty zostaje usunięty. Pusty payload usuwa wszystkie profile czasu działania. Zobacz dokumentację, aby zapoznać się z formatem i przykładami."
         }
       }
     },
@@ -706,7 +706,7 @@
       "fields": {
         "hvac_mode": {
           "name": "Tryb HVAC",
-          "description": "Tryb, w którym działa boost. Domyślnie aktualny tryb grupy (wyłączona grupa budzi się w ostatnim aktywnym trybie). Tryby bez pojedynczego punktu nastawy lub boost, którego żaden członek nie może przyjąć, są odrzucane."
+          "description": "Tryb, w którym działa boost. Domyślnie aktualny tryb grupy (wyłączona grupa budzi się w ostatnim aktywnym trybie). Tryby bez pojedynczego punktu nastawy przechodzą na Grzanie. Boost, którego żaden członek nie może przyjąć, jest odrzucany."
         },
         "temperature": {
           "name": "Temperatura",

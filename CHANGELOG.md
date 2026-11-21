@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.20.0 - 2026-11-21
+
+### 🎛️ Dashboard Card
+
+*   **Compact Status**: The status shows what blocks the group or where its target comes from, usually on one line.
+
+*   **Schedule Line**: A line below the status shows when the current slot ends or the next one starts.
+
+*   **Clearer Deviations**: The deviations list unreachable devices and unreadable sensors, show each disputed setting on its own line, and wait a few seconds before showing a new disagreement.
+
+*   **Deviations Badge**: A warning symbol in the status area opens the deviations list.
+
+*   **Visible Pause**: A feature paused by a schedule slot or preset shows a pause sign on its badge.
+
+*   **Badges on One Line**: The feature badges stay on one line; on a narrow card they show only their icons.
+
+*   **Theme Corners**: The buttons follow your theme's card corners.
+
+*   **History and Settings Buttons**: Two new buttons open the group's history and settings; existing cards keep them hidden.
+
+*   **Tidier Card Editor**: The card editor is organised into expandable sections.
+
+*   **Suggested for Groups**: The card picker suggests the card for a group.
+
+*   **Batteries in the Member List**: The member list shows each device's battery level; tapping the battery in the status area opens it.
+
+### ✨ Improvements
+
+*   **Sensor Health for Automations**: The `presence_fallback` attribute is gone; `unavailable_sensors` lists every sensor the group cannot read instead.
+
+*   **New Languages**: The integration and the card are now available in Traditional Chinese, Brazilian Portuguese, Hungarian, Romanian and Greek.
+
 ## 1.19.0 - 2026-11-14
 
 ### ✨ Improvements

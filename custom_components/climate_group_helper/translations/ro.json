@@ -1,0 +1,799 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Asistent grup de climatizare",
+        "description": "Creați un controler virtual care sincronizează mai multe unități de încălzire/răcire. Grupul funcționează ca o singură entitate inteligentă în tabloul de bord și în automatizări, reunind stările și comenzile.",
+        "data": {
+          "name": "Numele grupului",
+          "entities": "Dispozitive de climatizare"
+        },
+        "data_description": {
+          "name": "Un nume ușor de recunoscut pentru grup (de ex. 'Sufragerie' sau 'Toată casa').",
+          "entities": "Selectați dispozitivele de climatizare (termostate, aparate de aer condiționat) care fac parte din acest grup."
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Trebuie să selectați cel puțin un dispozitiv de climatizare.",
+      "empty_name": "Introduceți un nume pentru grup."
+    },
+    "abort": {
+      "already_configured": "Acest grup este deja configurat.",
+      "single_instance_allowed": "Este permisă o singură instanță.",
+      "no_changes": "Nu s-a făcut nicio modificare."
+    }
+  },
+  "options": {
+    "flow_title": "Configurare grup",
+    "step": {
+      "init": {
+        "title": "Configurare grup de climatizare",
+        "sections": {
+          "members_section": {
+            "name": "Membri și moduri",
+            "description": "Adăugați dispozitive de climatizare și alegeți cum se combină capacitățile lor. Funcțiile avansate permit o entitate principală.",
+            "data": {
+              "entities": "Dispozitive de climatizare",
+              "master_entity": "Entitate principală",
+              "hvac_mode_strategy": "Strategie mod HVAC",
+              "feature_strategy": "Strategie funcții",
+              "union_out_of_bounds_action": "Acțiune în afara limitelor",
+              "union_unsupported_hvac_action": "Acțiune pentru mod HVAC nesuportat"
+            },
+            "data_description": {
+              "entities": "Adăugați sau eliminați dispozitive. Dispozitivele eliminate nu mai sunt controlate de grup.",
+              "master_entity": "Desemnați un membru ca entitate principală (lider). Este folosită pentru sincronizarea Principal/Blocare și pentru afișarea centralizată a țintei.",
+              "hvac_mode_strategy": "Strategia de calcul al stării grupului din membrii săi (de ex. dacă unul este pe 'încălzire' și altul pe 'oprit').",
+              "feature_strategy": "Stabilește ce funcții (de ex. presetări, moduri ventilator) sunt disponibile în grup când membrii au capacități diferite.",
+              "union_out_of_bounds_action": "Ce se face cu membrii care nu pot atinge temperatura țintă. Se aplică doar când Strategia funcțiilor este setată pe Reuniune.",
+              "union_unsupported_hvac_action": "Ce se face cu membrii care, tehnic, nu suportă modul HVAC țintă al grupului (de ex. aerul condiționat la încălzire). Se aplică doar când Strategia funcțiilor este setată pe Reuniune."
+            }
+          },
+          "temperature_section": {
+            "name": "Setări temperatură",
+            "description": "Configurați agregarea și precizia temperaturii. Funcțiile avansate adaugă senzori externi, calibrare și protecție împotriva înghețului.",
+            "data": {
+              "temp_target_avg": "Temperatură țintă",
+              "temp_use_master": "Folosește temperatura țintă a entității principale",
+              "temp_target_round": "Precizia temperaturii țintă",
+              "temp_current_avg": "Temperatură curentă",
+              "min_temp_off": "Temperatură minimă la oprire",
+              "temp_sensors": "Senzori externi de temperatură",
+              "temp_update_targets": "Scrie temperatura externă în entități",
+              "temp_calibration_mode": "Mod de calibrare",
+              "temp_inverted_offset_targets": "Ținte cu decalaj inversat",
+              "calibration_heartbeat": "Interval de calibrare (min)",
+              "calibration_ignore_off": "Ignoră membrii opriți",
+              "ignore_off_members_temperature": "Exclude membrii opriți din temperatură"
+            },
+            "data_description": {
+              "temp_target_avg": "Cum rezumă grupul temperaturile țintă ale membrilor săi.",
+              "temp_use_master": "Afișează valoarea țintă a entității principale ca temperatură țintă a grupului, în locul mediei membrilor. Revine la medie dacă entitatea principală nu este disponibilă. Afectează doar modul în care este afișată starea grupului — nu controlează și nu sincronizează membrii (pentru aceasta folosiți Modul de sincronizare: Principal/Blocare).",
+              "temp_target_round": "Se aplică doar valorilor trimise către dispozitive, nu valorilor curente/afișate.",
+              "temp_current_avg": "Cum rezumă grupul citirile senzorilor membrilor săi.",
+              "min_temp_off": "Trimite temperatura minimă a dispozitivului (de ex. 5°C) la oprirea grupului. Astfel, robinetele se închid complet pentru protecție împotriva înghețului.",
+              "temp_sensors": "Folosiți senzori externi în locul citirilor membrilor. Aceștia devin singura sursă pentru temperatura grupului.",
+              "temp_update_targets": "Scrie valoarea senzorului extern în entități numerice (de ex. decalaje de calibrare ale capetelor termostatice). Util pentru ca termostatele să cunoască temperatura reală din cameră.",
+              "temp_calibration_mode": "Absolut: trimite valoarea direct. Decalaj: trimite diferența (extern - intern cap termostatic). Scalat: trimite ca întreg x100 (de ex. 21.5 -> 2150).",
+              "temp_inverted_offset_targets": "Entitățile de calibrare ale dispozitivelor care funcționează invers: un decalaj mai mare le face să raporteze o temperatură mai mică. Folosit doar în modul Decalaj.",
+              "calibration_heartbeat": "Forțează periodic sincronizarea calibrării în entități, chiar dacă temperatura nu s-a schimbat. Setați 0 pentru dezactivare.",
+              "calibration_ignore_off": "Nu trimite actualizări de calibrare membrilor care sunt opriți.",
+              "ignore_off_members_temperature": "Exclude membrii opriți din calculul temperaturii curente și al temperaturii țintă."
+            }
+          },
+          "humidity_section": {
+            "name": "Setări umiditate",
+            "description": "Configurați agregarea și precizia umidității. Funcțiile avansate adaugă senzori externi.",
+            "data": {
+              "humidity_target_avg": "Umiditate țintă",
+              "humidity_use_master": "Folosește umiditatea țintă a entității principale",
+              "humidity_target_round": "Precizia umidității țintă",
+              "humidity_current_avg": "Umiditate curentă",
+              "humidity_sensors": "Senzori externi de umiditate",
+              "humidity_update_targets": "Scrie umiditatea externă în entități"
+            },
+            "data_description": {
+              "humidity_target_avg": "Cum rezumă grupul umiditățile țintă ale membrilor săi.",
+              "humidity_use_master": "Afișează valoarea țintă a entității principale ca umiditate țintă a grupului, în locul mediei membrilor. Revine la medie dacă entitatea principală nu este disponibilă. Afectează doar modul în care este afișată starea grupului — nu controlează și nu sincronizează membrii (pentru aceasta folosiți Modul de sincronizare: Principal/Blocare).",
+              "humidity_target_round": "Se aplică doar valorilor trimise către dispozitive, nu valorilor curente/afișate.",
+              "humidity_current_avg": "Cum rezumă grupul citirile senzorilor membrilor săi.",
+              "humidity_sensors": "Folosiți senzori externi în locul citirilor membrilor. Aceștia devin singura sursă pentru umiditatea grupului.",
+              "humidity_update_targets": "Scrie valoarea senzorului extern în entități numerice. Util pentru calibrarea dezumidificatoarelor."
+            }
+          },
+          "sync_section": {
+            "name": "Mod de sincronizare",
+            "description": "Stabilește ce se întâmplă când un dispozitiv membru este modificat direct (de ex. din propria aplicație sau de la butoanele fizice) — nu când controlați grupul în sine. Alegeți ce atribute sunt impuse.",
+            "data": {
+              "sync_mode": "Mod de sincronizare",
+              "sync_attributes": "Atribute sincronizate",
+              "ignore_off_members_sync": "Respectă membrii opriți (sincronizare)"
+            },
+            "data_description": {
+              "sync_mode": "Ce se face când un membru este modificat în afara grupului. Dezactivat: se ignoră. Oglindire: modificările sunt oglindite. Blocare: modificările sunt anulate. Oglindire/Blocare: atributele selectate sunt oglindite, celelalte anulate. Principal/Blocare: entitatea principală este oglindită, ceilalți anulați. Doar preluare: modificările sunt preluate fără a fi transmise mai departe.",
+              "sync_attributes": "Stabilește asupra căror atribute acționează Modul de sincronizare. Tratarea atributelor selectate și neselectate (oglindire, anulare sau ignorare) depinde de modul ales.",
+              "ignore_off_members_sync": "Membrii opriți manual sunt lăsați în pace. Starea lor nu este nici oglindită, nici anulată. Notă: comenzile directe către grup ajung întotdeauna la toți membrii, indiferent de această setare."
+            }
+          },
+          "window_section": {
+            "name": "Control ferestre",
+            "description": "Oprire sau temperatură proprie la deschiderea ferestrelor. Restabilire la închidere.",
+            "data": {
+              "window_mode": "Mod control ferestre",
+              "window_adopt_manual_changes": "Preia modificările manuale",
+              "window_action": "Acțiune la deschiderea ferestrei",
+              "window_temperature": "Temperatură cu fereastra deschisă",
+              "window_restore_scope": "Restabilire la închiderea ferestrei",
+              "room_sensor": "Senzor fereastră cameră",
+              "zone_sensor": "Senzor fereastră zonă",
+              "room_open_delay": "Întârziere deschidere cameră (secunde)",
+              "zone_open_delay": "Întârziere deschidere zonă (secunde)",
+              "close_delay": "Întârziere închidere (secunde)"
+            },
+            "data_description": {
+              "window_mode": "Activați sau dezactivați controlul ferestrelor: încălzirea se întrerupe sau temperatura scade când se deschide o fereastră monitorizată.",
+              "window_adopt_manual_changes": "Păstrează modificările făcute cât timp ferestrele sunt deschise. La închiderea ferestrelor se aplică doar cu Ținta completă. Până atunci se aplică Acțiunea la deschiderea ferestrei.",
+              "window_action": "Ce se face când fereastra se deschide: oprire completă sau setarea unei temperaturi anume (de ex. protecție împotriva înghețului).",
+              "window_temperature": "Temperatura țintă setată când este selectată acțiunea 'Temperatură'.",
+              "window_restore_scope": "Ce restabilește închiderea ferestrei: întreaga țintă sau doar setarea modificată de Acțiunea la deschiderea ferestrei.",
+              "room_sensor": "(Opțional) Senzor binar, input_boolean sau entitate de tip jaluzea pentru fereastra/ușa proprie a camerei.",
+              "zone_sensor": "(Opțional) Senzor binar, input_boolean sau entitate de tip jaluzea pentru ferestrele/ușile din zonă/etaj. Senzorul zonei trebuie să includă senzorul camerei.",
+              "room_open_delay": "Timpul de așteptare după deschiderea ferestrei camerei înainte de declanșarea acțiunii ferestrei.",
+              "zone_open_delay": "Timpul de așteptare după deschiderea unei ferestre din zonă înainte de declanșarea acțiunii ferestrei.",
+              "close_delay": "Timpul de așteptare după închiderea tuturor ferestrelor înainte de restabilirea stării anterioare."
+            }
+          },
+          "presence_section": {
+            "name": "Control prezență",
+            "description": "Gestionează setările de climatizare în funcție de prezența în cameră. După ce absența este detectată pe durata configurată, se declanșează acțiunea de absență. La întoarcere, setările anterioare sunt restabilite.",
+            "data": {
+              "presence_mode": "Mod control prezență",
+              "presence_sensor": "Declanșator prezență",
+              "presence_zone": "Zonă de prezență",
+              "presence_action": "Acțiune la absență",
+              "presence_away_offset": "Decalaj de temperatură la absență",
+              "presence_away_temperature": "Temperatură la absență",
+              "presence_away_preset": "Presetare la absență",
+              "presence_away_delay": "Întârziere absență (secunde)",
+              "presence_return_delay": "Întârziere întoarcere (secunde)",
+              "ignore_off_members_presence": "Respectă membrii opriți (prezență)"
+            },
+            "data_description": {
+              "presence_mode": "Activați sau dezactivați trecerea automată în modul de absență când este detectată absența.",
+              "presence_sensor": "Entitatea care raportează prezența în cameră. Puteți selecta mai mulți senzori (de ex. senzor de mișcare și telefon). Orice stare 'pornit' sau 'acasă' este considerată prezență.",
+              "presence_zone": "(Opțional) Selectați zonele în care se ia în calcul prezența. Dacă sunt definite, o persoană este 'prezentă' doar când se află într-una dintre aceste zone. Dacă lista este goală, persoana este 'prezentă' în orice zonă (cu excepția 'not_home').",
+              "presence_action": "Acțiunea de rezervă executată când este detectată absența.",
+              "presence_away_offset": "Decalaj față de ținta curentă în timpul absenței (de ex. -2° sau +2°). Schimbările din program din timpul absenței se aplică automat.",
+              "presence_away_temperature": "Temperatură fixă setată în timpul absenței.",
+              "presence_away_preset": "Presetarea activată în timpul absenței.",
+              "presence_away_delay": "Timpul de așteptare după ce senzorul raportează absența, înainte de activarea modului de absență.",
+              "presence_return_delay": "Timpul de așteptare după ce senzorul raportează prezența, înainte de restabilire.",
+              "ignore_off_members_presence": "Lasă în pace membrii care sunt opriți — la plecare, la întoarcere sau în ambele cazuri. Nu se aplică dacă Acțiunea la absență este \"Oprire\", deoarece grupul însuși a oprit membrii."
+            }
+          },
+          "schedule_section": {
+            "name": "Automatizare prin program",
+            "description": "Asociați o entitate de program sau de calendar pentru a automatiza setările de climatizare. Datele unui interval pot conține atribute de climatizare (temperature, hvac_mode) și meta-chei (turn_off, sync_mode, sync_attributes) pentru a ajusta comportamentul grupului pe fiecare interval.",
+            "data": {
+              "schedule_entity": "Entitate program / calendar principal",
+              "schedule_fallback_payload": "Stare de rezervă când programul / calendarul principal este inactiv (YAML)",
+              "schedule_bypass_entity": "Entitate program / calendar de excepție",
+              "retain_service_changes_schedule": "Păstrează modificările făcute prin serviciu (program)",
+              "ignore_off_members_schedule": "Respectă membrii opriți (program)",
+              "schedule_hold_duration": "Durata menținerii manuale"
+            },
+            "data_description": {
+              "schedule_entity": "Selectați o entitate schedule.* sau calendar.*. Pentru entitățile de program, datele intervalului sunt citite din atributele intervalului. Pentru entitățile de calendar, datele intervalului sunt citite ca YAML din câmpul de descriere al evenimentului. Chei suportate: atribute de climatizare și meta-chei.",
+              "schedule_fallback_payload": "Ține locul programului principal în afara intervalelor sale active, ca să nu fie nevoie de programe continue 24/7. Stratul de excepție funcționează în continuare ca de obicei și are prioritate cât timp este activ. Același format YAML ca mai sus (de ex. temperature: 17, hvac_mode: heat).",
+              "schedule_bypass_entity": "Strat opțional cu prioritate mai mare (de ex. un calendar de vacanță). Când este activ, datele intervalului său înlocuiesc programul principal. Datele intervalului sunt citite la fel: atribute pentru entitățile schedule.*, descriere YAML pentru entitățile calendar.*.",
+              "retain_service_changes_schedule": "Păstrează după o repornire modificările făcute prin serviciu la programul principal, programul de excepție, starea de rezervă și durata menținerii manuale. Altfel, revin la valorile implicite configurate.",
+              "ignore_off_members_schedule": "Programul NU pornește membrii care sunt opriți.",
+              "schedule_hold_duration": "Cât timp se menține o modificare manuală (de ex. temperatura sau pornirea/oprirea grupului) înainte ca programul să continue cu intervalul valabil în acel moment. 0 dezactivează menținerea."
+            }
+          },
+          "presets_section": {
+            "name": "Presetări de grup",
+            "description": "Definiți presetări proprii cu nume pentru grup (de ex. eco, oaspeți, aerisire). La selectare, atributele ei se aplică tuturor membrilor deodată. O presetare de grup înlocuiește presetarea cu același nume a unui membru. Presetările de rulare setate prin serviciul set_group_preset se adaugă la cele introduse aici și au prioritate față de una cu același nume.",
+            "data": {
+              "group_presets": "Presetări de grup (YAML)",
+              "retain_service_changes_presets": "Păstrează modificările făcute prin serviciu (presetări)"
+            },
+            "data_description": {
+              "group_presets": "Presetările dumneavoastră în YAML: un nume ales liber pentru fiecare presetare, fiecare cu atributele pe care trebuie să le aplice (temperature, hvac_mode, fan_mode, swing_mode). O presetare aplică doar atributele pe care le enumeră. Formatul și exemple gata de copiat găsiți în documentație.",
+              "retain_service_changes_presets": "Păstrează după o repornire presetările de rulare setate prin serviciul set_group_preset. Fără aceasta, grupul pornește doar cu presetările introduse aici."
+            }
+          },
+          "temp_offsets_section": {
+            "name": "Decalaje membri",
+            "description": "Aplică decalaje de temperatură individuale, astfel încât anumiți membri să funcționeze proporțional mai cald sau mai rece decât temperatura țintă a grupului.",
+            "data": {
+              "member_offset_correction": "Corectează decalajul membrilor"
+            },
+            "data_description": {
+              "member_offset_correction": "Când este activat, decalajul fiecărui membru se scade înainte de calculul mediei, astfel încât grupul afișează valoarea țintă logică în locul mediei fizice brute."
+            }
+          },
+          "isolation_section": {
+            "name": "Izolare membri",
+            "description": "Izolează temporar anumiți membri cât timp un declanșator este activ. Membrii izolați primesc acțiunea de izolare (implicit oprire) și sunt excluși din calculele grupului.",
+            "data": {
+              "isolation_rule_count": "Număr de reguli",
+              "isolation_rule_1_entities": "Entități de izolat",
+              "isolation_rule_1_trigger": "Tip declanșator",
+              "isolation_rule_1_sensor": "Senzor de izolare",
+              "isolation_rule_1_hvac_modes": "Declanșator mod HVAC",
+              "isolation_rule_1_activate_delay": "Întârziere activare (secunde)",
+              "isolation_rule_1_restore_delay": "Întârziere restabilire (secunde)",
+              "isolation_rule_1_action_type": "Acțiune de izolare",
+              "isolation_rule_1_action_hvac_mode": "Mod HVAC",
+              "isolation_rule_1_action_preset_mode": "Presetare"
+            },
+            "data_description": {
+              "isolation_rule_count": "Câte reguli de izolare independente se afișează. Salvați după modificare pentru a afișa sau ascunde regulile suplimentare.",
+              "isolation_rule_1_entities": "Membrii grupului care se izolează cât timp declanșatorul este activ.",
+              "isolation_rule_1_trigger": "Alegeți ce activează izolarea: un senzor binar, un anumit mod HVAC al grupului sau un membru oprit manual.",
+              "isolation_rule_1_sensor": "(Declanșator senzor) Senzor binar care declanșează izolarea când este PORNIT.",
+              "isolation_rule_1_hvac_modes": "(Declanșator mod HVAC) Izolarea se activează când modul țintă al grupului este unul dintre acestea.",
+              "isolation_rule_1_activate_delay": "(Doar declanșator senzor / mod HVAC) Timpul de așteptare după activarea declanșatorului înainte de izolarea membrilor.",
+              "isolation_rule_1_restore_delay": "(Doar declanșator senzor / mod HVAC) Timpul de așteptare după dezactivarea declanșatorului înainte de readucerea membrilor la starea țintă a grupului.",
+              "isolation_rule_1_action_type": "Alegeți ce se face când acest membru este izolat: setarea unui mod HVAC sau a unei presetări.",
+              "isolation_rule_1_action_hvac_mode": "Modul HVAC aplicat membrului izolat.",
+              "isolation_rule_1_action_preset_mode": "Presetarea aplicată membrului izolat."
+            }
+          },
+          "isolation_rule_2_section": {
+            "name": "Izolare membri – Regula 2",
+            "description": "A doua regulă de izolare, opțională, cu declanșator și listă de membri proprii.",
+            "data": {
+              "isolation_rule_2_entities": "Entități de izolat",
+              "isolation_rule_2_trigger": "Tip declanșator",
+              "isolation_rule_2_sensor": "Senzor de izolare",
+              "isolation_rule_2_hvac_modes": "Declanșator mod HVAC",
+              "isolation_rule_2_activate_delay": "Întârziere activare (secunde)",
+              "isolation_rule_2_restore_delay": "Întârziere restabilire (secunde)",
+              "isolation_rule_2_action_type": "Acțiune de izolare",
+              "isolation_rule_2_action_hvac_mode": "Mod HVAC",
+              "isolation_rule_2_action_preset_mode": "Presetare"
+            },
+            "data_description": {
+              "isolation_rule_2_entities": "Membrii grupului care se izolează cât timp declanșatorul este activ.",
+              "isolation_rule_2_trigger": "Alegeți ce activează izolarea: un senzor binar, un anumit mod HVAC al grupului sau un membru oprit manual.",
+              "isolation_rule_2_sensor": "(Declanșator senzor) Senzor binar care declanșează izolarea când este PORNIT.",
+              "isolation_rule_2_hvac_modes": "(Declanșator mod HVAC) Izolarea se activează când modul țintă al grupului este unul dintre acestea.",
+              "isolation_rule_2_activate_delay": "(Doar declanșator senzor / mod HVAC) Timpul de așteptare după activarea declanșatorului înainte de izolarea membrilor.",
+              "isolation_rule_2_restore_delay": "(Doar declanșator senzor / mod HVAC) Timpul de așteptare după dezactivarea declanșatorului înainte de readucerea membrilor la starea țintă a grupului.",
+              "isolation_rule_2_action_type": "Alegeți ce se face când acest membru este izolat: setarea unui mod HVAC sau a unei presetări.",
+              "isolation_rule_2_action_hvac_mode": "Modul HVAC aplicat membrului izolat.",
+              "isolation_rule_2_action_preset_mode": "Presetarea aplicată membrului izolat."
+            }
+          },
+          "isolation_rule_3_section": {
+            "name": "Izolare membri – Regula 3",
+            "description": "A treia regulă de izolare, opțională, cu declanșator și listă de membri proprii.",
+            "data": {
+              "isolation_rule_3_entities": "Entități de izolat",
+              "isolation_rule_3_trigger": "Tip declanșator",
+              "isolation_rule_3_sensor": "Senzor de izolare",
+              "isolation_rule_3_hvac_modes": "Declanșator mod HVAC",
+              "isolation_rule_3_activate_delay": "Întârziere activare (secunde)",
+              "isolation_rule_3_restore_delay": "Întârziere restabilire (secunde)",
+              "isolation_rule_3_action_type": "Acțiune de izolare",
+              "isolation_rule_3_action_hvac_mode": "Mod HVAC",
+              "isolation_rule_3_action_preset_mode": "Presetare"
+            },
+            "data_description": {
+              "isolation_rule_3_entities": "Membrii grupului care se izolează cât timp declanșatorul este activ.",
+              "isolation_rule_3_trigger": "Alegeți ce activează izolarea: un senzor binar, un anumit mod HVAC al grupului sau un membru oprit manual.",
+              "isolation_rule_3_sensor": "(Declanșator senzor) Senzor binar care declanșează izolarea când este PORNIT.",
+              "isolation_rule_3_hvac_modes": "(Declanșator mod HVAC) Izolarea se activează când modul țintă al grupului este unul dintre acestea.",
+              "isolation_rule_3_activate_delay": "(Doar declanșator senzor / mod HVAC) Timpul de așteptare după activarea declanșatorului înainte de izolarea membrilor.",
+              "isolation_rule_3_restore_delay": "(Doar declanșator senzor / mod HVAC) Timpul de așteptare după dezactivarea declanșatorului înainte de readucerea membrilor la starea țintă a grupului.",
+              "isolation_rule_3_action_type": "Alegeți ce se face când acest membru este izolat: setarea unui mod HVAC sau a unei presetări.",
+              "isolation_rule_3_action_hvac_mode": "Modul HVAC aplicat membrului izolat.",
+              "isolation_rule_3_action_preset_mode": "Presetarea aplicată membrului izolat."
+            }
+          },
+          "isolation_rule_4_section": {
+            "name": "Izolare membri – Regula 4",
+            "description": "A patra regulă de izolare, opțională, cu declanșator și listă de membri proprii.",
+            "data": {
+              "isolation_rule_4_entities": "Entități de izolat",
+              "isolation_rule_4_trigger": "Tip declanșator",
+              "isolation_rule_4_sensor": "Senzor de izolare",
+              "isolation_rule_4_hvac_modes": "Declanșator mod HVAC",
+              "isolation_rule_4_activate_delay": "Întârziere activare (secunde)",
+              "isolation_rule_4_restore_delay": "Întârziere restabilire (secunde)",
+              "isolation_rule_4_action_type": "Acțiune de izolare",
+              "isolation_rule_4_action_hvac_mode": "Mod HVAC",
+              "isolation_rule_4_action_preset_mode": "Presetare"
+            },
+            "data_description": {
+              "isolation_rule_4_entities": "Membrii grupului care se izolează cât timp declanșatorul este activ.",
+              "isolation_rule_4_trigger": "Alegeți ce activează izolarea: un senzor binar, un anumit mod HVAC al grupului sau un membru oprit manual.",
+              "isolation_rule_4_sensor": "(Declanșator senzor) Senzor binar care declanșează izolarea când este PORNIT.",
+              "isolation_rule_4_hvac_modes": "(Declanșator mod HVAC) Izolarea se activează când modul țintă al grupului este unul dintre acestea.",
+              "isolation_rule_4_activate_delay": "(Doar declanșator senzor / mod HVAC) Timpul de așteptare după activarea declanșatorului înainte de izolarea membrilor.",
+              "isolation_rule_4_restore_delay": "(Doar declanșator senzor / mod HVAC) Timpul de așteptare după dezactivarea declanșatorului înainte de readucerea membrilor la starea țintă a grupului.",
+              "isolation_rule_4_action_type": "Alegeți ce se face când acest membru este izolat: setarea unui mod HVAC sau a unei presetări.",
+              "isolation_rule_4_action_hvac_mode": "Modul HVAC aplicat membrului izolat.",
+              "isolation_rule_4_action_preset_mode": "Presetarea aplicată membrului izolat."
+            }
+          },
+          "member_template_section": {
+            "name": "Șablon membri",
+            "description": "Prezintă membrii cu capacități pe care dispozitivul lor nu le oferă nativ. Șablon de interval: membrii cu o singură valoare țintă funcționează ca dispozitive cu interval încălzire/răcire — comenzile de interval devin încălzire sau răcire în funcție de temperatura curentă a fiecărui membru. Șablon de oprire: caloriferele fără mod oprit sunt oprite prin setarea lor pe încălzire la propria temperatură minimă.",
+            "data": {
+              "range_template_enabled": "Activează șablonul de interval",
+              "range_template_deadband_action": "Acțiune în banda moartă",
+              "range_template_heat_entities": "Dispozitive de încălzire",
+              "range_template_cool_entities": "Dispozitive de răcire",
+              "range_template_conditional": "Încălzire/Răcire condiționată",
+              "range_template_humidity_enabled": "Dezumidificare în banda moartă",
+              "range_template_humidity_action": "Acțiune de umiditate",
+              "range_template_humidity_hysteresis": "Histerezis umiditate",
+              "range_template_humidity_deactivation_delay": "Întârziere dezactivare",
+              "off_template_enabled": "Activează șablonul de oprire"
+            },
+            "data_description": {
+              "range_template_enabled": "Prezintă automat toți membrii cu o singură valoare țintă (fără încălzire/răcire nativă) ca dispozitive virtuale cu interval.",
+              "range_template_deadband_action": "Acțiunea executată când temperatura curentă se află în intervalul țintă (banda moartă). 'Niciuna' nu schimbă modul, dar ține la limita corespunzătoare un dispozitiv care continuă să încălzească sau să răcească.",
+              "range_template_heat_entities": "Membrii care au voie să încălzească. Membrii nelistați nu sunt restricționați (decide capacitatea fizică). Un rol poate doar restrânge, niciodată extinde capacitățile unui dispozitiv.",
+              "range_template_cool_entities": "Membrii care au voie să răcească. Membrii nelistați nu sunt restricționați (decide capacitatea fizică). Un rol poate doar restrânge, niciodată extinde capacitățile unui dispozitiv.",
+              "range_template_conditional": "Oferă Încălzire/Răcire și intervalul de temperatură doar cât timp cel puțin un membru accesibil poate încălzi și unul poate răci.",
+              "range_template_humidity_enabled": "În intervalul de temperatură țintă, trece la acțiunea de umiditate dacă umiditatea curentă depășește umiditatea țintă.",
+              "range_template_humidity_action": "Acțiunea executată când umiditatea curentă depășește umiditatea țintă în banda moartă.",
+              "range_template_humidity_hysteresis": "Bandă de histerezis (trigger Schmitt) în jurul umidității țintă, pentru a evita porniri și opriri dese.",
+              "range_template_humidity_deactivation_delay": "Întârziere înainte de dezactivarea acțiunii de umiditate după ce umiditatea scade sub prag.",
+              "off_template_enabled": "Caloriferele fără mod oprit sunt setate pe încălzire la propria temperatură minimă când grupul se oprește. Un calorifer aflat la temperatura minimă este apoi considerat oprit. Pentru dispozitivele cu mod oprit, folosiți în schimb 'Temperatură minimă la oprire'."
+            }
+          },
+          "advanced_section": {
+            "name": "Setări avansate",
+            "description": "Alegeți ce face comutatorul principal cât timp este oprit. Ajustați temporizarea comenzilor și reîncercările. Activați atribute de diagnosticare și senzori de configurare.",
+            "data": {
+              "switch_action": "Acțiune comutator principal",
+              "switch_temperature": "Temperatură comutator principal",
+              "debounce_delay": "Întârziere debounce (secunde)",
+              "retry_attempts": "Număr de reîncercări",
+              "retry_delay": "Întârziere între reîncercări (secunde)",
+              "force_retry": "Forțează reîncercarea",
+              "member_command_delay": "Întârziere între comenzile către membri (secunde)",
+              "grace_period": "Perioadă de grație pentru interfața optimistă (secunde)",
+              "expose_smart_sensors": "Expune senzori inteligenți",
+              "expose_member_entities": "Expune lista de membri",
+              "expose_config": "Expune senzorul de configurare"
+            },
+            "data_description": {
+              "switch_action": "Ce primesc dispozitivele cât timp comutatorul principal este oprit: Oprire, Setare temperatură (o valoare fixă, de ex. protecție împotriva înghețului — modifică doar valoarea țintă a dispozitivelor care funcționează) sau Eliberare dispozitive (grupul lasă dispozitivele în pace și le controlați direct).",
+              "switch_temperature": "Temperatura țintă setată când este selectată acțiunea 'Setare temperatură'.",
+              "debounce_delay": "Timpul de așteptare înainte de trimiterea comenzilor. Valorile mai mari previn rafalele de comenzi la mișcarea glisoarelor, dar răspunsul pare mai lent.",
+              "retry_attempts": "De câte ori se retrimite o comandă dacă un dispozitiv nu răspunde. Setați 0 pentru dezactivare.",
+              "retry_delay": "Pauză între reîncercări. Un scurt răgaz pentru dispozitive poate îmbunătăți fiabilitatea.",
+              "force_retry": "Retrimite întotdeauna comenzile către toți membrii, chiar dacă raportează deja starea țintă.",
+              "member_command_delay": "Pauză între comenzile către fiecare membru. Ajută când comandarea mai multor dispozitive deodată supraîncarcă rețeaua sau puntea (de ex. emițătoare IR, unele coordonatoare Zigbee). Setați 0 pentru dezactivare.",
+              "grace_period": "Cât timp afișează grupul valoarea comandată înainte de a trece la media membrilor. Previne pâlpâirea interfeței când dispozitivele lente (punți cloud, Zigbee) trimit înapoi starea veche. Setați 0 pentru dezactivare.",
+              "expose_smart_sensors": "Creează entități senzor suplimentare pentru temperatura și umiditatea grupului (utile pentru grafice).",
+              "expose_member_entities": "Adaugă atributul 'entity_id' cu toți membrii, astfel încât fereastra de detalii afișează lista membrilor.",
+              "expose_config": "Creează un senzor de diagnosticare (sensor.*_configuration) care expune setările portabile ca atribut JSON. Util pentru copierea setărilor între grupuri prin automatizări."
+            }
+          }
+        },
+        "data": {
+          "advanced_mode": "Funcții avansate",
+          "expand_sections": "Extinde implicit toate secțiunile"
+        }
+      }
+    },
+    "error": {
+      "no_entities": "Cel puțin un dispozitiv de climatizare trebuie să rămână în grup.",
+      "master_not_in_members": "Entitatea principală trebuie să fie membră a grupului.",
+      "master_refresh_notice": "Entitate principală adăugată. Sunt disponibile opțiuni noi.",
+      "master_options_notice": "În această secțiune sunt disponibile opțiuni noi pentru entitatea principală.",
+      "isolation_all_selected": "Cel puțin un membru trebuie să rămână în afara izolării.",
+      "isolation_entity_overlap": "Fiecare membru poate apărea într-o singură regulă de izolare.",
+      "isolation_action_preset_required": "Selectați o presetare pentru acțiunea de izolare.",
+      "isolation_sensor_required": "Selectați un senzor pentru regula de izolare sau setați declanșatorul pe Dezactivat.",
+      "isolation_hvac_modes_required": "Selectați cel puțin un mod pentru regula de izolare sau setați declanșatorul pe Dezactivat.",
+      "window_temperature_required": "Setați o temperatură pentru fereastră sau schimbați acțiunea ferestrei.",
+      "switch_temperature_required": "Setați o temperatură pentru comutatorul principal sau schimbați acțiunea comutatorului principal.",
+      "presence_action_value_required": "Setați o valoare pentru acțiunea de absență selectată sau schimbați acțiunea.",
+      "schedule_fallback_payload_invalid": "Format YAML nevalid în starea de rezervă a programului. Trebuie să fie o mapare cheie-valoare validă.",
+      "group_presets_invalid": "Format YAML nevalid în presetările de grup. Trebuie să fie o mapare cheie-valoare validă.",
+      "preset_name_collision_notice": "Una sau mai multe presetări de grup au același nume ca presetările proprii ale membrilor. Definiția grupului le va înlocui.",
+      "sensor_loop_protection": "Nu se poate folosi o entitate Climate Group Helper ca senzor extern sau țintă de calibrare — s-ar crea o buclă de reacție."
+    },
+    "abort": {
+      "no_changes": "Nu s-au detectat modificări."
+    }
+  },
+  "selector": {
+    "hvac_mode_strategy": {
+      "options": {
+        "normal": "Normal – Grupul preia modul cel mai des întâlnit la membri",
+        "off_priority": "Prioritate oprit – Dacă un membru este oprit, întregul grup este oprit",
+        "auto": "Automat – Comutare inteligentă între Normal și Prioritate oprit"
+      }
+    },
+    "feature_strategy": {
+      "options": {
+        "intersection": "Intersecție – Oferă funcții doar dacă TOȚI membrii le au",
+        "union": "Reuniune – Oferă toate funcțiile prezente la ORICARE membru"
+      }
+    },
+    "temp_target_avg": {
+      "options": {
+        "mean": "Medie",
+        "median": "Mediană (valoarea din mijloc)",
+        "min": "Minim (cea mai mică)",
+        "max": "Maxim (cea mai mare)"
+      }
+    },
+    "temp_target_round": {
+      "options": {
+        "none": "Fără rotunjire (exact)",
+        "half": "Jumătate de grad (0.5°)",
+        "integer": "Numere întregi (1°)"
+      }
+    },
+    "temp_current_avg": {
+      "options": {
+        "mean": "Medie",
+        "median": "Mediană (ignoră valorile extreme)",
+        "min": "Minim (cea mai mică)",
+        "max": "Maxim (cea mai mare)"
+      }
+    },
+    "temp_calibration_mode": {
+      "options": {
+        "absolute": "Absolut – Trimite valoarea direct (standard)",
+        "offset": "Decalaj – Trimite diferența (extern - intern cap termostatic)",
+        "scaled": "Scalat – Întreg x100 (Danfoss Ally)"
+      }
+    },
+    "humidity_target_avg": {
+      "options": {
+        "mean": "Medie",
+        "median": "Mediană (valoarea din mijloc)",
+        "min": "Minim (cea mai mică)",
+        "max": "Maxim (cea mai mare)"
+      }
+    },
+    "humidity_target_round": {
+      "options": {
+        "none": "Fără rotunjire (exact)",
+        "half": "Jumătate de procent (0.5%)",
+        "integer": "Numere întregi (1%)"
+      }
+    },
+    "humidity_current_avg": {
+      "options": {
+        "mean": "Medie",
+        "median": "Mediană (ignoră valorile extreme)",
+        "min": "Minim (cea mai mică)",
+        "max": "Maxim (cea mai mare)"
+      }
+    },
+    "sync_mode": {
+      "options": {
+        "disabled": "Dezactivat – Fără sincronizare automată între membri",
+        "mirror": "Oglindire – Modificările manuale pe un dispozitiv actualizează toți membrii",
+        "lock": "Blocare – Anulează modificările manuale pentru a corespunde stării grupului",
+        "mirror_lock": "Oglindire/Blocare – Atributele selectate sunt oglindite, celelalte sunt strict blocate",
+        "master_lock": "Principal/Blocare – Doar entitatea principală poate schimba ținta grupului",
+        "adopt_only": "Doar preluare – Grupul preia modificările manuale de la un dispozitiv, fără a le transmite celorlalți"
+      }
+    },
+    "sync_attributes": {
+      "options": {
+        "hvac_mode": "Mod HVAC",
+        "preset_mode": "Presetare",
+        "temperature": "Temperatură (țintă)",
+        "target_temp_high": "Temperatură țintă maximă (interval)",
+        "target_temp_low": "Temperatură țintă minimă (interval)",
+        "fan_mode": "Mod ventilator",
+        "swing_mode": "Baleiaj vertical",
+        "swing_horizontal_mode": "Baleiaj orizontal",
+        "humidity": "Umiditate (țintă)"
+      }
+    },
+    "window_mode": {
+      "options": {
+        "disabled": "Dezactivat – Controlul ferestrelor este inactiv",
+        "enabled": "Activat – Controlul ferestrelor este activ"
+      }
+    },
+    "window_adopt_manual_changes": {
+      "options": {
+        "off": "Oprit – Se renunță la modificări",
+        "all": "Toate – Modificările se păstrează până la închiderea ferestrelor",
+        "master_only": "Doar principal – Se păstrează doar modificările de pe dispozitivul principal"
+      }
+    },
+    "window_action": {
+      "options": {
+        "off": "Oprire",
+        "temperature": "Setare temperatură"
+      }
+    },
+    "window_restore_scope": {
+      "options": {
+        "full": "Ținta completă",
+        "action": "Doar setarea modificată"
+      }
+    },
+    "switch_action": {
+      "options": {
+        "off": "Oprire",
+        "temperature": "Setare temperatură",
+        "release": "Eliberare dispozitive"
+      }
+    },
+    "union_out_of_bounds_action": {
+      "options": {
+        "off": "Oprire",
+        "clamp": "Limitare la prag"
+      }
+    },
+    "union_unsupported_hvac_action": {
+      "options": {
+        "ignore": "Ignorare",
+        "off": "Oprire"
+      }
+    },
+    "isolation_rule_count": {
+      "options": {
+        "1": "1 regulă",
+        "2": "2 reguli",
+        "3": "3 reguli",
+        "4": "4 reguli"
+      }
+    },
+    "isolation_trigger": {
+      "options": {
+        "disabled": "Dezactivat – Izolarea membrilor este dezactivată",
+        "sensor": "Senzor binar – Izolare când senzorul este PORNIT",
+        "hvac_mode": "Mod HVAC – Izolare când modul grupului corespunde",
+        "member_off": "Membru oprit – Izolare când un membru este oprit manual"
+      }
+    },
+    "isolation_action_type": {
+      "options": {
+        "hvac_mode": "Setare mod HVAC",
+        "preset_mode": "Setare presetare"
+      }
+    },
+    "presence_mode": {
+      "options": {
+        "disabled": "Dezactivat – Controlul prezenței este inactiv",
+        "enabled": "Activat – Mod de absență"
+      }
+    },
+    "presence_action": {
+      "options": {
+        "off": "Oprire",
+        "away_offset": "Decalaj la absență",
+        "away_temperature": "Temperatură la absență",
+        "away_preset": "Presetare la absență"
+      }
+    },
+    "ignore_off_members_presence": {
+      "options": {
+        "disabled": "Dezactivat – Membrii opriți sunt porniți",
+        "away": "La plecare",
+        "home": "La întoarcere",
+        "away_home": "La plecare și la întoarcere"
+      }
+    },
+    "range_template_deadband_action": {
+      "options": {
+        "none": "Niciuna",
+        "off": "Oprire",
+        "fan_only": "Doar ventilare"
+      }
+    },
+    "range_template_humidity_action": {
+      "options": {
+        "fan_only": "Doar ventilare",
+        "dry": "Dezumidificare"
+      }
+    }
+  },
+  "entity": {
+    "climate": {
+      "climate_group_helper": {
+        "name": "Grup de climatizare",
+        "state_attributes": {
+          "last_active_hvac_mode": {
+            "name": "Ultimul mod activ"
+          },
+          "target_hvac_mode": {
+            "name": "Mod HVAC țintă"
+          },
+          "preset_mode": {
+            "state": {
+              "eco": "Eco",
+              "away": "Absent",
+              "home": "Acasă",
+              "sleep": "Somn",
+              "comfort": "Confort",
+              "activity": "Activitate",
+              "standby": "Așteptare",
+              "economy": "Economic",
+              "building_protection": "Protecția clădirii",
+              "boost": "Boost"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "group_offset": {
+        "name": "Decalaj grup"
+      }
+    },
+    "sensor": {
+      "temperature": {
+        "name": "Temperatură"
+      },
+      "humidity": {
+        "name": "Umiditate"
+      },
+      "configuration": {
+        "name": "Configurare"
+      }
+    },
+    "switch": {
+      "main_switch": {
+        "name": "Comutator principal"
+      }
+    }
+  },
+  "services": {
+    "set_schedule_entity": {
+      "name": "Setare entitate program",
+      "description": "Schimbă în timpul funcționării entitatea de program sau de calendar activă. Dacă lipsește sau este null, grupul revine la valoarea implicită configurată și reaplică intervalul curent.",
+      "fields": {
+        "schedule_entity": {
+          "name": "Entitate program / calendar",
+          "description": "Entitatea schedule.* sau calendar.* de activat (de ex. schedule.holiday sau calendar.vacation). Setați null sau gol pentru a restabili valoarea implicită configurată."
+        }
+      }
+    },
+    "set_schedule_bypass_entity": {
+      "name": "Setare entitate program de excepție",
+      "description": "Schimbă în timpul funcționării entitatea de excepție activă (de ex. pentru a alterna între calendare de vacanță diferite). Setați null pentru a restabili valoarea implicită configurată.",
+      "fields": {
+        "schedule_bypass_entity": {
+          "name": "Entitate de excepție",
+          "description": "Entitatea schedule.* sau calendar.* folosită ca excepție (de ex. calendar.vacation). Setați null sau gol pentru a restabili valoarea implicită configurată."
+        }
+      }
+    },
+    "set_schedule_fallback_payload": {
+      "name": "Setare stare de rezervă a programului",
+      "description": "Setează sau șterge o stare de rezervă aplicată când programul principal este oprit. Înlocuiește starea de rezervă configurată.",
+      "fields": {
+        "fallback_payload": {
+          "name": "Stare de rezervă",
+          "description": "Starea de rezervă de climatizare ca YAML sau mapare (de ex. 'temperature: 17.0\\nhvac_mode: heat'). Setați null sau gol pentru a restabili valoarea implicită configurată."
+        }
+      }
+    },
+    "set_schedule_hold_duration": {
+      "name": "Setare durată de menținere a programului",
+      "description": "Setează sau șterge o durată de menținere manuală: cât timp se menține o modificare manuală înainte ca programul să continue. Înlocuiește durata configurată. Trecerea la 0 încheie imediat o menținere în curs.",
+      "fields": {
+        "duration": {
+          "name": "Durată (minute)",
+          "description": "Durata menținerii în minute. 0 dezactivează menținerea. Lăsați gol pentru a restabili durata configurată."
+        }
+      }
+    },
+    "set_group_preset": {
+      "name": "Setare presetare de grup",
+      "description": "Setează, modifică sau elimină presetările de rulare ale grupului. Acestea se adaugă la presetările din setările grupului și au prioritate față de una cu același nume.",
+      "fields": {
+        "payload": {
+          "name": "Date",
+          "description": "Presetările de rulare de setat, ca YAML sau mapare. O presetare setată pe null sau gol este eliminată. Datele goale elimină toate presetările de rulare. Formatul și exemple găsiți în documentație."
+        }
+      }
+    },
+    "boost": {
+      "name": "Boost",
+      "description": "Setează temporar grupul la o temperatură țintă pentru o durată fixă. Când timpul expiră, grupul revine automat la intervalul activ al programului (dacă este configurat) sau la starea țintă anterioară.",
+      "fields": {
+        "hvac_mode": {
+          "name": "Mod HVAC",
+          "description": "Modul în care rulează boost-ul. Implicit, modul curent al grupului (un grup oprit pornește în ultimul mod activ). Modurile fără o singură valoare țintă trec pe Încălzire. Un boost pe care niciun membru nu îl poate prelua este respins."
+        },
+        "temperature": {
+          "name": "Temperatură",
+          "description": "Temperatura țintă absolută în timpul boost-ului (de ex. 24.0). Nu se poate folosi împreună cu temperature_offset."
+        },
+        "temperature_offset": {
+          "name": "Decalaj de temperatură",
+          "description": "Decalaj relativ adăugat la temperatura țintă curentă (de ex. +3.0 sau -2.0). Nu se poate folosi împreună cu temperature."
+        },
+        "duration": {
+          "name": "Durată (minute)",
+          "description": "Câte minute trebuie să dureze boost-ul."
+        }
+      }
+    },
+    "apply_config": {
+      "name": "Aplicare configurație",
+      "description": "Aplică o configurație JSON portabilă unui grup. Util pentru copierea setărilor logice între grupuri sau pentru restabilirea unei copii de rezervă. Cheile de identitate (numele) sunt protejate. Apoi deschideți setările grupului și salvați o dată — fereastra de setări verifică în plus dacă combinația aplicată are sens.",
+      "fields": {
+        "settings": {
+          "name": "Setări (JSON)",
+          "description": "Obiectul de configurație JSON de aplicat. Folosiți atributul 'settings_json' al unui senzor de configurare."
+        },
+        "include_member_list": {
+          "name": "Include lista de membri",
+          "description": "Dacă este adevărat, suprascrie și lista entităților membre și a entităților de izolare."
+        },
+        "include_entity_selectors": {
+          "name": "Include selectoarele de entități",
+          "description": "Dacă este adevărat, suprascrie și senzorii asociați (temperatură, umiditate, prezență, fereastră etc.) și decalajele pe membru."
+        }
+      }
+    },
+    "reset": {
+      "name": "Resetare",
+      "description": "Resetează suprascrierile temporare și starea de rulare (boost, decalaj, program, excepție, rezervă, presetări) la valorile implicite configurate. Selectați cel puțin o opțiune sau folosiți \"Tot\".",
+      "fields": {
+        "everything": {
+          "name": "Tot",
+          "description": "Resetează deodată tot ce este mai jos. Comutatoarele individuale sunt atunci ignorate."
+        },
+        "boost": {
+          "name": "Boost",
+          "description": "Întrerupe un boost activ și restabilește starea țintă."
+        },
+        "offset": {
+          "name": "Decalaj de temperatură",
+          "description": "Resetează decalajul de temperatură al grupului la 0.0."
+        },
+        "schedule": {
+          "name": "Entitate program",
+          "description": "Readuce entitatea de program activă și durata menținerii manuale la valorile implicite configurate și încheie o menținere manuală."
+        },
+        "bypass": {
+          "name": "Entitate de excepție",
+          "description": "Readuce entitatea de excepție activă la valoarea implicită configurată și anulează ajustările excepției."
+        },
+        "fallback": {
+          "name": "Stare de rezervă",
+          "description": "Readuce starea de rezervă a programului la valoarea implicită configurată."
+        },
+        "presets": {
+          "name": "Presetări de grup",
+          "description": "Elimină toate presetările de rulare. Presetările din configurație rămân neschimbate."
+        }
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "hvac_mode_changed": "Modul HVAC s-a schimbat",
+      "temperature_target_changed": "Temperatura țintă s-a schimbat",
+      "current_temperature_changed": "Temperatura curentă s-a schimbat",
+      "group_turned_on": "Grupul a pornit",
+      "group_turned_off": "Grupul s-a oprit"
+    },
+    "condition_type": {
+      "is_hvac_mode": "Modul HVAC este",
+      "is_temperature_above": "Temperatura este peste",
+      "is_temperature_below": "Temperatura este sub",
+      "is_group_available": "Grupul este disponibil"
+    },
+    "action_type": {
+      "set_hvac_mode": "Setare mod HVAC",
+      "set_temperature": "Setare temperatură",
+      "turn_on": "Pornire",
+      "turn_off": "Oprire"
+    }
+  }
+}
